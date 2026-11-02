@@ -279,7 +279,7 @@ describe('buildCompanySnapshot', () => {
     expect(snapshot.subscribers).toEqual([]);
     expect(snapshot.capital).toEqual({ authorised: null, paidUp: null, nominalValue: null, shareClasses: [] });
     expect(snapshot.links.directors).toBe('/app/client/incorporation/step/proposed-directors');
-    expect(snapshot.links.capital).toContain('?tab=share-capital-details');
+    expect(snapshot.links.capital).toContain('?tab=proposed-share-capital-structure');
   });
 
   it('reads directors, capital, share classes and subscribers', () => {

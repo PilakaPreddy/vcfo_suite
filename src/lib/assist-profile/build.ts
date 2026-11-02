@@ -78,9 +78,7 @@ const NIC_POPUP_NOTE = 'Pick the NIC row from the popup table manually; MainNICC
 const PLACEHOLDER = /^\[/;
 
 const PROPOSED_NAMES_TAB = sectionSlug(PART_A_SECTION.proposedNames);
-const BUSINESS_TAB = sectionSlug(PART_A_SECTION.businessDescription);
-const COMPANY_MAIL_TAB = sectionSlug(PART_A_SECTION.companyMail);
-const COMPANY_MOBILE_TAB = sectionSlug(PART_A_SECTION.companyMobile);
+const NIC_TAB = sectionSlug(PART_A_SECTION.nicCodes);
 const REGISTERED_OFFICE_TAB = sectionSlug('Registered office');
 const DIRECTORS_TAB = sectionSlug('Directors');
 const SUBSCRIBERS_TAB = sectionSlug('Subscribers');
@@ -221,7 +219,7 @@ function resolveCompany(ctx: DocPackContext, f: Findings): AssistCompany {
     const description = text(pre1.nicBusinessType);
     if (description) company.nicDescription = description;
   } else {
-    f.miss({ key: 'company.nicCode', label: 'NIC code', stepId: 'pre-1', tabId: BUSINESS_TAB });
+    f.miss({ key: 'company.nicCode', label: 'NIC code', stepId: 'pre-1', tabId: NIC_TAB });
   }
   f.note('company.nicCode', NIC_POPUP_NOTE);
   // `readNicCodes` puts the main code first; the rest are the extra entries.
@@ -324,7 +322,9 @@ function resolveRegisteredOffice(ctx: DocPackContext, f: Findings): AssistRegist
 
   const email = text(pre1.companyMailId);
   if (email) office.email = email;
-  else f.miss({ key: 'company.email', label: 'Company mail ID', stepId: 'pre-1', tabId: COMPANY_MAIL_TAB });
+  // Part A stopped asking for the company mail and mobile on 2026-11-02; older
+  // engagements may still hold them.
+  else f.miss({ key: 'company.email', label: 'Company mail ID', stepId: 'pre-1', reason: MISSING_REASON.notCollected });
 
   const mobile = text(pre1.companyMobileNumber);
   if (mobile) {
@@ -338,12 +338,11 @@ function resolveRegisteredOffice(ctx: DocPackContext, f: Findings): AssistRegist
         key: 'company.mobile',
         label: 'Company mobile number',
         stepId: 'pre-1',
-        tabId: COMPANY_MOBILE_TAB,
         reason: MISSING_REASON.unreadable,
       });
     }
   } else {
-    f.miss({ key: 'company.mobile', label: 'Company mobile number', stepId: 'pre-1', tabId: COMPANY_MOBILE_TAB });
+    f.miss({ key: 'company.mobile', label: 'Company mobile number', stepId: 'pre-1', reason: MISSING_REASON.notCollected });
   }
   return office;
 }

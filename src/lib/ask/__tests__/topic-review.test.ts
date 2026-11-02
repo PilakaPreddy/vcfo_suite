@@ -41,7 +41,7 @@ describe('topic review pack', () => {
 
   it('includes the field-help lines and is deterministic', () => {
     expect(report).toContain('| pre-15.din |');
-    expect(report).toContain('0 of 25 reviewed');
+    expect(report).toContain('0 of 24 reviewed');
     expect(buildTopicReview({ topics })).toBe(report);
   });
 });

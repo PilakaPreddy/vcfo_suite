@@ -13,49 +13,43 @@ import type { OwnershipType } from '@/data/engagements';
 export const PART_A_STEP_ID = 'pre-1';
 
 export const PART_A_SECTION = {
-  foreignEntity: 'Foreign Entity',
-  foreignEntityProof: 'Foreign Entity Proof',
-  authorizedSignatory: 'Authorized Signatory',
-  signatoryKyc: 'Signatory KYC',
-  proposedNames: 'Proposed Company Names',
-  companyMail: 'Company Mail ID',
-  companyMobile: 'Company Mobile Number',
   businessDescription: 'Business Description',
-  shareCapital: 'Share Capital Details',
+  proposedNames: 'Proposed Company Names',
+  foreignEntity: 'Foreign Entity Details',
+  proposedDirectors: 'Proposed Directors',
+  shareCapital: 'Proposed Share Capital Structure',
+  boardResolutionSignatory: 'Person Signing the Board Resolution',
+  nicCodes: 'NIC Codes',
 } as const;
 
 export type PartASection = (typeof PART_A_SECTION)[keyof typeof PART_A_SECTION];
 
 /**
- * Tab order — the MCA SPICe+ Part A sequence: main division of industrial
- * activity (NIC code) with its description, then the proposed name(s). Type /
- * class / category of company precede those on the portal but are project
- * settings here, not Part A answers. The parent-entity block sits together
- * ahead of Signatory KYC because the KYC belongs to the signatory it names.
+ * Tab order — the owner's Part A list (2026-11-02): what the business does,
+ * the two proposed names, the foreign entity with its certificate of
+ * incorporation, the proposed directors, the proposed share capital, and the
+ * person who signs the board resolution with their KYC. The NIC codes come
+ * last; only the project lead fills them and the client never sees that tab.
  * Sections absent from a company's list are skipped, not renumbered.
  */
 const PART_A_SECTION_ORDER: readonly PartASection[] = [
   PART_A_SECTION.businessDescription,
   PART_A_SECTION.proposedNames,
   PART_A_SECTION.foreignEntity,
-  PART_A_SECTION.foreignEntityProof,
-  PART_A_SECTION.authorizedSignatory,
-  PART_A_SECTION.signatoryKyc,
-  PART_A_SECTION.companyMail,
-  PART_A_SECTION.companyMobile,
+  PART_A_SECTION.proposedDirectors,
   PART_A_SECTION.shareCapital,
+  PART_A_SECTION.boardResolutionSignatory,
+  PART_A_SECTION.nicCodes,
 ];
 
 /**
  * Sections that exist only because a parent entity is incorporating the
- * company: who it is, its proof, its authorised signatory and their KYC. An
- * independent company has none of them.
+ * company: who it is (with its certificate) and the person who signs its board
+ * resolution (with their KYC). An independent company has none of them.
  */
 const PARENT_ENTITY_SECTIONS: ReadonlySet<string> = new Set([
   PART_A_SECTION.foreignEntity,
-  PART_A_SECTION.foreignEntityProof,
-  PART_A_SECTION.authorizedSignatory,
-  PART_A_SECTION.signatoryKyc,
+  PART_A_SECTION.boardResolutionSignatory,
 ]);
 
 /** Parent-entity fields that live inside an otherwise shared section. */

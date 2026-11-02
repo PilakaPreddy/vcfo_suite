@@ -110,7 +110,7 @@ describe('missing-field display', () => {
     const describedBy = nicInput.getAttribute('aria-describedby');
     expect(describedBy).toBeTruthy();
     expect(document.getElementById(describedBy!)?.textContent).toBe('This field is required.');
-    // The tab that holds the field is the one now open.
-    expect(tabs()[0]!.getAttribute('aria-selected')).toBe('true');
+    // The tab that holds the field (NIC Codes, the last Part A tab) is the one now open.
+    expect(tabs().at(-1)!.getAttribute('aria-selected')).toBe('true');
   });
 });

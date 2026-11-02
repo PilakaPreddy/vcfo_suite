@@ -75,8 +75,12 @@ export interface ChecklistField {
   /** File input accept attribute */
   accept?: string;
   required?: boolean;
-  /** Show this field only when another field equals a value (e.g. pre-1 conditional fields). */
-  showWhen?: { field: string; value: string };
+  /**
+   * Show this field only when another field equals a value (e.g. pre-1
+   * conditional fields). `anyOf` widens the match to several values (a
+   * director slot that shows for "3" or "4" directors).
+   */
+  showWhen?: { field: string; value: string; anyOf?: string[] };
   /** Relabel by a sibling's value — one field, two names (e.g. a subscriber's name by type). */
   labelWhen?: Array<{ field: string; value: string; label: string }>;
   /** Who fills this field; defaults to the step's responsibleRole */
@@ -145,20 +149,16 @@ const preInc: ChecklistItem[] = [
     title: 'Client Details',
     responsibleRole: 'client',
     description:
-      'Client provides foreign entity details, KYC, proposed names, directors, share capital, and board resolution date.',
+      'Client provides the business description, two proposed names, foreign entity details, proposed directors, proposed share capital and the person signing the board resolution. The project lead adds the NIC codes.',
     forms: ['RUN', 'Spice Part A'],
     infoRequired: [
-      'Details of Foreign Entity/ Parent Entity — Name, Registration Number, Complete Address; optional trademark (yes/no + document if yes)',
-      'Proof of Foreign Entity / Parent Entity — Certificate of Incorporation',
-      'Authorized Signatory Details — First name, Middle name (optional), Last name, Designation, Gender',
-      'KYC Documents of Authorized Signatory — Passport, Driving Licence, Utility Bill <2 months',
-      'Proposed Company Names — 2 names ending "India Private Limited"',
-      'Company Mail ID',
-      'Company Mobile Number — with country code',
       'Business Description — up to 100 words',
-      'Proposed Directors — 2/3/4; First name + Last name (+ optional middle) and Gender each; minimum 2; at least one India resident',
-      'Share Capital Details — Authorized and Initial Paid-up (INR), nominal value per equity share (e.g. 10,00,000 / 1,00,000 / INR 10)',
-      'Date of Board Resolution',
+      'Proposed Company Names — 2 names ending "India Private Limited"',
+      'Foreign Entity Details — Name, Address, Country and State of incorporation; Certificate of Incorporation (attachment)',
+      'Proposed Directors — 2/3/4; First name + Last name (+ optional middle), Gender and India residency each; at least one India resident',
+      'Proposed Share Capital Structure — Authorized and Initial Paid-up (INR), nominal value per equity share (e.g. 10,00,000 / 1,00,000 / INR 10)',
+      'Person Signing the Board Resolution — Name, Designation; KYC of the person signing (attachment)',
+      'NIC Codes — filled by the project lead',
     ],
     deadline: { kind: 'estimated-weeks', weeks: [1, 2] },
     expectedTimeline: '2–3 working days',

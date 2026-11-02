@@ -2,12 +2,12 @@ import type { Engagement } from '@/data/engagements';
 import type { ChecklistItemResponses } from '@/lib/checklist/checklist-responses';
 import {
   parseDirectorCount,
-  parsePre1BoardResolutionDate,
   PRE1_DIRECTOR_FIRST_NAME_IDS,
   PRE1_DIRECTOR_INDIA_RESIDENT_IDS,
   PRE1_DIRECTOR_LAST_NAME_IDS,
 } from '@/lib/checklist/checklist-pre1-validation';
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
+import { PART_A_SECTION } from '@/lib/checklist/part-a-sections';
 import { BoardResolutionSaveError } from '@/lib/projects/engagements-db';
 import { resolveDirectorDisplayName, resolveSignatoryDisplayName } from '@/lib/person-name';
 
@@ -106,7 +106,6 @@ export function boardResolutionErrorJson(err: BoardResolutionError): BoardResolu
 const PRE1_FIELD_LABELS: Record<string, string> = {
   parentEntityName: 'Parent entity name',
   proposedName1: 'Proposed company name (option 1)',
-  boardResolutionDate: 'Board resolution date',
   signatoryName: 'Signatory name',
   signatoryFirstName: 'Signatory first name',
   signatoryLastName: 'Signatory last name',
@@ -119,18 +118,16 @@ const PRE1_FIELD_LABELS: Record<string, string> = {
 };
 
 const PART_A = 'pre-1';
-const DIRECTORS_STEP = 'pre-15';
 
 /** Where each Part A board-resolution input lives (step + field + section tab). */
 const PRE1_FIELD_REFS: Record<string, { fieldId: string; section: string }> = {
-  parentEntityName: { fieldId: 'parentEntityName', section: 'Foreign Entity' },
-  proposedName1: { fieldId: 'proposedName1', section: 'Proposed Company Names' },
-  boardResolutionDate: { fieldId: 'boardResolutionDate', section: 'Share Capital Details' },
-  signatoryName: { fieldId: 'signatoryFirstName', section: 'Authorized Signatory' },
-  signatoryDesignation: { fieldId: 'signatoryDesignation', section: 'Authorized Signatory' },
-  authorisedShareCapital: { fieldId: 'authorisedShareCapital', section: 'Share Capital Details' },
-  paidUpShareCapital: { fieldId: 'paidUpShareCapital', section: 'Share Capital Details' },
-  nicCode: { fieldId: 'nicCode', section: 'Business Description' },
+  parentEntityName: { fieldId: 'parentEntityName', section: PART_A_SECTION.foreignEntity },
+  proposedName1: { fieldId: 'proposedName1', section: PART_A_SECTION.proposedNames },
+  signatoryName: { fieldId: 'signatoryFirstName', section: PART_A_SECTION.boardResolutionSignatory },
+  signatoryDesignation: { fieldId: 'signatoryDesignation', section: PART_A_SECTION.boardResolutionSignatory },
+  authorisedShareCapital: { fieldId: 'authorisedShareCapital', section: PART_A_SECTION.shareCapital },
+  paidUpShareCapital: { fieldId: 'paidUpShareCapital', section: PART_A_SECTION.shareCapital },
+  nicCode: { fieldId: 'nicCode', section: PART_A_SECTION.nicCodes },
 };
 
 function pre1Ref(key: keyof typeof PRE1_FIELD_REFS): BoardResolutionMissingFieldRef {
@@ -138,9 +135,13 @@ function pre1Ref(key: keyof typeof PRE1_FIELD_REFS): BoardResolutionMissingField
   return { stepId: PART_A, fieldId: ref.fieldId, section: ref.section, label: PRE1_FIELD_LABELS[key]! };
 }
 
-/** Directors now live on Part B `pre-15`; the legacy Part A slots are read through the overlay. */
-function directorRef(label: string): BoardResolutionMissingFieldRef {
-  return { stepId: DIRECTORS_STEP, fieldId: 'directors', section: 'Directors', label };
+/**
+ * The board resolution names the proposed directors from Part A (2026-11-02).
+ * Once `pre-15` has entries they overlay these slots, but Part A is still
+ * where a missing name is answered before the resolution is drafted.
+ */
+function directorRef(label: string, fieldId = 'directorCount'): BoardResolutionMissingFieldRef {
+  return { stepId: PART_A, fieldId, section: PART_A_SECTION.proposedDirectors, label };
 }
 
 function directorFieldLabel(index: number, kind: 'first' | 'last' | 'resident'): string {
@@ -189,9 +190,8 @@ export function collectBoardResolutionMissingFieldRefs(
   if (!pre1.proposedName1?.trim()) {
     missing.push(pre1Ref('proposedName1'));
   }
-  if (!parsePre1BoardResolutionDate(pre1.boardResolutionDate)) {
-    missing.push(pre1Ref('boardResolutionDate'));
-  }
+  // The resolution date is no longer a Part A answer (2026-11-02): the
+  // generator prints today's date and the project lead edits it in the editor.
   if (!resolveSignatoryDisplayName(pre1)) {
     missing.push(pre1Ref('signatoryName'));
   }
@@ -219,16 +219,16 @@ export function collectBoardResolutionMissingFieldRefs(
 
     if (!resolveDirectorDisplayName(pre1, index)) {
       if (!(pre1[firstNameId] ?? '').trim()) {
-        missing.push(directorRef(directorFieldLabel(index, 'first')));
+        missing.push(directorRef(directorFieldLabel(index, 'first'), firstNameId));
       }
       if (!(pre1[lastNameId] ?? '').trim()) {
-        missing.push(directorRef(directorFieldLabel(index, 'last')));
+        missing.push(directorRef(directorFieldLabel(index, 'last'), lastNameId));
       }
     }
 
     const resident = (pre1[residentId] ?? '').trim();
     if (!resident) {
-      missing.push(directorRef(directorFieldLabel(index, 'resident')));
+      missing.push(directorRef(directorFieldLabel(index, 'resident'), residentId));
     } else if (resident === 'yes') {
       hasIndiaResident = true;
     }

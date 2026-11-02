@@ -19,9 +19,7 @@ export interface FieldHelp {
 export const FIELD_HELP_MAX_CHARS = 140;
 
 export const FIELD_HELP: Readonly<Record<string, FieldHelp>> = {
-  'pre-1:parentEntityRegistrationNumber': { text: 'The Registrar checks the parent company against its home-country registration.', reviewed: false },
   'pre-1:certificateOfIncorporationUrl': { text: "Proof that the parent company exists; it is attached to the name application.", reviewed: false },
-  'pre-1:parentEntityHasTrademark': { text: 'A registered trademark supports the proposed name and helps it get approved.', reviewed: false },
   'pre-1:proposedName1': { text: 'Your first choice of company name. The Registrar approves it only if it is unique.', reviewed: false },
   'pre-1:proposedName2': { text: 'A back-up name in case the first choice is too close to an existing company.', reviewed: false },
   'pre-1:businessDescription': { text: "This becomes the company's objects in its charter, so describe what it will actually do.", reviewed: false },
@@ -29,7 +27,8 @@ export const FIELD_HELP: Readonly<Record<string, FieldHelp>> = {
   'pre-1:additionalNicCodes': { text: 'Other business activities the company will carry on, as NIC codes. Your project lead fills these in; the board resolution lists every code.', reviewed: false },
   'pre-1:authorisedShareCapital': { text: 'The most share capital the company may issue. Government fees depend on it.', reviewed: false },
   'pre-1:paidUpShareCapital': { text: 'The share money the first shareholders will actually pay in after incorporation.', reviewed: false },
-  'pre-1:boardResolutionDate': { text: "The date the parent's board approved setting up the Indian company.", reviewed: false },
+  'pre-1:directorCount': { text: 'A private company needs at least two directors, and one of them must live in India.', reviewed: false },
+  'pre-1:passportUrl': { text: 'Identity proof of the person who signs the parent board resolution.', reviewed: false },
   'pre-13:equityQuantity': { text: 'How many equity shares the company starts with. This goes into the MOA.', reviewed: false },
   'pre-13:equityNominalValue': { text: 'The face value of one share, usually ₹10. Shares × value = share capital.', reviewed: false },
   'pre-14:registeredOfficeCompleteAddress': { text: "The company's official address in India. Government notices are sent here.", reviewed: false },

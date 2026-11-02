@@ -1,7 +1,7 @@
 import type { ChecklistField, ChecklistItem, ChecklistResponsibleRole } from '@/data/checklist';
 import { getClientResponseFields } from '@/lib/checklist/checklist-responses';
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
-import { isDirectFlowStep } from '@/lib/incorporation/pre-inc-direct-flow';
+import { isDirectFlowStep, isLeadOnlyField } from '@/lib/incorporation/pre-inc-direct-flow';
 
 export const RESPONSIBLE_ROLE_LABEL: Record<ChecklistResponsibleRole, string> = {
   client: 'Client',
@@ -20,7 +20,9 @@ export function filterFieldsByViewer(
   itemId?: string,
 ): ChecklistField[] {
   if (variant === 'admin') return fields;
-  if (itemId && isDirectFlowStep(itemId)) return fields;
+  // Direct-flow steps: the client sees every field except the project lead's
+  // own (the Part A NIC codes) — those are not shown to the client at all.
+  if (itemId && isDirectFlowStep(itemId)) return fields.filter((field) => !isLeadOnlyField(itemId, field.id));
   return fields.filter((field) => field.filledBy !== 'intern');
 }
 

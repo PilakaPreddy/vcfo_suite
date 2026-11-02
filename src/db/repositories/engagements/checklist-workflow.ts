@@ -23,6 +23,7 @@ import {
   isDirectFlowStepComplete,
   isWaitingOnLead,
   lastEditedPatch,
+  stripClientOnlyResponses,
   stripLeadOnlyResponses,
   waitingOnLeadPatch,
 } from '@/lib/incorporation/pre-inc-direct-flow';
@@ -160,7 +161,8 @@ export async function submitDirectFlowStep(
     if (isWaitingOnLead(itemId, slice)) throw new Error('step_waiting_on_lead');
   }
 
-  const sent = ctx.role === 'client' ? stripLeadOnlyResponses(itemId, responses) : responses;
+  const sent =
+    ctx.role === 'client' ? stripLeadOnlyResponses(itemId, responses) : stripClientOnlyResponses(itemId, responses);
   const merged: Record<string, string> = { ...(slice?.responses ?? {}) };
   for (const [key, value] of Object.entries(sent)) merged[key] = value;
 
@@ -180,6 +182,12 @@ export async function submitDirectFlowStep(
     ...(Object.keys(sent).length ? { responses: sent } : {}),
     ...lastEditedPatch({ actorName: ctx.name, actorRole: ctx.role, now }),
   };
+
+  // A project lead cannot finish a step while the client's own answers (Part A)
+  // are still missing: those errors come back so the form can say so.
+  if (ctx.role === 'intern' && Object.keys(blocking).length === 0 && Object.keys(validation.errors).length > 0) {
+    Object.assign(blocking, validation.errors);
+  }
 
   if (Object.keys(blocking).length > 0) {
     const checklistState = Object.keys(sent).length

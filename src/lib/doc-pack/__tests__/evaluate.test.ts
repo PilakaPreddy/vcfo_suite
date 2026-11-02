@@ -224,7 +224,7 @@ describe('answers that replaced hardcoded values', () => {
     state['pre-7'] = { status: 'in-progress', responses: {} };
     const summary = evaluateDocPack({ state, brRow: FINALIZED_BR });
     expect(summary.items.find((i) => i.docId === 'authorisation-letter')?.missing).toEqual([
-      { key: 'parent.country', label: 'Parent entity country of incorporation', stepId: 'pre-1', tabId: 'foreign-entity' },
+      { key: 'parent.country', label: 'Parent entity country of incorporation', stepId: 'pre-1', tabId: 'foreign-entity-details' },
     ]);
     const sheet = summary.items.find((i) => i.docId === 'moa-subscription-sheet');
     expect(sheet?.missing.map((m) => [m.key, m.stepId, m.tabId])).toEqual([

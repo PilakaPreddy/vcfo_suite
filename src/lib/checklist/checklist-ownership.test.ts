@@ -14,17 +14,17 @@ describe('fieldsForOwnership', () => {
     const gone = new Set(all.filter((f) => !independent.includes(f)).map((f) => f.id));
     for (const id of [
       'parentEntityName',
-      'parentEntityRegistrationNumber',
       'parentEntityAddress',
-      'parentEntityHasTrademark',
+      'parentEntityCountry',
+      'parentEntityState',
       'certificateOfIncorporationUrl',
       'signatoryFirstName',
+      'signatoryDesignation',
       'passportUrl',
-      'boardResolutionDate',
     ]) {
       expect(gone.has(id), id).toBe(true);
     }
-    for (const id of ['proposedName1', 'authorisedShareCapital', 'businessDescription']) {
+    for (const id of ['proposedName1', 'authorisedShareCapital', 'businessDescription', 'director1FirstName', 'nicCode']) {
       expect(independent.some((f) => f.id === id), id).toBe(true);
     }
   });
@@ -116,10 +116,9 @@ describe('partAsectionsFor', () => {
     const seen = new Set(all.map((f) => f.section).filter(Boolean));
     expect(new Set(dependent)).toEqual(seen);
     const independent = partAsectionsFor('independent');
-    expect(independent).not.toContain('Signatory KYC');
-    expect(independent).not.toContain('Authorized Signatory');
-    expect(independent).not.toContain('Foreign Entity');
-    expect(independent).not.toContain('Foreign Entity Proof');
+    expect(independent).not.toContain('Foreign Entity Details');
+    expect(independent).not.toContain('Person Signing the Board Resolution');
+    expect(independent).toContain('Proposed Directors');
     // Relative order of the shared sections is identical for both company types.
     expect(dependent.filter((s) => independent.includes(s))).toEqual(independent);
   });
@@ -138,18 +137,26 @@ describe('partAsectionsFor', () => {
   });
 });
 
-describe('Part A tab order (MCA portal)', () => {
-  it('leads with the NIC code / business description, then proposed names; Submit is last', () => {
-    const dependent = partAsectionsFor('subsidiary');
-    expect(dependent.slice(0, 2)).toEqual(['Business Description', 'Proposed Company Names']);
-    expect(dependent.indexOf('Authorized Signatory')).toBeLessThan(dependent.indexOf('Signatory KYC'));
-    expect(dependent[dependent.length - 1]).toBe('Share Capital Details');
-    const independent = partAsectionsFor('independent');
-    expect(independent.slice(0, 2)).toEqual(['Business Description', 'Proposed Company Names']);
-    // NIC sits directly under the business description inside that section.
+describe('Part A tab order (owner list 2026-11-02)', () => {
+  it('follows the owner list and ends with the lead-only NIC codes', () => {
+    expect(partAsectionsFor('subsidiary')).toEqual([
+      'Business Description',
+      'Proposed Company Names',
+      'Foreign Entity Details',
+      'Proposed Directors',
+      'Proposed Share Capital Structure',
+      'Person Signing the Board Resolution',
+      'NIC Codes',
+    ]);
+    expect(partAsectionsFor('independent')).toEqual([
+      'Business Description',
+      'Proposed Company Names',
+      'Proposed Directors',
+      'Proposed Share Capital Structure',
+      'NIC Codes',
+    ]);
     const fields = partAFieldsFor(getClientResponseFields(pre1), 'subsidiary');
     const ids = fields.map((f) => f.id);
-    expect(ids.indexOf('nicCode')).toBe(ids.indexOf('businessDescription') + 1);
     expect(ids.indexOf('nicBusinessType')).toBe(ids.indexOf('nicCode') + 1);
   });
 });

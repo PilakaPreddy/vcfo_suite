@@ -4,6 +4,7 @@ import {
   directorResponsesFromState,
   directorsAsPre6Responses,
   readProposedDirectors,
+  seedProposedDirectorsFromPartA,
 } from '@/lib/incorporation/proposed-directors';
 
 const resident = {
@@ -190,5 +191,37 @@ describe('validatePre16Responses — subscriber details', async () => {
     expect(fields.find((f) => f.id === `subscribers.${entryId}.name`)?.label).toBe('Name of the LLP');
     const plain = resolveFieldLabels(expandRepeatEntry(group as never, entryId), { ...responses, [`subscribers.${entryId}.entityType`]: '' });
     expect(plain.find((f) => f.id === `subscribers.${entryId}.name`)?.label).toBe('Full name');
+  });
+});
+
+describe('seedProposedDirectorsFromPartA', () => {
+  const partA = {
+    directorCount: '2',
+    director1FirstName: 'Asha',
+    director1LastName: 'Rao',
+    director1Gender: 'female',
+    director1IndiaResident: 'yes',
+    director2FirstName: 'John',
+    director2MiddleName: 'Q',
+    director2LastName: 'Doe',
+    director2Gender: 'male',
+    director2IndiaResident: 'no',
+  };
+
+  it('starts pre-15 with one entry per Part A director', () => {
+    const seed = seedProposedDirectorsFromPartA({}, partA)!;
+    const ids = seed.directors!.split(',');
+    expect(ids).toHaveLength(2);
+    expect(seed[`directors.${ids[0]}.firstName`]).toBe('Asha');
+    expect(seed[`directors.${ids[0]}.indiaResident`]).toBe('yes');
+    expect(seed[`directors.${ids[1]}.middleName`]).toBe('Q');
+    expect(seed[`directors.${ids[1]}.gender`]).toBe('male');
+    const directors = readProposedDirectors({ 'pre-15': { status: 'in-progress', responses: seed } });
+    expect(directors.map((d) => d.values.lastName)).toEqual(['Rao', 'Doe']);
+  });
+
+  it('never overwrites a pre-15 that already has entries, and skips an empty Part A', () => {
+    expect(seedProposedDirectorsFromPartA({ directors: 'e12345678', 'directors.e12345678.firstName': 'X' }, partA)).toBeNull();
+    expect(seedProposedDirectorsFromPartA({}, { directorCount: '2' })).toBeNull();
   });
 });

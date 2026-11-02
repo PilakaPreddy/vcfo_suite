@@ -8,12 +8,14 @@ import {
   directReopenPatch,
   directSubmitPatch,
   isAwaitingManagerDecision,
+  isClientOnlyField,
   isDirectFlowStep,
   isDirectFlowStepComplete,
   isLeadOnlyField,
   isWaitingOnLead,
   LEAD_ONLY_STEP_IDS,
   MANAGER_APPROVAL_STEP_ID,
+  stripClientOnlyResponses,
   stripLeadOnlyResponses,
   waitingOnLeadPatch,
 } from '@/lib/incorporation/pre-inc-direct-flow';
@@ -63,9 +65,25 @@ describe('lead-only fields', () => {
 });
 
 describe('canRoleEditField', () => {
-  it('lets the lead edit everything', () => {
+  it('lets the lead edit everything except the client\'s own Part A answers', () => {
     expect(canRoleEditField('intern', 'pre-1', 'nicCode')).toBe(true);
+    expect(canRoleEditField('intern', 'pre-1', 'additionalNicCodes.e12345678.code')).toBe(true);
+    expect(canRoleEditField('intern', 'pre-1', 'stepRemarks')).toBe(true);
+    expect(canRoleEditField('intern', 'pre-1', 'businessDescription')).toBe(false);
+    expect(canRoleEditField('intern', 'pre-1', 'director1FirstName')).toBe(false);
+    expect(canRoleEditField('intern', 'pre-13', 'equityShares')).toBe(true);
     expect(canRoleEditField('intern', 'post-1', 'x')).toBe(true);
+  });
+
+  it('strips the client\'s Part A answers from a lead\'s save', () => {
+    expect(
+      stripClientOnlyResponses('pre-1', { nicCode: '62011', businessDescription: 'x', stepRemarks: 'note' }),
+    ).toEqual({ nicCode: '62011', stepRemarks: 'note' });
+    expect(stripClientOnlyResponses('pre-14', { registeredOfficeCompleteAddress: 'a' })).toEqual({
+      registeredOfficeCompleteAddress: 'a',
+    });
+    expect(isClientOnlyField('pre-1', 'parentEntityName')).toBe(true);
+    expect(isClientOnlyField('pre-1', 'nicCode')).toBe(false);
   });
 
   it('lets the client edit direct-flow fields but not the lead-only ones', () => {

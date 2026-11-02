@@ -17,6 +17,7 @@
 import { getIncorporationPhases, type ChecklistField, type ChecklistItem } from '@/data/checklist';
 import { extractItemResponses, getClientResponseFields, isStepRemarksField } from '@/lib/checklist/checklist-responses';
 import { filterFieldsByViewer } from '@/lib/checklist/checklist-field-access';
+import { isLeadOnlyField } from '@/lib/incorporation/pre-inc-direct-flow';
 import {
   REGISTERED_OFFICE_FIELD_IDS,
   REGISTERED_OFFICE_SOURCE_FIELD_ID,
@@ -43,7 +44,10 @@ export function shortLabel(l: string): string {
 }
 
 function clientFields(item: ChecklistItem): ChecklistField[] {
-  return filterFieldsByViewer(getClientResponseFields(item), 'client').filter((f) => !isStepRemarksField(f));
+  // The project lead's own fields (Part A NIC codes) are not a client sub-step.
+  return filterFieldsByViewer(getClientResponseFields(item), 'client').filter(
+    (f) => !isStepRemarksField(f) && !isLeadOnlyField(item.id, f.id),
+  );
 }
 
 /** The sub-steps of one step, with their state from the current answers. */

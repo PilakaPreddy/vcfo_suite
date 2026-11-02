@@ -62,33 +62,107 @@ describe('applyPre1EngagementDefaults share capital', () => {
   });
 });
 
-describe('getPre1VisibleFields Share Capital Details field order', () => {
+describe('Part A fields (owner list 2026-11-02)', () => {
   const pre1Fields = CLIENT_RESPONSE_FIELDS['pre-1'];
 
   it('lists nominal value as the third share-capital field', () => {
     const shareCapitalIds = pre1Fields
-      .filter((f) => f.section === 'Share Capital Details')
+      .filter((f) => f.section === 'Proposed Share Capital Structure')
       .map((f) => f.id);
     expect(shareCapitalIds).toEqual([
       'authorisedShareCapital',
       'paidUpShareCapital',
       'nominalValuePerEquityShare',
-      'boardResolutionDate',
     ]);
+  });
+
+  it('asks only the sections on the owner list, in that order', () => {
+    const sections = [...new Set(pre1Fields.map((f) => f.section).filter(Boolean))];
+    expect(sections).toEqual([
+      'Business Description',
+      'Proposed Company Names',
+      'Foreign Entity Details',
+      'Proposed Directors',
+      'Proposed Share Capital Structure',
+      'Person Signing the Board Resolution',
+      'NIC Codes',
+    ]);
+  });
+
+  it('no longer asks for company mail, mobile, registration number, trademark, gender, extra KYC or the resolution date', () => {
+    const ids = pre1Fields.map((f) => f.id);
+    for (const gone of [
+      'companyMailId',
+      'companyMobileCountryCode',
+      'companyMobileNumber',
+      'parentEntityRegistrationNumber',
+      'parentEntityHasTrademark',
+      'parentEntityTrademarkUrl',
+      'signatoryGender',
+      'drivingLicenseUrl',
+      'utilityBillUrl',
+      'boardResolutionDate',
+    ]) {
+      expect(ids).not.toContain(gone);
+    }
+  });
+
+  it('keeps the foreign entity certificate and the signatory KYC as attachments', () => {
+    const files = pre1Fields.filter((f) => f.type === 'file').map((f) => [f.id, f.section]);
+    expect(files).toEqual([
+      ['certificateOfIncorporationUrl', 'Foreign Entity Details'],
+      ['passportUrl', 'Person Signing the Board Resolution'],
+    ]);
+  });
+
+  it('shows director slots 3 and 4 only when the count asks for them', () => {
+    const ids = (count: string) => getPre1VisibleFields(pre1Fields, { directorCount: count }).map((f) => f.id);
+    expect(ids('2')).toContain('director2FirstName');
+    expect(ids('2')).not.toContain('director3FirstName');
+    expect(ids('3')).toContain('director3FirstName');
+    expect(ids('3')).not.toContain('director4FirstName');
+    expect(ids('4')).toContain('director3FirstName');
+    expect(ids('4')).toContain('director4FirstName');
   });
 });
 
-describe('validatePre1Responses boardResolutionDate', () => {
-  it('requires boardResolutionDate on submit validation', () => {
-    const { ok, errors } = validatePre1Responses({});
-    expect(ok).toBe(false);
-    expect(errors.boardResolutionDate).toMatch(/required/i);
+describe('validatePre1Responses proposed directors', () => {
+  const two = {
+    directorCount: '2',
+    director1FirstName: 'Priya',
+    director1LastName: 'Sharma',
+    director1Gender: 'female',
+    director1IndiaResident: 'yes',
+    director2FirstName: 'John',
+    director2LastName: 'Smith',
+    director2Gender: 'male',
+    director2IndiaResident: 'no',
+  };
+
+  it('accepts two named directors with one India resident', () => {
+    const { errors } = validatePre1Responses(two);
+    expect(Object.keys(errors).filter((k) => k.startsWith('director'))).toEqual([]);
   });
 
-  it('flags invalid boardResolutionDate format', () => {
-    const { ok, errors } = validatePre1Responses({ boardResolutionDate: 'May 26, 2026' });
-    expect(ok).toBe(false);
-    expect(errors.boardResolutionDate).toMatch(/valid date/i);
+  it('requires each slot up to the count', () => {
+    const { errors } = validatePre1Responses({ ...two, directorCount: '3' });
+    expect(errors.director3FirstName).toMatch(/required/i);
+    expect(errors.director3LastName).toMatch(/required/i);
+    expect(errors.director3Gender).toMatch(/required/i);
+    expect(errors.director3IndiaResident).toMatch(/required/i);
+    expect(errors.director4FirstName).toBeUndefined();
+  });
+
+  it('requires at least one India-resident director', () => {
+    const { errors } = validatePre1Responses({ ...two, director1IndiaResident: 'no' });
+    expect(errors.director1IndiaResident).toMatch(/resident in India/i);
+  });
+
+  it('never requires the board resolution date or the company mail', () => {
+    const { errors } = validatePre1Responses({});
+    expect(errors.boardResolutionDate).toBeUndefined();
+    expect(errors.companyMailId).toBeUndefined();
+    expect(errors.signatoryGender).toBeUndefined();
   });
 });
 
@@ -111,41 +185,6 @@ describe('pre1GenderLabel', () => {
   it('returns display label for stored value', () => {
     expect(pre1GenderLabel('female')).toBe('Female');
     expect(pre1GenderLabel('')).toBeNull();
-  });
-});
-
-describe('getPre1VisibleFields parent entity trademark', () => {
-  const pre1Fields = CLIENT_RESPONSE_FIELDS['pre-1'];
-
-  it('places trademark question after Complete Address', () => {
-    const ids = pre1Fields.map((f) => f.id);
-    const addressIdx = ids.indexOf('parentEntityAddress');
-    const trademarkIdx = ids.indexOf('parentEntityHasTrademark');
-    const uploadIdx = ids.indexOf('parentEntityTrademarkUrl');
-    expect(addressIdx).toBeGreaterThanOrEqual(0);
-    expect(trademarkIdx).toBeGreaterThan(addressIdx);
-    expect(uploadIdx).toBeGreaterThan(trademarkIdx);
-  });
-
-  it('shows trademark upload only when parent entity has trademark', () => {
-    const visibleYes = getPre1VisibleFields(pre1Fields, {
-      parentEntityHasTrademark: 'yes',
-    });
-    const idsYes = visibleYes.map((f) => f.id);
-    expect(idsYes).toContain('parentEntityHasTrademark');
-    expect(idsYes).toContain('parentEntityTrademarkUrl');
-
-    const visibleNo = getPre1VisibleFields(pre1Fields, {
-      parentEntityHasTrademark: 'no',
-    });
-    const idsNo = visibleNo.map((f) => f.id);
-    expect(idsNo).toContain('parentEntityHasTrademark');
-    expect(idsNo).not.toContain('parentEntityTrademarkUrl');
-
-    const visibleUnset = getPre1VisibleFields(pre1Fields, {});
-    const idsUnset = visibleUnset.map((f) => f.id);
-    expect(idsUnset).toContain('parentEntityHasTrademark');
-    expect(idsUnset).not.toContain('parentEntityTrademarkUrl');
   });
 });
 

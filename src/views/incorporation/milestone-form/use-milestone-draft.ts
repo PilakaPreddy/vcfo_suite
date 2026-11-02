@@ -24,6 +24,7 @@ import type { MilestoneSources } from './use-milestone-sources';
 type MilestoneDraftParams = { item: ChecklistItem } & Pick<
   MilestoneSources,
   | 'saved'
+  | 'user'
   | 'engagement'
   | 'pre1Responses'
   | 'pre8Responses'
@@ -36,6 +37,7 @@ type MilestoneDraftParams = { item: ChecklistItem } & Pick<
 export function useMilestoneDraft({
   item,
   saved,
+  user,
   engagement,
   pre1Responses,
   pre8Responses,
@@ -52,9 +54,18 @@ export function useMilestoneDraft({
    * fields therefore always follow `saved`; touched ones stick until saved.
    */
   const [draftEdits, setDraftEdits] = useState<DraftEdits | null>(null);
+  /**
+   * Part A's starting values (share capital 10,00,000 / 1,00,000 / 10, two
+   * directors) are a suggestion to the client, who owns those answers. Staff
+   * read what the client actually saved, never a default dressed as an answer.
+   */
+  const partADefaults = item.id !== 'pre-1' || user?.role === 'client';
   const baselineDraft = useMemo(
-    () => computeMilestoneDraftFromSaved(item.id, saved, engagement, pre1Responses, pre8Responses),
-    [item.id, saved, engagement, pre1Responses, pre8Responses],
+    () =>
+      partADefaults
+        ? computeMilestoneDraftFromSaved(item.id, saved, engagement, pre1Responses, pre8Responses)
+        : { ...saved },
+    [partADefaults, item.id, saved, engagement, pre1Responses, pre8Responses],
   );
   const draft = useMemo(
     () => overlayTouchedFields(baselineDraft, draftEdits?.values ?? null, draftEdits?.touched ?? NO_FIELDS),
@@ -62,8 +73,8 @@ export function useMilestoneDraft({
   );
 
   const pre1Draft = useMemo(
-    () => (item.id === 'pre-1' ? applyPre1EngagementDefaults(draft, engagement) : draft),
-    [item.id, draft, engagement],
+    () => (item.id === 'pre-1' && partADefaults ? applyPre1EngagementDefaults(draft, engagement) : draft),
+    [item.id, partADefaults, draft, engagement],
   );
   const visibleFields = useMemo(() => {
     let visible: ChecklistField[];
