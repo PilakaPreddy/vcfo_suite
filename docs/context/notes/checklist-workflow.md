@@ -191,4 +191,9 @@ Spec `docs/specs/pre-inc-direct-flow/` (CONTEXT, AUDIT, REPORT).
   what was saved (`use-milestone-draft.ts`). "Ask client" is not offered on lead-only fields.
 - **Client portal step 1 is the lead's page**: the same tabbed `MilestoneResponseForm` (variant client,
   `sectionTabs`) as a card on its own (no "What this step captures" card, sub-steps or views), with "Request a change" under it once done.
-  Other client portal steps keep the row list.
+- **Every client step page uses the lead's layout** (owner, 2026-11-02): the shared form card on
+  its own, read-only where the client does not fill; file requests, approval, "Message the lead",
+  "Request a change" and "Go to step n" sit under it. Steps with no client-visible answer fields,
+  and client-owned steps outside the direct flow (edited as rows, since the shared form is
+  read-only for the client there), keep a plain answers card titled with the step — the
+  "What this step captures" status block, sub-steps and description are gone everywhere.
