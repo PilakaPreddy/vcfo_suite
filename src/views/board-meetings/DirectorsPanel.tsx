@@ -137,7 +137,7 @@ export function DirectorsPanel({ engagementId, compliancesBase }: { engagementId
                   <td className="px-3 py-2.5">{d.email ?? <span className="text-warning">No email</span>}</td>
                   <td className="px-3 py-2.5 text-[13px] text-ink-muted">
                     {d.current ? (d.appointedOn ? shortDate(d.appointedOn) : '—') : (
-                      <Chip tone="idle" fixed>
+                      <Chip tone="idle" fixed raw>
                         Left {d.ceasedOn ? shortDate(d.ceasedOn) : ''}
                       </Chip>
                     )}

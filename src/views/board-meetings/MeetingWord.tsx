@@ -15,7 +15,7 @@ const TONE: Record<MeetingListRow['word'], ChipTone> = {
 /** The six-word status of a meeting row in lists. */
 export function MeetingWord({ word }: { word: MeetingListRow['word'] }) {
   return (
-    <Chip tone={TONE[word]} fixed>
+    <Chip tone={TONE[word]} fixed raw>
       {word}
     </Chip>
   );

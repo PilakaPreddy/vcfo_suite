@@ -34,7 +34,7 @@ export function MeetingStatusChip({ meeting }: { meeting: Pick<MeetingDto, 'stat
     tone = 'teal';
   }
   return (
-    <Chip tone={tone} fixed>
+    <Chip tone={tone} fixed raw>
       {word}
     </Chip>
   );

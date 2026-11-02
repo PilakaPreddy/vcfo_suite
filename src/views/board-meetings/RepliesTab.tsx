@@ -121,15 +121,15 @@ export function RepliesTab({ meeting }: { meeting: MeetingDto }) {
                   <td className="px-3 py-2.5 font-mono text-[13px] text-ink-2">{r.din ?? '—'}</td>
                   <td className="px-3 py-2.5">
                     {r.reply === 'yes' ? (
-                      <Chip tone="ok" fixed>
+                      <Chip tone="ok" fixed raw>
                         Attending
                       </Chip>
                     ) : r.reply === 'no' ? (
-                      <Chip tone="bad" fixed>
+                      <Chip tone="bad" fixed raw>
                         Not attending
                       </Chip>
                     ) : (
-                      <Chip tone="idle" fixed>
+                      <Chip tone="idle" fixed raw>
                         No reply
                       </Chip>
                     )}

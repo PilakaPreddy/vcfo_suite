@@ -106,7 +106,7 @@ export function SigningPanel({ meeting, doc, canAct }: { meeting: MeetingDto; do
                 {s.din ? <span className="ml-2 font-mono text-[12.5px] text-ink-muted">{s.din}</span> : null}
               </td>
               <td className="py-2 pr-3">
-                <Chip tone={SIGNER[s.state].tone} fixed>
+                <Chip tone={SIGNER[s.state].tone} fixed raw>
                   {SIGNER[s.state].word}
                 </Chip>
               </td>

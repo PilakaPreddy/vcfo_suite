@@ -80,7 +80,7 @@ function MeetingRecord({ m, back }: { m: MeetingDto; back: React.ReactNode }) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="m-0 text-[22px] font-medium leading-8 text-ink">
-              {m.typeLabel} {m.kindLabel.toLowerCase()}
+              {m.kind === 'board' ? m.typeLabel : m.kindLabel}
             </h1>
             <p className="m-0 mt-1 flex flex-wrap items-center gap-2 text-[14px] text-ink-2">
               <span>
@@ -93,19 +93,19 @@ function MeetingRecord({ m, back }: { m: MeetingDto; back: React.ReactNode }) {
             </p>
           </div>
           {m.status === 'cancelled' ? (
-            <Chip tone="idle" fixed>
+            <Chip tone="idle" fixed raw>
               Cancelled
             </Chip>
           ) : m.status === 'held' ? (
-            <Chip tone={signed.some((d) => d.kind === 'mom') ? 'ok' : 'prog'} fixed>
+            <Chip tone={signed.some((d) => d.kind === 'mom') ? 'ok' : 'prog'} fixed raw>
               {signed.some((d) => d.kind === 'mom') ? 'Done' : 'Held'}
             </Chip>
           ) : rescheduling ? (
-            <Chip tone="warn" fixed>
+            <Chip tone="warn" fixed raw>
               Being rescheduled
             </Chip>
           ) : (
-            <Chip tone="teal" fixed>
+            <Chip tone="teal" fixed raw>
               Upcoming
             </Chip>
           )}

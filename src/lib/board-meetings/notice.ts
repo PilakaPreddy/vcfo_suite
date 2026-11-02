@@ -57,7 +57,9 @@ function timeLine(input: Pick<NoticeInput, 'meetingTime' | 'secondZone'>): strin
   return input.secondZone ? `${ist} / ${noticeTime(input.secondZone.time)} ${input.secondZone.label}` : ist;
 }
 
-function placeLine(input: Pick<NoticeInput, 'mode' | 'venue'>): string {
+function placeLine(raw: Pick<NoticeInput, 'mode' | 'venue'>): string {
+  // A blank venue shows as a [field] so the lead and the manager see what is missing.
+  const input = { ...raw, venue: raw.venue?.trim() || '[registered office address]' };
   if (input.mode === 'in_person') return `at ${input.venue}`;
   if (input.mode === 'hybrid') return `at ${input.venue} and through Video Conferencing ("VC")`;
   return `through Video Conferencing ("VC") and shall be deemed to be held at the Registered Office of the Company situated at ${input.venue}`;

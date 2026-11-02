@@ -167,16 +167,16 @@ export function ResolutionsTab({ meeting }: { meeting: MeetingDto }) {
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {d.status === 'locked' ? (
-                      <Chip tone="ok" fixed>
+                      <Chip tone="ok" fixed raw>
                         <Lock className="mr-1 inline h-3 w-3" aria-hidden />
                         Signed
                       </Chip>
                     ) : d.status === 'sent' ? (
-                      <Chip tone="teal" fixed>
+                      <Chip tone="teal" fixed raw>
                         With directors
                       </Chip>
                     ) : (
-                      <Chip tone="idle" fixed>
+                      <Chip tone="idle" fixed raw>
                         Draft
                       </Chip>
                     )}

@@ -50,15 +50,15 @@ export function BoardMeetingsCard() {
                       <span className="text-ink-muted"> · {shortDate(m.meetingDate)}</span>
                     </span>
                     {m.status === 'pending_approval' ? (
-                      <Chip tone="teal" fixed>
+                      <Chip tone="teal" fixed raw>
                         Approve
                       </Chip>
                     ) : m.quorum && m.quorum.state !== 'ok' ? (
-                      <Chip tone="warn" fixed>
+                      <Chip tone="warn" fixed raw>
                         Quorum
                       </Chip>
                     ) : (
-                      <Chip tone="bad" fixed>
+                      <Chip tone="bad" fixed raw>
                         Overdue
                       </Chip>
                     )}

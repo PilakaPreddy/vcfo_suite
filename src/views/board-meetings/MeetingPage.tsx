@@ -84,7 +84,7 @@ function MeetingBody({ basePath, meeting: m }: { basePath: string; meeting: Meet
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="m-0 text-[24px] font-medium leading-8 tracking-[-0.01em] text-ink">
-                {m.typeLabel} {m.kindLabel.toLowerCase()}
+                {m.kind === 'board' ? m.typeLabel : m.kindLabel}
               </h1>
               <div className="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-2 text-[14px]">
                 <span className="font-medium">{m.company.name}</span>
