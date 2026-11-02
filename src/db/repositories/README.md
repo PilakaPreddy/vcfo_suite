@@ -76,6 +76,7 @@ this table, so re-check the migration before trusting a row.
 | weekly digest (`weekly-digest.ts`) | system only | system only | system only | system only | product; the Inngest cron lists active people with the digest on (never saved = on, developers never) as their own AuthContext, then reads through the scoped repositories; `notification_deliveries` rows with `event_type = 'weekly_digest'` and the ISO week in `template_sid` |
 | user_sessions, profiles.totp_* | own rows; reset another person's two-step | own rows | own rows | own rows | `0026` (G-25); developers reach own-account routes through `requireOwnAccount` |
 | home trends (`home-trends.ts`, read only) | super home: firm-wide engagements, filings, delete and reopen audit events; admin, manager and lead homes: no series | manager home: no series | lead home: no series | client home: own engagement's filings and reopen events | product (C-0122, R-18); dev home: developer or super admin only, counts of failed messages and denied events |
+| labour_register_* (`labour-registers.ts`) | all | owned engagements | assigned engagements | **read only** (downloads) | product (2 Nov 2026); scope reused from `engagements`; writes staff-only, attestation firm-wide admin only, and there is no delete path — an attested register is frozen and a correction supersedes it |
 | dev-* (developer console reads) | **none** | **none** | **none** | **none** | developer and super admin only (`assertDeveloper`); firm-wide, client recipients masked or counted | `0026_gaps_backend.sql` |
 
 Corrections from the first draft:

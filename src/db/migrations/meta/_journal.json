@@ -232,6 +232,13 @@
       "when": 1793401707429,
       "tag": "0032_task_sort_order",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793621028851,
+      "tag": "0033_labour_registers",
+      "breakpoints": true
     }
   ]
 }

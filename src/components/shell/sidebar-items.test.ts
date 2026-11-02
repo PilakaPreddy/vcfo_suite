@@ -49,10 +49,10 @@ const STAFF: Array<{ role: Role; base: string; before: string }> = [
 
 describe('practice block (R-51)', () => {
   for (const { role, base, before } of STAFF) {
-    it(`${role}: Incorporation, Compliances, Registrations after ${before}, before Updates`, () => {
+    it(`${role}: Incorporation, Compliances, Registrations after ${before}, before Labour registers`, () => {
       const b = block(role, base);
       expect(b.before).toBe(before);
-      expect(b.after).toBe('Updates');
+      expect(b.after).toBe('Labour registers');
       expectBlockShape(b.three);
       expect(b.three.flatMap(hrefs)).toEqual([
         `${base}/incorporation`,
@@ -74,7 +74,7 @@ describe('practice block (R-51)', () => {
   it('super admin: the block replaces Practice areas, after Clients, on the Practice routes', () => {
     const b = block('super_admin', '/app/super');
     expect(b.before).toBe('Clients');
-    expect(b.after).toBe('Team');
+    expect(b.after).toBe('Labour registers');
     expectBlockShape(b.three);
     expect(b.items.map(label)).not.toContain('Practice areas');
     expect(b.three.flatMap(hrefs)).toEqual([
@@ -89,7 +89,7 @@ describe('practice block (R-51)', () => {
   it('client (staff-shell fallback): the same block after Home', () => {
     const b = block('client', '/app/client');
     expect(b.before).toBe('Home');
-    expect(b.after).toBe('Updates');
+    expect(b.after).toBe('Labour registers');
     expectBlockShape(b.three);
     expect(b.three.flatMap(hrefs)).toEqual([
       '/app/client/incorporation',

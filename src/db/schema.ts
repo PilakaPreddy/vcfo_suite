@@ -1212,3 +1212,5 @@ export * from './schema-portal-credentials';
 export * from './schema-firm';
 export * from './schema-work';
 export * from './schema-compliance-tasks';
+
+export * from './schema-labour-registers';
