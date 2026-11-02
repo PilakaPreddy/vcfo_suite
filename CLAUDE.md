@@ -106,8 +106,8 @@ access, tunnels and Auth.js URLs are in `docs/context/notes/tooling.md`.
 - `docs/context/STATE.md` — what is verified and deployed, what is deferred.
 - `docs/context/HOW-TO-BUILD.md` — recipes (page, route, repository, migration, job, UI) and a "Where is X?" table.
 - `docs/context/notes/*.md` — gotchas per area (aws, checklist-workflow, compliance,
-  data-access, design-system, email, incorporation-docs, lead-ui, notifications, shell-ui,
-  tooling). Append when something costs more than a minute.
+  data-access, demo-data, design-system, email, incorporation-docs, lead-ui, notifications,
+  shell-ui, tooling). Append when something costs more than a minute.
 - `docs/context/AWS-DEPLOY.md` and `infra/README.md` — the deploy runbook.
 - `docs/specs/` — specs still in progress; finished specs are in git history. `QUESTIONS.md`
   at the root lists the client portal v7 decisions the owner may still want to change.

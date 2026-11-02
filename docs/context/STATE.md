@@ -76,6 +76,15 @@ npm run test
 npm run dev   # or npm run build && npm run start:lan
 ```
 
+## Walkthrough demo clients (2026-11-02)
+
+`npm run demo:seed` / `npm run demo:clean` create and remove the six named projects the
+owner demos (Emburse India, Emburse WebPT, Emburse Buntera, Rootware Labs, XYZ Ventures,
+ABC Industries), one per stage including two that another firm incorporated. `:prod`
+variants of both commands run the same thing against RDS through an SSM tunnel the wrapper
+opens itself. Everything is tagged (`@demo.sbctrack.in`, `sbcdemo-`), so cleanup is exact
+and real clients are never touched. See `docs/context/notes/demo-data.md`.
+
 Demo logins:
 - `super@vcfo.local` / `super123` (Super Admin — bird's-eye)
 - `admin@vcfo.local` / `admin123` (Firm Admin) — absent from the current local DB (2026-09-07); use `admin-nadia@demo.vcfo.local` / `demo1234` from `db:seed-demo`
