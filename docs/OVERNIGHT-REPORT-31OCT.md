@@ -103,3 +103,13 @@ Then run `npm run totp:reencrypt` through the tunnel (docs/context/AWS-DEPLOY.md
 | Rollback image | ✓ | `vcfo-suite:rollback-0f746dfc`. |
 | Image | ✓ | `vcfo-suite:b5f3f919` and `:latest`. App Runner deployment succeeded at 12:03 IST. |
 | Live check | ✓ | `/` and `/login` answer 200. No errors in the application log. Not checked signed in. |
+
+## 8. Deploy, 2 Nov 2026 18:03 IST
+
+| Step | Done | Detail |
+|---|---|---|
+| `main` | ✓ | `fd08d4ac`: Ask VCFO robot fixes (PR #4 and PR #5). No migration and no infra change. |
+| Gate | ✓ | 0 type errors, 0 lint errors (518 warnings), 3,709 tests pass. |
+| Rollback image | ✓ | `vcfo-suite:rollback-b5f3f919`. |
+| Image | ✓ | `vcfo-suite:fd08d4ac` and `:latest`. App Runner deployment succeeded at 18:03 IST. |
+| Live check | ✓ | `/` and `/login` answer 200. No errors in the application log. Not checked signed in. |
