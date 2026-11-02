@@ -163,9 +163,16 @@ export function removeRepeatEntry(
  * `showWhen`, so the same test works inside an entry.
  */
 export function applyShowWhen(fields: ChecklistField[], responses: ChecklistItemResponses): ChecklistField[] {
-  return fields.filter(
-    (field) => !field.showWhen || (responses[field.showWhen.field] ?? '').trim() === field.showWhen.value,
-  );
+  return fields.filter((field) => !field.showWhen || showWhenMatches(field.showWhen, responses[field.showWhen.field]));
+}
+
+/** True when a stored value satisfies a `showWhen` rule (`value`, or any of `anyOf`). */
+export function showWhenMatches(
+  showWhen: NonNullable<ChecklistField['showWhen']>,
+  raw: string | undefined,
+): boolean {
+  const value = (raw ?? '').trim();
+  return value === showWhen.value || (showWhen.anyOf?.includes(value) ?? false);
 }
 
 /** Concrete label for a dotted field id — "Passport copy · Director 2" — or null for a plain id. */
@@ -212,7 +219,7 @@ export function missingRequiredEntryFields(group: RepeatField, entry: RepeatEntr
   const errors: Record<string, string> = {};
   for (const field of group.entryFields) {
     if (!field.required) continue;
-    if (field.showWhen && (entry.values[field.showWhen.field] ?? '').trim() !== field.showWhen.value) continue;
+    if (field.showWhen && !showWhenMatches(field.showWhen, entry.values[field.showWhen.field])) continue;
     if (!(entry.values[field.id] ?? '').trim()) {
       errors[field.id] = field.type === 'file' ? 'Please upload a document.' : 'This field is required.';
     }

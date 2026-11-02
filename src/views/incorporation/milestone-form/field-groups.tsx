@@ -3,7 +3,7 @@ import type { ChecklistField } from '@/data/checklist';
 import { WhatsThisButton } from '@/components/ask/WhatsThisButton';
 import { cn } from '@/lib/utils';
 import { isFieldEditableForClient } from '@/lib/checklist/checklist-item-lock';
-import { isLeadOnlyField } from '@/lib/incorporation/pre-inc-direct-flow';
+import { isClientOnlyField, isLeadOnlyField } from '@/lib/incorporation/pre-inc-direct-flow';
 import { Pre1SectionCard } from '@/views/incorporation/MilestoneResponseFormParts';
 import type { ReadOnlyFieldRenderers } from './read-only-field';
 import type { MilestoneFormCtx } from './types';
@@ -44,7 +44,9 @@ export function renderMilestoneFieldGroups(
 
   const isFieldLockedForClient = (fieldId: string) =>
     (enforceClientLock && submissionLocked && !isFieldEditableForClient(itemState, fieldId)) ||
-    (isClient && directFlow && isLeadOnlyField(item.id, fieldId));
+    (isClient && directFlow && isLeadOnlyField(item.id, fieldId)) ||
+    // The project lead reads the client's own answers (Part A) and fills only the NIC codes.
+    (!isClient && directFlow && isClientOnlyField(item.id, fieldId));
 
   const showUnlock = showFieldUnlock && submissionLocked && !isClient;
   const groupsForRender =
@@ -63,7 +65,8 @@ export function renderMilestoneFieldGroups(
      * untouched.
      */
     const recordLayout =
-      (isClient || formReadOnly) && group.fields.every((field) => fieldIsReadOnly(field.id));
+      (isClient || formReadOnly || (directFlow && group.fields.every((field) => isClientOnlyField(item.id, field.id)))) &&
+      group.fields.every((field) => fieldIsReadOnly(field.id));
 
     const fieldsBlock = recordLayout ? (
       <dl className="milestone-record">{group.fields.map(renderRecordRow)}</dl>

@@ -1,6 +1,6 @@
 # STATE — verified build state
 
-Last updated: 2026-11-02 (Ask VCFO robot avatar and dedicated page on `chatbot-avatar`, not deployed). Before that: 2026-10-30 (M7 SOC 2 secrets and console built on `ovn/m5`, not deployed). Before that: 2026-10-30 (`main` = 34169d0 deployed to App Runner; RDS migrated to 0030 after snapshot `vcfo-suite-db-pre-0030-20261030-1154`). Earlier: 2026-10-29 (`ui/spectrum` fast-forwarded to `main` at 72d2d7f and deployed to App Runner; migration 0026 applied on RDS after snapshot `vcfo-suite-db-pre-0026-20261029-2003`).
+Last updated: 2026-11-02 (Part A `pre-1` reworked to the owner's client list on `claude/gifted-gates-zcmv0s`, not deployed; see `notes/checklist-workflow.md`, "Part A owner list"). Before that: 2026-11-02 (Ask VCFO robot avatar and dedicated page on `chatbot-avatar`, not deployed). Before that: 2026-10-30 (M7 SOC 2 secrets and console built on `ovn/m5`, not deployed). Before that: 2026-10-30 (`main` = 34169d0 deployed to App Runner; RDS migrated to 0030 after snapshot `vcfo-suite-db-pre-0030-20261030-1154`). Earlier: 2026-10-29 (`ui/spectrum` fast-forwarded to `main` at 72d2d7f and deployed to App Runner; migration 0026 applied on RDS after snapshot `vcfo-suite-db-pre-0026-20261029-2003`).
 
 > Docs cleanup 2026-09-30: specs and progress reports of finished features were
 > removed. A doc named below that is not under `docs/context/` or `docs/specs/`

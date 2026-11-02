@@ -160,3 +160,40 @@ Spec `docs/specs/pre-inc-direct-flow/` (CONTEXT, AUDIT, REPORT).
 - **Slice keys added** (all three edits in `checklist-state-key.ts`): `submittedByName`,
   `submittedByRole`, `waitingOnLeadAt`, `waitingOnLeadByName`, `lastEditedAt`,
   `lastEditedByName`, `lastEditedByRole`. "Last edited by …" shows under the step title.
+
+## Part A owner list (2026-11-02)
+
+- The owner's handwritten list replaced the Part A (`pre-1`) questions. Client sections, in order:
+  Business Description · Proposed Company Names (1 and 2) · Foreign Entity Details (name,
+  address, country, state of incorporation, COI upload) · Proposed Directors · Proposed Share
+  Capital Structure · Person Signing the Board Resolution (name, designation, KYC upload). The
+  project lead's tab is **NIC Codes** (main and additional), last.
+- Dropped from the form (stored values stay, nothing reads them as required): registration
+  number, trademark, company mail and mobile, signatory gender, driving licence, utility bill,
+  board resolution date. The signatory KYC upload reuses the `passportUrl` key.
+- **Lead-only fields are hidden from the client** (`filterFieldsByViewer(…, 'client', itemId)`
+  drops `isLeadOnlyField`) instead of showing "Your project lead fills this". Client portal
+  sub-steps and the home popup drop them too.
+- **Directors are back on Part A** in the legacy `directorCount` + `director{n}*` slots (2 to 4),
+  so the board resolution (drafted at `pre-2`, before `pre-15`) can name them. Slots 3 and 4 use
+  `showWhen.anyOf` (new; evaluate it with `showWhenMatches`). `pre-15` still wins once it has
+  entries, and it seeds itself from Part A on first open (`seedProposedDirectorsFromPartA`, in
+  the milestone autosave hook). Board-resolution missing-director links now point at Part A.
+- The board resolution no longer requires a date; it prints today's date and the lead edits it.
+- Section names live in `PART_A_SECTION`; the doc pack, assist profile and BR error links read it.
+- **Part A is the client's; the lead fills only the NIC codes** (owner, 2026-11-02, second pass).
+  `isClientOnlyField` (pre-inc-direct-flow) marks every `pre-1` field except the lead-only NIC
+  fields and `stepRemarks`. `canRoleEditField('intern', …)` is false for them, the lead's saves
+  are stripped with `stripClientOnlyResponses` (form, PATCH route, submit), and the lead's form
+  renders them as a read-only record. A lead's Submit while client answers are missing gets
+  "Waiting on the client" (form) or a 422 (server), never `waiting_on_lead`.
+- Part A defaults (share capital, two directors) apply to the client's draft only; staff read
+  what was saved (`use-milestone-draft.ts`). "Ask client" is not offered on lead-only fields.
+- **Client portal step 1 is the lead's page**: the same tabbed `MilestoneResponseForm` (variant client,
+  `sectionTabs`) as a card on its own (no "What this step captures" card, sub-steps or views), with "Request a change" under it once done.
+- **Every client step page uses the lead's layout** (owner, 2026-11-02): the shared form card on
+  its own, read-only where the client does not fill; file requests, approval, "Message the lead",
+  "Request a change" and "Go to step n" sit under it. Steps with no client-visible answer fields,
+  and client-owned steps outside the direct flow (edited as rows, since the shared form is
+  read-only for the client there), keep a plain answers card titled with the step — the
+  "What this step captures" status block, sub-steps and description are gone everywhere.

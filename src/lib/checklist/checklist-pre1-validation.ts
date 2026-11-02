@@ -1,5 +1,6 @@
 import type { ChecklistField } from '@/data/checklist';
 import type { ChecklistItemResponses } from '@/lib/checklist/checklist-responses';
+import { showWhenMatches } from '@/lib/checklist/checklist-repeat';
 import {
   ADDITIONAL_NIC_CODES_GROUP_ID,
   isNicCodeFormat,
@@ -7,7 +8,6 @@ import {
 } from '@/lib/incorporation/nic-2008';
 
 const INDIA_PVT_SUFFIX = /india\s+private\s+limited\s*$/i;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const PRE1_GENDER_OPTIONS = [
   { value: 'male', label: 'Male' },
@@ -32,19 +32,6 @@ export function pre1GenderLabel(value: string | undefined | null): string | null
 export const PRE1_INDIA_RESIDENT_OPTIONS = [
   { value: 'yes', label: 'Yes' },
   { value: 'no', label: 'No' },
-] as const;
-
-export const PRE1_MOBILE_COUNTRY_OPTIONS = [
-  { value: '+91', label: 'India (+91)' },
-  { value: '+1', label: 'United States / Canada (+1)' },
-  { value: '+44', label: 'United Kingdom (+44)' },
-  { value: '+65', label: 'Singapore (+65)' },
-  { value: '+971', label: 'UAE (+971)' },
-  { value: '+49', label: 'Germany (+49)' },
-  { value: '+33', label: 'France (+33)' },
-  { value: '+81', label: 'Japan (+81)' },
-  { value: '+86', label: 'China (+86)' },
-  { value: '+61', label: 'Australia (+61)' },
 ] as const;
 
 export const PRE1_DEFAULT_AUTHORISED_SHARE_CAPITAL = '1000000';
@@ -86,25 +73,26 @@ const PRE1_DEFAULT_DIRECTOR_COUNT = PRE1_MIN_DIRECTORS;
 const PRE1_PARENT_HAS_TRADEMARK_ID = 'parentEntityHasTrademark' as const;
 const PRE1_PARENT_TRADEMARK_URL_ID = 'parentEntityTrademarkUrl' as const;
 
+/**
+ * Part A answers that must be filled (owner's list, 2026-11-02). Company mail,
+ * mobile, registration number, signatory gender and the board resolution date
+ * are no longer asked; old values stay stored and are never required.
+ */
 const PRE1_BASE_REQUIRED_TEXT_IDS = [
-  'parentEntityName',
-  'parentEntityRegistrationNumber',
-  'parentEntityAddress',
-  'signatoryFirstName',
-  'signatoryLastName',
-  'signatoryDesignation',
-  'signatoryGender',
+  'businessDescription',
   'proposedName1',
   'proposedName2',
-  'companyMailId',
-  'companyMobileCountryCode',
-  'companyMobileNumber',
-  'businessDescription',
-  'nicCode',
+  'parentEntityName',
+  'parentEntityAddress',
+  'parentEntityCountry',
+  'directorCount',
   'authorisedShareCapital',
   'paidUpShareCapital',
   'nominalValuePerEquityShare',
-  'boardResolutionDate',
+  'signatoryFirstName',
+  'signatoryLastName',
+  'signatoryDesignation',
+  'nicCode',
 ] as const;
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -136,17 +124,13 @@ export function formatPre1DateDisplay(value: string | undefined | null): string 
   });
 }
 
-const PRE1_REQUIRED_FILE_IDS = [
-  'certificateOfIncorporationUrl',
-  'passportUrl',
-  'drivingLicenseUrl',
-  'utilityBillUrl',
-] as const;
+const PRE1_REQUIRED_FILE_IDS = ['certificateOfIncorporationUrl', 'passportUrl'] as const;
 
 /**
- * LEGACY — proposed directors moved to Part B `pre-15` (2026-09-16). These read
- * the old Part A slots (`director{n}*`) for engagements that still hold them;
- * see `src/lib/incorporation/proposed-directors.ts`.
+ * Part A proposed directors (`directorCount` + the `director{n}*` slots). They
+ * were moved to `pre-15` on 2026-09-16 and came back to Part A on 2026-11-02 so
+ * the board resolution can name them; `pre-15` still holds the full KYC and,
+ * once it has entries, wins (see `src/lib/incorporation/proposed-directors.ts`).
  */
 export function parseDirectorCount(responses: ChecklistItemResponses): number {
   const raw = (responses.directorCount ?? String(PRE1_DEFAULT_DIRECTOR_COUNT)).trim();
@@ -165,7 +149,7 @@ export function getPre1VisibleFields(
     }
 
     if (field.showWhen) {
-      return (responses[field.showWhen.field] ?? '').trim() === field.showWhen.value;
+      return showWhenMatches(field.showWhen, responses[field.showWhen.field]);
     }
 
     return true;
@@ -208,24 +192,14 @@ export function validatePre1Responses(
     }
   }
 
-  if ((responses.signatoryGender ?? '').trim() && !isValidPre1Gender(responses.signatoryGender)) {
-    errors.signatoryGender = 'Select a valid gender.';
+  if (applies('directorCount')) {
+    Object.assign(errors, validatePre1Directors(responses));
   }
 
   for (const id of PRE1_REQUIRED_FILE_IDS) {
     if (applies(id) && !(responses[id] ?? '').trim()) {
       errors[id] = 'Please upload a document.';
     }
-  }
-
-  const mail = (responses.companyMailId ?? '').trim();
-  if (mail && !EMAIL_RE.test(mail)) {
-    errors.companyMailId = 'Enter a valid email address.';
-  }
-
-  const mobile = (responses.companyMobileNumber ?? '').trim();
-  if (mobile && !/^\d{6,15}$/.test(mobile.replace(/\s/g, ''))) {
-    errors.companyMobileNumber = 'Enter a valid mobile number (digits only, 6–15 digits).';
   }
 
   const words = countWords(responses.businessDescription ?? '');
@@ -253,11 +227,6 @@ export function validatePre1Responses(
     }
   }
 
-  const boardResolutionDate = (responses.boardResolutionDate ?? '').trim();
-  if (boardResolutionDate && !isValidPre1Date(boardResolutionDate)) {
-    errors.boardResolutionDate = 'Enter a valid date.';
-  }
-
   const nominalRaw = (responses.nominalValuePerEquityShare ?? '').trim();
   if (nominalRaw && !isValidPre1NominalValuePerEquityShare(nominalRaw)) {
     errors.nominalValuePerEquityShare =
@@ -265,6 +234,34 @@ export function validatePre1Responses(
   }
 
   return { ok: Object.keys(errors).length === 0, errors, warnings };
+}
+
+/**
+ * The proposed directors on Part A: each slot up to the chosen count needs a
+ * first and last name, a gender and a residency answer, and at least one of
+ * them must be resident in India.
+ */
+function validatePre1Directors(responses: ChecklistItemResponses): Record<string, string> {
+  const errors: Record<string, string> = {};
+  const count = parseDirectorCount(responses);
+  let hasResident = false;
+  for (let i = 0; i < count; i += 1) {
+    for (const id of [PRE1_DIRECTOR_FIRST_NAME_IDS[i]!, PRE1_DIRECTOR_LAST_NAME_IDS[i]!]) {
+      if (!(responses[id] ?? '').trim()) errors[id] = 'This field is required.';
+    }
+    const genderId = PRE1_DIRECTOR_GENDER_IDS[i]!;
+    const gender = (responses[genderId] ?? '').trim();
+    if (!gender) errors[genderId] = 'This field is required.';
+    else if (!isValidPre1Gender(gender)) errors[genderId] = 'Select a valid gender.';
+    const residentId = PRE1_DIRECTOR_INDIA_RESIDENT_IDS[i]!;
+    const resident = (responses[residentId] ?? '').trim();
+    if (!resident) errors[residentId] = 'This field is required.';
+    if (resident === 'yes') hasResident = true;
+  }
+  if (!hasResident && !Object.keys(errors).some((id) => id.endsWith('IndiaResident'))) {
+    errors[PRE1_DIRECTOR_INDIA_RESIDENT_IDS[0]] = 'At least one proposed director must be resident in India.';
+  }
+  return errors;
 }
 
 const ADDITIONAL_NIC_CODES_MAX = 9;
@@ -348,8 +345,8 @@ export function applyPre1EngagementDefaults(
   if (!next.nominalValuePerEquityShare?.trim()) {
     next.nominalValuePerEquityShare = PRE1_DEFAULT_NOMINAL_VALUE_PER_EQUITY_SHARE;
   }
-  if (!next.companyMobileCountryCode?.trim()) {
-    next.companyMobileCountryCode = '+91';
+  if (!next.directorCount?.trim()) {
+    next.directorCount = String(PRE1_DEFAULT_DIRECTOR_COUNT);
   }
   return next;
 }

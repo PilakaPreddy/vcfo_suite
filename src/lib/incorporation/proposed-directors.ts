@@ -4,7 +4,14 @@ import {
   getClientResponseFields,
   type ChecklistItemResponses,
 } from '@/lib/checklist/checklist-responses';
-import { isRepeatField, repeatEntries, type RepeatEntry, type RepeatField } from '@/lib/checklist/checklist-repeat';
+import {
+  addRepeatEntry,
+  isRepeatField,
+  repeatEntries,
+  repeatFieldId,
+  type RepeatEntry,
+  type RepeatField,
+} from '@/lib/checklist/checklist-repeat';
 import { parseDirectorCount } from '@/lib/checklist/checklist-pre1-validation';
 import { pre6NrFieldPrefix, pre6ResidentFieldPrefix } from '@/lib/checklist/checklist-pre6-validation';
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
@@ -116,6 +123,36 @@ export function readProposedDirectors(state: StepStateMap): ProposedDirector[] {
     if (entries.length > 0) return entries;
   }
   return legacyDirectors(responsesFor(state, 'pre-1'), responsesFor(state, 'pre-6'));
+}
+
+/** What Part A captures about each director and `pre-15` starts from. */
+const PART_A_DIRECTOR_KEYS = ['firstName', 'middleName', 'lastName', 'gender', 'indiaResident'] as const;
+
+/**
+ * The `pre-15` patch that starts its director list from the Part A directors
+ * (name, gender, residency), so nobody types them twice. Null when `pre-15`
+ * already has entries or Part A names nobody — a seed never overwrites.
+ */
+export function seedProposedDirectorsFromPartA(
+  pre15: ChecklistItemResponses,
+  pre1: ChecklistItemResponses,
+): ChecklistItemResponses | null {
+  const group = proposedDirectorsGroup();
+  if (!group || repeatEntries(pre15, group).length > 0) return null;
+  const directors = legacyDirectors(pre1, {});
+  if (directors.length === 0) return null;
+  let current: ChecklistItemResponses = { ...pre15 };
+  const patch: ChecklistItemResponses = {};
+  for (const director of directors) {
+    const { entryId, patch: added } = addRepeatEntry(current, group);
+    current = { ...current, ...added };
+    Object.assign(patch, added);
+    for (const key of PART_A_DIRECTOR_KEYS) {
+      const value = (director.values[key] ?? '').trim();
+      if (value) patch[repeatFieldId(group.id, entryId, key)] = value;
+    }
+  }
+  return patch;
 }
 
 /** Template id → legacy Director KYC suffix (`residentDirector` + suffix). */

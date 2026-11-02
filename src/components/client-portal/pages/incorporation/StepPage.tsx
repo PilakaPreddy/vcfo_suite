@@ -20,7 +20,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getActiveCatalogItems, getChecklistStepTimelineLabel, type ChecklistField } from '@/data/checklist';
 import { resolveChecklistItemFromStepParam } from '@/lib/slug';
-import { extractItemResponses, fieldsForOwnership, getClientResponseFields } from '@/lib/checklist/checklist-responses';
+import {
+  extractItemResponses,
+  fieldsForOwnership,
+  getClientResponseFields,
+  isStepRemarksField,
+} from '@/lib/checklist/checklist-responses';
 import { filterFieldsByViewer } from '@/lib/checklist/checklist-field-access';
 import { applyShowWhen, expandRepeatFields, isRepeatField, repeatFieldLabel, resolveFieldLabels } from '@/lib/checklist/checklist-repeat';
 import { withoutUnusedDirectorSlots } from '@/lib/incorporation/incorp-director-slots';
@@ -31,6 +36,8 @@ import type { PortalStep } from '@/lib/client-portal/step-model';
 import type { ClientFileRequestDto } from '@/lib/client-portal/incorporation-types';
 import { canRoleEditField, isDirectFlowStep } from '@/lib/incorporation/pre-inc-direct-flow';
 import { itemKey } from '@/lib/work/item-key';
+import { useApp } from '@/context/AppContext';
+import { MilestoneResponseForm } from '@/views/incorporation/MilestoneResponseForm';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +51,7 @@ import { portalHref } from '../../routes';
 import { usePortal, usePortalCrumbs } from '../../PortalProvider';
 import { useDocViewer, type ViewerDoc } from '../documents/DocViewer';
 import { triggerDownload } from '../documents/file-types';
-import { IncFrame, fmt, fmtL, fmtS, istDay, kb } from './ui';
+import { IncFrame, fmt, fmtL, istDay, kb } from './ui';
 import {
   INC_EXTRAS_KEY,
   KL,
@@ -55,14 +62,12 @@ import {
   signedUrlFor,
   stepAnswer,
   stepHrefOf,
-  subList,
   tipTxt,
   useIncData,
   type IncData,
 } from './data';
 import { stepFiles } from './StepTable';
-import { SubSteps } from './PhasePage';
-import { prefillNotes, subStepCount } from '@/lib/client-portal/step-progress';
+import { prefillNotes } from '@/lib/client-portal/step-progress';
 import { portalFor } from './portals';
 import { FieldArea, PortalModal } from './modal';
 import { Col, Cols, Dot, DropZone, Empty, Island, ListRow, PageHead, Pager, SCard, markState, markTone, stepChip, useGo } from './spectrum';
@@ -129,15 +134,6 @@ function answerRows(s: PortalStep, ownershipType: IncData['ownershipType'], inDo
   }
   if (!rows.some((r) => /^remarks/i.test(r.label))) rows.push({ label: 'Remarks (optional)', value: '—' });
   return rows;
-}
-
-function liveIntro(s: PortalStep, d: IncData, prev?: PortalStep): string {
-  const k = kd(s);
-  const sbc = s.owner !== 'client';
-  if (k === 'you') return `${d.short}’s team filled this step. Check it, then approve & submit${s.due ? ` by ${fmt(s.due)}` : ''}.`;
-  if (k === 'with') return `${d.short}’s team is preparing this step${s.due ? ` (due ${fmt(s.due)})` : ''}. Here is what it captures.`;
-  if (k === 'prog') return `Fill this step${s.due ? ` and submit by ${fmt(s.due)}` : ''}. Here is what it captures.`;
-  return `${sbc ? `${d.short}’s team prepares this step.` : `${d.short} fills this step once step ${s.n - 1}${prev ? ` · ${prev.title}` : ''} is done.`} Here is what it captures.`;
 }
 
 /* ---------------- change-request dialog ---------------- */
@@ -210,6 +206,7 @@ const PHASE_PART: Record<number, string> = { 1: 'SPICe+ Part A', 2: 'SPICe+ Part
 
 export default function StepPage({ stepParam }: { stepParam: string }) {
   const d = useIncData();
+  const { engagementsSettled } = useApp();
   const { go, openChat, toast, drill } = usePortal();
   const goTo = useGo();
   const qc = useQueryClient();
@@ -499,11 +496,8 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
   // G-10: where pre-filled answers came from, and the step's sub-steps, both derived from the answers
   const notes = prefillNotes(s.id, Object.fromEntries(Object.values(d.model.byId).map((x) => [x.id, x.slice])));
   const rows = answerRows(s, d.ownershipType, new Set([...requests.map((r) => r.fieldId), ...otherFiles.map((f) => f.fieldId)]), notes);
-  const subs = subList(s);
-  const subCount = subStepCount(subs);
   const released = k === 'done' || isStepReleasedToClient(s.slice, s.id);
   const phl = PHL[s.phaseNo - 1]!;
-  const tab = s.item.fields?.find((f) => f.section)?.section ?? s.title;
   const actItems = requests.length + 2;
   const actDone = requests.filter((r) => r.fulfilledAt).length + 1;
   const actPct = Math.round((actDone / actItems) * 100);
@@ -515,8 +509,6 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
   const inPhase = phase.steps;
   const portalLink = s.owner !== 'client' && s.n !== 2 ? portalFor(s.item) : null;
   const forms = (s.item.forms ?? []).slice(0, 3);
-  const st = statusLine(s, d, prev);
-  const about = s.item.description?.trim() || (k === 'done' ? '' : liveIntro(s, d, prev));
   const showDocs = view === 'docs' && docsCount > 0;
   // C-218: the client edits text answers on a step it fills that is still open. The draft route
   // repeats every check; this only decides which rows draw an input.
@@ -530,6 +522,23 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
     (direct ? canRoleEditField('client', s.id, r.field.id) : (r.field.filledBy ?? s.item.responsibleRole) === 'client') &&
     (!s.slice?.locked || unlocked.has(r.field.id));
   const editable = rows.some(canEditRow);
+  /**
+   * Every step: the client's page is the project lead's page — the same tabbed
+   * form card on its own (one tab per section; the client's own steps are
+   * filled here, the rest read). No "What this step captures" card, sub-steps
+   * or Answers / Documents views. The client's actions (approve, file requests,
+   * message the lead, request a change) sit under the card. Two cases keep the
+   * old answer list: a step with no answer fields for the client, and a
+   * client-owned step outside the direct flow that the client edits as rows
+   * (the shared form is read-only for the client there).
+   */
+  const clientFormFields = filterFieldsByViewer(
+    fieldsForOwnership(s.id, getClientResponseFields(s.item), d.ownershipType),
+    'client',
+    s.id,
+  ).filter((f) => !isStepRemarksField(f));
+  const leadLayout = Boolean(d.engagementId) && clientFormFields.length > 0 && (direct || !editable);
+  const reqDone = requests.filter((r) => r.fulfilledAt).length;
   const dirty = Object.keys(draft).length > 0;
   // C-219: a step SBC or MCA holds gets "Message <lead>" in the card foot.
   const leadFirst = d.leadName ? firstName(d.leadName) : '';
@@ -566,18 +575,21 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
     );
   };
 
+  const cardOtherFiles = leadLayout ? [] : otherFiles;
+  const cardDocsCount = requests.length + cardOtherFiles.length;
+  const cardDocsDone = leadLayout ? reqDone : docsDone;
   const docsCard =
-    docsCount > 0 ? (
+    cardDocsCount > 0 ? (
       <section ref={docsRef} id="docs" aria-label="Documents" className="min-w-0">
         <SCard
           title="Documents"
           flush
           right={
             requests.length ? (
-              <Chip tone={docsDone === docsCount ? 'ok' : 'warn'}>{`${docsDone} of ${docsCount}`}</Chip>
+              <Chip tone={cardDocsDone === cardDocsCount ? 'ok' : 'warn'}>{`${cardDocsDone} of ${cardDocsCount}`}</Chip>
             ) : (
               <span className="text-[13px] text-ink-muted">
-                {docsCount} file{docsCount === 1 ? '' : 's'}
+                {cardDocsCount} file{cardDocsCount === 1 ? '' : 's'}
               </span>
             )
           }
@@ -606,7 +618,7 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
               </div>
             );
           })}
-          {otherFiles.map((f) => fileRow(f.fieldId, f.label, f.path, k === 'done' ? 'Checked' : 'Uploaded'))}
+          {cardOtherFiles.map((f) => fileRow(f.fieldId, f.label, f.path, k === 'done' ? 'Checked' : 'Uploaded'))}
         </SCard>
       </section>
     ) : null;
@@ -669,30 +681,49 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
     </div>
   );
 
-  const answersCard = (
-    <SCard title={k === 'done' || k === 'you' ? 'Answers' : 'What this step captures'} meta={tab !== s.title ? tab : undefined} flush>
-      <div className="flex items-start gap-3 border-b border-line-soft px-4 py-3 md:px-5" role="status">
-        <StepMark state={markState(s)} tone={markTone(s)} size={20} className="mt-0.5" label={chip.label} />
-        <span className="min-w-0 flex-1">
-          <b className={cn('block text-[14px] font-medium', st.bad ? 'text-danger' : 'text-ink')}>{st.title}</b>
-          <span className="block text-[12.5px] text-ink-muted">{st.sub}</span>
-        </span>
-      </div>
-      {subs.length >= 2 ? (
-        <div className="border-b border-line-soft px-4 py-3 md:px-5" aria-label="Sub-step progress">
-          <span className="flex items-center justify-between gap-3 text-[12.5px] text-ink-muted">
-            <span>Sub-steps</span>
-            {/* past six sub-steps SubSteps prints the count itself */}
-            {subs.length <= 6 ? (
-              <span className="font-medium text-ink-2">
-                {subCount.done} of {subCount.total} done
-              </span>
-            ) : null}
-          </span>
-          <SubSteps subs={subs} />
+  const stepForm = leadLayout ? (
+    <div className="grid gap-3">
+      <MilestoneResponseForm
+        key={`${s.id}-${d.engagementId}`}
+        item={s.item}
+        clientId={d.engagementId!}
+        engagementId={d.engagementId}
+        variant="client"
+        open={engagementsSettled}
+        readOnly={!editStep}
+        compactChrome
+        sectionTabs
+      />
+      {requests.length > 0 ? docsCard : null}
+      {k === 'you' ? <div className="overflow-hidden rounded-lg border border-line bg-surface">{approval}</div> : null}
+      {k === 'with' && s.owner !== 'client' ? (
+        <div className="flex justify-end">
+          <Button variant="secondary" onClick={() => setMsgOpen(true)}>
+            <MessageSquare size={16} strokeWidth={1.6} aria-hidden />
+            {leadFirst ? `Message ${leadFirst}` : 'Message your team'}
+          </Button>
+        </div>
+      ) : k === 'done' ? (
+        <div className="flex justify-end">
+          <Button variant="secondary" onClick={requestChange}>
+            <MessageSquare size={16} strokeWidth={1.6} aria-hidden />
+            Request a change
+          </Button>
+        </div>
+      ) : k === 'up' && prev ? (
+        <div className="flex justify-end">
+          <Button variant="secondary" onClick={() => go(stepHrefOf(prev))}>
+            Go to step {prev.n}
+          </Button>
         </div>
       ) : null}
-      {about ? <p className="m-0 border-b border-line-soft px-4 py-3 text-[13.5px] text-ink-2 md:px-5">{about}</p> : null}
+    </div>
+  ) : null;
+
+  // Same look as the lead's page: a plain card of the step's answers — no status
+  // block, sub-steps or description (used where the shared form has nothing to show).
+  const answersCard = (
+    <SCard title={s.title} flush>
       <dl className="m-0">
         {rows.map((r, i) => (
           <KvRow
@@ -848,7 +879,7 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
           />
           <Cols>
             <Col>
-              {docsCount > 0 ? (
+              {stepForm ?? (docsCount > 0 ? (
                 <SpectrumTabs
                   variant="underline"
                   label="Views of this step"
@@ -859,8 +890,8 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
                   value={view}
                   onChange={setView}
                 />
-              ) : null}
-              {showDocs ? docsCard : answersCard}
+              ) : null)}
+              {stepForm ? null : showDocs ? docsCard : answersCard}
             </Col>
             <Col>{rail}</Col>
           </Cols>
@@ -884,23 +915,6 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
       {viewer.node}
     </IncFrame>
   );
-}
-
-/** Status line at the top of the Answers card (prototype step-parts statusLine). */
-function statusLine(s: PortalStep, d: IncData, prev?: PortalStep): { title: string; sub: string; bad?: boolean } {
-  const k = kd(s);
-  const due = s.due ? fmt(s.due) : '-';
-  if (k === 'done')
-    return { title: s.owner === 'client' ? 'Approved' : 'Completed', sub: `${s.owner === 'client' ? 'Accepted after submission on' : 'Delivered by SBC on'} ${fmtS(s.doneOn)}` };
-  if (k === 'you') return { title: `Waiting on ${d.short} · due ${due}`, sub: 'Check the answers, then approve', bad: s.late };
-  if (k === 'prog') return { title: `In progress · due ${due}`, sub: `Fill the remaining answers and submit by ${due}`, bad: s.late };
-  if (k === 'with')
-    return {
-      title: `With ${s.owner === 'mca' ? 'MCA' : 'SBC'}${s.due ? ` · due ${due}` : ''}`,
-      sub: s.owner === 'mca' ? 'MCA reviews the filing' : `${d.leadName ?? 'Your project lead'} is working on it`,
-      bad: s.late,
-    };
-  return { title: 'Not started', sub: prev ? `Opens after step ${prev.n} · ${prev.title}` : 'Opens later' };
 }
 
 function stepTimelineLabel(s: PortalStep): string {
