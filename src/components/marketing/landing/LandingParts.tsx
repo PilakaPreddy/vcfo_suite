@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import { ArrowRight, Check, Minus, X } from "lucide-react";
-import { ASK_A, ASK_Q, COMPARE, COMPARE_COLS, MONTHS, REGULATORS, busyWeeks, ringItems, type Mark } from "./content";
+import { COMPARE, COMPARE_COLS, ringItems, type Mark } from "./content";
 import { reduceMotion } from "./landing-motion";
 
 /** A 24 px line icon, drawn the way the old landing drew them (stroke 1.75). */
@@ -49,37 +49,20 @@ export function SwapWord({ words, start }: { words: string[]; start: boolean }) 
 /** Fixed decimals, so the server and the browser print the same coordinates. */
 const f2 = (n: number) => n.toFixed(2);
 
-/** The ring tracks, outside in, with the short label drawn inside each track at twelve o'clock. */
-const RING = [
-  { s: "gst", r: 214, l: "GST" },
-  { s: "it", r: 192, l: "TAX" },
-  { s: "mca", r: 170, l: "MCA" },
-  { s: "lab", r: 148, l: "LAB" },
-  { s: "rbi", r: 126, l: "RBI" },
-] as const;
-
-/**
- * The year ring: one track per regulator, a dot for every statutory date, a sweeping hand.
- * Each dot carries its month (`data-m`), so the pinned #comply section can turn the ring month by month.
- * The one label in the centre is "each filing: owner · date · proof" (D7, the old #record section).
- */
+/** The year ring: one track per regulator, a dot for every statutory date, a sweeping hand. */
 export function ComplianceRing() {
   const C = 260;
-  const R = Object.fromEntries(RING.map((t) => [t.s, t.r])) as Record<(typeof RING)[number]["s"], number>;
+  const MONTHS = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
+  const R = { gst: 214, it: 192, mca: 170, lab: 148, rbi: 126 } as const;
   const items = ringItems();
   const pos = (m: number, d: number, r: number) => {
     const a = ((m + (d - 1) / 31) / 12) * Math.PI * 2 - Math.PI / 2;
     return [C + r * Math.cos(a), C + r * Math.sin(a)];
   };
   return (
-    <svg id="ring" viewBox="0 0 520 520" role="img" aria-label="A year ring from April to March with dots for every statutory filing: GST, income tax, MCA, labour and RBI. Each filing has an owner, a date and a proof.">
-      {RING.map((t) => (
-        <circle key={t.s} className="track" cx={C} cy={C} r={t.r} />
-      ))}
-      {RING.map((t) => (
-        <text key={`l-${t.s}`} className={`trk-l s-${t.s}`} x={C - 6} y={C - t.r + 3.5}>
-          {t.l}
-        </text>
+    <svg id="ring" viewBox="0 0 520 520" role="img" aria-label="A year ring from April to March with dots for every statutory filing: GST, income tax, MCA, labour and RBI.">
+      {Object.entries(R).map(([k, r]) => (
+        <circle key={k} className="track" cx={C} cy={C} r={r} />
       ))}
       {MONTHS.map((mo, i) => {
         const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
@@ -87,7 +70,7 @@ export function ComplianceRing() {
         return (
           <React.Fragment key={mo}>
             <line className="mline" x1={f2(C + 112 * Math.cos(a))} y1={f2(C + 112 * Math.sin(a))} x2={f2(C + 228 * Math.cos(a))} y2={f2(C + 228 * Math.sin(a))} />
-            <text className="month" data-m={i} x={f2(C + 246 * Math.cos(am))} y={f2(C + 246 * Math.sin(am) + 4)}>
+            <text className="month" x={f2(C + 246 * Math.cos(am))} y={f2(C + 246 * Math.sin(am) + 4)}>
               {mo.toUpperCase()}
             </text>
           </React.Fragment>
@@ -97,7 +80,7 @@ export function ComplianceRing() {
         const [x, y] = pos(it.m, it.d, R[it.s]);
         const small = it.t.indexOf("GSTR") === 0 || it.t === "TDS payment" || it.s === "lab";
         return (
-          <circle key={idx} className={`dot s-${it.s}`} data-m={it.m} cx={x.toFixed(1)} cy={y.toFixed(1)} r={small ? 3.2 : 4.6} style={{ "--i": idx } as React.CSSProperties}>
+          <circle key={idx} className={`dot s-${it.s}`} cx={x.toFixed(1)} cy={y.toFixed(1)} r={small ? 3.2 : 4.6} style={{ "--i": idx } as React.CSSProperties}>
             <title>{`${it.t}, ${it.d} ${MONTHS[it.m]}`}</title>
           </circle>
         );
@@ -107,117 +90,13 @@ export function ComplianceRing() {
         <circle className="hand-cap" cx={C} cy={C - 222} r={3} />
       </g>
       <circle className="ctr" cx={C} cy={C} r={100} />
-      <text className="ctr-t" x={C} y={C - 12}>
+      <text className="ctr-t" x={C} y={C - 2}>
         FY 2026-27
       </text>
-      <text className="ctr-s" x={C} y={C + 10}>
+      <text className="ctr-s" x={C} y={C + 20}>
         {items.length} statutory dates
       </text>
-      <text className="ctr-l" x={C} y={C + 36}>
-        each filing: owner · date · proof
-      </text>
     </svg>
-  );
-}
-
-/**
- * V5: the busy weeks of the year beside the ring, one column per month and one cell per week of the month,
- * darker where more statutory dates fall. Counted from the ring's own dates.
- */
-export function BusyWeeks() {
-  const grid = busyWeeks();
-  const max = Math.max(...grid.flat());
-  return (
-    <figure className="heat" aria-label="Busy weeks: how many statutory dates fall in each week of the financial year. The second and third week of every month are the busiest.">
-      <figcaption className="mono">Busy weeks</figcaption>
-      <div className="heat-grid" aria-hidden="true">
-        {grid.map((weeks, m) => (
-          <div className="heat-col" key={MONTHS[m]} data-m={m}>
-            {weeks.map((n, w) => (
-              <span key={w} className="heat-cell" title={`${MONTHS[m]}, week ${w + 1}: ${n} ${n === 1 ? "date" : "dates"}`} style={{ "--h": n / max } as React.CSSProperties} />
-            ))}
-            <span className="heat-m">{MONTHS[m].slice(0, 1)}</span>
-          </div>
-        ))}
-      </div>
-    </figure>
-  );
-}
-
-/**
- * V2: one status chip on the hero screenshot that changes from "In progress" to "Done" once, about two seconds
- * after load. Under reduced motion it shows "Done" at once and still.
- */
-export function HeroStatus() {
-  const [done, setDone] = React.useState(false);
-  React.useEffect(() => {
-    if (reduceMotion()) {
-      setDone(true);
-      return;
-    }
-    const t = setTimeout(() => setDone(true), 2200);
-    return () => clearTimeout(t);
-  }, []);
-  return (
-    <div className="status-chip" aria-live="polite">
-      <span className="t">Name approval</span>
-      <span className={`pill ${done ? "pill-positive is-done" : "pill-brand"}`}>{done ? "Done" : "In progress"}</span>
-    </div>
-  );
-}
-
-/** V3: the six-colour regulator ribbon under the hero, one band per regulator on the calendar. */
-export function RegulatorRibbon() {
-  return (
-    <ul className="ribbon" aria-label="Six regulators on one calendar">
-      {REGULATORS.map((r, i) => (
-        <li key={r.name} style={{ "--c": r.c, "--i": i } as React.CSSProperties}>
-          {r.name}
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/**
- * D8: the Ask VCFO bubble on the portal screenshot. The page renders the whole answer; when the bubble first
- * comes into view it types the answer once. Under reduced motion, or without IntersectionObserver, it stays whole.
- */
-export function AskBubble() {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [typed, setTyped] = React.useState(ASK_A);
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el || reduceMotion() || !("IntersectionObserver" in window)) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const type = (i: number) => {
-      setTyped(ASK_A.slice(0, i));
-      if (i < ASK_A.length) timer = setTimeout(() => type(i + 1), 28);
-    };
-    const io = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0].isIntersecting) return;
-        io.disconnect();
-        timer = setTimeout(() => type(0), 500);
-      },
-      { threshold: 0.6 },
-    );
-    io.observe(el);
-    return () => {
-      io.disconnect();
-      clearTimeout(timer);
-    };
-  }, []);
-  const typing = typed.length < ASK_A.length;
-  return (
-    <div ref={ref} className="ask-bubble card" data-app="home-chat" aria-label="Book a demo to try Ask VCFO" role="button" aria-haspopup="dialog" tabIndex={0}>
-      <span className="mono">Ask VCFO</span>
-      <p className="msg me">{ASK_Q}</p>
-      <p className={`msg bot${typing ? " typing-on" : ""}`}>
-        <span aria-hidden="true">{typed}</span>
-        <span className="sr">{ASK_A}</span>
-      </p>
-    </div>
   );
 }
 
@@ -246,7 +125,7 @@ export function CompareSection({ onDemo }: { onDemo: () => void }) {
             Spreadsheets break when compliance stops being <span>routine.</span>
           </h2>
         </div>
-        <div className="cmp-card reveal" data-play>
+        <div className="cmp-card reveal">
           <table className="cmp-table">
             <caption className="sr">VCFO Suite compared with the old way</caption>
             <colgroup>
@@ -271,8 +150,8 @@ export function CompareSection({ onDemo }: { onDemo: () => void }) {
               </tr>
             </thead>
             <tbody>
-              {COMPARE.map((r, i) => (
-                <tr key={r.label} style={{ "--r": i } as React.CSSProperties}>
+              {COMPARE.map((r) => (
+                <tr key={r.label}>
                   <th scope="row">{r.label}</th>
                   <td className="cmp-v">
                     <CompareMark m={r.vcfo} />
@@ -292,7 +171,7 @@ export function CompareSection({ onDemo }: { onDemo: () => void }) {
           <button className="cmp-btn" type="button" onClick={onDemo}>
             Book a demo <ArrowRight size={16} strokeWidth={2} aria-hidden />
           </button>
-          <a className="cmp-link" href="#incorporate">
+          <a className="cmp-link" href="#journey">
             See how it works
           </a>
         </div>

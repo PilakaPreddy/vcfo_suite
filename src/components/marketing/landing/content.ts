@@ -47,59 +47,7 @@ export function ringItems() {
   return items;
 }
 
-/** The twelve months of the year ring, April first. */
-export const MONTHS = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"] as const;
-
-/**
- * V5, the busy-weeks heat map beside the ring: for each month (April first) and each week of the month
- * (days 1-7, 8-14, 15-21, 22-28, 29-31), how many statutory dates on the ring fall in it.
- * It is counted from ringItems(), so it shows the statutory schedule, not sample client data.
- */
-export function busyWeeks() {
-  const grid = MONTHS.map(() => [0, 0, 0, 0, 0]);
-  for (const it of ringItems()) grid[it.m][Math.min(4, Math.floor((it.d - 1) / 7))] += 1;
-  return grid;
-}
-
-/**
- * The 16 steps of stages 1 and 2 (src/data/checklist.ts, pre-1 to pre-12), in checklist order, and the
- * flow-chart group each one lights up: s1 questionnaire, s2 board resolution, noc the NOC decision (V1),
- * s3 name reservation, s4 documents and DSC, s5 SPICe+ and the certificate.
- */
-export const INC_STEPS: { t: string; g: "s1" | "s2" | "noc" | "s3" | "s4" | "s5" }[] = [
-  { t: "Client details", g: "s1" },
-  { t: "Draft board resolution", g: "s2" },
-  { t: "Signed board resolution", g: "noc" },
-  { t: "Name application", g: "s3" },
-  { t: "Name approval", g: "s3" },
-  { t: "Director KYC", g: "s4" },
-  { t: "Capital structure", g: "s4" },
-  { t: "Registered office address", g: "s4" },
-  { t: "Proposed directors", g: "s4" },
-  { t: "Subscriber details", g: "s4" },
-  { t: "KYC review and DSC", g: "s4" },
-  { t: "Document execution", g: "s4" },
-  { t: "SPICe+ confirmation", g: "s5" },
-  { t: "SPICe+ filing", g: "s5" },
-  { t: "MCA remarks", g: "s5" },
-  { t: "Certificate of Incorporation", g: "s5" },
-];
-
-/** V3, the regulator ribbon under the hero: the six regulators on the calendar, each with its data colour. */
-export const REGULATORS: { name: string; c: string }[] = [
-  { name: "MCA", c: "var(--lp-d5)" },
-  { name: "GST", c: "var(--lp-d3)" },
-  { name: "Income tax", c: "var(--lp-d1)" },
-  { name: "Payroll", c: "var(--lp-info)" },
-  { name: "FEMA", c: "var(--lp-d2)" },
-  { name: "Labour", c: "var(--lp-d4)" },
-];
-
-/** D8: the one answer the Ask VCFO bubble on the portal screenshot types (the demo company's name application). */
-export const ASK_Q = "Where is my incorporation now?";
-export const ASK_A = "Your name application is with MCA. Expected 28 Oct.";
-
-/** Board C2: the comparison table. */
+/** Board C2: the comparison under "Every step has an owner, a date and a proof". */
 export type Mark = "yes" | "no" | "part";
 export const COMPARE_COLS = ["VCFO Suite", "Generic task tool", "Spreadsheets and email"] as const;
 export const COMPARE: { label: string; vcfo: Mark; tool: Mark; sheet: Mark }[] = [
@@ -114,7 +62,7 @@ export const COMPARE: { label: string; vcfo: Mark; tool: Mark; sheet: Mark }[] =
 /** Quick answers for the fixed Ask VCFO panel. `sec` is the section the "Show me" button scrolls to. */
 /** `href` is the real portal screen an answer is about ("Open the screen", shown in demo mode only). */
 export const GUIDE: { q: string; a: string; sec: string; href?: string; sales?: boolean }[] = [
-  { q: "What does VCFO Suite cover?", a: "Four stages, then the yearly calendar: name and papers, incorporation, the first 180 days and registrations, then every statutory filing after. Each step carries an owner, a due date and the document that proves it.", sec: "incorporate", href: "/app/client/overview" },
+  { q: "What does VCFO Suite cover?", a: "Four stages, then the yearly calendar: name and papers, incorporation, the first 180 days and registrations, then every statutory filing after. Each step carries an owner, a due date and the document that proves it.", sec: "journey", href: "/app/client/overview" },
   { q: "How does incorporation work?", a: "The client answers one questionnaire, the firm drafts and files, and MCA approves. The board resolution, MOA, AOA, DIR-2 and INC-9 are generated from the answers, not retyped.", sec: "incorporate", href: "/app/client/incorporation" },
   { q: "What happens after the certificate?", a: "Eleven steps start the day the certificate arrives, most with a statutory clock: the first board meeting and ADT-1 within 30 days, share certificates within 60, and INC-20A within 180.", sec: "after", href: "/app/client/incorporation" },
   { q: "Which registrations does it track?", a: "Twenty-three registrations and reportings across tax, labour, trade, RBI and intellectual property. Only the ones that apply to the company are switched on.", sec: "register", href: "/app/client/registrations" },
