@@ -22,7 +22,7 @@ export function AskAvatarLauncher() {
   if (!ask?.enabled || ask.pageOpen) return null;
 
   return (
-    <div id="ask-avatar" ref={launchRef} className={cn('ask-vpv-scope', yieldOn && 'yield', open && 'open')}>
+    <div id="ask-avatar" ref={launchRef} className={cn('ask-vpv-scope ask-avatar', yieldOn && 'yield', open && 'open')}>
       {/* The robot is a second, mouse-only way in; the pill beside it is the keyboard control. */}
       <span className="vpl-char" aria-hidden="true" onClick={ask.toggle}>
         <span className="vpl-lift">
