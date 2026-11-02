@@ -1,6 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import { SEO } from '@/components/SEO';
+import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
+import { AgendaLibrarySection } from '@/views/board-meetings/AgendaLibrarySection';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SkeletonRows } from '@/components/ui/empty-state';
 import { SuperPageError } from '@/components/super/parts/super-parts';
@@ -32,6 +35,8 @@ export function FirmSettingsBody() {
   const canEdit = isFirmWideAdmin(user?.role);
   const isSuper = user?.role === 'super_admin';
   const { query, settings, history, save, uploadLogo, removeLogo, logoSrc } = useFirmSettings();
+  // Board meetings: the agenda master the notice picker reads (docs/specs/board-meetings/PLAN.md).
+  const [tab, setTab] = useState<'settings' | 'agenda'>('settings');
 
   if (query.isPending) return <SkeletonRows rows={8} />;
   if (query.isError || !settings) {
@@ -40,7 +45,7 @@ export function FirmSettingsBody() {
 
   const onSave = (patch: Parameters<typeof save.mutate>[0]) => save.mutate(patch);
 
-  return (
+  const grid = (
     <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-2">
       <div className="flex min-w-0 flex-col gap-3">
         {canEdit ? <PeopleRolesSection /> : null}
@@ -55,6 +60,22 @@ export function FirmSettingsBody() {
         {canEdit ? <IntegrationsSection isSuper={isSuper} /> : null}
         {canEdit ? <SettingsHistorySection rows={history} /> : null}
       </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-3">
+      <SpectrumTabs
+        variant="underline"
+        label="Firm settings"
+        value={tab}
+        onChange={(k) => setTab(k as 'settings' | 'agenda')}
+        items={[
+          { key: 'settings', label: 'Settings' },
+          { key: 'agenda', label: 'Agenda library' },
+        ]}
+      />
+      {tab === 'agenda' ? <AgendaLibrarySection canEdit={canEdit} /> : grid}
     </div>
   );
 }
