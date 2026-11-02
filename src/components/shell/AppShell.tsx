@@ -98,9 +98,10 @@ export function AppShell({
           <div className="sticky top-[3px] z-20 pt-0">
             <TopBar />
           </div>
+          {/* md:pb-32 leaves room under every page so its last row scrolls clear of the Ask VCFO robot. */}
           <main
             className={cn(
-              "mx-auto page-fade-up px-4 pb-28 pt-5 md:px-8 md:pb-20 md:pt-7",
+              "mx-auto page-fade-up px-4 pb-28 pt-5 md:px-8 md:pb-32 md:pt-7",
               mainMaxWidth,
             )}
           >
