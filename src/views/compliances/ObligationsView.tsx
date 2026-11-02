@@ -148,7 +148,7 @@ export function ObligationsView({ basePath, scope, embedded = false }: { basePat
   const tasksQuery = useTasks({ engagementId: companyId !== ALL_COMPANIES ? companyId : undefined });
   const tasks: TaskRowDto[] = useMemo(() => (tasksQuery.data?.tasks ?? []).filter((t) => !t.hidden), [tasksQuery.data?.tasks]);
   const shownTasks = tasks.filter((t) => taskRowMatches(t, filter));
-  const tHref = (t: TaskRowDto) => taskHref(basePath, t.id);
+  const tHref = (t: TaskRowDto) => taskHref(basePath, t.id, t.boardMeetingId);
 
   const count = (f: ObligationFilter) => allClientRows.filter((r) => matchesFilter(r, f, now)).length;
   const taskCount = (f: ObligationFilter) => tasks.filter((t) => taskRowMatches(t, f)).length;

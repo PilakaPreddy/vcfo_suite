@@ -116,3 +116,9 @@ export function withCarriedResolutions(agenda: AgendaItem[], lines: string[]): A
     return { ...a, subs: [...lines, ...keep] };
   });
 }
+
+/** "RESOLVED THAT …" with a full stop, unless the lead already wrote the RESOLVED words. */
+export function resolvedText(description: string): string {
+  const t = description.trim().replace(/\.\s*$/, '');
+  return /^resolved\b/i.test(t) ? `${t}.` : `RESOLVED THAT ${t}.`;
+}

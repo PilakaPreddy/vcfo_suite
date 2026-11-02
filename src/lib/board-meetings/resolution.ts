@@ -1,5 +1,8 @@
 import { longDate } from './dates';
 import { simpleDocx, type P } from './notice-docx';
+import { resolvedText } from './rules';
+
+export { resolvedText };
 
 /**
  * A resolution added after the meeting, in the layout of a resolution passed by circulation
@@ -21,11 +24,6 @@ export interface ResolutionDocInput {
   signers: Array<{ name: string; din: string | null }>;
 }
 
-/** "RESOLVED THAT …" with a full stop, unless the lead already wrote the RESOLVED words. */
-export function resolvedText(description: string): string {
-  const t = description.trim().replace(/\.\s*$/, '');
-  return /^resolved\b/i.test(t) ? `${t}.` : `RESOLVED THAT ${t}.`;
-}
 
 export function resolutionParagraphs(input: ResolutionDocInput): P[] {
   const out: P[] = [
