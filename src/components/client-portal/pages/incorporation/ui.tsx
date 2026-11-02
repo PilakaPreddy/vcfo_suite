@@ -19,7 +19,7 @@ import {
   type ReactNode,
 } from 'react';
 import { usePortal, type WhatsThisAnswer } from '../../PortalProvider';
-import { VisorHead } from '../../Visor';
+import { VisorHead } from '@/components/ask/Visor';
 import { IC, type IcName } from './icons';
 import '../../css/incorporation-pages.css';
 import '../../css/incorporation-landing.css';

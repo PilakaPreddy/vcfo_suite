@@ -72,13 +72,15 @@ describe('role gating', () => {
     role = r;
     render(wrap(<AskShellMount userRole={r}><AskLauncher /></AskShellMount>));
     expect(screen.queryByRole('button', { name: /ask vcfo/i })).toBeNull();
+    expect(document.getElementById('ask-avatar')).toBeNull();
     expect(screen.queryByRole('complementary', { name: 'Ask VCFO' })).toBeNull();
   });
 
   it.each(['client', 'admin', 'super_admin', 'manager', 'intern'])('shows the launcher for %s', (r) => {
     role = r;
     render(wrap(<AskShellMount userRole={r}><AskLauncher /></AskShellMount>));
-    expect(screen.getByRole('button', { name: /ask vcfo/i })).toBeInTheDocument();
+    expect(screen.getByTitle('Ask VCFO (⌘J / Ctrl+J)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Ask VCFO chat' })).toBeInTheDocument();
   });
 });
 
@@ -96,7 +98,7 @@ describe('keyboard', () => {
 
   it('Ctrl+J opens the panel and Esc closes it', async () => {
     render(wrap(<AskShellMount userRole="client"><AskLauncher /></AskShellMount>));
-    const launcher = screen.getByRole('button', { name: /ask vcfo/i });
+    const launcher = screen.getByTitle('Ask VCFO (⌘J / Ctrl+J)');
     expect(launcher).toHaveAttribute('aria-expanded', 'false');
     fireEvent.keyDown(window, { key: 'j', ctrlKey: true });
     expect(launcher).toHaveAttribute('aria-expanded', 'true');
@@ -126,7 +128,7 @@ describe('pop-up size (owner item F3)', () => {
 });
 
 describe('avatars (owner item F2)', () => {
-  it('shows the initials beside a question and the VCFO mark beside an answer', async () => {
+  it('shows the initials beside a question and the robot beside an answer', async () => {
     const { AskUserBubble, AskAvatar } = await import('@/components/ask/AskUserBubble');
     const { container } = render(
       <>
@@ -135,7 +137,34 @@ describe('avatars (owner item F2)', () => {
       </>,
     );
     expect(screen.getByText('RK')).toBeInTheDocument();
-    expect(container.querySelector('img[src="/client-portal/vcfo-mark.webp"]')).not.toBeNull();
+    expect(container.querySelector('svg.vpv')).not.toBeNull();
+  });
+});
+
+describe('robot launcher and sidebar link (owner decision 2 Nov 2026)', () => {
+  it('opens the pop-up from the robot pill and closes it again', async () => {
+    role = 'admin';
+    render(wrap(<AskShellMount userRole="admin"><span /></AskShellMount>));
+    const pill = screen.getByRole('button', { name: 'Open Ask VCFO chat' });
+    expect(pill).toHaveAttribute('aria-controls', 'ask-panel');
+    fireEvent.click(pill);
+    expect(await screen.findByRole('complementary', { name: 'Ask VCFO' })).toBeInTheDocument();
+    expect(document.getElementById('ask-avatar')).toHaveClass('open');
+    fireEvent.click(screen.getByRole('button', { name: 'Close Ask VCFO chat' }));
+    expect(document.getElementById('ask-avatar')).not.toHaveClass('open');
+  });
+
+  it('opens the pop-up when the robot itself is clicked', async () => {
+    role = 'manager';
+    render(wrap(<AskShellMount userRole="manager"><span /></AskShellMount>));
+    fireEvent.click(document.querySelector('#ask-avatar .vpl-char')!);
+    expect(await screen.findByRole('complementary', { name: 'Ask VCFO' })).toBeInTheDocument();
+  });
+
+  it('makes the sidebar Ask VCFO a link to the full page', () => {
+    role = 'intern';
+    render(wrap(<AskShellMount userRole="intern"><AskLauncher variant="sidebar" withShortcut={false} /></AskShellMount>));
+    expect(screen.getByRole('link', { name: 'Ask VCFO' })).toHaveAttribute('href', '/app/intern/ask');
   });
 });
 

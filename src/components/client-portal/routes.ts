@@ -104,6 +104,7 @@ export function crumbsFor(pathname: string): { mid?: string; crumb: string; icon
   if (p.includes('/board-resolution')) return { mid: 'Incorporation', crumb: 'Board resolution', icon: 'incorporation' };
   if (key === 'compliances' || key === 'filings' || key === 'obligations') return { mid: 'Compliances', crumb: PORTAL_TITLES[key], icon: key };
   if (key === 'announcements' || key === 'notifications') return { mid: 'Updates', crumb: PORTAL_TITLES[key], icon: key };
+  if (p.startsWith(`${CP_BASE}/ask`)) return { crumb: 'Ask VCFO', icon: 'home' };
   if (/\/library\/[^/]+/.test(p) || p.includes('/learn/')) return { mid: 'Library', crumb: 'Reading', icon: 'knowledge-bank' };
   return { crumb: PORTAL_TITLES[key], icon: key };
 }
