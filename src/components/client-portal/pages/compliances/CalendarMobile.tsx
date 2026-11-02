@@ -71,7 +71,7 @@ export function CalendarMobile({ state, onOpenFilings }: { state: ReturnType<typ
   const statFy = useMemo(() => (after ? qT.data?.rows ?? [] : []), [after, qT.data]);
   const taskFy = useMemo(() => allTasks.filter((r) => fyOfIso(r.dueDate) === todayFy), [allTasks, todayFy]);
   const fyRows = useMemo(() => [...(statOn ? statFy : []), ...(tasksOn ? taskFy : [])], [statOn, tasksOn, statFy, taskFy]);
-  const openRow = (r: PortalFiling) => (isTaskRow(r) ? go(taskHref(r.task.id)) : set({ filing: r.id }));
+  const openRow = (r: PortalFiling) => (isTaskRow(r) ? go(taskHref(r.task.id, r.task.boardMeetingId)) : set({ filing: r.id }));
   const loading = after && (qA.isLoading || qT.isLoading);
 
   const c = countByStatus(fyRows, today);

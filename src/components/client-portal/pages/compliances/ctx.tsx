@@ -56,7 +56,7 @@ export function CompProvider({
       if (isTaskRow(f)) {
         const d = f.task.deliverable;
         if (!d?.id) {
-          go(taskHref(f.task.id));
+          go(taskHref(f.task.id, f.task.boardMeetingId));
           return;
         }
         attachmentUrl(f.task.id, d.id)
@@ -81,7 +81,7 @@ export function CompProvider({
   const remind = useCallback(
     (f: PortalFiling) => {
       if (isTaskRow(f)) {
-        go(taskHref(f.task.id));
+        go(taskHref(f.task.id, f.task.boardMeetingId));
         return;
       }
       if (f.filedOn) {
@@ -127,7 +127,7 @@ export function CompProvider({
           onClose={() => setDrill(null)}
           onRow={(f) => {
             setDrill(null);
-            if (isTaskRow(f)) go(taskHref(f.task.id));
+            if (isTaskRow(f)) go(taskHref(f.task.id, f.task.boardMeetingId));
             else onDrillRow(f);
           }}
           onProof={openProof}

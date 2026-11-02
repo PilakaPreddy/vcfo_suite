@@ -17,8 +17,15 @@ import { normStage, taskAsRow, type CalRow, type ClientTask } from './tasks';
 
 export const TASK_KEY = [...COMP_KEY, 'tasks'] as const;
 
-/** The client task page: /app/client/compliances/obligations/tasks/<id>. */
-export const taskHref = (id: string) => `${portalHref('obligations')}/tasks/${encodeURIComponent(id)}`;
+/**
+ * The client task page: /app/client/compliances/obligations/tasks/<id>. A board meeting task
+ * opens its meeting page: /app/client/compliances/obligations/meetings/<meetingId>.
+ */
+export const taskHref = (id: string, boardMeetingId?: string | null) =>
+  boardMeetingId ? meetingHref(boardMeetingId) : `${portalHref('obligations')}/tasks/${encodeURIComponent(id)}`;
+
+/** The client board meeting page. */
+export const meetingHref = (meetingId: string) => `${portalHref('obligations')}/meetings/${encodeURIComponent(meetingId)}`;
 
 /* ------------------------------------------------------------------ shapes */
 
@@ -117,6 +124,7 @@ export function parseTask(r: Raw): ClientTask {
     ownerName: person(r.owner) ?? s(r.ownerName),
     notifyDays: Number(r.remindBefore ?? r.notifyDays ?? 5) || 5,
     deliverable: del && (del.id || del.fileName) ? { id: String(del.id ?? ''), fileName: String(del.fileName ?? del.name ?? 'Deliverable') } : null,
+    boardMeetingId: s(r.boardMeetingId),
   };
 }
 

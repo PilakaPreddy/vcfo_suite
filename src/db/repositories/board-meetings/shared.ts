@@ -62,7 +62,8 @@ export function canEditLibrary(role: string): boolean {
 export function clientMaySee(row: Pick<MeetingRow, 'status' | 'sentAt'>): boolean {
   const s = row.status as MeetingStatus;
   if (s === 'sent' || s === 'held') return true;
-  return s === 'cancelled' && Boolean(row.sentAt);
+  // Once a notice went out the client keeps the meeting (a reschedule waiting for approval, or cancelled).
+  return Boolean(row.sentAt);
 }
 
 /** The engagement, if the caller may read it; staff only unless `allowClient`. */

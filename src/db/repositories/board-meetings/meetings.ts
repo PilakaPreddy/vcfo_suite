@@ -59,6 +59,7 @@ import {
   leadProfileId,
   managerProfileId,
   notFound,
+  clientMaySee,
   notifyMeeting,
   peopleById,
   recordMeetingEvent,
@@ -224,6 +225,7 @@ export async function syncTask(meeting: MeetingRow, momLocked = false): Promise<
         dueDate: held ? momDueDate(meeting.meetingDate) : meeting.meetingDate,
         stage: momLocked ? 'completed' : TASK_STAGE[status] ?? 'in-progress',
         completedAt: momLocked ? new Date() : null,
+        visibility: meeting.sentAt ? 'both' : 'firm',
         updatedAt: new Date(),
       })
       .where(eq(complianceTasks.id, meeting.taskId));
@@ -445,7 +447,7 @@ export async function listMeetings(ctx: AuthContext, opts: { engagementId?: stri
   const where = ids.length ? and(inArray(boardMeetings.engagementId, ids), isNull(engagements.deletedAt)) : isNull(engagements.deletedAt);
   const rows = await base.where(where).orderBy(desc(boardMeetings.meetingDate)).limit(500);
   const today = todayIst();
-  const visible = ctx.role === 'client' ? rows.filter((r) => r.m.status === 'sent' || r.m.status === 'held' || (r.m.status === 'cancelled' && r.m.sentAt)) : rows;
+  const visible = ctx.role === 'client' ? rows.filter((r) => clientMaySee(r.m)) : rows;
   if (visible.length === 0) return [];
   const meetingIds = visible.map((r) => r.m.id);
   const docs = await db
@@ -640,7 +642,8 @@ export async function createMeeting(ctx: AuthContext, input: CreateMeetingInput)
       startDate: startDate > input.meetingDate ? input.meetingDate : startDate,
       dueDate: input.meetingDate,
       urgency: 'High',
-      visibility: 'both',
+      // The client sees the meeting once the notice is sent (`syncTask` opens it then).
+      visibility: 'firm',
       ownerId: leadId,
       reviewerId: managerId,
       stage: 'in-progress',
