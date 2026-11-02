@@ -62,7 +62,6 @@
       <rect class="eye" x="130" y="109" width="22" height="30" rx="11"/>
       <path class="smile" d="M103 148 Q120 161 137 148" fill="none" stroke="#7DD3FC" stroke-width="5" stroke-linecap="round"/>
     </g>
-    <rect x="104" y="180" width="32" height="5" rx="2.5" fill="#1E3A8A" fill-opacity=".7"/>
   </g></g></g>
   <g class="hand" transform="translate(4 178)">
     <rect x="2" y="4" width="46" height="22" rx="11" fill="url(#vHand)" stroke="#1D4ED8" stroke-opacity=".5"/>
