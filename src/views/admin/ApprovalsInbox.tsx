@@ -17,6 +17,7 @@ import { adminProjectStepPath } from '@/lib/projects/project-step-path';
 import { ProjectChangeRequestsPanel } from '@/views/admin/ProjectChangeRequestsPanel';
 import { DateChangeRequestsPanel } from '@/components/work/DateChangeRequestsPanel';
 import { PlainPageHead } from '@/views/admin/PlainPageHead';
+import { MeetingApprovalsPanel } from '@/views/board-meetings/MeetingApprovalsPanel';
 
 type KindKey = 'client' | 'lead' | 'send' | 'board';
 
@@ -85,6 +86,9 @@ export default function ApprovalsInbox({ scope }: { scope: 'firm' | 'manager' })
 
       {/* G-17: a lead's request to move a manager-set date window. */}
       <DateChangeRequestsPanel />
+
+      {/* Board meeting notices waiting for the manager (docs/specs/board-meetings/PLAN.md). */}
+      <MeetingApprovalsPanel />
 
       <DashSection
         title="Pending milestones"

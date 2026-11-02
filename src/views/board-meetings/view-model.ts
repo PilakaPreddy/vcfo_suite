@@ -44,3 +44,10 @@ export function stamp(iso: string | null | undefined): string {
   if (!iso) return '';
   return new Date(iso).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
 }
+
+/** The staff compliances base for a role; super admin uses the admin pages (no super route). */
+export function meetingsBase(role: string | null | undefined): string {
+  if (role === 'manager') return '/app/manager/compliances';
+  if (role === 'intern') return '/app/intern/compliances';
+  return '/app/admin/compliances';
+}

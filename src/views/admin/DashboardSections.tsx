@@ -1,5 +1,6 @@
 'use client';
 
+import { BoardMeetingsCard } from '@/views/board-meetings/BoardMeetingsCard';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -275,6 +276,7 @@ export function AdminDashboardView({
           </div>
           <div className="flex min-w-0 flex-col gap-5">
             <DashboardApprovalsPanel />
+            <BoardMeetingsCard />
             <TaskStatusCard rows={teamRows} />
             <WorkloadByLeadCard rows={teamRows} rebalanceHref={`${projectBase}/team`} />
           </div>

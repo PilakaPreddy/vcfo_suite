@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { AssignTaskDialog } from '@/components/staff/today/AssignTaskDialog';
 import { deriveStuckReason, primaryPhaseItems } from '@/lib/projects/project-stuck';
 import { FirmProjectsPanel } from '@/views/admin/FirmProjectsPanel';
+import { BoardMeetingsCard } from '@/views/board-meetings/BoardMeetingsCard';
 import { FirmDecisionsCard } from '@/views/admin/FirmDecisionsCard';
 import { PhaseProgressGrid } from '@/components/staff/today/PhaseProgressGrid';
 import { buildPhaseProgressRows } from '@/components/staff/today/today-rows';
@@ -307,6 +308,7 @@ export default function FirmDashboard() {
 
           <div className="flex min-w-0 flex-col gap-5">
             <FirmDecisionsCard engagements={engagements} />
+            <BoardMeetingsCard />
             <DashSection icon={Activity} tone="success" title="Portfolio health">
               <div className="flex min-w-0 items-center gap-4">
                 <DashDonut
