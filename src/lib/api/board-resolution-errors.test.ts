@@ -61,8 +61,18 @@ describe('collectBoardResolutionMissingFields', () => {
     const missing = collectBoardResolutionMissingFields({});
     expect(missing).toContain('Parent entity name');
     expect(missing).toContain('Proposed company name (option 1)');
-    expect(missing).toContain('Board resolution date');
+    expect(missing).not.toContain('Board resolution date');
     expect(missing).toContain('Signatory name');
+  });
+
+  it('links a missing director to the Part A proposed directors tab', () => {
+    const refs = collectBoardResolutionMissingFieldRefs({ directorCount: '2' });
+    expect(refs).toContainEqual({
+      stepId: 'pre-1',
+      fieldId: 'director1FirstName',
+      section: 'Proposed Directors',
+      label: 'Director 1 first name',
+    });
   });
 
   it('returns empty when required Pre-1 data is present', () => {
@@ -182,7 +192,7 @@ describe('board resolution NIC check', () => {
     const { nicCode: _nic, ...withoutNic } = completePre1;
     expect(collectBoardResolutionMissingFields(withoutNic)).toEqual(['NIC code']);
     expect(collectBoardResolutionMissingFieldRefs(withoutNic)).toEqual([
-      { stepId: 'pre-1', fieldId: 'nicCode', section: 'Business Description', label: 'NIC code' },
+      { stepId: 'pre-1', fieldId: 'nicCode', section: 'NIC Codes', label: 'NIC code' },
     ]);
   });
 

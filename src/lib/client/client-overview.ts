@@ -26,6 +26,7 @@ import { displayName, readProposedDirectors } from '@/lib/incorporation/proposed
 import { clientIncorporationStepPath } from '@/lib/projects/project-step-path';
 import { STEP_TAB_PARAM } from '@/lib/doc-pack/paths';
 import { sectionSlug } from '@/lib/doc-pack/section-slug';
+import { PART_A_SECTION } from '@/lib/checklist/part-a-sections';
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
 import { formatWindow, windowForStep, type EngagementSchedule } from '@/lib/projects/schedule-windows';
 import {
@@ -414,7 +415,7 @@ export function buildCompanySnapshot(state: ClientOverviewState): ClientCompanyS
     subscribers,
     links: {
       directors: clientIncorporationStepPath('pre-15'),
-      capital: `${clientIncorporationStepPath('pre-1')}?${STEP_TAB_PARAM}=${sectionSlug('Share Capital Details')}`,
+      capital: `${clientIncorporationStepPath('pre-1')}?${STEP_TAB_PARAM}=${sectionSlug(PART_A_SECTION.shareCapital)}`,
       shareClasses: clientIncorporationStepPath('pre-13'),
       subscribers: clientIncorporationStepPath('pre-16'),
     },

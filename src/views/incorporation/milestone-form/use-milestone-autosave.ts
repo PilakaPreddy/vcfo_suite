@@ -21,6 +21,7 @@ import {
   type AutoSaveStatus,
 } from '@/views/incorporation/milestone-response-form-utils';
 import { inferIndianState } from '@/lib/incorporation/countries';
+import { seedProposedDirectorsFromPartA } from '@/lib/incorporation/proposed-directors';
 import type { MilestoneSources } from './use-milestone-sources';
 import type { MilestoneDraft } from './use-milestone-draft';
 import type { MilestoneAccess } from './use-milestone-access';
@@ -36,7 +37,15 @@ type MilestoneAutoSaveParams = {
   setFieldErrors: MilestoneUiState['setFieldErrors'];
 } & Pick<
   MilestoneSources,
-  'saved' | 'user' | 'engagements' | 'engagement' | 'pre6Responses' | 'pre8Responses' | 'updateItem' | 'fields'
+  | 'saved'
+  | 'user'
+  | 'engagements'
+  | 'engagement'
+  | 'pre1Responses'
+  | 'pre6Responses'
+  | 'pre8Responses'
+  | 'updateItem'
+  | 'fields'
 > &
   Pick<MilestoneDraft, 'draft'> &
   Pick<MilestoneAccess, 'formReadOnly' | 'writableForViewer'>;
@@ -56,6 +65,7 @@ export function useMilestoneAutoSave({
   user,
   engagements,
   engagement,
+  pre1Responses,
   pre6Responses,
   pre8Responses,
   updateItem,
@@ -149,6 +159,19 @@ export function useMilestoneAutoSave({
     if (Object.keys(seed).length === 0) return;
     void updateItem(scopeId, item.id, { responses: seed }, { clientResponsesOnly: true }).catch(() => undefined);
   }, [item.id, contentReady, autoSaveEnabled, engagement, pre6Responses, pre8Responses, scopeId, updateItem]);
+  /**
+   * Proposed directors (pre-15) — on first open with no entries, start the
+   * list from the directors named on Part A (name, gender, residency), so the
+   * filler only adds the KYC. Same `contentReady` guard as the office seed.
+   */
+  const directorsSeededRef = useRef(false);
+  useEffect(() => {
+    if (item.id !== 'pre-15' || !contentReady || !autoSaveEnabled || directorsSeededRef.current) return;
+    directorsSeededRef.current = true;
+    const seed = seedProposedDirectorsFromPartA(savedRef.current, pre1Responses);
+    if (!seed) return;
+    void updateItem(scopeId, item.id, { responses: seed }, { clientResponsesOnly: true }).catch(() => undefined);
+  }, [item.id, contentReady, autoSaveEnabled, pre1Responses, scopeId, updateItem]);
   const provenanceNote =
     item.id === 'pre-14'
       ? (REGISTERED_OFFICE_SOURCE_LABEL[saved[REGISTERED_OFFICE_SOURCE_FIELD_ID] ?? ''] ?? null)

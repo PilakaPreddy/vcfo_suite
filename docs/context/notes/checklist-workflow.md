@@ -160,3 +160,24 @@ Spec `docs/specs/pre-inc-direct-flow/` (CONTEXT, AUDIT, REPORT).
 - **Slice keys added** (all three edits in `checklist-state-key.ts`): `submittedByName`,
   `submittedByRole`, `waitingOnLeadAt`, `waitingOnLeadByName`, `lastEditedAt`,
   `lastEditedByName`, `lastEditedByRole`. "Last edited by …" shows under the step title.
+
+## Part A owner list (2026-11-02)
+
+- The owner's handwritten list replaced the Part A (`pre-1`) questions. Client sections, in order:
+  Business Description · Proposed Company Names (1 and 2) · Foreign Entity Details (name,
+  address, country, state of incorporation, COI upload) · Proposed Directors · Proposed Share
+  Capital Structure · Person Signing the Board Resolution (name, designation, KYC upload). The
+  project lead's tab is **NIC Codes** (main and additional), last.
+- Dropped from the form (stored values stay, nothing reads them as required): registration
+  number, trademark, company mail and mobile, signatory gender, driving licence, utility bill,
+  board resolution date. The signatory KYC upload reuses the `passportUrl` key.
+- **Lead-only fields are hidden from the client** (`filterFieldsByViewer(…, 'client', itemId)`
+  drops `isLeadOnlyField`) instead of showing "Your project lead fills this". Client portal
+  sub-steps and the home popup drop them too.
+- **Directors are back on Part A** in the legacy `directorCount` + `director{n}*` slots (2 to 4),
+  so the board resolution (drafted at `pre-2`, before `pre-15`) can name them. Slots 3 and 4 use
+  `showWhen.anyOf` (new; evaluate it with `showWhenMatches`). `pre-15` still wins once it has
+  entries, and it seeds itself from Part A on first open (`seedProposedDirectorsFromPartA`, in
+  the milestone autosave hook). Board-resolution missing-director links now point at Part A.
+- The board resolution no longer requires a date; it prints today's date and the lead edits it.
+- Section names live in `PART_A_SECTION`; the doc pack, assist profile and BR error links read it.

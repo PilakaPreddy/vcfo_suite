@@ -14,7 +14,6 @@ import {
   parsePre1BoardResolutionDate,
   PRE1_GENDER_OPTIONS,
   PRE1_INDIA_RESIDENT_OPTIONS,
-  PRE1_MOBILE_COUNTRY_OPTIONS,
 } from '@/lib/checklist/checklist-pre1-validation';
 import {
   getPre6DirectorNameOptions,
@@ -60,129 +59,82 @@ function pre15OtherInterestFields(): ChecklistField[] {
   }).flat();
 }
 
+/**
+ * Part A proposed directors: how many (2–4) and, per slot, the name, gender and
+ * India residency the board resolution prints. Stored in the fixed
+ * `director{n}*` slots the board resolution and the proposed-directors reader
+ * already understand; slots 3 and 4 show only when the count asks for them.
+ * The full director KYC is still captured per entry on `pre-15`, which is
+ * seeded from these answers.
+ */
+function pre1ProposedDirectorFields(): ChecklistField[] {
+  const section = 'Proposed Directors';
+  const out: ChecklistField[] = [
+    {
+      id: 'directorCount',
+      label: 'Number of proposed directors',
+      type: 'segmented',
+      section,
+      options: [
+        { value: '2', label: '2' },
+        { value: '3', label: '3' },
+        { value: '4', label: '4' },
+      ],
+      helperText: 'At least two directors, and at least one of them resident in India.',
+      required: true,
+    },
+  ];
+  for (let n = 1; n <= 4; n += 1) {
+    const showWhen =
+      n === 3
+        ? { field: 'directorCount', value: '3', anyOf: ['4'] }
+        : n === 4
+          ? { field: 'directorCount', value: '4' }
+          : undefined;
+    const slot = (field: ChecklistField): ChecklistField => (showWhen ? { ...field, showWhen } : field);
+    out.push(
+      slot({ id: `director${n}FirstName`, label: `Director ${n} — first name`, type: 'text', section, required: true, layout: 'short' }),
+      slot({ id: `director${n}MiddleName`, label: `Director ${n} — middle name (optional)`, type: 'text', section, layout: 'short' }),
+      slot({ id: `director${n}LastName`, label: `Director ${n} — last name`, type: 'text', section, required: true, layout: 'short' }),
+      slot({
+        id: `director${n}Gender`,
+        label: `Director ${n} — gender`,
+        type: 'segmented',
+        section,
+        options: [...PRE1_GENDER_OPTIONS],
+        required: true,
+      }),
+      slot({
+        id: `director${n}IndiaResident`,
+        label: `Director ${n} — resident of India?`,
+        type: 'segmented',
+        section,
+        options: [...PRE1_INDIA_RESIDENT_OPTIONS],
+        required: true,
+      }),
+    );
+  }
+  return out;
+}
+
 export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
+  // Part A, in the order the client is asked (owner's list, 2026-11-02):
+  // business description, the two proposed names, the foreign entity with its
+  // certificate of incorporation, the proposed directors, the proposed share
+  // capital, and the person who signs the board resolution with their KYC.
+  // The NIC codes are the project lead's (lead-only, hidden from the client).
+  // Answers that were asked before (registration number, trademark, company
+  // mail and mobile, signatory gender, driving licence, utility bill, board
+  // resolution date) are no longer shown; stored values stay in the row and
+  // every reader treats them as optional.
   'pre-1': [
     {
-      id: 'parentEntityName',
-      label: 'Name',
-      type: 'text',
-      section: 'Foreign Entity',
-      required: true,
-    },
-    {
-      id: 'parentEntityRegistrationNumber',
-      label: 'Registration Number',
-      type: 'text',
-      section: 'Foreign Entity',
-      required: true,
-    },
-    {
-      id: 'parentEntityAddress',
-      label: 'Complete Address',
+      id: 'businessDescription',
+      label:
+        'Brief description of the business and operations to be carried out by the entity in India. (One Text Box – up to 100 words)',
       type: 'textarea',
-      section: 'Foreign Entity',
-      required: true,
-    },
-    {
-      id: 'parentEntityCountry',
-      label: 'Country of incorporation',
-      type: 'select',
-      section: 'Foreign Entity',
-      options: toOptions(COUNTRY_OPTIONS),
-      helperText: `Printed on the board resolution and the authorisation and acceptance letters. ${NEEDED_FOR_DOCUMENTS}`,
-    },
-    {
-      id: 'parentEntityState',
-      label: 'State / province of incorporation (if any)',
-      type: 'text',
-      section: 'Foreign Entity',
-      placeholder: 'e.g. Delaware',
-      helperText: 'Leave blank when the country has no states or provinces.',
-    },
-    {
-      id: 'parentEntityHasTrademark',
-      label: 'Does the parent entity have a trademark?',
-      type: 'select',
-      section: 'Foreign Entity',
-      options: [...PRE1_INDIA_RESIDENT_OPTIONS],
-      required: false,
-    },
-    {
-      id: 'parentEntityTrademarkUrl',
-      label: 'Trademark document (optional)',
-      type: 'file',
-      section: 'Foreign Entity',
-      accept: '.pdf,image/*',
-      required: false,
-    },
-    {
-      id: 'certificateOfIncorporationUrl',
-      label: 'Certificate of Incorporation',
-      type: 'file',
-      section: 'Foreign Entity Proof',
-      accept: '.pdf,image/*',
-      required: true,
-    },
-    {
-      id: 'signatoryFirstName',
-      label: 'First name',
-      type: 'text',
-      section: 'Authorized Signatory',
-      required: true,
-    },
-    {
-      id: 'signatoryMiddleName',
-      label: 'Middle name (optional)',
-      type: 'text',
-      section: 'Authorized Signatory',
-      required: false,
-    },
-    {
-      id: 'signatoryLastName',
-      label: 'Last name',
-      type: 'text',
-      section: 'Authorized Signatory',
-      required: true,
-    },
-    {
-      id: 'signatoryDesignation',
-      label: 'Designation',
-      type: 'text',
-      section: 'Authorized Signatory',
-      required: true,
-    },
-    {
-      id: 'signatoryGender',
-      label: 'Gender',
-      type: 'select',
-      section: 'Authorized Signatory',
-      options: [...PRE1_GENDER_OPTIONS],
-      required: true,
-    },
-    {
-      id: 'passportUrl',
-      label: 'Passport',
-      type: 'file',
-      section: 'Signatory KYC',
-      accept: '.pdf,image/*',
-      required: true,
-    },
-    {
-      id: 'drivingLicenseUrl',
-      label: 'Driving Licence',
-      type: 'file',
-      section: 'Signatory KYC',
-      accept: '.pdf,image/*',
-      required: true,
-    },
-    {
-      id: 'utilityBillUrl',
-      label: 'Utility Bill <2 months',
-      type: 'file',
-      section: 'Signatory KYC',
-      accept: '.pdf,image/*',
-      helperText:
-        'Electricity, water, gas, telephone bill, or bank statement dated within the last two months.',
+      section: 'Business Description',
+      maxWords: 100,
       required: true,
     },
     {
@@ -204,44 +156,112 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
       required: true,
     },
     {
-      id: 'companyMailId',
-      label: 'Company Mail ID',
+      id: 'parentEntityName',
+      label: 'Name of the foreign entity',
       type: 'text',
-      section: 'Company Mail ID',
-      placeholder: 'company@example.com',
+      section: 'Foreign Entity Details',
       required: true,
     },
     {
-      id: 'companyMobileCountryCode',
-      label: 'Country code',
-      type: 'select',
-      section: 'Company Mobile Number',
-      options: [...PRE1_MOBILE_COUNTRY_OPTIONS],
-      required: true,
-    },
-    {
-      id: 'companyMobileNumber',
-      label: 'Mobile number',
-      type: 'text',
-      section: 'Company Mobile Number',
-      placeholder: 'e.g. 9876543210',
-      helperText: 'Digits only, without the country code prefix.',
-      required: true,
-    },
-    {
-      id: 'businessDescription',
-      label:
-        'Brief description of the business and operations to be carried out by the entity in India. (One Text Box – up to 100 words)',
+      id: 'parentEntityAddress',
+      label: 'Foreign entity address',
       type: 'textarea',
-      section: 'Business Description',
-      maxWords: 100,
+      section: 'Foreign Entity Details',
+      required: true,
+    },
+    {
+      id: 'parentEntityCountry',
+      label: 'Country of incorporation',
+      type: 'select',
+      section: 'Foreign Entity Details',
+      options: toOptions(COUNTRY_OPTIONS),
+      helperText: 'Printed on the board resolution and the authorisation and acceptance letters.',
+      required: true,
+    },
+    {
+      id: 'parentEntityState',
+      label: 'State of incorporation',
+      type: 'text',
+      section: 'Foreign Entity Details',
+      placeholder: 'e.g. Delaware',
+      helperText: 'Leave blank when the country has no states or provinces.',
+    },
+    {
+      id: 'certificateOfIncorporationUrl',
+      label: 'Certificate of Incorporation (COI) of the foreign entity',
+      type: 'file',
+      section: 'Foreign Entity Details',
+      accept: '.pdf,image/*',
+      required: true,
+    },
+    ...pre1ProposedDirectorFields(),
+    {
+      id: 'authorisedShareCapital',
+      label: 'Authorized Share Capital (INR) (ex: 10,00,000)',
+      type: 'text',
+      section: 'Proposed Share Capital Structure',
+      placeholder: '10,00,000',
+      required: true,
+    },
+    {
+      id: 'paidUpShareCapital',
+      label: 'Initial Paid-up Share Capital (INR) (ex: 1,00,000)',
+      type: 'text',
+      section: 'Proposed Share Capital Structure',
+      placeholder: '1,00,000',
+      required: true,
+    },
+    {
+      id: 'nominalValuePerEquityShare',
+      label: 'Nominal Value of Each Equity Share (ex: INR 10)',
+      type: 'text',
+      section: 'Proposed Share Capital Structure',
+      placeholder: '10',
+      required: true,
+    },
+    {
+      id: 'signatoryFirstName',
+      label: 'First name',
+      type: 'text',
+      section: 'Person Signing the Board Resolution',
+      required: true,
+    },
+    {
+      id: 'signatoryMiddleName',
+      label: 'Middle name (optional)',
+      type: 'text',
+      section: 'Person Signing the Board Resolution',
+      required: false,
+    },
+    {
+      id: 'signatoryLastName',
+      label: 'Last name',
+      type: 'text',
+      section: 'Person Signing the Board Resolution',
+      required: true,
+    },
+    {
+      id: 'signatoryDesignation',
+      label: 'Designation',
+      type: 'text',
+      section: 'Person Signing the Board Resolution',
+      placeholder: 'e.g. Director',
+      required: true,
+    },
+    {
+      // Stored under the old passport key so uploads made before 2026-11-02 still resolve.
+      id: 'passportUrl',
+      label: 'KYC of the person signing (passport copy)',
+      type: 'file',
+      section: 'Person Signing the Board Resolution',
+      accept: '.pdf,image/*',
       required: true,
     },
     {
       id: 'nicCode',
       label: 'Main NIC code',
       type: 'text',
-      section: 'Business Description',
+      section: 'NIC Codes',
       placeholder: 'e.g. 62011',
       helperText: '5-digit NIC-2008 code filed with SPICe+ (main division of industrial activity).',
       required: true,
@@ -253,7 +273,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
       id: 'nicBusinessType',
       label: 'Business type',
       type: 'text',
-      section: 'Business Description',
+      section: 'NIC Codes',
       helperText: 'Filled in from the NIC code.',
       layout: 'full',
     },
@@ -263,7 +283,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
       id: 'additionalNicCodes',
       label: 'Additional NIC codes',
       type: 'repeat',
-      section: 'Business Description',
+      section: 'NIC Codes',
       entryLabel: 'NIC code',
       minEntries: 0,
       maxEntries: 9,
@@ -286,40 +306,6 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
           layout: 'full',
         },
       ],
-    },
-    {
-      id: 'authorisedShareCapital',
-      label: 'Authorized Share Capital (INR) (ex: 10,00,000)',
-      type: 'text',
-      section: 'Share Capital Details',
-      placeholder: '10,00,000',
-      required: true,
-    },
-    {
-      id: 'paidUpShareCapital',
-      label: 'Initial Paid-up Share Capital (INR) (ex: 1,00,000)',
-      type: 'text',
-      section: 'Share Capital Details',
-      placeholder: '1,00,000',
-      required: true,
-    },
-    {
-      id: 'nominalValuePerEquityShare',
-      label: 'Nominal Value of Each Equity Share (ex: INR 10)',
-      type: 'text',
-      section: 'Share Capital Details',
-      placeholder: '10',
-      required: true,
-    },
-    {
-      id: 'boardResolutionDate',
-      label: 'Date of Board Resolution',
-      type: 'date',
-      section: 'Share Capital Details',
-      placeholder: 'YYYY-MM-DD',
-      helperText:
-        'Date the parent entity board passed the resolution to incorporate the Indian subsidiary.',
-      required: true,
     },
   ],
   'pre-2': [

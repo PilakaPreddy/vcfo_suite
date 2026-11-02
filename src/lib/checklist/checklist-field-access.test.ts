@@ -62,6 +62,20 @@ describe('filterFieldsByViewer — direct flow', () => {
     expect(filterFieldsByViewer(fields, 'client', 'pre-5').map((f) => f.id)).toEqual(['a', 'b']);
   });
 
+  it('hides the project lead\'s own fields from the client (Part A NIC codes)', () => {
+    const partA = [
+      { id: 'businessDescription', label: 'Business', type: 'text' as const },
+      { id: 'nicCode', label: 'NIC', type: 'text' as const },
+      { id: 'additionalNicCodes', label: 'More NIC', type: 'repeat' as const },
+    ];
+    expect(filterFieldsByViewer(partA, 'client', 'pre-1').map((f) => f.id)).toEqual(['businessDescription']);
+    expect(filterFieldsByViewer(partA, 'admin', 'pre-1').map((f) => f.id)).toEqual([
+      'businessDescription',
+      'nicCode',
+      'additionalNicCodes',
+    ]);
+  });
+
   it('keeps hiding lead fields elsewhere', () => {
     expect(filterFieldsByViewer(fields, 'client', 'post-1').map((f) => f.id)).toEqual(['a']);
     expect(filterFieldsByViewer(fields, 'client').map((f) => f.id)).toEqual(['a']);

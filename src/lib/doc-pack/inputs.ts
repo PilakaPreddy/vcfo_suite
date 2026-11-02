@@ -154,14 +154,14 @@ export const signatoryName: RequiredInput = {
   key: 'signatory.name',
   label: 'Authorised signatory name',
   stepId: 'pre-1',
-  tabId: sectionSlug(PART_A_SECTION.authorizedSignatory),
+  tabId: sectionSlug(PART_A_SECTION.boardResolutionSignatory),
   isPresent: (ctx) => filled(resolveSignatoryDisplayName(ctx.responses.pre1)),
 };
 
 export const signatoryDesignation = pre1Input(
   'signatory.designation',
   'Authorised signatory designation',
-  PART_A_SECTION.authorizedSignatory,
+  PART_A_SECTION.boardResolutionSignatory,
   'signatoryDesignation',
 );
 

@@ -11,6 +11,7 @@ import { VisorHead } from '@/components/ask/Visor';
 import { LinkButton } from '@/components/client-portal/LinkButton';
 import { portalHref, stepHref } from '@/components/client-portal/routes';
 import { extractItemResponses, getClientResponseFields } from '@/lib/checklist/checklist-responses';
+import { isLeadOnlyField } from '@/lib/incorporation/pre-inc-direct-flow';
 import { isReviewAccepted } from '@/lib/checklist/checklist-item-review';
 import type { PortalStep } from '@/lib/client-portal/step-model';
 import { Ico, InfoPopover, Seg } from './ui';
@@ -243,7 +244,9 @@ export function StepPopup({
             ? { t: 'In progress', k: 'prog' as const }
             : { t: 'Upcoming', k: 'up' as const };
   const dueIn = s.due ? days(h.today, s.due) : null;
-  const fields = getClientResponseFields(s.item).filter((f) => f.type !== 'file').slice(0, 8);
+  const fields = getClientResponseFields(s.item)
+    .filter((f) => f.type !== 'file' && !isLeadOnlyField(s.item.id, f.id))
+    .slice(0, 8);
   const resp = extractItemResponses(s.item, s.slice ?? null);
   const send = async () => {
     if (!msg?.trim()) return;
