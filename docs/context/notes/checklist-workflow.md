@@ -181,3 +181,14 @@ Spec `docs/specs/pre-inc-direct-flow/` (CONTEXT, AUDIT, REPORT).
   the milestone autosave hook). Board-resolution missing-director links now point at Part A.
 - The board resolution no longer requires a date; it prints today's date and the lead edits it.
 - Section names live in `PART_A_SECTION`; the doc pack, assist profile and BR error links read it.
+- **Part A is the client's; the lead fills only the NIC codes** (owner, 2026-11-02, second pass).
+  `isClientOnlyField` (pre-inc-direct-flow) marks every `pre-1` field except the lead-only NIC
+  fields and `stepRemarks`. `canRoleEditField('intern', …)` is false for them, the lead's saves
+  are stripped with `stripClientOnlyResponses` (form, PATCH route, submit), and the lead's form
+  renders them as a read-only record. A lead's Submit while client answers are missing gets
+  "Waiting on the client" (form) or a 422 (server), never `waiting_on_lead`.
+- Part A defaults (share capital, two directors) apply to the client's draft only; staff read
+  what was saved (`use-milestone-draft.ts`). "Ask client" is not offered on lead-only fields.
+- **Client portal step 1 renders the same tabbed `MilestoneResponseForm`** (variant client,
+  `sectionTabs`) inside the answers card, so the client gets tabs, Next / Submit and uploads.
+  Other client portal steps keep the row list.

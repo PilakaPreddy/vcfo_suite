@@ -14,7 +14,11 @@ import {
   getClientReviewBanner,
   isReviewAccepted,
 } from '@/lib/checklist/checklist-item-review';
-import { isDirectFlowStep, stripLeadOnlyResponses } from '@/lib/incorporation/pre-inc-direct-flow';
+import {
+  isDirectFlowStep,
+  stripClientOnlyResponses,
+  stripLeadOnlyResponses,
+} from '@/lib/incorporation/pre-inc-direct-flow';
 import type { MilestoneSources } from './use-milestone-sources';
 
 interface MilestoneAccessParams {
@@ -39,7 +43,11 @@ export function useMilestoneAccess({ item, variant, readOnly, itemState }: Miles
     (partial: ChecklistItemResponses): ChecklistItemResponses =>
       filterResponsesToEditableFields(
         itemState,
-        isClient && directFlow ? stripLeadOnlyResponses(item.id, partial) : partial,
+        directFlow
+          ? isClient
+            ? stripLeadOnlyResponses(item.id, partial)
+            : stripClientOnlyResponses(item.id, partial)
+          : partial,
         enforceClientLock,
       ),
     [itemState, isClient, directFlow, item.id, enforceClientLock],

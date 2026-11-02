@@ -198,6 +198,16 @@ export function createSubmitActions(ctx: MilestoneFormCtx) {
       showErrors(blocking);
       return;
     }
+    // Part A: the lead cannot finish the step while the client's own answers
+    // are missing. Nothing for the lead to fix, so no field errors — just say so.
+    const clientGaps = Object.keys(validation.errors).length;
+    if (!isClient && clientGaps > 0) {
+      toastError(
+        'Waiting on the client',
+        `The client still has ${clientGaps} answer${clientGaps === 1 ? '' : 's'} to fill on this step. Your NIC codes are saved.`,
+      );
+      return;
+    }
     setFieldErrors({});
 
     setSubmitting(true);

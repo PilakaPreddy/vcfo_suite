@@ -31,6 +31,9 @@ import type { PortalStep } from '@/lib/client-portal/step-model';
 import type { ClientFileRequestDto } from '@/lib/client-portal/incorporation-types';
 import { canRoleEditField, isDirectFlowStep } from '@/lib/incorporation/pre-inc-direct-flow';
 import { itemKey } from '@/lib/work/item-key';
+import { PART_A_STEP_ID } from '@/lib/checklist/part-a-sections';
+import { useApp } from '@/context/AppContext';
+import { MilestoneResponseForm } from '@/views/incorporation/MilestoneResponseForm';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -210,6 +213,7 @@ const PHASE_PART: Record<number, string> = { 1: 'SPICe+ Part A', 2: 'SPICe+ Part
 
 export default function StepPage({ stepParam }: { stepParam: string }) {
   const d = useIncData();
+  const { engagementsSettled } = useApp();
   const { go, openChat, toast, drill } = usePortal();
   const goTo = useGo();
   const qc = useQueryClient();
@@ -530,6 +534,24 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
     (direct ? canRoleEditField('client', s.id, r.field.id) : (r.field.filledBy ?? s.item.responsibleRole) === 'client') &&
     (!s.slice?.locked || unlocked.has(r.field.id));
   const editable = rows.some(canEditRow);
+  // Part A: the client fills the same tabbed form the project lead works in
+  // (one tab per section, Next / Submit, uploads included) instead of the row list.
+  const partAForm =
+    s.id === PART_A_STEP_ID && d.engagementId ? (
+      <div className="px-4 py-4 md:px-5">
+        <MilestoneResponseForm
+          key={`${s.id}-${d.engagementId}`}
+          item={s.item}
+          clientId={d.engagementId}
+          engagementId={d.engagementId}
+          variant="client"
+          open={engagementsSettled}
+          readOnly={!editStep}
+          compactChrome
+          sectionTabs
+        />
+      </div>
+    ) : null;
   const dirty = Object.keys(draft).length > 0;
   // C-219: a step SBC or MCA holds gets "Message <lead>" in the card foot.
   const leadFirst = d.leadName ? firstName(d.leadName) : '';
@@ -693,6 +715,7 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
         </div>
       ) : null}
       {about ? <p className="m-0 border-b border-line-soft px-4 py-3 text-[13.5px] text-ink-2 md:px-5">{about}</p> : null}
+      {partAForm ?? (
       <dl className="m-0">
         {rows.map((r, i) => (
           <KvRow
@@ -707,7 +730,8 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
           />
         ))}
       </dl>
-      {editable ? (
+      )}
+      {editable && !partAForm ? (
         <footer className="flex flex-wrap items-center gap-2 border-t border-line-soft px-4 py-3 md:px-5">
           <Button variant="secondary" className="ml-auto" disabled={!dirty || savingDraft} onClick={() => void saveDraft()}>
             <PenLine size={16} strokeWidth={1.6} aria-hidden />

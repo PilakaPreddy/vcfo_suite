@@ -1,5 +1,6 @@
 'use client';
 
+import { isLeadOnlyField } from '@/lib/incorporation/pre-inc-direct-flow';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Chip, type ChipTone } from '@/components/ui/spectrum-chip';
@@ -93,6 +94,8 @@ export function FieldReviewControls({
     onError: (err) => toastError('Could not update the field', errorMessage(err)),
   });
   if (!staff || !engagementId || !loaded) return null;
+  // The project lead's own fields (Part A NIC codes) are never asked of the client.
+  if (isLeadOnlyField(itemId, fieldId)) return null;
 
   const p = fieldStatePresentation(state);
   const busy = run.isPending;
