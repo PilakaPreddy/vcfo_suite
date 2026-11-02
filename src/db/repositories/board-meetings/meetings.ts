@@ -154,6 +154,7 @@ export interface MeetingDto {
   recipients: MeetingRecipient[];
   signatoryDirectorId: string | null;
   teamsLink: string | null;
+  icsSequence: number;
   postInc: boolean;
   noticeOn: string | null;
   shortNotice: boolean;
@@ -382,6 +383,7 @@ async function buildDto(ctx: AuthContext, meetingIn: MeetingRow, engagement: Eng
     recipients: clientView ? meeting.recipients.filter((r) => r.kind === 'to').map((r) => ({ ...r, email: null })) : meeting.recipients,
     signatoryDirectorId: meeting.signatoryDirectorId,
     teamsLink: meeting.teamsLink,
+    icsSequence: meeting.icsSequence,
     postInc: meeting.postInc,
     noticeOn: meeting.noticeOn,
     shortNotice: meeting.shortNotice,
@@ -1000,3 +1002,59 @@ export async function systemMarkHeld(today: string): Promise<number> {
 }
 
 export { BoardMeetingError };
+
+/** Who to tell about a meeting: its lead, manager and admin (system; caller checked access). */
+export async function systemMeetingPeople(engagement: EngagementDbRow): Promise<{ lead: { id: string; name: string; email: string } | null; manager: { id: string; name: string; email: string } | null; admin: { id: string; name: string; email: string } | null }> {
+  const leadId = await leadProfileId(engagement);
+  const managerId = managerProfileId(engagement);
+  const map = await peopleById([leadId, managerId, engagement.adminId]);
+  const pick = (id: string | null | undefined) => {
+    const p = id ? map.get(id) : null;
+    return p ? { id: p.id, name: p.name, email: p.email } : null;
+  };
+  let admin = pick(engagement.adminId);
+  if (!admin) {
+    const all = await firmAdmins();
+    const a = all.find((x) => x.role === 'admin') ?? all[0];
+    admin = a ? { id: a.id, name: a.name, email: a.email } : null;
+  }
+  return { lead: pick(leadId), manager: pick(managerId), admin };
+}
+
+/** The reply page (no session): what one director sees for one meeting. */
+export async function systemReplySummary(meetingId: string, directorId: string): Promise<{
+  companyName: string;
+  meetingNo: string;
+  kindLabel: string;
+  meetingDate: string;
+  meetingTime: string;
+  secondZone: string | null;
+  mode: MeetingMode;
+  venue: string;
+  teamsLink: string | null;
+  directorName: string;
+  reply: 'yes' | 'no' | null;
+  open: boolean;
+} | null> {
+  const bundle = await systemMeetingBundle(meetingId);
+  if (!bundle) return null;
+  const { meeting, directors, company } = bundle;
+  if (!meeting.recipients.some((r) => r.directorId === directorId)) return null;
+  const director = directors.find((d) => d.id === directorId);
+  if (!director) return null;
+  const [rep] = await db.select().from(boardMeetingReplies).where(and(eq(boardMeetingReplies.meetingId, meetingId), eq(boardMeetingReplies.directorId, directorId))).limit(1);
+  return {
+    companyName: company.name,
+    meetingNo: meeting.meetingNo,
+    kindLabel: KIND_LABEL[meeting.kind as MeetingKind] ?? 'Board meeting',
+    meetingDate: meeting.meetingDate,
+    meetingTime: meeting.meetingTime,
+    secondZone: meeting.secondZoneLabel && meeting.secondZoneTime ? `${meeting.secondZoneTime} ${meeting.secondZoneLabel}` : null,
+    mode: meeting.mode as MeetingMode,
+    venue: meeting.venue,
+    teamsLink: meeting.teamsLink,
+    directorName: director.name,
+    reply: rep ? (rep.reply as 'yes' | 'no') : null,
+    open: (meeting.status === 'sent' || meeting.status === 'approved') && meeting.meetingDate >= todayIst(),
+  };
+}

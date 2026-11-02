@@ -5,7 +5,7 @@ import 'server-only';
  * (docs/specs/board-meetings/PLAN.md). Split by concern; this file keeps one import path.
  * Access rules: `shared.ts`.
  */
-export { BoardMeetingError, meetingHref } from './shared';
+export { BoardMeetingError, meetingHref, notifyMeeting } from './shared';
 export type { CompanyInfo } from './shared';
 export { listDirectors, addDirector, updateDirector, ceaseDirector } from './directors';
 export type { DirectorDto, DirectorInput } from './directors';
@@ -28,6 +28,8 @@ export {
   systemDraftsToPrepare,
   systemMomOpen,
   systemMarkHeld,
+  systemMeetingPeople,
+  systemReplySummary,
 } from './meetings';
 export type { MeetingDto, MeetingListRow, MeetingDocumentDto, ReplyDto, CreateMeetingInput, UpdateMeetingInput } from './meetings';
 export {

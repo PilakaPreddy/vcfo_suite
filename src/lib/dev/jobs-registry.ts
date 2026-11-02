@@ -12,6 +12,7 @@ import { dailyDigest } from '@/jobs/daily-digest';
 import { serviceChecks } from '@/jobs/service-checks';
 import { complianceTaskReminders } from '@/jobs/compliance-task-reminders';
 import { complianceTaskRepeatOnComplete, complianceTaskRepeatSweep } from '@/jobs/compliance-task-repeat';
+import { boardMeetingReminders } from '@/jobs/board-meeting-reminders';
 import { devCleanup } from '@/jobs/dev-cleanup';
 import { describeFunctions } from './parse';
 import type { JobFunction } from './types';
@@ -37,5 +38,6 @@ export function registeredJobs(): JobFunction[] {
     complianceTaskReminders,
     complianceTaskRepeatOnComplete,
     complianceTaskRepeatSweep,
+    boardMeetingReminders,
   ]);
 }

@@ -222,3 +222,30 @@ describe('notice', () => {
     expect(xml).toContain('CIN: U62099TS2025FTC205994');
   });
 });
+
+describe('resolution document', async () => {
+  const { resolutionDocx, resolvedText } = await import('./resolution');
+  it('writes RESOLVED THAT once and lists the signers', () => {
+    expect(resolvedText('the Company opens a current account.')).toBe('RESOLVED THAT the Company opens a current account.');
+    expect(resolvedText('Resolved that x')).toBe('Resolved that x.');
+    const xml = new PizZip(
+      resolutionDocx({
+        companyName: 'NetDocuments India Private Limited',
+        cin: null,
+        address: null,
+        title: 'Opening of a current account',
+        description: 'the Company opens a current account',
+        resolutionDate: '2026-09-25',
+        meetingNo: 'NIPL/BM/02/2026-27',
+        meetingDate: '2026-09-10',
+        changesItem: 'item 5',
+        signers: [{ name: 'Rahul Hari Bhide', din: '10211790' }],
+      }),
+    )
+      .file('word/document.xml')!
+      .asText();
+    expect(xml).toContain('RESOLUTION PASSED BY CIRCULATION');
+    expect(xml).toContain('Rahul Hari Bhide  ·  10211790');
+    expect(xml).toContain('changes the decision on item 5');
+  });
+});

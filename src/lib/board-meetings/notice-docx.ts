@@ -10,7 +10,7 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-interface P {
+export interface P {
   text: string;
   bold?: boolean;
   center?: boolean;
@@ -63,6 +63,11 @@ export function noticeDocxParagraphs(doc: NoticeDoc): P[] {
 }
 
 export function noticeDocx(doc: NoticeDoc): Buffer {
+  return simpleDocx(noticeDocxParagraphs(doc));
+}
+
+/** A one-section A4 Word file from paragraphs (Times New Roman, no template). */
+export function simpleDocx(paragraphs: P[]): Buffer {
   const zip = new PizZip();
   zip.file(
     '[Content_Types].xml',
@@ -72,7 +77,7 @@ export function noticeDocx(doc: NoticeDoc): Buffer {
     '_rels/.rels',
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
   );
-  const body = noticeDocxParagraphs(doc).map(para).join('');
+  const body = paragraphs.map(para).join('');
   zip.file(
     'word/document.xml',
     `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`,

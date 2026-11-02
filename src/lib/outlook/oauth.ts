@@ -4,7 +4,8 @@ import { authSecrets } from '@/auth/secrets';
 import { azureClientSecret, isInvalidClient } from '@/lib/secrets/app-secrets';
 import { withSecretRetry } from '@/lib/secrets/runtime-secret';
 
-const OUTLOOK_SCOPES = ['offline_access', 'User.Read', 'Mail.Send'].join(' ');
+/** Calendars.ReadWrite (2 Nov 2026): board meeting Teams links. Older connections lack it until reconnected. */
+const OUTLOOK_SCOPES = ['offline_access', 'User.Read', 'Mail.Send', 'Calendars.ReadWrite'].join(' ');
 
 function azureTenant(): string {
   return process.env.AZURE_AD_TENANT_ID?.trim() || 'common';
@@ -230,4 +231,59 @@ export async function graphSendMail(
     const body = await res.text();
     throw new Error(body.slice(0, 280) || `graph_send_${res.status}`);
   }
+}
+
+export interface GraphTeamsEventInput {
+  subject: string;
+  /** Local wall time in India, `YYYY-MM-DDTHH:MM:00`. */
+  start: string;
+  end: string;
+  location: string;
+  bodyHtml: string;
+}
+
+function teamsEventBody(input: GraphTeamsEventInput) {
+  return {
+    subject: input.subject,
+    body: { contentType: 'HTML', content: input.bodyHtml },
+    start: { dateTime: input.start, timeZone: 'India Standard Time' },
+    end: { dateTime: input.end, timeZone: 'India Standard Time' },
+    location: { displayName: input.location },
+    isOnlineMeeting: true,
+    onlineMeetingProvider: 'teamsForBusiness',
+  };
+}
+
+/**
+ * A Teams meeting in the signed-in user's calendar without attendees: VCFO sends its own notice
+ * and invite, so Outlook must not send a second one. Needs Calendars.ReadWrite.
+ */
+export async function graphCreateTeamsEvent(accessToken: string, input: GraphTeamsEventInput): Promise<{ eventId: string; joinUrl: string | null }> {
+  const res = await fetch('https://graph.microsoft.com/v1.0/me/events', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(teamsEventBody(input)),
+  });
+  if (!res.ok) throw new Error(`graph_event_create_${res.status}`);
+  const j = (await res.json()) as { id: string; onlineMeeting?: { joinUrl?: string } | null };
+  return { eventId: j.id, joinUrl: j.onlineMeeting?.joinUrl ?? null };
+}
+
+export async function graphUpdateTeamsEvent(accessToken: string, eventId: string, input: GraphTeamsEventInput): Promise<{ eventId: string; joinUrl: string | null }> {
+  const res = await fetch(`https://graph.microsoft.com/v1.0/me/events/${encodeURIComponent(eventId)}`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(teamsEventBody(input)),
+  });
+  if (!res.ok) throw new Error(`graph_event_update_${res.status}`);
+  const j = (await res.json()) as { id: string; onlineMeeting?: { joinUrl?: string } | null };
+  return { eventId: j.id, joinUrl: j.onlineMeeting?.joinUrl ?? null };
+}
+
+export async function graphCancelEvent(accessToken: string, eventId: string, comment: string): Promise<void> {
+  const res = await fetch(`https://graph.microsoft.com/v1.0/me/events/${encodeURIComponent(eventId)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok && res.status !== 404) throw new Error(`graph_event_cancel_${res.status}_${comment.length}`);
 }
