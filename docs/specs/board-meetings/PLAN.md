@@ -4,6 +4,10 @@ Owner: SBC. Decided in the 2 Nov 2026 session; designs on the "Create Board Meet
 canvas (claude.ai artifact FZAzHTLVDseikA8QWqHm1X) and the plan PDF ("Board Meeting Workflow
 Plan", draft 6). This file is the spec the code follows.
 
+Status 2026-11-02: built end to end on `claude/determined-planck-9hnlhx` (see `docs/context/STATE.md`).
+Not built yet: e-signature (signers still sign on paper and the lead uploads the signed copy),
+and marking the post-1 checklist step done automatically when the first meeting's MoM locks.
+
 ## Workflow
 
 | Day | Step | Who |
