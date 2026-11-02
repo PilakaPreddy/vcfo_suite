@@ -130,7 +130,7 @@ are not part of the port and were not committed. A second pass the same day buil
 
 ## Next steps / known issues
 
-- Board meetings (`docs/specs/board-meetings/PLAN.md`) need migration `0033_board_meetings` on RDS
+- Board meetings (`docs/specs/board-meetings/PLAN.md`) need migration `0034_board_meetings` on RDS
   before deploy, and each lead must reconnect Outlook once (new `Calendars.ReadWrite` scope) for
   the notice to carry a Teams link.
 

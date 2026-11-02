@@ -236,8 +236,15 @@
     {
       "idx": 33,
       "version": "7",
-      "when": 1793624620979,
-      "tag": "0033_board_meetings",
+      "when": 1793621028851,
+      "tag": "0033_labour_registers",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1793627969985,
+      "tag": "0034_board_meetings",
       "breakpoints": true
     }
   ]

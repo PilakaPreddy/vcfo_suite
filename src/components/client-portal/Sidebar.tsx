@@ -20,6 +20,9 @@ import { usePortal } from './PortalProvider';
 import { activeKeyFor, portalHref, PORTAL_TITLES, type PortalRouteKey } from './routes';
 import { showsBeforeAfterSwitch, type ClientPortalContact } from '@/lib/client-portal/types';
 
+/** The full Ask VCFO page in the client portal. */
+const ASK_PAGE = '/app/client/ask';
+
 type Bp = 'phone' | 'tablet' | 'desktop';
 
 function bpOf(w: number): Bp {
@@ -372,7 +375,7 @@ function SidebarFull({ drawer, onPin }: { drawer?: boolean; onPin?: () => void }
   const pathname = usePathname();
   const act = activeKeyFor(pathname);
   const nav = useNav();
-  const { shell, prefs, savePrefs, toast, go, setDrawerOpen, openChat } = usePortal();
+  const { shell, prefs, savePrefs, toast, go, setDrawerOpen } = usePortal();
   const showBa = useShowBeforeAfter();
   const navRef = useRef<HTMLElement>(null);
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -514,14 +517,18 @@ function SidebarFull({ drawer, onPin }: { drawer?: boolean; onPin?: () => void }
           </div>
         ))}
       </div>
-      {/* R-45: Ask VCFO is a sidebar button with the "/" key, never a floating bubble. */}
+      {/* Owner decision 2 Nov 2026: the sidebar's Ask VCFO opens the full Ask VCFO page; the
+         robot in the bottom-right corner (and the "/" key) opens the pop-up chat. */}
       <div className="vps-askw">
-        <button
-          type="button"
+        <a
           className="vps-ask"
-          onClick={() => {
+          href={ASK_PAGE}
+          title="Open Ask VCFO"
+          aria-current={pathname === ASK_PAGE ? 'page' : undefined}
+          onClick={(e) => {
+            e.preventDefault();
             if (drawer) setDrawerOpen(false);
-            openChat();
+            go(ASK_PAGE);
           }}
         >
           <span className="vps-ask-i" aria-hidden="true">
@@ -530,8 +537,7 @@ function SidebarFull({ drawer, onPin }: { drawer?: boolean; onPin?: () => void }
             </svg>
           </span>
           <span className="vps-ask-t">Ask VCFO</span>
-          <kbd>/</kbd>
-        </button>
+        </a>
       </div>
       <div className="vps-me">
         <div className="vps-mest">

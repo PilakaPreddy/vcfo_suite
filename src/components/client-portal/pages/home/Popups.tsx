@@ -7,7 +7,7 @@
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { VisorHead } from '@/components/client-portal/Visor';
+import { VisorHead } from '@/components/ask/Visor';
 import { LinkButton } from '@/components/client-portal/LinkButton';
 import { portalHref, stepHref } from '@/components/client-portal/routes';
 import { extractItemResponses, getClientResponseFields } from '@/lib/checklist/checklist-responses';

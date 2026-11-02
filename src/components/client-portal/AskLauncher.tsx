@@ -17,14 +17,15 @@
  * hand-off → /api/client/handoff.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAskOptional } from '@/components/ask/ask-context';
 import { ASK_PANEL_SIZES, useAskPanelSize, type AskPanelSize } from '@/components/ask/use-ask-layout';
 import { useApp } from '@/context/AppContext';
 import { AFTER_QUESTIONS, BEFORE_QUESTIONS } from '@/lib/client-portal/answers';
 import { usePortal, type WhatsThisAnswer } from './PortalProvider';
-import { VisorCharacter, VisorHead } from './Visor';
-import { activeKeyFor, stepHref } from './routes';
+import { VisorCharacter, VisorHead } from '@/components/ask/Visor';
+import { useAvatarYield } from '@/components/ask/use-avatar-yield';
+import { stepHref } from './routes';
 
 /* The size buttons' icons: small window, large window, right-hand panel. */
 const SIZE_ICON: Record<AskPanelSize, string> = {
@@ -47,9 +48,6 @@ function readLog(): LogItem[] {
     return [];
   }
 }
-
-const ACT =
-  'a[href],button,[role=button],[role=link],[role=tab],[role=checkbox],[role=radio],[role=switch],[role=menuitem],[role=option],input,select,textarea,summary,label,[data-go],[onclick],[contenteditable=""],[contenteditable=true]';
 
 /** Ask VCFO go-there link → a portal path. */
 function destHref(dest: { to: string; stepId?: string; focusStepId?: string; slug?: string; itemId?: string }): string {
@@ -90,9 +88,6 @@ export function AskLauncher() {
   const [thinking, setThinking] = useState(false);
   const [mood, setMood] = useState<'ok' | 'nan' | null>(null);
   const [moodN, setMoodN] = useState(0);
-  const [yieldOn, setYield] = useState(false);
-  const [lift, setLift] = useState('0px');
-  const scrolling = useRef(false);
   const awaitingAsk = useRef<number | null>(null);
 
   useEffect(() => setLog(readLog()), []);
@@ -134,64 +129,9 @@ export function AskLauncher() {
   const company = shell?.companyShort ?? 'your company';
   const questions = after ? AFTER_QUESTIONS : BEFORE_QUESTIONS;
 
-  /* ---------- yield: duck while scrolling, open, or covering a control ---------- */
-  const coversControl = useCallback(() => {
-    const c = launchRef.current?.querySelector('.vpl-char');
-    if (!c || !launchRef.current) return false;
-    const r = c.getBoundingClientRect();
-    if (!r.width || !r.height) return false;
-    const seen: Element[] = [];
-    for (let i = 0; i < 6; i++)
-      for (let j = 0; j < 4; j++) {
-        const x = r.left + r.width * (0.08 + 0.168 * i);
-        const y = r.top + r.height * (0.08 + 0.28 * j);
-        const st = document.elementsFromPoint(x, y);
-        for (const e of st) {
-          if (launchRef.current.contains(e)) continue;
-          const a = e.closest(ACT);
-          if (!a || seen.includes(a)) break;
-          seen.push(a);
-          const b = a.getBoundingClientRect();
-          const ow = Math.min(b.right, r.right) - Math.max(b.left, r.left);
-          const oh = Math.min(b.bottom, r.bottom) - Math.max(b.top, r.top);
-          if (ow > 0 && oh > 0 && (ow * oh) / Math.max(1, b.width * b.height) > 0.2) return true;
-          break;
-        }
-      }
-    return false;
-  }, []);
-  const updYield = useCallback(() => {
-    const sheet = document.querySelector('.cp')?.classList.contains('sheet-open') ?? false;
-    setYield(scrolling.current || chatOpen || sheet || coversControl());
-    const l = launchRef.current;
-    if (l) setLift(`${Math.max(0, Math.round(window.innerHeight - l.getBoundingClientRect().bottom))}px`);
-  }, [chatOpen, coversControl]);
-  useEffect(() => {
-    let t: ReturnType<typeof setTimeout> | null = null;
-    const onScroll = () => {
-      if (chatOpen) return;
-      scrolling.current = true;
-      updYield();
-      if (t) clearTimeout(t);
-      t = setTimeout(() => {
-        scrolling.current = false;
-        updYield();
-      }, 650);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true, capture: true });
-    window.addEventListener('resize', updYield);
-    const iv = setInterval(() => {
-      if (!document.hidden) updYield();
-    }, 1000);
-    const first = setTimeout(updYield, 60);
-    return () => {
-      window.removeEventListener('scroll', onScroll, { capture: true } as EventListenerOptions);
-      window.removeEventListener('resize', updYield);
-      clearInterval(iv);
-      clearTimeout(first);
-      if (t) clearTimeout(t);
-    };
-  }, [chatOpen, updYield]);
+  /* ---------- yield: duck while scrolling, open, a bottom sheet, or covering a control ---------- */
+  const sheetOpen = useCallback(() => document.querySelector('.cp')?.classList.contains('sheet-open') ?? false, []);
+  const { yieldOn, lift } = useAvatarYield(launchRef, chatOpen, sheetOpen);
 
   /* ---------- open / close ---------- */
   useEffect(() => {
@@ -530,7 +470,7 @@ export function AskLauncher() {
           <button type="submit">Send</button>
         </form>
       </section>
-      <div id="vp-launch" ref={launchRef} className={[yieldOn ? 'yield' : '', chatOpen ? 'open' : ''].filter(Boolean).join(' ')}>
+      <div id="vp-launch" ref={launchRef} hidden={pageOpen} className={[yieldOn ? 'yield' : '', chatOpen ? 'open' : ''].filter(Boolean).join(' ')}>
         <span
           className="vpl-char"
           aria-hidden="true"

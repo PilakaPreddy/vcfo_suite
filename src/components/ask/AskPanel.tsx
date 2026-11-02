@@ -14,6 +14,8 @@ import { AskComposer } from './AskComposer';
 import { AskHome } from './AskHome';
 import { useAskOptional } from './ask-context';
 import { AskThread } from './AskThread';
+import { VisorBadge, VisorCharacter } from './Visor';
+import './ask-avatar.css';
 import { ASK_PANEL_SIZES, useAskLayoutMode, useAskPanelSize, type AskPanelSize } from './use-ask-layout';
 
 const iconButton =
@@ -22,8 +24,8 @@ const iconButton =
 const SIZE_ICON: Record<AskPanelSize, LucideIcon> = { small: Minimize2, large: Maximize2, side: PanelRight };
 
 /**
- * Prototype AskButton head: 52px, the title in 15px weight 500, no bot figure (R-04). The
- * floating card adds the three size buttons and "Open full page" (owner items F3, F4).
+ * Prototype AskButton head: 52px, the robot's head, the title in 15px weight 500. The floating
+ * card adds the three size buttons and "Open full page" (owner items F3, F4).
  */
 function Header({ onClose, size, setSize }: { onClose: () => void; size?: AskPanelSize; setSize?: (s: AskPanelSize) => void }) {
   const ask = useAskOptional()!;
@@ -44,9 +46,11 @@ function Header({ onClose, size, setSize }: { onClose: () => void; size?: AskPan
         </div>
       )}
       <div className="flex min-h-[52px] items-center gap-2.5 px-4">
+        <VisorBadge size={32} />
         <h2 className="text-[15px] font-medium text-ink">Ask VCFO</h2>
+        {/* The Small card has no room for the scope beside the robot and the buttons. */}
         <span className="min-w-0 flex-1 truncate text-[13px] text-ink-muted">
-          {client ? 'Verified sources' : scoped ? 'Your clients · read only' : 'Firm-wide · read only'}
+          {size === 'small' ? null : client ? 'Verified sources' : scoped ? 'Your clients · read only' : 'Firm-wide · read only'}
         </span>
         {size && setSize ? (
           <div role="group" aria-label="Chat size" className="flex items-center">
@@ -182,8 +186,9 @@ export function AskPanel() {
           aria-label="Ask VCFO"
           data-size={size}
           className={cn(
-            'fixed z-50 flex flex-col overflow-hidden border border-line bg-surface-raised shadow-dialog',
-            side ? 'inset-y-0 right-0 border-y-0 border-r-0' : 'bottom-5 right-5 rounded-md',
+            'ask-vpv-scope fixed z-50 flex flex-col border border-line bg-surface-raised shadow-dialog',
+            side ? 'inset-y-0 right-0 overflow-hidden border-y-0 border-r-0' : 'bottom-5 right-5 rounded-md',
+            ask.busy && 'ask-think',
           )}
           style={
             side
@@ -195,8 +200,16 @@ export function AskPanel() {
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
           transition={{ duration: reduceMotion ? 0.1 : 0.16, ease }}
         >
-          <Header onClose={close} size={size} setSize={setSize} />
-          <Body compactHome />
+          {/* The robot peeks over the card's top edge once per open (not on the full-height side panel). */}
+          {!side ? (
+            <span className="ask-pk" aria-hidden="true">
+              <VisorCharacter variant="peek" />
+            </span>
+          ) : null}
+          <div className={cn('flex min-h-0 flex-1 flex-col overflow-hidden', !side && 'rounded-md')}>
+            <Header onClose={close} size={size} setSize={setSize} />
+            <Body compactHome />
+          </div>
         </m.aside>
       )}
     </AnimatePresence>

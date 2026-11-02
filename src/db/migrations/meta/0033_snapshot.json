@@ -1,5 +1,5 @@
 {
-  "id": "6b678522-1d46-4e73-a6da-3953768680a3",
+  "id": "748e1fce-bfd3-4ba5-b76c-af771e2474af",
   "prevId": "bec0a2d0-8fe2-4aa2-8bb9-f6afc9cd07c6",
   "version": "7",
   "dialect": "postgresql",
@@ -11814,12 +11814,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "board_meeting_id": {
-          "name": "board_meeting_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "previous_id": {
           "name": "previous_id",
           "type": "uuid",
@@ -12016,75 +12010,230 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.agenda_library_items": {
-      "name": "agenda_library_items",
+    "public.labour_register_batches": {
+      "name": "labour_register_batches",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "text",
+          "type": "uuid",
           "primaryKey": true,
-          "notNull": true
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
-        "topic": {
-          "name": "topic",
-          "type": "text",
+        "engagement_id": {
+          "name": "engagement_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "scenario": {
-          "name": "scenario",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "wording": {
-          "name": "wording",
+        "state_code": {
+          "name": "state_code",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "law": {
-          "name": "law",
+        "period_from": {
+          "name": "period_from",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "''"
+          "notNull": true
         },
-        "applicability": {
-          "name": "applicability",
+        "period_to": {
+          "name": "period_to",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "''"
+          "notNull": true
         },
-        "action": {
-          "name": "action",
+        "status": {
+          "name": "status",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "''"
+          "default": "'open'"
         },
-        "notes": {
-          "name": "notes",
+        "assumptions": {
+          "name": "assumptions",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "locale": {
+          "name": "locale",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "''"
+          "default": "'en-IN'"
+        },
+        "time_zone": {
+          "name": "time_zone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Asia/Kolkata'"
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "labour_register_batch_period_idx": {
+          "name": "labour_register_batch_period_idx",
+          "columns": [
+            {
+              "expression": "engagement_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "state_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "period_from",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "period_to",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "labour_register_batch_engagement_idx": {
+          "name": "labour_register_batch_engagement_idx",
+          "columns": [
+            {
+              "expression": "engagement_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "period_from",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "labour_register_batches_engagement_id_engagements_id_fk": {
+          "name": "labour_register_batches_engagement_id_engagements_id_fk",
+          "tableFrom": "labour_register_batches",
+          "tableTo": "engagements",
+          "columnsFrom": [
+            "engagement_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "labour_register_batches_created_by_profiles_id_fk": {
+          "name": "labour_register_batches_created_by_profiles_id_fk",
+          "tableFrom": "labour_register_batches",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.labour_register_checklist": {
+      "name": "labour_register_checklist",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "engagement_id": {
+          "name": "engagement_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "head_id": {
+          "name": "head_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         },
         "active": {
           "name": "active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": true
+          "default": false
         },
-        "sort": {
-          "name": "sort",
-          "type": "integer",
+        "owner": {
+          "name": "owner",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": 0
+          "default": "'client-hr'"
+        },
+        "in_final_settlement": {
+          "name": "in_final_settlement",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "note": {
+          "name": "note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
         },
         "updated_by": {
           "name": "updated_by",
@@ -12100,11 +12249,46 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "labour_register_checklist_head_idx": {
+          "name": "labour_register_checklist_head_idx",
+          "columns": [
+            {
+              "expression": "engagement_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "head_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "agenda_library_items_updated_by_profiles_id_fk": {
-          "name": "agenda_library_items_updated_by_profiles_id_fk",
-          "tableFrom": "agenda_library_items",
+        "labour_register_checklist_engagement_id_engagements_id_fk": {
+          "name": "labour_register_checklist_engagement_id_engagements_id_fk",
+          "tableFrom": "labour_register_checklist",
+          "tableTo": "engagements",
+          "columnsFrom": [
+            "engagement_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "labour_register_checklist_updated_by_profiles_id_fk": {
+          "name": "labour_register_checklist_updated_by_profiles_id_fk",
+          "tableFrom": "labour_register_checklist",
           "tableTo": "profiles",
           "columnsFrom": [
             "updated_by"
@@ -12122,8 +12306,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.agenda_templates": {
-      "name": "agenda_templates",
+    "public.labour_register_checklist_ticks": {
+      "name": "labour_register_checklist_ticks",
       "schema": "",
       "columns": {
         "id": {
@@ -12133,434 +12317,40 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "engagement_id": {
-          "name": "engagement_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "meeting_type": {
-          "name": "meeting_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "agenda": {
-          "name": "agenda",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "agenda_templates_engagement_idx": {
-          "name": "agenda_templates_engagement_idx",
-          "columns": [
-            {
-              "expression": "engagement_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "agenda_templates_engagement_id_engagements_id_fk": {
-          "name": "agenda_templates_engagement_id_engagements_id_fk",
-          "tableFrom": "agenda_templates",
-          "tableTo": "engagements",
-          "columnsFrom": [
-            "engagement_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "agenda_templates_created_by_profiles_id_fk": {
-          "name": "agenda_templates_created_by_profiles_id_fk",
-          "tableFrom": "agenda_templates",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.board_meeting_documents": {
-      "name": "board_meeting_documents",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "meeting_id": {
-          "name": "meeting_id",
+        "batch_id": {
+          "name": "batch_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "kind": {
-          "name": "kind",
+        "head_id": {
+          "name": "head_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
+        "state": {
+          "name": "state",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "''"
-        },
-        "resolution_date": {
-          "name": "resolution_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "changes_item": {
-          "name": "changes_item",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "signer_ids": {
-          "name": "signer_ids",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'draft'"
-        },
-        "file_key": {
-          "name": "file_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "file_name": {
-          "name": "file_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "signed_key": {
-          "name": "signed_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "signed_name": {
-          "name": "signed_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sent_at": {
-          "name": "sent_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "locked_at": {
-          "name": "locked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "locked_by": {
-          "name": "locked_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "final_sent_at": {
-          "name": "final_sent_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "board_meeting_documents_meeting_idx": {
-          "name": "board_meeting_documents_meeting_idx",
-          "columns": [
-            {
-              "expression": "meeting_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "kind",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "board_meeting_documents_meeting_id_board_meetings_id_fk": {
-          "name": "board_meeting_documents_meeting_id_board_meetings_id_fk",
-          "tableFrom": "board_meeting_documents",
-          "tableTo": "board_meetings",
-          "columnsFrom": [
-            "meeting_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "board_meeting_documents_locked_by_profiles_id_fk": {
-          "name": "board_meeting_documents_locked_by_profiles_id_fk",
-          "tableFrom": "board_meeting_documents",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "locked_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "board_meeting_documents_created_by_profiles_id_fk": {
-          "name": "board_meeting_documents_created_by_profiles_id_fk",
-          "tableFrom": "board_meeting_documents",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.board_meeting_events": {
-      "name": "board_meeting_events",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "meeting_id": {
-          "name": "meeting_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "actor_id": {
-          "name": "actor_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "label": {
-          "name": "label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "board_meeting_events_meeting_idx": {
-          "name": "board_meeting_events_meeting_idx",
-          "columns": [
-            {
-              "expression": "meeting_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "board_meeting_events_meeting_id_board_meetings_id_fk": {
-          "name": "board_meeting_events_meeting_id_board_meetings_id_fk",
-          "tableFrom": "board_meeting_events",
-          "tableTo": "board_meetings",
-          "columnsFrom": [
-            "meeting_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "board_meeting_events_actor_id_profiles_id_fk": {
-          "name": "board_meeting_events_actor_id_profiles_id_fk",
-          "tableFrom": "board_meeting_events",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "actor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.board_meeting_replies": {
-      "name": "board_meeting_replies",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "meeting_id": {
-          "name": "meeting_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "director_id": {
-          "name": "director_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reply": {
-          "name": "reply",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
+          "default": "'pending'"
         },
         "note": {
           "name": "note",
           "type": "text",
           "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "updated_by": {
+          "name": "updated_by",
+          "type": "uuid",
+          "primaryKey": false,
           "notNull": false
         },
-        "replied_at": {
-          "name": "replied_at",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
@@ -12568,17 +12358,17 @@
         }
       },
       "indexes": {
-        "board_meeting_replies_meeting_director_idx": {
-          "name": "board_meeting_replies_meeting_director_idx",
+        "labour_register_tick_head_idx": {
+          "name": "labour_register_tick_head_idx",
           "columns": [
             {
-              "expression": "meeting_id",
+              "expression": "batch_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "director_id",
+              "expression": "head_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -12591,12 +12381,12 @@
         }
       },
       "foreignKeys": {
-        "board_meeting_replies_meeting_id_board_meetings_id_fk": {
-          "name": "board_meeting_replies_meeting_id_board_meetings_id_fk",
-          "tableFrom": "board_meeting_replies",
-          "tableTo": "board_meetings",
+        "labour_register_checklist_ticks_batch_id_labour_register_batches_id_fk": {
+          "name": "labour_register_checklist_ticks_batch_id_labour_register_batches_id_fk",
+          "tableFrom": "labour_register_checklist_ticks",
+          "tableTo": "labour_register_batches",
           "columnsFrom": [
-            "meeting_id"
+            "batch_id"
           ],
           "columnsTo": [
             "id"
@@ -12604,206 +12394,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "board_meeting_replies_director_id_company_directors_id_fk": {
-          "name": "board_meeting_replies_director_id_company_directors_id_fk",
-          "tableFrom": "board_meeting_replies",
-          "tableTo": "company_directors",
-          "columnsFrom": [
-            "director_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.board_meeting_signature_events": {
-      "name": "board_meeting_signature_events",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "document_id": {
-          "name": "document_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "director_id": {
-          "name": "director_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "event": {
-          "name": "event",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "board_meeting_signature_events_doc_idx": {
-          "name": "board_meeting_signature_events_doc_idx",
-          "columns": [
-            {
-              "expression": "document_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "board_meeting_signature_events_document_id_board_meeting_documents_id_fk": {
-          "name": "board_meeting_signature_events_document_id_board_meeting_documents_id_fk",
-          "tableFrom": "board_meeting_signature_events",
-          "tableTo": "board_meeting_documents",
-          "columnsFrom": [
-            "document_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "board_meeting_signature_events_director_id_company_directors_id_fk": {
-          "name": "board_meeting_signature_events_director_id_company_directors_id_fk",
-          "tableFrom": "board_meeting_signature_events",
-          "tableTo": "company_directors",
-          "columnsFrom": [
-            "director_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.board_meeting_versions": {
-      "name": "board_meeting_versions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "meeting_id": {
-          "name": "meeting_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "snapshot": {
-          "name": "snapshot",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "actor_id": {
-          "name": "actor_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "board_meeting_versions_meeting_version_idx": {
-          "name": "board_meeting_versions_meeting_version_idx",
-          "columns": [
-            {
-              "expression": "meeting_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "version",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "board_meeting_versions_meeting_id_board_meetings_id_fk": {
-          "name": "board_meeting_versions_meeting_id_board_meetings_id_fk",
-          "tableFrom": "board_meeting_versions",
-          "tableTo": "board_meetings",
-          "columnsFrom": [
-            "meeting_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "board_meeting_versions_actor_id_profiles_id_fk": {
-          "name": "board_meeting_versions_actor_id_profiles_id_fk",
-          "tableFrom": "board_meeting_versions",
+        "labour_register_checklist_ticks_updated_by_profiles_id_fk": {
+          "name": "labour_register_checklist_ticks_updated_by_profiles_id_fk",
+          "tableFrom": "labour_register_checklist_ticks",
           "tableTo": "profiles",
           "columnsFrom": [
-            "actor_id"
+            "updated_by"
           ],
           "columnsTo": [
             "id"
@@ -12818,8 +12414,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.board_meetings": {
-      "name": "board_meetings",
+    "public.labour_register_column_maps": {
+      "name": "labour_register_column_maps",
       "schema": "",
       "columns": {
         "id": {
@@ -12835,69 +12431,179 @@
           "primaryKey": false,
           "notNull": true
         },
-        "kind": {
-          "name": "kind",
+        "slot": {
+          "name": "slot",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'board'"
+          "notNull": true
         },
-        "meeting_type": {
-          "name": "meeting_type",
-          "type": "text",
+        "mapping": {
+          "name": "mapping",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
-          "default": "'quarterly'"
+          "default": "'{}'::jsonb"
         },
-        "seq": {
-          "name": "seq",
+        "value_maps": {
+          "name": "value_maps",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "last_headers": {
+          "name": "last_headers",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "confirmed_by": {
+          "name": "confirmed_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "labour_register_map_slot_idx": {
+          "name": "labour_register_map_slot_idx",
+          "columns": [
+            {
+              "expression": "engagement_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "slot",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "labour_register_column_maps_engagement_id_engagements_id_fk": {
+          "name": "labour_register_column_maps_engagement_id_engagements_id_fk",
+          "tableFrom": "labour_register_column_maps",
+          "tableTo": "engagements",
+          "columnsFrom": [
+            "engagement_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "labour_register_column_maps_confirmed_by_profiles_id_fk": {
+          "name": "labour_register_column_maps_confirmed_by_profiles_id_fk",
+          "tableFrom": "labour_register_column_maps",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "confirmed_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.labour_register_documents": {
+      "name": "labour_register_documents",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "batch_id": {
+          "name": "batch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "form_id": {
+          "name": "form_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cache_key": {
+          "name": "cache_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "object_key": {
+          "name": "object_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "artifact_sha256": {
+          "name": "artifact_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byte_length": {
+          "name": "byte_length",
           "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": 0
         },
-        "meeting_no": {
-          "name": "meeting_no",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "meeting_date": {
-          "name": "meeting_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "meeting_time": {
-          "name": "meeting_time",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "second_zone_label": {
-          "name": "second_zone_label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "second_zone_time": {
-          "name": "second_zone_time",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mode": {
-          "name": "mode",
+        "format": {
+          "name": "format",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'vc'"
+          "default": "'xlsx'"
         },
-        "venue": {
-          "name": "venue",
+        "template_version": {
+          "name": "template_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'v1'"
+        },
+        "generator_revision": {
+          "name": "generator_revision",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "default": "''"
+        },
+        "manifest": {
+          "name": "manifest",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
         },
         "status": {
           "name": "status",
@@ -12906,177 +12612,64 @@
           "notNull": true,
           "default": "'draft'"
         },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 1
-        },
-        "agenda": {
-          "name": "agenda",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "body_override": {
-          "name": "body_override",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "recipients": {
-          "name": "recipients",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "signatory_director_id": {
-          "name": "signatory_director_id",
+        "generated_by": {
+          "name": "generated_by",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "teams_link": {
-          "name": "teams_link",
+        "generated_at": {
+          "name": "generated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "attested_by": {
+          "name": "attested_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attested_at": {
+          "name": "attested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attestation_method": {
+          "name": "attestation_method",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "teams_event_id": {
-          "name": "teams_event_id",
-          "type": "text",
+        "supersedes_id": {
+          "name": "supersedes_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "ics_sequence": {
-          "name": "ics_sequence",
+        "download_count": {
+          "name": "download_count",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "default": 0
         },
-        "post_inc": {
-          "name": "post_inc",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "notice_on": {
-          "name": "notice_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "short_notice": {
-          "name": "short_notice",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "review_note": {
-          "name": "review_note",
+        "retain_until": {
+          "name": "retain_until",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
-        },
-        "submitted_at": {
-          "name": "submitted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "submitted_by": {
-          "name": "submitted_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "approved_at": {
-          "name": "approved_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "approved_by": {
-          "name": "approved_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sent_at": {
-          "name": "sent_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "rescheduled_from": {
-          "name": "rescheduled_from",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "cancelled_at": {
-          "name": "cancelled_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "cancel_reason": {
-          "name": "cancel_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "locked_at": {
-          "name": "locked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "task_id": {
-          "name": "task_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_by": {
-          "name": "created_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
           "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
+          "default": "''"
         }
       },
       "indexes": {
-        "board_meetings_engagement_date_idx": {
-          "name": "board_meetings_engagement_date_idx",
+        "labour_register_document_key_idx": {
+          "name": "labour_register_document_key_idx",
           "columns": [
             {
-              "expression": "engagement_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "meeting_date",
+              "expression": "cache_key",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -13087,17 +12680,29 @@
           "method": "btree",
           "with": {}
         },
-        "board_meetings_engagement_no_idx": {
-          "name": "board_meetings_engagement_no_idx",
+        "labour_register_document_form_idx": {
+          "name": "labour_register_document_form_idx",
           "columns": [
             {
-              "expression": "engagement_id",
+              "expression": "batch_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "meeting_no",
+              "expression": "form_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "cache_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "format",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -13110,12 +12715,12 @@
         }
       },
       "foreignKeys": {
-        "board_meetings_engagement_id_engagements_id_fk": {
-          "name": "board_meetings_engagement_id_engagements_id_fk",
-          "tableFrom": "board_meetings",
-          "tableTo": "engagements",
+        "labour_register_documents_batch_id_labour_register_batches_id_fk": {
+          "name": "labour_register_documents_batch_id_labour_register_batches_id_fk",
+          "tableFrom": "labour_register_documents",
+          "tableTo": "labour_register_batches",
           "columnsFrom": [
-            "engagement_id"
+            "batch_id"
           ],
           "columnsTo": [
             "id"
@@ -13123,12 +12728,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "board_meetings_signatory_director_id_company_directors_id_fk": {
-          "name": "board_meetings_signatory_director_id_company_directors_id_fk",
-          "tableFrom": "board_meetings",
-          "tableTo": "company_directors",
+        "labour_register_documents_generated_by_profiles_id_fk": {
+          "name": "labour_register_documents_generated_by_profiles_id_fk",
+          "tableFrom": "labour_register_documents",
+          "tableTo": "profiles",
           "columnsFrom": [
-            "signatory_director_id"
+            "generated_by"
           ],
           "columnsTo": [
             "id"
@@ -13136,38 +12741,12 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "board_meetings_submitted_by_profiles_id_fk": {
-          "name": "board_meetings_submitted_by_profiles_id_fk",
-          "tableFrom": "board_meetings",
+        "labour_register_documents_attested_by_profiles_id_fk": {
+          "name": "labour_register_documents_attested_by_profiles_id_fk",
+          "tableFrom": "labour_register_documents",
           "tableTo": "profiles",
           "columnsFrom": [
-            "submitted_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "board_meetings_approved_by_profiles_id_fk": {
-          "name": "board_meetings_approved_by_profiles_id_fk",
-          "tableFrom": "board_meetings",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "board_meetings_created_by_profiles_id_fk": {
-          "name": "board_meetings_created_by_profiles_id_fk",
-          "tableFrom": "board_meetings",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "created_by"
+            "attested_by"
           ],
           "columnsTo": [
             "id"
@@ -13182,8 +12761,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.company_directors": {
-      "name": "company_directors",
+    "public.labour_register_uploads": {
+      "name": "labour_register_uploads",
       "schema": "",
       "columns": {
         "id": {
@@ -13193,83 +12772,78 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "engagement_id": {
-          "name": "engagement_id",
+        "batch_id": {
+          "name": "batch_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "name": {
-          "name": "name",
+        "slot": {
+          "name": "slot",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "din": {
-          "name": "din",
+        "file_name": {
+          "name": "file_name",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "email": {
-          "name": "email",
+        "object_key": {
+          "name": "object_key",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "phone": {
-          "name": "phone",
+        "sha256": {
+          "name": "sha256",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "designation": {
-          "name": "designation",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'Director'"
-        },
-        "appointed_on": {
-          "name": "appointed_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "ceased_on": {
-          "name": "ceased_on",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "cease_reason": {
-          "name": "cease_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "source": {
-          "name": "source",
+        "sheet_name": {
+          "name": "sheet_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'manual'"
+          "default": "''"
         },
-        "created_by": {
-          "name": "created_by",
+        "header_row": {
+          "name": "header_row",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "headers": {
+          "name": "headers",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "row_count": {
+          "name": "row_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "grid_detection": {
+          "name": "grid_detection",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uploaded_by": {
+          "name": "uploaded_by",
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
+        "uploaded_at": {
+          "name": "uploaded_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
@@ -13277,29 +12851,35 @@
         }
       },
       "indexes": {
-        "company_directors_engagement_idx": {
-          "name": "company_directors_engagement_idx",
+        "labour_register_upload_slot_idx": {
+          "name": "labour_register_upload_slot_idx",
           "columns": [
             {
-              "expression": "engagement_id",
+              "expression": "batch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "slot",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
       "foreignKeys": {
-        "company_directors_engagement_id_engagements_id_fk": {
-          "name": "company_directors_engagement_id_engagements_id_fk",
-          "tableFrom": "company_directors",
-          "tableTo": "engagements",
+        "labour_register_uploads_batch_id_labour_register_batches_id_fk": {
+          "name": "labour_register_uploads_batch_id_labour_register_batches_id_fk",
+          "tableFrom": "labour_register_uploads",
+          "tableTo": "labour_register_batches",
           "columnsFrom": [
-            "engagement_id"
+            "batch_id"
           ],
           "columnsTo": [
             "id"
@@ -13307,12 +12887,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "company_directors_created_by_profiles_id_fk": {
-          "name": "company_directors_created_by_profiles_id_fk",
-          "tableFrom": "company_directors",
+        "labour_register_uploads_uploaded_by_profiles_id_fk": {
+          "name": "labour_register_uploads_uploaded_by_profiles_id_fk",
+          "tableFrom": "labour_register_uploads",
           "tableTo": "profiles",
           "columnsFrom": [
-            "created_by"
+            "uploaded_by"
           ],
           "columnsTo": [
             "id"

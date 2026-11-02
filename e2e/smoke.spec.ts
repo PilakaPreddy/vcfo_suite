@@ -203,6 +203,7 @@ const STAFF_COMMON = [
   // R-51: the practice block's staff Incorporation page.
   'incorporation',
   'registrations',
+  'labour-registers',
   'knowledge-bank',
   'mail',
   'notifications',
@@ -217,6 +218,7 @@ const ROUTES: Record<DemoRole, Route[]> = {
     '/app/super/practice/incorporation',
     [`/app/super/projects/${PROJECT}/board-resolution`, staffBoardResolution],
     '/app/super/practice/registrations',
+    '/app/super/practice/labour-registers',
     '/app/super/team',
     '/app/super/growth',
     '/app/super/reports',
@@ -305,6 +307,7 @@ const ROUTES: Record<DemoRole, Route[]> = {
     '/app/client/compliances/filings',
     '/app/client/compliances/obligations',
     '/app/client/registrations',
+    '/app/client/labour-registers',
     '/app/client/announcements',
     '/app/client/notifications',
     '/app/client/audit',
