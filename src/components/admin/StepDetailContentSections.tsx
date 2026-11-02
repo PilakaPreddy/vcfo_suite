@@ -12,6 +12,7 @@ import { RequestClientFill } from '@/components/admin/RequestClientFill';
 import { ClientStepFieldPreview } from '@/components/client/ClientStepFieldPreview';
 import { InternStepActionBar } from '@/components/admin/InternStepActionBar';
 import { BoardResolutionStepLink } from '@/components/incorporation/BoardResolutionStepLink';
+import { FirstMeetingStepPanel } from '@/views/board-meetings/FirstMeetingStepPanel';
 import { StepWorkspaceRail } from '@/components/admin/StepWorkspaceRail';
 import { Eyebrow, Mono, GoldDivider, StatusDot, AccentButton } from '@/components/noir';
 import {
@@ -116,6 +117,9 @@ export function StepDetailContentView(props: any) {
         variant={isClientViewer ? 'client' : 'admin'}
         className={isLight ? undefined : 'mb-6'}
       />
+    ) : item.id === 'post-1' && engagement && !isClientViewer ? (
+      // Board meetings: the first meeting runs on its own page; this links or creates it.
+      <FirstMeetingStepPanel engagementId={engagement.id} companyName={engagement.companyName} />
     ) : null;
 
   /**
