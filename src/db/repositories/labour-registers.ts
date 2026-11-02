@@ -1,0 +1,463 @@
+import 'server-only';
+
+import { and, desc, eq, inArray } from 'drizzle-orm';
+import { db } from '@/db/client';
+import {
+  labourRegisterBatches,
+  labourRegisterChecklist,
+  labourRegisterChecklistTicks,
+  labourRegisterColumnMaps,
+  labourRegisterDocuments,
+  labourRegisterUploads,
+} from '@/db/schema';
+import type { AuthContext } from '@/auth/guards';
+import { isAdminOrManager, isFirmWideAdmin } from '@/lib/auth';
+import { assertEngagementAccess, listScopedEngagementIds } from '@/db/repositories/engagements';
+import { CHECKLIST_HEADS, defaultHeadIds, type ChecklistOwner } from '@/data/labour-registers/checklist-heads';
+import { knownHeadIds } from '@/lib/labour-registers/catalogue';
+import type { UploadSlot } from '@/lib/labour-registers/parse';
+
+/**
+ * LABOUR REGISTERS — the seam.
+ *
+ * Access follows the engagement, as everything client-scoped in this codebase does, so the
+ * scope helpers are reused rather than a new rule invented: `listScopedEngagementIds` for
+ * lists and `assertEngagementAccess` for a single row or a write. Writes are staff-only.
+ *
+ * Two rules here are specific to registers and are the reason this file refuses more often
+ * than a typical repository:
+ *
+ *  - **A client may read, never write.** The client portal offers downloads. Mapping columns,
+ *    generating and attesting are the firm's work and the firm's liability.
+ *  - **An attested document is immutable.** `attestDocument` is the only transition into that
+ *    state and there is no transition out, no update path and no delete path at all. A
+ *    correction is a new row that supersedes the old one. Rule 72 of the OSH (Central) Rules
+ *    forbids destroying a register after its retention period unless it has been properly
+ *    transferred, and the research found that an electronic register may change its layout but
+ *    not its integrity, serial number or column contents.
+ */
+
+export type BatchRow = typeof labourRegisterBatches.$inferSelect;
+export type UploadRow = typeof labourRegisterUploads.$inferSelect;
+export type DocumentRow = typeof labourRegisterDocuments.$inferSelect;
+export type ChecklistRow = typeof labourRegisterChecklist.$inferSelect;
+export type TickRow = typeof labourRegisterChecklistTicks.$inferSelect;
+
+function assertStaff(ctx: AuthContext) {
+  if (!isAdminOrManager(ctx.role) && ctx.role !== 'intern') {
+    throw new Error('not permitted');
+  }
+}
+
+/** Only a firm-wide admin may force a rebuild or attest. */
+function assertFirmAdmin(ctx: AuthContext) {
+  if (!isFirmWideAdmin(ctx.role)) throw new Error('not permitted');
+}
+
+async function engagement(ctx: AuthContext, engagementId: string) {
+  const access = await assertEngagementAccess(ctx, engagementId);
+  if (!access.ok) return null;
+  return access;
+}
+
+/* ── Batches ──────────────────────────────────────────────────────────────── */
+
+/** Every batch the caller may see, newest period first. */
+export async function listBatches(ctx: AuthContext, opts: { engagementId?: string } = {}): Promise<BatchRow[]> {
+  if (opts.engagementId) {
+    const access = await engagement(ctx, opts.engagementId);
+    if (!access) return [];
+    return db
+      .select()
+      .from(labourRegisterBatches)
+      .where(eq(labourRegisterBatches.engagementId, access.dbId))
+      .orderBy(desc(labourRegisterBatches.periodFrom));
+  }
+
+  if (isFirmWideAdmin(ctx.role)) {
+    return db.select().from(labourRegisterBatches).orderBy(desc(labourRegisterBatches.periodFrom));
+  }
+
+  const ids = await listScopedEngagementIds(ctx);
+  if (ids.length === 0) return [];
+  return db
+    .select()
+    .from(labourRegisterBatches)
+    .where(inArray(labourRegisterBatches.engagementId, ids))
+    .orderBy(desc(labourRegisterBatches.periodFrom));
+}
+
+/** One batch, or null when the caller may not see it. */
+export async function getBatch(ctx: AuthContext, batchId: string): Promise<BatchRow | null> {
+  const [row] = await db.select().from(labourRegisterBatches).where(eq(labourRegisterBatches.id, batchId)).limit(1);
+  if (!row) return null;
+  const access = await engagement(ctx, row.engagementId);
+  return access ? row : null;
+}
+
+/**
+ * Open a batch for a client, a state and a period, or return the one that already exists. The
+ * unique index on (engagement, state, period) is what makes a second preparer opening the same
+ * month join the first rather than fork it.
+ */
+export async function openBatch(
+  ctx: AuthContext,
+  input: { engagementId: string; stateCode: string; periodFrom: string; periodTo: string },
+): Promise<BatchRow | null> {
+  assertStaff(ctx);
+  const access = await engagement(ctx, input.engagementId);
+  if (!access) return null;
+
+  const existing = await db
+    .select()
+    .from(labourRegisterBatches)
+    .where(
+      and(
+        eq(labourRegisterBatches.engagementId, access.dbId),
+        eq(labourRegisterBatches.stateCode, input.stateCode),
+        eq(labourRegisterBatches.periodFrom, input.periodFrom),
+        eq(labourRegisterBatches.periodTo, input.periodTo),
+      ),
+    )
+    .limit(1);
+  if (existing[0]) return existing[0];
+
+  const [row] = await db
+    .insert(labourRegisterBatches)
+    .values({
+      engagementId: access.dbId,
+      stateCode: input.stateCode,
+      periodFrom: input.periodFrom,
+      periodTo: input.periodTo,
+      createdBy: ctx.userId,
+    })
+    .returning();
+  return row ?? null;
+}
+
+/** Move a batch's status, or record the assumptions a generation was made under. */
+export async function updateBatch(
+  ctx: AuthContext,
+  batchId: string,
+  patch: { status?: string; assumptions?: Record<string, unknown> },
+): Promise<BatchRow | null> {
+  assertStaff(ctx);
+  const batch = await getBatch(ctx, batchId);
+  if (!batch) return null;
+  const [row] = await db
+    .update(labourRegisterBatches)
+    .set({ ...patch, updatedAt: new Date() })
+    .where(eq(labourRegisterBatches.id, batch.id))
+    .returning();
+  return row ?? null;
+}
+
+/* ── The payroll checklist ────────────────────────────────────────────────── */
+
+/**
+ * A client's standing checklist. A client with no rows yet gets the catalogue's defaults,
+ * unsaved, so the screen has something to show on the first visit without a write.
+ */
+export async function getChecklist(ctx: AuthContext, engagementId: string): Promise<ChecklistRow[] | null> {
+  const access = await engagement(ctx, engagementId);
+  if (!access) return null;
+  return db.select().from(labourRegisterChecklist).where(eq(labourRegisterChecklist.engagementId, access.dbId));
+}
+
+/** The head ids a client's payroll runs, falling back to the catalogue defaults. */
+export async function activeHeads(ctx: AuthContext, engagementId: string): Promise<string[]> {
+  const rows = await getChecklist(ctx, engagementId);
+  if (!rows) return [];
+  if (rows.length === 0) return defaultHeadIds();
+  return rows.filter((r) => r.active).map((r) => r.headId);
+}
+
+/** Turn a head on or off for a client, or change who supplies it. */
+export async function setChecklistHead(
+  ctx: AuthContext,
+  input: { engagementId: string; headId: string; active?: boolean; owner?: ChecklistOwner; note?: string },
+): Promise<ChecklistRow | null> {
+  assertStaff(ctx);
+  if (!knownHeadIds().has(input.headId)) throw new Error('unknown checklist head');
+  const access = await engagement(ctx, input.engagementId);
+  if (!access) return null;
+
+  const fallback = CHECKLIST_HEADS.find((h) => h.id === input.headId);
+  const [row] = await db
+    .insert(labourRegisterChecklist)
+    .values({
+      engagementId: access.dbId,
+      headId: input.headId,
+      active: input.active ?? fallback?.defaultOn ?? false,
+      owner: input.owner ?? fallback?.owner ?? 'client-hr',
+      inFinalSettlement: fallback?.inFinalSettlement ?? true,
+      note: input.note ?? '',
+      updatedBy: ctx.userId,
+    })
+    .onConflictDoUpdate({
+      target: [labourRegisterChecklist.engagementId, labourRegisterChecklist.headId],
+      set: {
+        ...(input.active === undefined ? {} : { active: input.active }),
+        ...(input.owner === undefined ? {} : { owner: input.owner }),
+        ...(input.note === undefined ? {} : { note: input.note }),
+        updatedBy: ctx.userId,
+        updatedAt: new Date(),
+      },
+    })
+    .returning();
+  return row ?? null;
+}
+
+/** The monthly tick-off for one batch. */
+export async function listTicks(ctx: AuthContext, batchId: string): Promise<TickRow[]> {
+  const batch = await getBatch(ctx, batchId);
+  if (!batch) return [];
+  return db.select().from(labourRegisterChecklistTicks).where(eq(labourRegisterChecklistTicks.batchId, batch.id));
+}
+
+/** Record that a head's figure is in, still awaited, or not applicable this period. */
+export async function setTick(
+  ctx: AuthContext,
+  input: { batchId: string; headId: string; state: 'pending' | 'received' | 'off'; note?: string },
+): Promise<TickRow | null> {
+  assertStaff(ctx);
+  if (!knownHeadIds().has(input.headId)) throw new Error('unknown checklist head');
+  const batch = await getBatch(ctx, input.batchId);
+  if (!batch) return null;
+  const [row] = await db
+    .insert(labourRegisterChecklistTicks)
+    .values({ batchId: batch.id, headId: input.headId, state: input.state, note: input.note ?? '', updatedBy: ctx.userId })
+    .onConflictDoUpdate({
+      target: [labourRegisterChecklistTicks.batchId, labourRegisterChecklistTicks.headId],
+      set: { state: input.state, ...(input.note === undefined ? {} : { note: input.note }), updatedBy: ctx.userId, updatedAt: new Date() },
+    })
+    .returning();
+  return row ?? null;
+}
+
+/* ── Uploads ──────────────────────────────────────────────────────────────── */
+
+export async function listUploads(ctx: AuthContext, batchId: string): Promise<UploadRow[]> {
+  const batch = await getBatch(ctx, batchId);
+  if (!batch) return [];
+  return db.select().from(labourRegisterUploads).where(eq(labourRegisterUploads.batchId, batch.id));
+}
+
+/** Record an uploaded input. Replacing a slot replaces the row, by the unique index. */
+export async function recordUpload(
+  ctx: AuthContext,
+  input: {
+    batchId: string;
+    slot: UploadSlot;
+    fileName: string;
+    objectKey: string;
+    sha256: string;
+    sheetName: string;
+    headerRow: number;
+    headers: string[];
+    rowCount: number;
+    gridDetection?: unknown;
+  },
+): Promise<UploadRow | null> {
+  assertStaff(ctx);
+  const batch = await getBatch(ctx, input.batchId);
+  if (!batch) return null;
+  const [row] = await db
+    .insert(labourRegisterUploads)
+    .values({ ...input, uploadedBy: ctx.userId })
+    .onConflictDoUpdate({
+      target: [labourRegisterUploads.batchId, labourRegisterUploads.slot],
+      set: {
+        fileName: input.fileName,
+        objectKey: input.objectKey,
+        sha256: input.sha256,
+        sheetName: input.sheetName,
+        headerRow: input.headerRow,
+        headers: input.headers,
+        rowCount: input.rowCount,
+        gridDetection: input.gridDetection ?? null,
+        uploadedBy: ctx.userId,
+        uploadedAt: new Date(),
+      },
+    })
+    .returning();
+  return row ?? null;
+}
+
+/* ── Remembered column maps ───────────────────────────────────────────────── */
+
+/** The mapping remembered for a client and slot, so next month is a confirmation. */
+export async function getColumnMap(
+  ctx: AuthContext,
+  engagementId: string,
+  slot: UploadSlot,
+): Promise<typeof labourRegisterColumnMaps.$inferSelect | null> {
+  const access = await engagement(ctx, engagementId);
+  if (!access) return null;
+  const [row] = await db
+    .select()
+    .from(labourRegisterColumnMaps)
+    .where(and(eq(labourRegisterColumnMaps.engagementId, access.dbId), eq(labourRegisterColumnMaps.slot, slot)))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Save the mapping a preparer confirmed. */
+export async function saveColumnMap(
+  ctx: AuthContext,
+  input: {
+    engagementId: string;
+    slot: UploadSlot;
+    mapping: Record<string, string>;
+    valueMaps?: Record<string, Record<string, string>>;
+    lastHeaders: string[];
+  },
+): Promise<void> {
+  assertStaff(ctx);
+  const access = await engagement(ctx, input.engagementId);
+  if (!access) return;
+  await db
+    .insert(labourRegisterColumnMaps)
+    .values({
+      engagementId: access.dbId,
+      slot: input.slot,
+      mapping: input.mapping,
+      valueMaps: input.valueMaps ?? {},
+      lastHeaders: input.lastHeaders,
+      confirmedBy: ctx.userId,
+    })
+    .onConflictDoUpdate({
+      target: [labourRegisterColumnMaps.engagementId, labourRegisterColumnMaps.slot],
+      set: {
+        mapping: input.mapping,
+        valueMaps: input.valueMaps ?? {},
+        lastHeaders: input.lastHeaders,
+        confirmedBy: ctx.userId,
+        updatedAt: new Date(),
+      },
+    });
+}
+
+/* ── Documents ────────────────────────────────────────────────────────────── */
+
+/** Every document of a batch. Clients may read these; that is the portal's whole job. */
+export async function listDocuments(ctx: AuthContext, batchId: string): Promise<DocumentRow[]> {
+  const batch = await getBatch(ctx, batchId);
+  if (!batch) return [];
+  return db
+    .select()
+    .from(labourRegisterDocuments)
+    .where(eq(labourRegisterDocuments.batchId, batch.id))
+    .orderBy(desc(labourRegisterDocuments.generatedAt));
+}
+
+/**
+ * The stored document for a content address, if there is one. This is the call that keeps the
+ * bill down: a hit means the register is downloaded rather than built.
+ */
+export async function findByCacheKey(
+  ctx: AuthContext,
+  batchId: string,
+  formId: string,
+  cacheKey: string,
+  format = 'xlsx',
+): Promise<DocumentRow | null> {
+  const batch = await getBatch(ctx, batchId);
+  if (!batch) return null;
+  const [row] = await db
+    .select()
+    .from(labourRegisterDocuments)
+    .where(
+      and(
+        eq(labourRegisterDocuments.batchId, batch.id),
+        eq(labourRegisterDocuments.formId, formId),
+        eq(labourRegisterDocuments.cacheKey, cacheKey),
+        eq(labourRegisterDocuments.format, format),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+/** Record a freshly generated document. */
+export async function recordDocument(
+  ctx: AuthContext,
+  input: {
+    batchId: string;
+    formId: string;
+    cacheKey: string;
+    objectKey: string;
+    artifactSha256: string;
+    byteLength: number;
+    format?: string;
+    templateVersion: string;
+    generatorRevision: string;
+    manifest: Record<string, unknown>;
+    retainUntil: string;
+    supersedesId?: string;
+  },
+): Promise<DocumentRow | null> {
+  assertStaff(ctx);
+  const batch = await getBatch(ctx, input.batchId);
+  if (!batch) return null;
+  const [row] = await db
+    .insert(labourRegisterDocuments)
+    .values({ ...input, format: input.format ?? 'xlsx', generatedBy: ctx.userId })
+    .returning();
+  return row ?? null;
+}
+
+/** Count a download, so the saving from not regenerating is observable rather than claimed. */
+export async function countDownload(ctx: AuthContext, documentId: string): Promise<void> {
+  const [doc] = await db.select().from(labourRegisterDocuments).where(eq(labourRegisterDocuments.id, documentId)).limit(1);
+  if (!doc) return;
+  const batch = await getBatch(ctx, doc.batchId);
+  if (!batch) return;
+  await db
+    .update(labourRegisterDocuments)
+    .set({ downloadCount: doc.downloadCount + 1 })
+    .where(eq(labourRegisterDocuments.id, doc.id));
+}
+
+/**
+ * Sign off a document. The only transition into the attested state, and there is no transition
+ * out: afterwards the row is frozen and a correction has to be issued as a new document.
+ * Restricted to a firm-wide admin, because this is the firm putting its name to a statutory
+ * record.
+ */
+export async function attestDocument(
+  ctx: AuthContext,
+  input: { documentId: string; method: 'printed-wet-signature' | 'dsc' | 'aadhaar-esign' },
+): Promise<DocumentRow | null> {
+  assertFirmAdmin(ctx);
+  const [doc] = await db
+    .select()
+    .from(labourRegisterDocuments)
+    .where(eq(labourRegisterDocuments.id, input.documentId))
+    .limit(1);
+  if (!doc) return null;
+  const batch = await getBatch(ctx, doc.batchId);
+  if (!batch) return null;
+  if (doc.attestedAt) throw new Error('already attested — issue a superseding document instead');
+
+  const [row] = await db
+    .update(labourRegisterDocuments)
+    .set({ status: 'attested', attestedBy: ctx.userId, attestedAt: new Date(), attestationMethod: input.method })
+    .where(eq(labourRegisterDocuments.id, doc.id))
+    .returning();
+  return row ?? null;
+}
+
+/**
+ * Mark an attested document as replaced by a later one. The file itself is untouched and
+ * stays downloadable: a superseded register is part of the record, not a mistake to hide.
+ */
+export async function supersedeDocument(ctx: AuthContext, oldId: string, newId: string): Promise<void> {
+  assertFirmAdmin(ctx);
+  const [doc] = await db.select().from(labourRegisterDocuments).where(eq(labourRegisterDocuments.id, oldId)).limit(1);
+  if (!doc) return;
+  const batch = await getBatch(ctx, doc.batchId);
+  if (!batch) return;
+  await db.update(labourRegisterDocuments).set({ status: 'superseded' }).where(eq(labourRegisterDocuments.id, oldId));
+  await db.update(labourRegisterDocuments).set({ supersedesId: oldId }).where(eq(labourRegisterDocuments.id, newId));
+}
