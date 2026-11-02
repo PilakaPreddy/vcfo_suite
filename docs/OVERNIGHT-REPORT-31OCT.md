@@ -113,3 +113,15 @@ Then run `npm run totp:reencrypt` through the tunnel (docs/context/AWS-DEPLOY.md
 | Rollback image | ✓ | `vcfo-suite:rollback-b5f3f919`. |
 | Image | ✓ | `vcfo-suite:fd08d4ac` and `:latest`. App Runner deployment succeeded at 18:03 IST. |
 | Live check | ✓ | `/` and `/login` answer 200. No errors in the application log. Not checked signed in. |
+
+## 9. Deploy, 2 Nov 2026 18:41 IST
+
+| Step | Done | Detail |
+|---|---|---|
+| `main` | ✓ | `7fb6b705`: Labour registers (PR #6). Adds migration 0033 (6 new tables, additive only). |
+| Gate | ✓ | 0 type errors, 0 lint errors (524 warnings), 3,794 tests pass. |
+| RDS snapshot | ✓ | `vcfo-suite-db-pre-0033-20261102-1823`. |
+| Migration 0033 on RDS | ✓ | Applied through the SSM tunnel on the NAT instance. RDS stayed private. The tunnel is closed. |
+| Rollback image | ✓ | `vcfo-suite:rollback-fd08d4ac`. |
+| Image | ✓ | `vcfo-suite:7fb6b705` and `:latest`. App Runner deployment succeeded at 18:41 IST. |
+| Live check | ✓ | `/` and `/login` answer 200. No errors in the application log. Not checked signed in. |
