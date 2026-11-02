@@ -534,11 +534,12 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
     (direct ? canRoleEditField('client', s.id, r.field.id) : (r.field.filledBy ?? s.item.responsibleRole) === 'client') &&
     (!s.slice?.locked || unlocked.has(r.field.id));
   const editable = rows.some(canEditRow);
-  // Part A: the client fills the same tabbed form the project lead works in
-  // (one tab per section, Next / Submit, uploads included) instead of the row list.
+  // Part A: the client's page is the project lead's page — the same tabbed form
+  // card on its own (one tab per section, Next / Submit, uploads included), no
+  // "What this step captures" card, sub-steps or Answers / Documents views.
   const partAForm =
     s.id === PART_A_STEP_ID && d.engagementId ? (
-      <div className="px-4 py-4 md:px-5">
+      <div className="grid gap-3">
         <MilestoneResponseForm
           key={`${s.id}-${d.engagementId}`}
           item={s.item}
@@ -550,6 +551,14 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
           compactChrome
           sectionTabs
         />
+        {k === 'done' ? (
+          <div className="flex justify-end">
+            <Button variant="secondary" onClick={requestChange}>
+              <MessageSquare size={16} strokeWidth={1.6} aria-hidden />
+              Request a change
+            </Button>
+          </div>
+        ) : null}
       </div>
     ) : null;
   const dirty = Object.keys(draft).length > 0;
@@ -715,7 +724,6 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
         </div>
       ) : null}
       {about ? <p className="m-0 border-b border-line-soft px-4 py-3 text-[13.5px] text-ink-2 md:px-5">{about}</p> : null}
-      {partAForm ?? (
       <dl className="m-0">
         {rows.map((r, i) => (
           <KvRow
@@ -730,8 +738,7 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
           />
         ))}
       </dl>
-      )}
-      {editable && !partAForm ? (
+      {editable ? (
         <footer className="flex flex-wrap items-center gap-2 border-t border-line-soft px-4 py-3 md:px-5">
           <Button variant="secondary" className="ml-auto" disabled={!dirty || savingDraft} onClick={() => void saveDraft()}>
             <PenLine size={16} strokeWidth={1.6} aria-hidden />
@@ -872,7 +879,7 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
           />
           <Cols>
             <Col>
-              {docsCount > 0 ? (
+              {partAForm ?? (docsCount > 0 ? (
                 <SpectrumTabs
                   variant="underline"
                   label="Views of this step"
@@ -883,8 +890,8 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
                   value={view}
                   onChange={setView}
                 />
-              ) : null}
-              {showDocs ? docsCard : answersCard}
+              ) : null)}
+              {partAForm ? null : showDocs ? docsCard : answersCard}
             </Col>
             <Col>{rail}</Col>
           </Cols>

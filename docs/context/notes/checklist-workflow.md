@@ -189,6 +189,6 @@ Spec `docs/specs/pre-inc-direct-flow/` (CONTEXT, AUDIT, REPORT).
   "Waiting on the client" (form) or a 422 (server), never `waiting_on_lead`.
 - Part A defaults (share capital, two directors) apply to the client's draft only; staff read
   what was saved (`use-milestone-draft.ts`). "Ask client" is not offered on lead-only fields.
-- **Client portal step 1 renders the same tabbed `MilestoneResponseForm`** (variant client,
-  `sectionTabs`) inside the answers card, so the client gets tabs, Next / Submit and uploads.
+- **Client portal step 1 is the lead's page**: the same tabbed `MilestoneResponseForm` (variant client,
+  `sectionTabs`) as a card on its own (no "What this step captures" card, sub-steps or views), with "Request a change" under it once done.
   Other client portal steps keep the row list.
