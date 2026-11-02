@@ -9,7 +9,7 @@
  */
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { usePortal } from './PortalProvider';
-import { VisorHead } from './Visor';
+import { VisorHead } from '@/components/ask/Visor';
 import { LinkButton } from './LinkButton';
 
 let openInfo: (() => void) | null = null;

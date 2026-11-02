@@ -1,3 +1,5 @@
+import { VisorBadge } from './Visor';
+
 /**
  * The person's own message (owner item F1 and F2, 30 Oct 2026): a soft brand fill with ink text,
  * so it reads the same in light and dark, and the person's initials beside it.
@@ -16,12 +18,7 @@ export function AskUserBubble({ text, initials }: { text: string; initials?: str
   );
 }
 
-/** The VCFO mark beside each answer (owner item F2). The mark, not the Visor figure (C-0003, R-04). */
+/** The Ask VCFO robot beside each answer (owner item F2; the robot replaced the mark on 2 Nov 2026). */
 export function AskAvatar() {
-  return (
-    <span aria-hidden className="grid h-7 w-7 flex-none place-items-center overflow-hidden rounded-mark border border-line bg-surface-raised">
-      {/* eslint-disable-next-line @next/next/no-img-element -- a 26 px static mark */}
-      <img src="/client-portal/vcfo-mark.webp" alt="" width={20} height={20} className="h-5 w-5 object-contain" />
-    </span>
-  );
+  return <VisorBadge size={28} />;
 }

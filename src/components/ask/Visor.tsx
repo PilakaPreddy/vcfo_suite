@@ -111,3 +111,19 @@ export function VisorHead({ className, style }: { className?: string; style?: Re
     </svg>
   );
 }
+
+/**
+ * The robot's head in a round chip: the avatar beside each answer and in chat headers. The head
+ * sits low in the circle so its face fills it, as in the prototype's chat header.
+ */
+export function VisorBadge({ size = 28, className }: { size?: number; className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`ask-vpv-scope grid flex-none place-items-center overflow-hidden rounded-full border border-line bg-surface-raised${className ? ` ${className}` : ''}`}
+      style={{ width: size, height: size }}
+    >
+      <VisorHead style={{ width: size * 0.86, height: size * 1.08, marginTop: size * 0.25 }} />
+    </span>
+  );
+}

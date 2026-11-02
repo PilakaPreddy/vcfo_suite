@@ -126,11 +126,12 @@ html.vp-chat-on #vp-launch{visibility:hidden}
 }
 @media (prefers-reduced-motion: reduce){#vp-launch *,#vp-chat .vpc-ty i,#vp-chat .vpc-pk *{animation:none!important;transition:none!important}#vp-launch .vpv-head,#vp-chat .vpv-peek .vpv-head{transform:none}#vp-launch .vpv-hand,#vp-chat .vpv-peek .vpv-hand{opacity:1}#vp-chat{transition:none}}
 
-/* VCFO Spectrum (R-04, R-45): no floating launcher and no mascot. Ask VCFO opens from the
-   sidebar button or the "/" key; the chat window keeps its place on the right. */
-#vp-launch{display:none!important}
-:root{--vp-launch-h:0px}
-#vp-chat .vpc-pk,#vp-chat .vpc-av{display:none!important}
+/* Owner decision 2 Nov 2026 (branch chatbot-avatar), replacing R-04 / R-45: the Ask VCFO robot
+   is back in the bottom-right corner and opens the pop-up chat; the sidebar button opens the
+   full Ask VCFO page. The launcher hides on that page. */
+#vp-launch[hidden]{display:none!important}
+/* Phones have the bottom tab bar with its own Ask tab, so the robot stays off there. */
+@media (max-width:767px){#vp-launch{display:none!important}:root{--vp-launch-h:0px}}
 
 /* The Search palette and the drill-down are Spectrum Tailwind islands (SearchPalette.tsx,
    PortalProvider.tsx); the old #vp-drill frame is gone. */
@@ -151,7 +152,7 @@ html.vp-chat-on #vp-launch{visibility:hidden}
 #vp-chat .vpc-sz button[aria-pressed=true]{background:oklch(var(--brand-soft));color:oklch(var(--brand-text))}
 #vp-chat .vpc-hb button:focus-visible{outline:none;box-shadow:0 0 0 4px oklch(var(--focus-ring) / .24)}
 #vp-chat .vpc-m.vpc-a,#vp-chat .vpc-card{position:relative;margin-left:50px}
-#vp-chat .vpc-m.vpc-a::before,#vp-chat .vpc-card::before{content:"";position:absolute;left:-38px;top:0;width:28px;height:28px;box-sizing:border-box;border-radius:4px;border:1px solid oklch(var(--line));background:oklch(var(--surface-raised)) url(/client-portal/vcfo-mark.webp) center/20px 20px no-repeat}
+#vp-chat .vpc-m.vpc-a::before,#vp-chat .vpc-card::before{content:"";position:absolute;left:-38px;top:0;width:28px;height:28px;box-sizing:border-box;border-radius:50%;border:1px solid oklch(var(--line));background:oklch(var(--surface-raised)) url(/client-portal/vcfo-bot-head.svg) 50% 8px/24px 30px no-repeat}
 #vp-chat .vpc-m.vpc-u{position:relative;margin-right:50px}
 #vp-chat .vpc-m.vpc-u::after{content:attr(data-initials);position:absolute;right:-38px;top:0;width:28px;height:28px;box-sizing:border-box;border-radius:50%;border:1px solid oklch(var(--line));background:oklch(var(--surface-sunken));color:oklch(var(--ink-2));display:grid;place-items:center;font:500 11px/1 var(--font-sans),system-ui,sans-serif}
 @media (max-width:767px){#vp-chat .vpc-sz{display:none}}
