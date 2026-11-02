@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Calendar, CalendarClock, CircleCheck, User } from 'lucide-react';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
@@ -44,6 +44,7 @@ import { isAdminOrManager } from '@/lib/auth';
 import { CategoryTabs } from '@/components/compliances/CategoryTabs';
 import { useTasks, type TaskRowDto } from '@/views/compliances/tasks/api';
 import { NewTaskButton } from '@/views/compliances/tasks/new-task';
+import { NewWorkMenu } from '@/views/board-meetings/NewMeetingDialog';
 import { statHref, taskColumns, taskGroups, taskHref, taskRowMatches } from '@/views/compliances/tasks/task-list';
 import type { Category } from '@/views/compliances/tasks/task-model';
 import {
@@ -130,6 +131,11 @@ export function ObligationsView({ basePath, scope, embedded = false }: { basePat
   const { user } = useApp();
   // S-4: admin and manager create non-statutory tasks; leads do not. Super admin has the same rights.
   const canCreate = isAdminOrManager(user?.role);
+  // Board meetings: every staff role (the lead included) can start one; clients cannot.
+  const canMeet = Boolean(user?.role) && user?.role !== 'client';
+  const [taskRequest, setTaskRequest] = useState(0);
+  const typeParam = params.get('type');
+  const workType: 'all' | 'task' | 'meeting' = typeParam === 'meeting' || typeParam === 'task' ? typeParam : 'all';
 
   const picked = pickedCompany(engagements, companyId);
   const pickedPreIncorporation = picked && scope.preIncorporationIds.has(picked.id) ? picked : null;
@@ -147,7 +153,8 @@ export function ObligationsView({ basePath, scope, embedded = false }: { basePat
   // Non-statutory tasks (S-3). The client filter applies to them too; not-applicable rows stay hidden.
   const tasksQuery = useTasks({ engagementId: companyId !== ALL_COMPANIES ? companyId : undefined });
   const tasks: TaskRowDto[] = useMemo(() => (tasksQuery.data?.tasks ?? []).filter((t) => !t.hidden), [tasksQuery.data?.tasks]);
-  const shownTasks = tasks.filter((t) => taskRowMatches(t, filter));
+  const ofType = (t: TaskRowDto) => (workType === 'all' ? true : workType === 'meeting' ? Boolean(t.boardMeetingId) : !t.boardMeetingId);
+  const shownTasks = tasks.filter((t) => ofType(t) && taskRowMatches(t, filter));
   const tHref = (t: TaskRowDto) => taskHref(basePath, t.id, t.boardMeetingId);
 
   const count = (f: ObligationFilter) => allClientRows.filter((r) => matchesFilter(r, f, now)).length;
@@ -343,8 +350,19 @@ export function ObligationsView({ basePath, scope, embedded = false }: { basePat
           Clear
         </Button>
       ) : null}
+      {canCreate || canMeet ? (
+        <NewWorkMenu
+          canCreateTask={canCreate}
+          onTask={() => setTaskRequest((n) => n + 1)}
+          companies={engagements.map((e) => ({ id: e.id, name: e.companyName }))}
+          defaultCompany={companyId !== ALL_COMPANIES ? companyId : sole?.id}
+          basePath={basePath}
+        />
+      ) : null}
       {canCreate ? (
         <NewTaskButton
+          hideTrigger
+          openRequest={taskRequest}
           engagements={engagements}
           defaultClient={companyId !== ALL_COMPANIES ? companyId : sole?.id}
           now={now}
@@ -375,7 +393,19 @@ export function ObligationsView({ basePath, scope, embedded = false }: { basePat
           value={groupBy}
           onChange={(v) => setParams({ by: v === 'filing' ? null : v })}
         />
-      ) : null}
+      ) : (
+        <SpectrumTabs
+          label="Type"
+          className="sm:ml-auto"
+          items={[
+            { key: 'all', label: 'All' },
+            { key: 'task', label: 'Tasks' },
+            { key: 'meeting', label: 'Meetings', count: tasks.filter((t) => t.boardMeetingId).length || undefined },
+          ]}
+          value={workType}
+          onChange={(v) => setParams({ type: v === 'all' ? null : v })}
+        />
+      )}
     </>
   );
   const taskGrid = (top: boolean) => (

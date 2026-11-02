@@ -33,6 +33,7 @@ export function NewTaskButton({
   prefill,
   onPrefillDone,
   hideTrigger = false,
+  openRequest = 0,
 }: {
   engagements: Engagement[];
   defaultClient?: string;
@@ -44,11 +45,16 @@ export function NewTaskButton({
   onPrefillDone?: () => void;
   /** Render the dialog only, for a host that opens it with `prefill`. */
   hideTrigger?: boolean;
+  /** Each increase opens the dialog (the "New task › Task" menu item of the host). */
+  openRequest?: number;
 }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (prefill) setOpen(true);
   }, [prefill]);
+  useEffect(() => {
+    if (openRequest > 0) setOpen(true);
+  }, [openRequest]);
   const [client, setClient] = useState(defaultClient ?? '');
   const activities = useActivities('non-statutory');
   const defaults = useTaskDefaults(client, open);
