@@ -4,7 +4,7 @@ import { formById } from '@/data/labour-registers/forms';
 import { monthPeriod } from './catalogue';
 import { buildDataset, daysOf, employeesShort, joinKey, undecidedCoverage, type SlotInput } from './dataset';
 import { DERIVERS, num, wholeYears, workedDays } from './derive';
-import { ProjectionError, projectForm, projectForms } from './project';
+import { assumedCode, ProjectionError, projectForm, projectForms } from './project';
 import type { ParsedSheet } from './parse';
 
 /**
@@ -373,6 +373,34 @@ describe('projecting a muster roll', () => {
     expect(table.rows[0][first + 1]).toBe('A');
     /* No attendance for day 3, and the month was not assumed: blank, not a guess. */
     expect(table.rows[0][first + 2]).toBeNull();
+  });
+
+  it('shows the weekly off as a weekly off in an assumed month', () => {
+    /* A month stated fully present is not thirty days worked. Printing P across the Sundays
+       would overstate the days-worked total on the same sheet — a muster roll contradicting
+       itself. September 2026 begins on a Tuesday, so the 6th, 13th, 20th and 27th are Sundays. */
+    const d = dataset(
+      { paysheet: paysheet([ROW_ONE]) },
+      { forms: [form], assumptions: { fullAttendanceAssumed: true, weekOff: 'sun' } },
+    );
+    const table = projectForm(form, d);
+    const first = table.columns.findIndex((c) => c.source === 'grid');
+    expect(table.rows[0][first]).toBe('P');
+    expect(table.rows[0][first + 5]).toBe('WO');
+    expect(table.rows[0][first + 12]).toBe('WO');
+    expect(table.notes.join(' ')).toContain('Sundays are shown as the weekly off');
+  });
+
+  it('applies each week-off rule the dialog offers', () => {
+    const sep = { from: '2026-09-01' };
+    /* 5 Sep is a Saturday, 6 Sep a Sunday, 12 Sep the second Saturday. */
+    expect(assumedCode(sep, 6, 'sun')).toBe('WO');
+    expect(assumedCode(sep, 5, 'sun')).toBe('P');
+    expect(assumedCode(sep, 5, 'sat-sun')).toBe('WO');
+    expect(assumedCode(sep, 12, 'alt-sat-sun')).toBe('WO');
+    expect(assumedCode(sep, 5, 'alt-sat-sun')).toBe('P');
+    expect(assumedCode(sep, 6, 'none')).toBe('P');
+    expect(assumedCode(sep, 6, undefined)).toBe('P');
   });
 
   it('prints a fully assumed month present throughout, and says so', () => {

@@ -95,6 +95,32 @@ function format(kind: FieldKind, raw: string | number | null | undefined): strin
   return text;
 }
 
+/**
+ * The code an assumed month prints for one day.
+ *
+ * A month stated fully present is not thirty days worked: the weekly off is still a weekly
+ * off, and printing `P` across it would overstate the days-worked total on the same sheet — a
+ * muster roll that contradicts itself. So the week-off rule recorded with the assumption is
+ * applied, and only the remaining days read as present.
+ */
+export function assumedCode(period: { from: string }, day: number, weekOff: string | undefined): string {
+  if (!weekOff || weekOff === 'none') return 'P';
+
+  const date = new Date(`${period.from.slice(0, 8)}${String(day).padStart(2, '0')}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return 'P';
+  const dow = date.getUTCDay();
+
+  if (weekOff === 'sun') return dow === 0 ? 'WO' : 'P';
+  if (weekOff === 'sat-sun') return dow === 0 || dow === 6 ? 'WO' : 'P';
+  if (weekOff === 'alt-sat-sun') {
+    if (dow === 0) return 'WO';
+    /* The second and fourth Saturday, which is the common Indian office rule. */
+    if (dow === 6) return Math.ceil(day / 7) % 2 === 0 ? 'WO' : 'P';
+    return 'P';
+  }
+  return 'P';
+}
+
 /** The per-establishment master values, which are the same for everybody on the roll. */
 const ESTABLISHMENT_FIELDS = new Set(['shiftName', 'shiftStart', 'shiftEnd', 'restInterval']);
 
@@ -204,9 +230,15 @@ export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
 
         case 'grid': {
           const code = employee.grid[col.day!];
-          /* A month marked fully present rather than uploaded prints P everywhere, and the
-             assumption is keyed, so an assumed month is a different document. */
-          row.push(code ?? (dataset.assumptions.fullAttendanceAssumed ? 'P' : null));
+          /* A month stated fully present prints present on the working days and the weekly
+             off on the rest. The assumption is keyed, so uploading a real sheet later rebuilds
+             these rather than leaving a file that looks the same. */
+          row.push(
+            code ??
+              (dataset.assumptions.fullAttendanceAssumed
+                ? assumedCode(dataset.period, col.day!, dataset.assumptions.weekOff)
+                : null),
+          );
           break;
         }
 
@@ -251,7 +283,16 @@ export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
     );
   }
   if (dataset.assumptions.fullAttendanceAssumed) {
-    notes.push('Attendance was marked fully present for the month rather than uploaded.');
+    const off = dataset.assumptions.weekOff;
+    const rule =
+      off === 'sat-sun'
+        ? ' Saturdays and Sundays are shown as the weekly off.'
+        : off === 'alt-sat-sun'
+          ? ' Sundays and alternate Saturdays are shown as the weekly off.'
+          : off === 'none'
+            ? ''
+            : ' Sundays are shown as the weekly off.';
+    notes.push(`Attendance was stated fully present for the period rather than uploaded.${rule}`);
   }
 
   return { form, columns, rows, nil, notes };

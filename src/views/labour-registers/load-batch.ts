@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { AuthContext } from '@/auth/guards';
 import { batchProvenance, getBatch, getColumnMap, listDocuments, listUploads } from '@/db/repositories/labour-registers';
-import { formsFor, optionalFields, requiredFields } from '@/lib/labour-registers/catalogue';
+import { formsFor, formsNeedingAttendance, optionalFields, requiredFields } from '@/lib/labour-registers/catalogue';
 import { assessReadiness, closeSentence } from '@/lib/labour-registers/readiness';
 import type { BatchView } from './BatchPage';
 
@@ -106,6 +106,8 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
       },
       [],
     ),
+    needsAttendance: formsNeedingAttendance(forms).map((f) => `Form ${f.formNumber}`),
+    attendanceAssumed: Boolean(assumptions.fullAttendanceAssumed),
     readiness: summary,
     sentence: closeSentence(summary, period),
   };

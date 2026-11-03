@@ -34,6 +34,8 @@ export interface BatchActions {
   /** Build again without closing again — for a retry, or after a reopen. */
   generate: () => Promise<void>;
   reopen: (reason: string) => Promise<void>;
+  /** State that the month was fully present, rather than uploading a sheet. */
+  assumeAttendance: (weekOff: string) => Promise<void>;
   dismissOutcome: () => void;
 }
 
@@ -116,5 +118,34 @@ export function useBatchActions(batchId: string, companyName?: string): BatchAct
     [batchId, router],
   );
 
-  return { busy, error, outcome, closeAndGenerate, generate, reopen, dismissOutcome: () => setOutcome(null) };
+  const assumeAttendance = useCallback(
+    async (weekOff: string) => {
+      setError('');
+      setBusy('generating');
+      try {
+        /* Keyed, so the muster rolls are rebuilt if a real sheet arrives later. */
+        await post('/api/labour-registers/assumptions', {
+          batchId,
+          assumptions: { fullAttendanceAssumed: true, weekOff },
+        });
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'That could not be recorded.');
+      } finally {
+        setBusy(null);
+      }
+    },
+    [batchId, router],
+  );
+
+  return {
+    busy,
+    error,
+    outcome,
+    closeAndGenerate,
+    generate,
+    reopen,
+    assumeAttendance,
+    dismissOutcome: () => setOutcome(null),
+  };
 }

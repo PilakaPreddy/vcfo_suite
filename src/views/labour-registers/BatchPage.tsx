@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, ArrowLeft, Download, Info, Lock, RotateCcw } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CalendarCheck, Download, Info, Lock, RotateCcw } from 'lucide-react';
 
 import { ActDirectory, type DirectoryFolder } from '@/components/labour-registers/ActDirectory';
+import { AttendanceChoiceDialog } from '@/components/labour-registers/AttendanceChoiceDialog';
 import { ReopenDialog } from '@/components/labour-registers/ReopenDialog';
 import { useBatchActions } from '@/components/labour-registers/use-batch-actions';
 import { UploadCard, type SlotKey, type SlotState } from '@/components/labour-registers/UploadCard';
@@ -58,6 +59,10 @@ export interface BatchView {
   companyName?: string;
   /** The documents produced, so the directory lists what exists rather than what might. */
   documents?: Array<{ id: string; formId: string; byteLength: number; format: string }>;
+  /** Registers that carry a day grid and so cannot be produced without attendance. */
+  needsAttendance?: string[];
+  /** True when the month has been stated fully present rather than uploaded. */
+  attendanceAssumed?: boolean;
 }
 
 const MONTHS = [
@@ -140,6 +145,7 @@ export function BatchPage({
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
+  const [attendanceOpen, setAttendanceOpen] = useState(false);
   const { uploads, busySlot, errors, upload } = useRegisterUpload(view.batchId, view.uploads);
   const actions = useBatchActions(view.batchId, view.companyName);
 
@@ -247,6 +253,18 @@ export function BatchPage({
           ) : null
         }
       />
+
+      {!view.locked && canPrepare && !uploads.attendance && (view.needsAttendance?.length ?? 0) > 0 ? (
+        <LrBanner icon={CalendarCheck} tone="warn">
+          <span className="font-semibold">No attendance sheet for this period.</span>{' '}
+          {view.attendanceAssumed
+            ? 'The month is recorded as fully present. Upload a sheet to replace that.'
+            : `${view.needsAttendance!.length} registers carry a column per day and cannot be produced without one.`}{' '}
+          <button type="button" onClick={() => setAttendanceOpen(true)} className={`${lr.link} align-baseline`}>
+            {view.attendanceAssumed ? 'Change how it was recorded' : 'Decide how to handle it'}
+          </button>
+        </LrBanner>
+      ) : null}
 
       {actions.error ? (
         <LrBanner icon={AlertCircle} tone="bad">
@@ -367,6 +385,22 @@ export function BatchPage({
         onConfirm={(summary) => {
           setDialogOpen(false);
           void actions.closeAndGenerate(summary);
+        }}
+      />
+
+      <AttendanceChoiceDialog
+        open={attendanceOpen}
+        periodLabel={label}
+        blockedForms={view.needsAttendance ?? []}
+        busy={actions.busy === 'generating'}
+        onCancel={() => setAttendanceOpen(false)}
+        onUpload={() => {
+          setAttendanceOpen(false);
+          document.getElementById('lr-inputs')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }}
+        onConfirmAssume={(weekOff) => {
+          setAttendanceOpen(false);
+          void actions.assumeAttendance(weekOff);
         }}
       />
 
