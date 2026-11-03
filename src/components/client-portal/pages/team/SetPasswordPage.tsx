@@ -5,6 +5,9 @@
  * (`/set-password/<token>`). It shows the email and the company for a good link, takes a new
  * password twice, and sends the person to sign in. A bad, used or expired link says so.
  * Data: `GET` and `POST /api/client/invite-password`.
+ *
+ * The receivables client partner login (Phase 8) reuses this page with its own token (from
+ * `?token=`), its own API and its own sign-in page; the props default to the client invite.
  */
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -12,9 +15,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SbcLogo } from '@/components/brand/SbcLogo';
 
-export function SetPasswordPage() {
+export function SetPasswordPage({
+  token: tokenProp,
+  apiPath = '/api/client/invite-password',
+  loginPath = '/login',
+  invalidText = 'This link was used already or has expired. Ask the person who invited you to send the invite again.',
+}: {
+  /** The link token; read from the `[token]` route segment when not given. */
+  token?: string;
+  apiPath?: string;
+  loginPath?: string;
+  invalidText?: string;
+} = {}) {
   const params = useParams();
-  const token = String(params.token ?? '');
+  const token = tokenProp ?? String(params?.token ?? '');
   const router = useRouter();
   const [info, setInfo] = useState<{ email: string; companyName: string } | null | undefined>(undefined);
   const [pw, setPw] = useState('');
@@ -24,14 +38,14 @@ export function SetPasswordPage() {
 
   useEffect(() => {
     let live = true;
-    fetch(`/api/client/invite-password?token=${encodeURIComponent(token)}`, { cache: 'no-store' })
+    fetch(`${apiPath}?token=${encodeURIComponent(token)}`, { cache: 'no-store' })
       .then(async (r) => (r.ok ? ((await r.json()) as { email: string; companyName: string }) : null))
       .then((v) => live && setInfo(v))
       .catch(() => live && setInfo(null));
     return () => {
       live = false;
     };
-  }, [token]);
+  }, [token, apiPath]);
 
   const submit = async () => {
     if (pw.length < 8) return setErr('Use at least 8 characters');
@@ -39,14 +53,14 @@ export function SetPasswordPage() {
     setBusy(true);
     setErr('');
     try {
-      const res = await fetch('/api/client/invite-password', {
+      const res = await fetch(apiPath, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ token, password: pw }),
       });
       const b = (await res.json().catch(() => ({}))) as { error?: string; email?: string };
       if (!res.ok) throw new Error(b.error ?? 'Could not set the password');
-      router.push(`/login?email=${encodeURIComponent(b.email ?? info?.email ?? '')}`);
+      router.push(`${loginPath}?email=${encodeURIComponent(b.email ?? info?.email ?? '')}`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not set the password');
       setBusy(false);
@@ -62,8 +76,8 @@ export function SetPasswordPage() {
         ) : info === null ? (
           <div className="mt-6 grid gap-3">
             <h1 className="m-0 text-[18px] font-medium text-ink">Link not valid</h1>
-            <p className="m-0 text-[14px] text-ink-2">This link was used already or has expired. Ask the person who invited you to send the invite again.</p>
-            <Button variant="secondary" onClick={() => router.push('/login')}>
+            <p className="m-0 text-[14px] text-ink-2">{invalidText}</p>
+            <Button variant="secondary" onClick={() => router.push(loginPath)}>
               Go to sign in
             </Button>
           </div>

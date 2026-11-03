@@ -17,6 +17,7 @@ import {
   FolderClosed,
   FolderOpen,
   History as HistoryIcon,
+  IndianRupee,
   Inbox,
   Landmark,
   LayoutDashboard,
@@ -155,6 +156,14 @@ function labourRegistersItem(base: string): NavItem {
   return { to: `${base}/labour-registers`, label: 'Labour registers', icon: ScrollText, iconTone: TONE.work };
 }
 
+/**
+ * Receivables (docs/specs/receivables/PLAN.md) lives outside /app at /receivables/manager, with its
+ * own header; this row only opens it. Managers only: the one receivables manager is a manager.
+ */
+function receivablesItem(): NavItem {
+  return { to: '/receivables/manager', label: 'Receivables', icon: IndianRupee, iconTone: TONE.work };
+}
+
 /* Sidebars in priority order (K-15, rule R-32): daily work, the practice block (R-51), dated
    work, messages, documents, then reports and settings below the break. */
 const firmAdminItems: NavEntry[] = [
@@ -236,6 +245,7 @@ function managerItems(staffBase: string): NavEntry[] {
     { to: `${staffBase}/team`, label: 'Project leads', icon: UserSquare2, iconTone: TONE.people },
     ...practiceBlock('manager', staffBase),
     labourRegistersItem(staffBase),
+    receivablesItem(),
     updatesGroup(staffBase),
     { to: `${staffBase}/mail`, label: 'Email', icon: Mail, iconTone: TONE.work },
     docsGroup(staffBase),
@@ -281,6 +291,9 @@ export function sidebarItemsFor(role: Role, staffBase: string, inDevConsole = fa
       return internItems;
     case 'developer':
       return developerItems;
+    case 'partner':
+      // A client partner never gets the /app shell (the proxy keeps them on /receivables).
+      return [];
     default:
       return clientItems;
   }

@@ -32,7 +32,7 @@ import { systemIsSessionActive, systemTouchLastSeen } from '@/db/repositories/us
  * minutes. None of this runs in the edge proxy, which never touches the database.
  */
 
-export type AppRole = 'super_admin' | 'admin' | 'manager' | 'intern' | 'client' | 'developer';
+export type AppRole = 'super_admin' | 'admin' | 'manager' | 'intern' | 'client' | 'developer' | 'partner';
 
 export interface AuthContext {
   userId: string;
@@ -53,10 +53,11 @@ export type GuardResult = Ok | Err;
 
 /**
  * The signed-in person, or null. A developer gets null here unless the caller is
- * `requireDeveloper`, because the repositories were written for the five firm and
- * client roles and some treat an unknown role as firm-wide.
+ * `requireDeveloper`, and a client partner unless the caller is `requirePartner` (or their own
+ * account), because the repositories were written for the five firm and client roles and some
+ * treat an unknown role as firm-wide.
  */
-async function currentContext(opts: { allowDeveloper?: boolean } = {}): Promise<AuthContext | null> {
+async function currentContext(opts: { allowDeveloper?: boolean; allowPartner?: boolean } = {}): Promise<AuthContext | null> {
   const session = await auth();
   const u = session?.user as
     | {
@@ -96,6 +97,7 @@ async function currentContext(opts: { allowDeveloper?: boolean } = {}): Promise<
   if (!isValidDbRole(row.role)) return null;
   if (row.role === 'intern' && !row.internId?.trim()) return null;
   if (row.role === 'developer' && !opts.allowDeveloper) return null;
+  if (row.role === 'partner' && !opts.allowPartner) return null;
 
   // Throttled inside and never throws, so it does not hold up the request.
   void systemTouchLastSeen(row.id, sid);
@@ -163,8 +165,16 @@ export async function requireAnyRole(...roles: AppRole[]): Promise<GuardResult> 
  * and never reach a tenant-scoped repository.
  */
 export async function requireOwnAccount(): Promise<GuardResult> {
-  const ctx = await currentContext({ allowDeveloper: true });
+  const ctx = await currentContext({ allowDeveloper: true, allowPartner: true });
   if (!ctx) return { ok: false, status: 401, error: 'Not authenticated' };
+  return { ok: true, ctx };
+}
+
+/** The receivables client partner pages (/receivables): a signed-in `partner` only. */
+export async function requirePartner(): Promise<GuardResult> {
+  const ctx = await currentContext({ allowPartner: true });
+  if (!ctx) return { ok: false, status: 401, error: 'Not authenticated' };
+  if (ctx.role !== 'partner') return { ok: false, status: 403, error: 'Requires a client partner login' };
   return { ok: true, ctx };
 }
 

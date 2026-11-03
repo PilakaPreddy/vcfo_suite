@@ -506,7 +506,7 @@ export async function resolveVaultFiles(
   ctx: AuthContext,
   refs: VaultFileRef[],
 ): Promise<ResolvedVaultFile[]> {
-  if (ctx.role === 'developer') return [];
+  if (ctx.role === 'developer' || ctx.role === 'partner') return [];
   const access = accessCache(ctx);
   const out: ResolvedVaultFile[] = [];
   for (const ref of refs) {
@@ -794,7 +794,7 @@ export async function indexMilestoneUpload(
   ctx: AuthContext,
   input: IndexMilestoneUploadInput,
 ): Promise<DocumentDto> {
-  if (ctx.role === 'developer') throw new Error('Upload index is not permitted for this role');
+  if (ctx.role === 'developer' || ctx.role === 'partner') throw new Error('Upload index is not permitted for this role');
   const access = await assertEngagementAccess(ctx, engagementDbId(input.engagementId));
   if (!access.ok) throw new Error('Engagement not found or not permitted');
 

@@ -39,7 +39,7 @@ export async function recordFilingEvent(
   input: { instanceId: string; side: FilingEventSide; label: string },
 ): Promise<void> {
   try {
-    if (ctx.role === 'developer') return;
+    if (ctx.role === 'developer' || ctx.role === 'partner') return;
     const [row] = await db
       .select({ id: complianceInstances.id, engagementId: complianceInstances.engagementId })
       .from(complianceInstances)
@@ -61,7 +61,7 @@ export async function recordFilingEvent(
 
 /** The events of the given filings, oldest first, limited to the caller's scope. */
 export async function listFilingEvents(ctx: AuthContext, instanceIds: string[]): Promise<FilingEvent[]> {
-  if (ctx.role === 'developer') return [];
+  if (ctx.role === 'developer' || ctx.role === 'partner') return [];
   const ids = [...new Set(instanceIds)].filter(Boolean).slice(0, 200);
   if (ids.length === 0) return [];
 

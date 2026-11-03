@@ -164,6 +164,9 @@ function pagesForRole(role: Role | undefined): PageLink[] {
         { label: "Data and costs", href: "/app/dev/data" },
         { label: "Audit", href: "/app/dev/audit" },
       ];
+    case "partner":
+      // A client partner never gets the /app shell, so there is nothing to jump to.
+      return [];
     default:
       return [];
   }

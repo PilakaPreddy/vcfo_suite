@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getSession, signIn as authJsSignIn, signOut as authJsSignOut } from 'next-auth/react';
 import { useApp } from '@/context/AppContext';
 import { isValidDbRole } from '@/lib/auth';
-import { roleHomePath } from '@/lib/auth-routes';
+import { postLoginPath } from '@/lib/auth-routes';
 import { toastError, toastSuccess } from '@/lib/toast-errors';
 
 /**
@@ -18,6 +18,15 @@ import { toastError, toastSuccess } from '@/lib/toast-errors';
  * Auth.js with the password as the `otp` field; `authorize` checks both.
  */
 export type SignInStep = 'password' | 'code';
+
+/**
+ * `?next=` of the login page, or `fallback` when there is none (the partner login defaults to
+ * `/receivables`). `postLoginPath` decides whether it is honoured.
+ */
+function nextParam(fallback: string | null = null): string | null {
+  if (typeof window === 'undefined') return fallback;
+  return new URLSearchParams(window.location.search).get('next') ?? fallback;
+}
 
 export type SignInState = {
   step: SignInStep;
@@ -80,7 +89,12 @@ async function needsCode(email: string, password: string): Promise<boolean> {
   }
 }
 
-export function useSignIn() {
+export type UseSignInOptions = {
+  /** Where to go after sign-in when the page has no `?next=`; the role home when unset. */
+  defaultNext?: string;
+};
+
+export function useSignIn({ defaultNext }: UseSignInOptions = {}) {
   const { signIn, refreshAuth } = useApp();
   const router = useRouter();
   const [state, dispatch] = useReducer(signInReducer, initialSignInState);
@@ -103,7 +117,7 @@ export function useSignIn() {
       return;
     }
     if (result.user) {
-      router.push(roleHomePath(result.user.role));
+      router.push(postLoginPath(result.user.role, nextParam(defaultNext)));
     }
   };
 
@@ -139,7 +153,7 @@ export function useSignIn() {
     }
     await refreshAuth();
     patch({ loading: false });
-    router.push(roleHomePath(role));
+    router.push(postLoginPath(role, nextParam(defaultNext)));
   };
 
   const backToPassword = () => patch({ step: 'password', code: '', error: null });

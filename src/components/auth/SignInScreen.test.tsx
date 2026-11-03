@@ -142,3 +142,26 @@ describe('Microsoft sign-in (S-650)', () => {
     expect(screen.queryByRole('button', { name: /sign in with microsoft/i })).toBeNull();
   });
 });
+
+describe('SignInScreen, client partner variant', () => {
+  beforeEach(() => {
+    push.mockReset();
+    signIn.mockReset();
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ codeRequired: false }) });
+    getProviders.mockClear();
+    params = new URLSearchParams();
+  });
+
+  it('shows the receivables heading and sends a partner to /receivables', async () => {
+    signIn.mockResolvedValue({ user: { role: 'partner' } });
+    render(<SignInScreen variant="partner" />);
+    expect(screen.getByRole('heading', { name: 'SBC receivables — client partner sign in' })).toBeInTheDocument();
+    expect(screen.queryByText('Book a demo')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign in with Microsoft' })).not.toBeInTheDocument();
+    expect(getProviders).not.toHaveBeenCalled();
+    fill('partner@client.in', 'secret');
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/receivables'));
+  });
+});
