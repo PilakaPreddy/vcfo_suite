@@ -88,3 +88,13 @@ export function sortCurrencies(codes: Iterable<string>): string[] {
   };
   return [...new Set([...codes].map(clean).filter(Boolean))].sort((a, b) => order(a) - order(b) || a.localeCompare(b));
 }
+
+/**
+ * The header of a foreign amount column: "EUR Amount" when every foreign row is in one currency,
+ * "Foreign Amount" when they are mixed (each row then names its own currency in the Currency
+ * column). `word` lets a caller keep its own casing, e.g. "amount".
+ */
+export function foreignAmountHeader(codes: Iterable<string | null | undefined>, word = 'Amount'): string {
+  const foreign = sortCurrencies([...codes].map((c) => clean(c)).filter((c) => c && c !== 'INR'));
+  return foreign.length === 1 ? `${foreign[0]} ${word}` : `Foreign ${word}`;
+}

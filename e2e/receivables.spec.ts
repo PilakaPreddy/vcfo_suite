@@ -39,8 +39,14 @@ test('the manager signs in and sees the sheet', async ({ page }) => {
   await signIn(page, '/login?next=/receivables/manager', MANAGER, (p) => p.startsWith('/receivables/manager'));
   await page.goto('/receivables/manager');
   await expect(page.getByRole('tab', { name: 'Sheet' })).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByText(OWN_CLIENT, { exact: true }).locator('visible=true').first()).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByText(OTHER_CLIENT, { exact: true }).locator('visible=true').first()).toBeVisible();
+  await expect(page.getByRole('tab', { name: 'Sheet' })).toHaveAttribute('aria-selected', 'true');
+  // The sheet holds every partner's invoices, the own client and the other partner's alike.
+  await expect(page.getByRole('region', { name: 'Summary' })).toContainText('Open receivables', { timeout: 60_000 });
+  const list = (await (await page.request.get('/api/receivables/sheets')).json()) as { sheets: Array<{ id: string }> };
+  expect(list.sheets.length).toBeGreaterThan(0);
+  const sheet = (await (await page.request.get(`/api/receivables/sheets/${list.sheets[0].id}`)).json()) as { invoices: Array<{ clientName: string }> };
+  const names = new Set(sheet.invoices.map((i) => i.clientName));
+  expect(names.has(OWN_CLIENT) && names.has(OTHER_CLIENT)).toBe(true);
 });
 
 test('a client partner signs in and sees only their own invoices', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FOREIGN_CURRENCY_CODES, INVOICE_CURRENCY_CODES, currencyInfo, fcLabel, fcNumber, isInvoiceCurrency, isSupportedForeign, sortCurrencies } from './currencies';
+import { FOREIGN_CURRENCY_CODES, INVOICE_CURRENCY_CODES, currencyInfo, fcLabel, fcNumber, foreignAmountHeader, isInvoiceCurrency, isSupportedForeign, sortCurrencies } from './currencies';
 
 describe('the supported currencies', () => {
   it('lists the nine foreign currencies, INR only for invoices', () => {
@@ -25,5 +25,13 @@ describe('the supported currencies', () => {
 
   it('sorts codes in list order with unknown codes last and no duplicates', () => {
     expect(sortCurrencies(['jpy', 'EUR', 'ZZZ', 'USD', 'EUR'])).toEqual(['USD', 'EUR', 'JPY', 'ZZZ']);
+  });
+});
+
+describe('foreignAmountHeader', () => {
+  it('names the one currency, or reads Foreign when mixed', () => {
+    expect(foreignAmountHeader(['INR', 'USD', 'usd'])).toBe('USD Amount');
+    expect(foreignAmountHeader(['EUR', 'GBP'], 'amount')).toBe('Foreign amount');
+    expect(foreignAmountHeader([null, 'INR'])).toBe('Foreign Amount');
   });
 });
