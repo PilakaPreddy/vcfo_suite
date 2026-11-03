@@ -57,10 +57,26 @@ export const receivablePartners = pgTable(
     name: text('name').notNull(),
     email: text('email').notNull(),
     active: boolean('active').notNull().default(true),
+    /**
+     * Phase 8: the partner's own login (a `partner` profile), set when the manager invites them.
+     * Null until invited. Disabling the login clears nothing here; the profile is deactivated.
+     */
+    profileId: uuid('profile_id').references(() => base.profiles.id, { onDelete: 'set null' }),
+    /** Email the partner when the manager publishes an Update that changes their invoices. */
+    notifyOnPublish: boolean('notify_on_publish').notNull().default(true),
+    /** The stored hash of the set-password link token (the raw token only travels in the email). */
+    setPasswordTokenHash: text('set_password_token_hash'),
+    setPasswordExpiresAt: timestamp('set_password_expires_at', { withTimezone: true }),
+    invitedAt: timestamp('invited_at', { withTimezone: true }),
+    inviteSendCount: integer('invite_send_count').notNull().default(0),
+    /** When the partner first set their password. */
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     slugIdx: uniqueIndex('receivable_partners_sheet_slug_idx').on(t.sheetId, t.slug),
+    profileIdx: index('receivable_partners_profile_idx').on(t.profileId),
+    tokenIdx: index('receivable_partners_token_idx').on(t.setPasswordTokenHash),
   }),
 );
 
@@ -92,6 +108,21 @@ export const receivableInvoices = pgTable(
     partPaid: numeric('part_paid', { precision: 14, scale: 2 }).notNull().default('0'),
     remindersPausedUntil: date('reminders_paused_until'),
     pauseReason: text('pause_reason'),
+    /** Phase 8: the date the client partner says the client promised to pay. Live, not published. */
+    promisedOn: date('promised_on'),
+    promisedBy: uuid('promised_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    promisedAt: timestamp('promised_at', { withTimezone: true }),
+    /** Phase 9: the invoice date (the FX booking date for a foreign invoice). Null on imported rows. */
+    invoiceDate: date('invoice_date'),
+    /** Phase 9: the foreign amount that actually arrived (paid_amount holds the INR credited). */
+    receivedFc: numeric('received_fc', { precision: 14, scale: 2 }),
+    /** Phase 9: TDS the client deducted, in INR. The certificate (Form 16A) is tracked by tds_certificate_on. */
+    tdsInr: numeric('tds_inr', { precision: 14, scale: 2 }).notNull().default('0'),
+    tdsCertificateOn: date('tds_certificate_on'),
+    /** Phase 9: a dispute stops reminders and leaves the invoice out of the ageing until resolved. */
+    disputedAt: timestamp('disputed_at', { withTimezone: true }),
+    disputeReason: text('dispute_reason'),
+    disputeResolvedAt: timestamp('dispute_resolved_at', { withTimezone: true }),
     createdBy: uuid('created_by').references(() => base.profiles.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
@@ -232,5 +263,108 @@ export const receivableEmailSends = pgTable(
   },
   (t) => ({
     sheetIdx: index('receivable_email_sends_sheet_idx').on(t.sheetId, t.sentAt),
+  }),
+);
+
+/**
+ * Phase 8: notes on one invoice, written by the client partner or by SBC. Live (never part of a
+ * published snapshot), so a note needs no Update. A partner sees only the notes on their own
+ * invoices; `from_sbc` marks the manager's replies.
+ */
+export const receivableInvoiceNotes = pgTable(
+  'receivable_invoice_notes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sheetId: uuid('sheet_id')
+      .notNull()
+      .references(() => receivableSheets.id, { onDelete: 'cascade' }),
+    invoiceId: uuid('invoice_id')
+      .notNull()
+      .references(() => receivableInvoices.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id').references(() => base.profiles.id, { onDelete: 'set null' }),
+    authorName: text('author_name').notNull().default(''),
+    fromSbc: boolean('from_sbc').notNull().default(false),
+    text: text('text').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    invoiceIdx: index('receivable_invoice_notes_invoice_idx').on(t.invoiceId, t.createdAt),
+  }),
+);
+
+/**
+ * Phase 9: daily reference rates, INR per one unit of `currency`. The 14:30 IST job stores the
+ * fetched rate (source `fbil`, or `ecb` when only the Frankfurter fallback answered); a manager
+ * override is a second row with source `manual`, which wins for that day.
+ */
+export const fxRates = pgTable(
+  'fx_rates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    currency: text('currency').notNull(),
+    rateDate: date('rate_date').notNull(),
+    rate: numeric('rate', { precision: 12, scale: 6 }).notNull(),
+    /** fbil | ecb | manual. */
+    source: text('source').notNull(),
+    note: text('note').notNull().default(''),
+    setBy: uuid('set_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    dayIdx: uniqueIndex('fx_rates_currency_day_source_idx').on(t.currency, t.rateDate, t.source),
+  }),
+);
+
+/** Phase 9: a credit note against one invoice. It lowers the open balance when the manager applies it. */
+export const receivableCreditNotes = pgTable(
+  'receivable_credit_notes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sheetId: uuid('sheet_id')
+      .notNull()
+      .references(() => receivableSheets.id, { onDelete: 'cascade' }),
+    invoiceId: uuid('invoice_id')
+      .notNull()
+      .references(() => receivableInvoices.id, { onDelete: 'cascade' }),
+    number: text('number'),
+    issuedOn: date('issued_on').notNull(),
+    amountInr: numeric('amount_inr', { precision: 14, scale: 2 }).notNull(),
+    reason: text('reason').notNull().default(''),
+    createdBy: uuid('created_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    invoiceIdx: index('receivable_credit_notes_invoice_idx').on(t.invoiceId),
+  }),
+);
+
+/**
+ * Phase 9: Foreign Inward Remittance Advices. Every foreign receipt needs one from the bank for
+ * the export (GST/FEMA) file; a row is `awaited` from the day the money lands until the advice arrives.
+ */
+export const receivableFiras = pgTable(
+  'receivable_firas',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sheetId: uuid('sheet_id')
+      .notNull()
+      .references(() => receivableSheets.id, { onDelete: 'cascade' }),
+    invoiceId: uuid('invoice_id').references(() => receivableInvoices.id, { onDelete: 'set null' }),
+    bankCreditId: uuid('bank_credit_id').references(() => bankCredits.id, { onDelete: 'set null' }),
+    /** awaited | received. */
+    status: text('status').notNull().default('awaited'),
+    firaNo: text('fira_no'),
+    issuedOn: date('issued_on'),
+    currency: text('currency').notNull().default('USD'),
+    fcAmount: numeric('fc_amount', { precision: 14, scale: 2 }),
+    inrAmount: numeric('inr_amount', { precision: 14, scale: 2 }),
+    note: text('note').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    sheetIdx: index('receivable_firas_sheet_status_idx').on(t.sheetId, t.status),
+    invoiceIdx: index('receivable_firas_invoice_idx').on(t.invoiceId),
   }),
 );

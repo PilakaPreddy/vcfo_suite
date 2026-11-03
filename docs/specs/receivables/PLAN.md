@@ -167,3 +167,40 @@ Each phase ends with `npm run check` green and is shown to the owner before the 
   manager page cover it.
 - A daily email after the due date may annoy partners; the rules are stored per sheet, so a cap
   (for example every 3 days after 15 days overdue) is a settings change, not code.
+
+## Build plan: Phase 8 (client partner logins)
+
+The owner replaced the public key link with a login for each client partner (3 Nov 2026).
+
+- New role `partner` (`trak_role`, `Role`, `AppRole`). The guards refuse a partner everywhere
+  except `requirePartner` and their own account routes. `roleHomePath('partner')` is
+  `/receivables`; `postLoginPath` allows `/receivables`. `proxy.ts` matches `/receivables*`:
+  signed out goes to `/receivables/login?next=…`; a partner is kept out of `/app` and
+  `/receivables/manager`.
+- Migration `0038_receivables_partners`: the enum value; `receivable_partners.profile_id`,
+  `notify_on_publish`, set-password token hash and expiry, invite stamps; invoice
+  `promised_on`, `promised_by`, `promised_at`; new `receivable_invoice_notes`.
+- Partners tab: invite, resend, reset password and disable, reusing the set-password token
+  pattern of `src/db/repositories/client-team.ts` and `app/set-password`.
+- Partner routes follow `src/lib/receivables/partner-wire.ts`. Pages: `/receivables` (own
+  invoices of the latest published version, promise to pay, notes, Excel),
+  `/receivables/login`, `/receivables/account`.
+- `/receivables/k/[key]` and `app/api/public/receivables/export` are retired; reminder emails
+  link to `/receivables?invoice=<id>`.
+- The manager sheet shows each invoice's promise date and notes, and the manager can reply.
+- Publish alerts: after Update, each partner with `notify_on_publish` and a changed invoice
+  gets a short email (email path, never blocking the publish).
+
+## Build plan: Phase 9 (foreign currency, reports)
+
+- Migration `0039_receivables_fx`: `fx_rates` (fetched `fbil`/`ecb` rows plus a `manual`
+  override that wins), invoice `invoice_date`, `received_fc`, `tds_inr`,
+  `tds_certificate_on`, dispute columns; `receivable_credit_notes`; `receivable_firas`.
+- `src/lib/receivables/fx-rate-source.ts`: the daily USD/INR reference rate (FBIL; the
+  Frankfurter API as the fallback), `forecast.ts` (expected cash by week from due dates,
+  promises and each client's days to pay), USD matching in `match.ts` (foreign amount within
+  bank-charge tolerance).
+- Job `receivables-fx-rates` at 14:30 IST; the manager can override a day's rate.
+- Sheet FX columns (USD amount, booked rate, today's INR, change), Mark received with the USD
+  received, a Reports tab (ageing, days to pay, cash forecast, FX gain or loss, TDS, FIRA),
+  the partner's USD view, and the FX columns in the summary email and the Excel export.

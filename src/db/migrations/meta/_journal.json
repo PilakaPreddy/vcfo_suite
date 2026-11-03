@@ -267,6 +267,20 @@
       "when": 1793722222139,
       "tag": "0037_receivables",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793730767379,
+      "tag": "0038_receivables_partners",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793730791627,
+      "tag": "0039_receivables_fx",
+      "breakpoints": true
     }
   ]
 }
