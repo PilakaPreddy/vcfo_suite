@@ -32,6 +32,7 @@ import {
   TriangleAlert,
   UserSquare2,
   Users,
+  Wallet,
 } from 'lucide-react';
 import type { Role } from '@/lib/auth';
 import { complianceLeaves, compliancesBasePath } from '@/components/shell/compliance-nav';
@@ -147,12 +148,14 @@ export function practiceBlock(role: Role, base: string): NavEntry[] {
 
 
 /**
- * R-51 sits three labels in the practice block, so Labour registers is its own row directly
- * after it rather than a fourth label inside it. Every role that does practice work gets it,
- * clients included: their portal row is download-only, which the page enforces.
+ * R-51 sits three labels in the practice block, so Payroll is its own row directly after it
+ * rather than a fourth label inside it. Labour registers used to hold this row; it now opens as
+ * a tab inside Payroll (next to Salary updates and Payroll summary), and the old
+ * `…/labour-registers` route still works for links already shared. Every role that does
+ * practice work gets it, clients included: their page is read-only, which the page enforces.
  */
-function labourRegistersItem(base: string): NavItem {
-  return { to: `${base}/labour-registers`, label: 'Labour registers', icon: ScrollText, iconTone: TONE.work };
+function payrollItem(base: string): NavItem {
+  return { to: `${base}/payroll`, label: 'Payroll', icon: Wallet, iconTone: TONE.work };
 }
 
 /* Sidebars in priority order (K-15, rule R-32): daily work, the practice block (R-51), dated
@@ -164,7 +167,7 @@ const firmAdminItems: NavEntry[] = [
   { to: '/app/admin/people', label: 'People', icon: Users, iconTone: TONE.people },
   { to: '/app/admin/managers', label: 'Managers', icon: UserSquare2, iconTone: TONE.people },
   ...practiceBlock('admin', '/app/admin'),
-  labourRegistersItem('/app/admin'),
+  payrollItem('/app/admin'),
   updatesGroup('/app/admin'),
   { to: '/app/admin/mail', label: 'Email', icon: Mail, iconTone: TONE.work },
   docsGroup('/app/admin'),
@@ -180,7 +183,7 @@ const firmAdminItems: NavEntry[] = [
 const clientItems: NavEntry[] = [
   { to: '/app/client/overview', label: 'Home', icon: LayoutDashboard, iconTone: TONE.home },
   ...practiceBlock('client', '/app/client'),
-  labourRegistersItem('/app/client'),
+  payrollItem('/app/client'),
   updatesGroup('/app/client'),
   { to: '/app/client/documents', label: 'Documents', icon: FolderClosed, iconTone: TONE.files },
   { to: '/app/client/library', label: 'Library', icon: BookMarked, iconTone: TONE.knowledge },
@@ -195,7 +198,7 @@ const superAdminItems: NavEntry[] = [
   { to: '/app/super/risks', label: 'Risks', icon: TriangleAlert, iconTone: TONE.queue },
   { to: '/app/super/projects', label: 'Clients', icon: Briefcase, iconTone: TONE.work },
   ...practiceBlock('super_admin', '/app/super'),
-  labourRegistersItem('/app/super/practice'),
+  payrollItem('/app/super/practice'),
   { to: '/app/super/team', label: 'Team', icon: Users, iconTone: TONE.people },
   { to: '/app/super/growth', label: 'Growth', icon: TrendingUp, iconTone: TONE.analytics },
   { to: '/app/super/reports', label: 'Reports', icon: FileBarChart, iconTone: TONE.analytics },
@@ -235,7 +238,7 @@ function managerItems(staffBase: string): NavEntry[] {
     { to: `${staffBase}/people`, label: 'People', icon: Users, iconTone: TONE.people },
     { to: `${staffBase}/team`, label: 'Project leads', icon: UserSquare2, iconTone: TONE.people },
     ...practiceBlock('manager', staffBase),
-    labourRegistersItem(staffBase),
+    payrollItem(staffBase),
     updatesGroup(staffBase),
     { to: `${staffBase}/mail`, label: 'Email', icon: Mail, iconTone: TONE.work },
     docsGroup(staffBase),
@@ -255,7 +258,7 @@ const internItems: NavEntry[] = [
   { to: '/app/intern/tasks', label: 'Work', icon: Columns3, iconTone: TONE.work },
   { to: INTERN_CLIENTS, label: 'Clients', icon: UserSquare2, iconTone: TONE.people },
   ...practiceBlock('intern', '/app/intern'),
-  labourRegistersItem('/app/intern'),
+  payrollItem('/app/intern'),
   updatesGroup('/app/intern'),
   { to: '/app/intern/mail', label: 'Email', icon: Mail, iconTone: TONE.work },
   docsGroup('/app/intern', Archive),

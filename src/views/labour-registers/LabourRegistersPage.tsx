@@ -47,6 +47,14 @@ export interface LabourRegistersPageProps {
    * to find it among thirty-six tiles. Left out, every configured state reads as reachable.
    */
   relevantStates?: string[];
+  /**
+   * Where the state links point. Defaults to the shell's own `…/labour-registers` route; the
+   * Payroll page passes its own URL (with `tab=labour-registers`) so a state pick stays inside
+   * the payroll tab instead of leaving it.
+   */
+  linkBase?: string;
+  /** True inside the Payroll page, which already has its own header, so the hero is left out. */
+  embedded?: boolean;
 }
 
 function parsePeriod(period: string | undefined): { year: number; month: number } {
@@ -75,6 +83,8 @@ export function LabourRegistersPage({
   period,
   canPrepare = true,
   relevantStates,
+  linkBase,
+  embedded = false,
 }: LabourRegistersPageProps) {
   const states = statesForPicker();
   const selected = stateByCode(stateCode ?? '') ?? states.find((s) => s.configured)!;
@@ -87,7 +97,9 @@ export function LabourRegistersPage({
   const summary = regimeSummary(selected, periodRange);
   const closed = periodRange.to < new Date().toISOString().slice(0, 10);
 
-  const href = (code: string) => `${shellBase}/labour-registers?state=${code}&period=${year}-${String(month).padStart(2, '0')}`;
+  const base = linkBase ?? `${shellBase}/labour-registers`;
+  const href = (code: string) =>
+    `${base}${base.includes('?') ? '&' : '?'}state=${code}&period=${year}-${String(month).padStart(2, '0')}`;
 
   /* The map and the list below it read the same rows, so the two cannot disagree. */
   const relevant = relevantStates ? new Set(relevantStates) : null;
@@ -101,6 +113,7 @@ export function LabourRegistersPage({
 
   return (
     <div className="flex flex-col gap-3">
+      {embedded ? null : (
       <DashHero
         title="Labour registers"
         subtitle={`${selected.name} · ${periodLabel}`}
@@ -111,6 +124,7 @@ export function LabourRegistersPage({
           { label: 'Retention', value: retentionYears(forms) || '—', of: 'years' },
         ]}
       />
+      )}
 
       {summary.hybrid && selected.configured ? (
         <div className="flex items-start gap-3 rounded-md border-2 border-line bg-warning-soft p-4">
