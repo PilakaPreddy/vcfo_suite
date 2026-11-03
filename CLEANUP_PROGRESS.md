@@ -18,7 +18,8 @@ memory), and the tests need `npm run css:portal` first because the generated por
 - [x] Phase 1.2 — production report ready
 - [x] Phase 1.3 — unused deps (none; skipped)
 - [x] Phase 1.3 — orphan files (38 removed, gate GREEN)
-- [!] Phase 1.3 — dead exports: FAILED gate, rolled back. knip --fix-type exports,types (450 exports, 153 types, 285 files) broke typecheck: src/lib/incorporation/dir-2.ts uses `import(".../shared").IncorpDirectorKind`, an inline type import knip does not see. Retry by hand in smaller batches (per folder), or exclude types.
+- [x] Phase 1.3 — dead exports (values only, retry): 450 exports in 239 files un-exported, gate GREEN, lint 0 errors (warnings 527 -> 581: 54 newly visible unused locals, which are dead code for a later pass)
+- [!] Phase 1.3 — dead exports + types (first attempt): FAILED gate, rolled back. knip --fix-type exports,types (450 exports, 153 types, 285 files) broke typecheck: src/lib/incorporation/dir-2.ts uses `import(".../shared").IncorpDirectorKind`, an inline type import knip does not see. Retry by hand in smaller batches (per folder), or exclude types.
 - [ ] Phase 1.4 — audit
 - [ ] Phase 1.5 — duplication survey
 
