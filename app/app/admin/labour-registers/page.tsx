@@ -5,6 +5,8 @@ import { listEngagements } from '@/db/repositories/engagements';
 import { BatchPage } from '@/views/labour-registers/BatchPage';
 import { LabourRegistersPage } from '@/views/labour-registers/LabourRegistersPage';
 import { loadBatchView } from '@/views/labour-registers/load-batch';
+import { loadMappingView } from '@/views/labour-registers/load-mapping';
+import { MappingPage } from '@/views/labour-registers/MappingPage';
 import { pageMetadata } from '@/lib/shell/page-metadata';
 
 export const metadata = pageMetadata('Labour registers', 'Statutory labour registers, state by state');
@@ -25,6 +27,15 @@ export default async function Page({
   if (batchId) {
     const guard = await requireAuth();
     if (!guard.ok) notFound();
+
+    /* `?map=` opens the column reconciliation for one slot of that batch. */
+    const slot = one('map');
+    if (slot && ['paysheet', 'attendance', 'overtime', 'employees'].includes(slot)) {
+      const mapping = await loadMappingView(guard.ctx, batchId, slot as 'paysheet');
+      if (!mapping) notFound();
+      return <MappingPage view={mapping} shellBase="/app/admin" />;
+    }
+
     const view = await loadBatchView(guard.ctx, batchId);
     if (!view) notFound();
     return <BatchPage view={view} shellBase="/app/admin" />;

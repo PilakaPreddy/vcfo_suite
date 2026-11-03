@@ -1,7 +1,8 @@
 'use client';
 
 import { useId, useRef, useState } from 'react';
-import { AlertCircle, CheckCircle2, FileSpreadsheet, Upload } from 'lucide-react';
+import Link from 'next/link';
+import { AlertCircle, CheckCircle2, Columns3, FileSpreadsheet, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { maxUploadSizeLabel } from '@/lib/upload-limits';
 import { lr } from './theme';
@@ -79,6 +80,7 @@ function Slot({
   busy,
   error,
   disabled,
+  mapHref,
   onPick,
 }: {
   spec: SlotSpec;
@@ -86,6 +88,8 @@ function Slot({
   busy: boolean;
   error?: string;
   disabled: boolean;
+  /** Where the column reconciliation for this slot lives, once something is uploaded. */
+  mapHref?: string;
   onPick: (file: File) => void;
 }) {
   const inputId = useId();
@@ -157,6 +161,12 @@ function Slot({
           e.target.value = '';
         }}
       />
+      {state && mapHref ? (
+        <Link href={mapHref} className={cn(lr.quiet, 'h-9 flex-none text-[13px]')}>
+          <Columns3 className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
+          Columns
+        </Link>
+      ) : null}
       <button
         type="button"
         disabled={disabled || busy}
@@ -175,6 +185,7 @@ export function UploadCard({
   busySlot,
   errors,
   locked = false,
+  mapHref,
   onPick,
   className,
 }: {
@@ -184,6 +195,8 @@ export function UploadCard({
   errors?: Partial<Record<SlotKey, string>>;
   /** True once the period is closed: inputs stop accepting changes. */
   locked?: boolean;
+  /** Where each slot's column reconciliation lives. */
+  mapHref?: (slot: SlotKey) => string;
   onPick: (slot: SlotKey, file: File) => void;
   className?: string;
 }) {
@@ -210,6 +223,7 @@ export function UploadCard({
             busy={busySlot === spec.key}
             error={errors?.[spec.key]}
             disabled={locked}
+            mapHref={mapHref?.(spec.key)}
             onPick={(file) => onPick(spec.key, file)}
           />
         ))}

@@ -225,7 +225,14 @@ export function BatchPage({ view, shellBase }: { view: BatchView; shellBase: str
               because an empty directory makes no sense until somebody has seen why it is
               empty. Once the period is locked the card goes read-only rather than away: what
               was uploaded is part of what the registers were built from. */}
-          <UploadCard uploads={uploads} busySlot={busySlot} errors={errors} locked={view.locked} onPick={upload} />
+          <UploadCard
+            uploads={uploads}
+            busySlot={busySlot}
+            errors={errors}
+            locked={view.locked}
+            mapHref={(slot) => `${shellBase}/labour-registers?batch=${view.batchId}&map=${slot}`}
+            onPick={upload}
+          />
 
           <ActDirectory folders={foldersFor(view)} />
         </div>
