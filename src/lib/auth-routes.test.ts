@@ -33,6 +33,16 @@ describe('postLoginPath', () => {
     expect(postLoginPath('admin', '/receivables/manager/partners')).toBe('/receivables/manager/partners');
   });
 
+  it('returns staff and partners to a shared view', () => {
+    const view = '/receivables/s/AbCdEfGhIjKlMnOpQrStUvWxYz012-_9';
+    expect(postLoginPath('manager', view)).toBe(view);
+    expect(postLoginPath('super_admin', view)).toBe(view);
+    expect(postLoginPath('partner', view)).toBe(view);
+    expect(postLoginPath('manager', `${view}/x`)).toBe('/app/manager/dashboard');
+    expect(postLoginPath('manager', '/receivables/s/short')).toBe('/app/manager/dashboard');
+    expect(postLoginPath('manager', '//evil.example/receivables/s/AbCdEfGhIjKlMnOpQrStUvWxYz012-_9')).toBe('/app/manager/dashboard');
+  });
+
   it('ignores every other next and falls back to the role home', () => {
     expect(postLoginPath('manager', null)).toBe('/app/manager/dashboard');
     expect(postLoginPath('manager', 'https://evil.example/receivables/manager')).toBe('/app/manager/dashboard');

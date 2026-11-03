@@ -12,6 +12,9 @@ import { postLoginPath, roleHomePath } from '@/lib/auth-routes';
  *   - A client partner is kept out of /app and /receivables/manager and sent to /receivables.
  *   - Staff who open a partner page go to /receivables/manager (editors) or their role home.
  *   - On /app the URL segment must match the role; the super admin may enter every segment.
+ *   - A shared view, /receivables/s/<token> (Phase 10), is let through for everyone, signed out
+ *     or not, because the page itself decides who may see it. A signed-in person who lands on the
+ *     partner login with `?next=` set to a shared view goes straight to it.
  */
 
 const ROLE_SEGMENT: Partial<Record<Role, string>> = {
@@ -37,6 +40,11 @@ export function isPublicReceivablesPath(path: string): boolean {
   );
 }
 
+/** A shared receivables view, /receivables/s/<token>; the page applies the link's visibility rule. */
+export function isReceivablesSharePath(path: string): boolean {
+  return path.startsWith('/receivables/s/') && path.length > '/receivables/s/'.length;
+}
+
 export function isReceivablesManagerPath(path: string): boolean {
   return path === '/receivables/manager' || path.startsWith('/receivables/manager/');
 }
@@ -44,7 +52,7 @@ export function isReceivablesManagerPath(path: string): boolean {
 /** A client partner page that needs a partner session: /receivables and its sub-pages, bar the manager area and the public pages. */
 export function isReceivablesPartnerPath(path: string): boolean {
   if (path !== '/receivables' && !path.startsWith('/receivables/')) return false;
-  return !isReceivablesManagerPath(path) && !isPublicReceivablesPath(path);
+  return !isReceivablesManagerPath(path) && !isPublicReceivablesPath(path) && !isReceivablesSharePath(path);
 }
 
 /** The role home, or /login for a role this build does not know. */
@@ -62,6 +70,7 @@ function loginRedirect(loginPath: string, next: string): string {
  * or null when signed out.
  */
 export function proxyRedirect(path: string, search: string, role: string | null | undefined): string | null {
+  if (isReceivablesSharePath(path)) return null;
   const isApp = path === '/app' || path.startsWith('/app/');
   const isManager = isReceivablesManagerPath(path);
   const isPartnerPage = isReceivablesPartnerPath(path);
@@ -84,6 +93,11 @@ export function proxyRedirect(path: string, search: string, role: string | null 
   }
 
   if (isAuthPage) return homeFor(role);
+
+  if (isPartnerLogin) {
+    const next = new URLSearchParams(search).get('next');
+    if (next && isReceivablesSharePath(next) && isValidDbRole(role)) return postLoginPath(role, next);
+  }
 
   if (isPartnerPage || isPartnerLogin) {
     return RECEIVABLES_EDITORS.has(role) ? '/receivables/manager' : homeFor(role);

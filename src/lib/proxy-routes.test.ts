@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isReceivablesPartnerPath, proxyRedirect } from './proxy-routes';
+import { isReceivablesPartnerPath, isReceivablesSharePath, proxyRedirect } from './proxy-routes';
 
 describe('proxyRedirect, signed out', () => {
   it('sends /app and the receivables manager area to the staff login', () => {
@@ -89,5 +89,31 @@ describe('isReceivablesPartnerPath', () => {
     expect(isReceivablesPartnerPath('/receivables/manager')).toBe(false);
     expect(isReceivablesPartnerPath('/receivables/login')).toBe(false);
     expect(isReceivablesPartnerPath('/receivablesx')).toBe(false);
+  });
+});
+
+describe('proxyRedirect, shared views', () => {
+  const token = 'AbCdEfGhIjKlMnOpQrStUvWxYz012-_9';
+  const path = `/receivables/s/${token}`;
+
+  it('lets everyone through to a shared view; the page applies the visibility rule', () => {
+    for (const role of [null, undefined, 'partner', 'manager', 'admin', 'super_admin', 'intern', 'client', 'developer']) {
+      expect(proxyRedirect(path, '', role)).toBeNull();
+    }
+  });
+
+  it('sends a signed-in person on the partner login straight back to the shared view', () => {
+    const search = `?next=${encodeURIComponent(path)}`;
+    expect(proxyRedirect('/receivables/login', search, 'partner')).toBe(path);
+    expect(proxyRedirect('/receivables/login', search, 'manager')).toBe(path);
+    expect(proxyRedirect('/receivables/login', search, 'admin')).toBe(path);
+    expect(proxyRedirect('/receivables/login', search, null)).toBeNull();
+  });
+
+  it('does not treat /receivables/s itself as a shared view', () => {
+    expect(isReceivablesSharePath('/receivables/s/')).toBe(false);
+    expect(isReceivablesSharePath('/receivables/s')).toBe(false);
+    expect(isReceivablesSharePath(path)).toBe(true);
+    expect(isReceivablesPartnerPath(path)).toBe(false);
   });
 });
