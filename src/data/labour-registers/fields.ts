@@ -94,8 +94,8 @@ export const FIELDS: FieldSpec[] = [
   { key: 'wageRate', label: 'Rate of wages', kind: 'money', aliases: ['rate of wages', 'rates of wages actually paid', 'rate of daily wages', 'rate of remuneration paid', 'wage rate'], usually: 'derived' },
   { key: 'basic', label: 'Basic wages', kind: 'money', aliases: ['basic', 'basic pay', 'basic_pay', 'basic wages', 'basic salary', 'basic wage or salary'], usually: 'input' },
   { key: 'dearnessAllowance', label: 'Dearness allowance', kind: 'money', aliases: ['da', 'dearness allowance'], usually: 'input', optional: true },
-  { key: 'hra', label: 'House rent allowance', kind: 'money', aliases: ['hra', 'house rent allowance', 'house rent'], usually: 'input' },
-  { key: 'specialAllowance', label: 'Special allowance', kind: 'money', aliases: ['special allowance', 'special_allowance', 'special allowances', 'other allowance'], usually: 'input' },
+  { key: 'hra', label: 'House rent allowance', kind: 'money', aliases: ['hra', 'house rent allowance', 'house rent'], usually: 'input', optional: true },
+  { key: 'specialAllowance', label: 'Special allowance', kind: 'money', aliases: ['special allowance', 'special_allowance', 'special allowances', 'other allowance'], usually: 'input', optional: true },
   { key: 'conveyanceAllowance', label: 'Conveyance allowance', kind: 'money', aliases: ['conveyance', 'conveyance allowance', 'transport allowance'], usually: 'input', optional: true },
   { key: 'foodAllowance', label: 'Food allowance', kind: 'money', aliases: ['food allowance', 'food_allowance', 'food allowances', 'meal allowance'], usually: 'input', optional: true },
   { key: 'medicalAllowance', label: 'Medical allowance', kind: 'money', aliases: ['medical allowance', 'medical'], usually: 'input', optional: true },
@@ -116,11 +116,11 @@ export const FIELDS: FieldSpec[] = [
   { key: 'reimbursements', label: 'Total reimbursements', kind: 'money', aliases: ['reimbursement', 'reimbursements', 'total reimbursements', 'reimb_gross_salary'], usually: 'input' },
 
   /* Deductions. */
-  { key: 'pf', label: "Employee's contribution to provident fund", kind: 'money', aliases: ['pf', 'epf', 'pf employee', "employee's contribution to p.f.", 'provident fund', 'pf deduction'], usually: 'input' },
+  { key: 'pf', label: "Employee's contribution to provident fund", kind: 'money', aliases: ['pf', 'epf', 'pf employee', "employee's contribution to p.f.", 'provident fund', 'pf deduction'], usually: 'input', optional: true },
   { key: 'vpf', label: 'Voluntary provident fund', kind: 'money', aliases: ['vpf', 'voluntary provident fund', 'volutary provident fund'], usually: 'input', optional: true },
   { key: 'esi', label: 'Employee state insurance', kind: 'money', aliases: ['esi', 'esic', 'esi deduction', 'esi employee'], usually: 'input', optional: true },
-  { key: 'professionTax', label: 'Profession tax', kind: 'money', aliases: ['pt', 'profession tax', 'professional tax', 'ptax'], usually: 'input' },
-  { key: 'tds', label: 'Income tax deducted', kind: 'money', aliases: ['tds', 'income tax', 'total income tax', 'it deduction'], usually: 'input' },
+  { key: 'professionTax', label: 'Profession tax', kind: 'money', aliases: ['pt', 'profession tax', 'professional tax', 'ptax'], usually: 'input', optional: true },
+  { key: 'tds', label: 'Income tax deducted', kind: 'money', aliases: ['tds', 'income tax', 'total income tax', 'it deduction'], usually: 'input', optional: true },
   { key: 'labourWelfareFund', label: 'Labour welfare fund', kind: 'money', aliases: ['lwf', 'labour welfare fund', 'lwf deduction'], usually: 'input', optional: true },
   { key: 'advances', label: 'Advances or loans', kind: 'money', aliases: ['advance', 'advances', 'salary advance', 'cash advance', 'amount of advances / loans', 'loan'], usually: 'input', optional: true },
   { key: 'fines', label: 'Fines imposed', kind: 'money', aliases: ['fine', 'fines', 'deductions of fines imposed', 'damages/loss'], usually: 'input', optional: true },
@@ -128,7 +128,7 @@ export const FIELDS: FieldSpec[] = [
   { key: 'assetDeduction', label: 'Asset deduction', kind: 'money', aliases: ['asset deduction', 'asset recovery'], usually: 'input', optional: true },
   { key: 'mediclaimDeduction', label: 'Medical claim deduction', kind: 'money', aliases: ['medi claim deduction', 'mediclaim', 'medical insurance deduction', 'insurance'], usually: 'input', optional: true },
   { key: 'npsDeduction', label: 'National pension scheme deduction', kind: 'money', aliases: ['nps', 'nps deduction', 'nps_deduction', 'pran deduction'], usually: 'input', optional: true },
-  { key: 'otherDeductions', label: 'Other deductions', kind: 'money', aliases: ['other deduction', 'other_deduction', 'other deductions', 'society'], usually: 'input' },
+  { key: 'otherDeductions', label: 'Other deductions', kind: 'money', aliases: ['other deduction', 'other_deduction', 'other deductions', 'society'], usually: 'input', optional: true },
   { key: 'totalDeductions', label: 'Total deductions', kind: 'money', aliases: ['total deduction', 'total_dedn', 'total deductions', 'gross deductions'], usually: 'input' },
   { key: 'netPay', label: 'Net wages paid', kind: 'money', aliases: ['net pay', 'net_pay', 'net salary', 'net amount payable', 'actual wages paid', 'total wages paid', 'net wages payable', 'net transfer', 'total net pay'], usually: 'input' },
   { key: 'netPayInWords', label: 'Amount in words', kind: 'text', aliases: ['in words', 'inwords', 'amount in words'], usually: 'derived' },
@@ -140,7 +140,7 @@ export const FIELDS: FieldSpec[] = [
   { key: 'restInterval', label: 'Rest interval', kind: 'text', aliases: ['rest interval', 'break', 'lunch'], usually: 'master' },
   { key: 'shiftName', label: 'Shift', kind: 'text', aliases: ['shift', 'shift no', 'relay', 'group'], usually: 'master' },
   { key: 'normalHours', label: 'Normal hours', kind: 'hours', aliases: ['normal hours', 'period of work'], usually: 'derived' },
-  { key: 'remarks', label: 'Remarks', kind: 'text', aliases: ['remarks', 'remark', 'note'], usually: 'input' },
+  { key: 'remarks', label: 'Remarks', kind: 'text', aliases: ['remarks', 'remark', 'note'], usually: 'input', optional: true },
   { key: 'signature', label: 'Signature or thumb impression', kind: 'text', aliases: [], usually: 'derived' },
 
   /* Bank and statutory identifiers, which the wider registers and some returns carry. */
