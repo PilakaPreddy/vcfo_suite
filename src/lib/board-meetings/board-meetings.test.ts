@@ -196,7 +196,7 @@ describe('notice', () => {
 
   it('matches the NIPL sample wording', () => {
     const doc = buildNotice(input);
-    expect(doc.title).toBe('NOTICE OF BOARD MEETING TO BE HELD ON 10 SEPTEMBER 2026');
+    expect(doc.title).toBe('NOTICE OF BOARD MEETING TO BE HELD ON 10 September 2026');
     expect(doc.dated).toBe('03 September 2026');
     expect(doc.body[0]).toBe(
       'Notice is hereby given that the Meeting of the Board of Directors of NetDocuments India Private Limited bearing Meeting No. NIPL/BM/02/2026-27 will be held on Thursday, 10th September 2026 at 07:30 P.M. IST / 08:00 A.M. MDT through Video Conferencing ("VC") and shall be deemed to be held at the Registered Office of the Company situated at Level 6, Unit 2, Orwell Block, Salarpuria Knowledge City, Raidurg, Hyderabad – 500081, India, to transact the business set out in the Agenda enclosed herewith.',
@@ -217,9 +217,19 @@ describe('notice', () => {
   it('writes a Word file with both pages', () => {
     const buf = noticeDocx(buildNotice(input));
     const xml = new PizZip(buf).file('word/document.xml')!.asText();
-    expect(xml).toContain('NOTICE OF BOARD MEETING TO BE HELD ON 10 SEPTEMBER 2026');
+    expect(xml).toContain('NOTICE OF BOARD MEETING TO BE HELD ON 10 September 2026');
     expect(xml).toContain('<w:pageBreakBefore/>');
-    expect(xml).toContain('CIN: U62099TS2025FTC205994');
+    // The sample's bold runs: "Notice" and "Meeting No. …" inside the first paragraph.
+    expect(xml).toMatch(/<w:b\/><w:sz w:val="24"\/><\/w:rPr><w:t xml:space="preserve">Notice<\/w:t>/);
+    expect(xml).toContain('<w:t xml:space="preserve">Meeting No. NIPL/BM/02/2026-27</w:t>');
+    // The agenda: underlined title, a two-column block, numbered items with a hanging indent.
+    expect(xml).toContain('<w:u w:val="single"/>');
+    expect(xml).toContain('<w:tbl>');
+    expect(xml).toMatch(/w:hanging="425"/);
+    // Company name, address and CIN sit in the page footer on both pages.
+    const footer = new PizZip(buf).file('word/footer1.xml')!.asText();
+    expect(footer).toContain('CIN: U62099TS2025FTC205994');
+    expect(new PizZip(buf).file('word/header1.xml')).toBeTruthy();
   });
 });
 

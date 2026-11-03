@@ -225,7 +225,7 @@ export async function syncTask(meeting: MeetingRow, momLocked = false): Promise<
         dueDate: held ? momDueDate(meeting.meetingDate) : meeting.meetingDate,
         stage: momLocked ? 'completed' : TASK_STAGE[status] ?? 'in-progress',
         completedAt: momLocked ? new Date() : null,
-        visibility: meeting.sentAt ? 'both' : 'firm',
+        visibility: meeting.sentAt || status === 'held' ? 'both' : 'firm',
         updatedAt: new Date(),
       })
       .where(eq(complianceTasks.id, meeting.taskId));
@@ -535,6 +535,12 @@ export interface CreateMeetingInput {
   postInc?: boolean;
   /** Copy directors, time, mode, venue, CC and agenda from the last meeting (default true). */
   copyFromLast?: boolean;
+  /**
+   * The meeting already happened and its notice went out outside VCFO (a meeting held before
+   * the firm used VCFO, or a short-notice meeting). It starts as held, so the lead can upload
+   * the MoM and add resolutions at once. The date must be today or earlier.
+   */
+  alreadyHeld?: boolean;
 }
 
 function cleanZone(z: { label: string; time: string } | null | undefined): { label: string; time: string } | null {
@@ -570,7 +576,8 @@ export async function createMeeting(ctx: AuthContext, input: CreateMeetingInput)
   if (!isIsoDate(input.meetingDate)) throw invalid('bad_date');
   if (!isHhmm(input.meetingTime)) throw invalid('bad_time');
   const kind: MeetingKind = isMeetingKind(input.kind) ? input.kind : 'board';
-  const meetingType: MeetingType = isMeetingType(input.meetingType) ? input.meetingType : input.postInc ? 'first' : 'quarterly';
+  const alreadyHeld = Boolean(input.alreadyHeld);
+  if (alreadyHeld && input.meetingDate > todayIst()) throw invalid('held_in_future');
   const mode: MeetingMode = isMeetingMode(input.mode) ? input.mode : 'vc';
 
   await systemSeedDirectors(engagement);
@@ -591,6 +598,8 @@ export async function createMeeting(ctx: AuthContext, input: CreateMeetingInput)
     .orderBy(desc(boardMeetings.meetingDate))
     .limit(1);
   const copy = input.copyFromLast !== false && last ? last : null;
+  // A company's first board meeting is the "first" type unless the caller says otherwise.
+  const meetingType: MeetingType = isMeetingType(input.meetingType) ? input.meetingType : input.postInc || (kind === 'board' && !last) ? 'first' : 'quarterly';
 
   let recipients = await defaultRecipients(engagement, directors, input.meetingDate);
   if (copy) {
@@ -623,6 +632,7 @@ export async function createMeeting(ctx: AuthContext, input: CreateMeetingInput)
       recipients,
       signatoryDirectorId: signatory,
       postInc: Boolean(input.postInc),
+      ...(alreadyHeld ? { status: 'held' as const } : {}),
       createdBy: ctx.userId,
     })
     .returning();
@@ -640,10 +650,10 @@ export async function createMeeting(ctx: AuthContext, input: CreateMeetingInput)
       name: `${KIND_LABEL[kind]} · ${shortDate(input.meetingDate)}`,
       periodLabel: meetingNo,
       startDate: startDate > input.meetingDate ? input.meetingDate : startDate,
-      dueDate: input.meetingDate,
+      dueDate: alreadyHeld ? momDueDate(input.meetingDate) : input.meetingDate,
       urgency: 'High',
       // The client sees the meeting once the notice is sent (`syncTask` opens it then).
-      visibility: 'firm',
+      visibility: alreadyHeld ? 'both' : 'firm',
       ownerId: leadId,
       reviewerId: managerId,
       stage: 'in-progress',
@@ -654,9 +664,13 @@ export async function createMeeting(ctx: AuthContext, input: CreateMeetingInput)
     })
     .returning({ id: complianceTasks.id });
   const [withTask] = await db.update(boardMeetings).set({ taskId: task?.id ?? null }).where(eq(boardMeetings.id, row.id)).returning();
-  await recordMeetingEvent(ctx.userId, row.id, copy ? `Created the meeting · copied from ${copy.meetingNo}` : 'Created the meeting');
+  await recordMeetingEvent(
+    ctx.userId,
+    row.id,
+    alreadyHeld ? 'Recorded a meeting already held (notice sent outside VCFO)' : copy ? `Created the meeting · copied from ${copy.meetingNo}` : 'Created the meeting',
+  );
   await recordAuditEvent(ctx, { engagementId: engagement.id, action: 'board_meeting.created', summary: `Created ${meetingNo} on ${input.meetingDate}`, metadata: { meetingId: row.id } });
-  if (leadId && leadId !== ctx.userId) {
+  if (leadId && leadId !== ctx.userId && !alreadyHeld) {
     await notifyMeeting(
       { userId: ctx.userId, name: ctx.name },
       { meeting: withTask ?? row, companyName: company.name, title: `Prepare the notice: ${meetingNo}`, body: `Board meeting on ${shortDate(input.meetingDate)}. Send the notice for approval by ${shortDate(noticeSendDate(input.meetingDate))}.`, recipientIds: [leadId] },
