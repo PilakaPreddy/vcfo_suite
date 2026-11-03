@@ -246,6 +246,13 @@
       "when": 1793627969985,
       "tag": "0034_board_meetings",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793696145085,
+      "tag": "0035_labour_register_lock",
+      "breakpoints": true
     }
   ]
 }

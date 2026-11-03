@@ -82,6 +82,38 @@ A field can be gated from either side — by `FormColumn.requiresHead` or by the
 `FieldSpec.head` — and `requiredFields()` honours both. A prescribed form names an overtime
 column outright, so that gate lives on the field.
 
+## The monthly close is a lock, not a save
+
+Nothing is generated until somebody marks the inputs ready. Before that the batch is being
+gathered; after it the uploads and the mapping are fixed, and the registers are built from
+exactly what was locked. `recordDocument` refuses on an unlocked batch for that reason — a
+register built from a half-gathered month looks exactly like a finished one, and the only way
+to tell them apart is to open the file.
+
+`assessReadiness()` decides what blocks and what is merely short, and the distinction is the
+interesting part:
+
+- **Blocks:** no paysheet; no attendance where a form carries a day grid; a required column
+  nobody mapped; an attendance code nobody matched; and, where overtime is on, an employee
+  with no minimum wage coverage decision. Each would put a figure in a statutory register that
+  the firm cannot stand behind.
+- **Does not block:** employees missing a field, checklist heads still awaited, a month marked
+  fully present rather than uploaded. These are judgement calls — a client really may have two
+  people with no PAN on file — so they are reported, the preparer decides, and the decision is
+  on the record.
+
+The readiness summary is stored on the batch verbatim at the moment of locking
+(`readiness_snapshot`). What somebody was told when they took responsibility is part of the
+record; recomputing it later answers a different question.
+
+Reopening is the only way back and it takes a reason (`reopen_reason`, `reopen_count`).
+Documents already generated are left alone: they keep their content address, so unchanged
+inputs mean the same files answer and nothing is rebuilt.
+
+`batchProvenance()` is that record said out loud — who locked it, when, how many registers
+exist and how many were served from storage rather than built. A saving nobody can see is a
+saving nobody believes.
+
 ## Caching: two lifecycles, not one
 
 `draftKey()` addresses a **draft** by everything that determines its bytes: the data, the active
