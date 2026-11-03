@@ -1,5 +1,6 @@
 'use client';
 
+import { DatePick } from './sheet/DatePick';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
@@ -51,9 +52,7 @@ export function FxFields({ draft, onChange, stored, idPrefix }: { draft: FxDraft
             <Field label={`Amount (${c})`} htmlFor={`${idPrefix}-fc`}>
               <Input id={`${idPrefix}-fc`} inputMode="decimal" value={draft.fcAmount} onChange={(e) => set({ fcAmount: e.target.value })} className="font-mono" />
             </Field>
-            <Field label="Invoice date" htmlFor={`${idPrefix}-date`}>
-              <Input id={`${idPrefix}-date`} type="date" value={draft.invoiceDate} onChange={(e) => set({ invoiceDate: e.target.value })} />
-            </Field>
+            <DatePick id={`${idPrefix}-date`} label="Invoice date" value={draft.invoiceDate} onChange={(iso) => set({ invoiceDate: iso })} quick={[0]} />
           </div>
           <Field label={`Booked rate (INR per ${c})`} htmlFor={`${idPrefix}-rate`} hint={rateHint}>
             <Input

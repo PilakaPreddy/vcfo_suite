@@ -60,8 +60,8 @@ export function reminderSteps(d: PartnerInvoiceDetailDto, today: string): Thread
       at: r.forDate,
       title: r.label,
       state: r.status === 'sent' ? 'done' : r.status === 'failed' ? 'current' : 'upcoming',
-      date: r.sentAt ?? r.forDate,
-      note: REMINDER_NOTE[r.status],
+      // Dates in the sheet's own format (dd-Mon-yy) in the note line, not the thread's long form.
+      note: `${sheetDate(r.forDate)} · ${REMINDER_NOTE[r.status]}`,
     }));
   const row = d.row;
   if (row.status === 'open') {
@@ -70,13 +70,12 @@ export function reminderSteps(d: PartnerInvoiceDetailDto, today: string): Thread
       at: row.dueDate,
       title: daysLeft(row.dueDate, today) < 0 ? 'Due date passed' : 'Due date',
       state: row.dueDate <= today ? 'done' : 'upcoming',
-      date: row.dueDate,
       note: sheetDate(row.dueDate),
     });
     if (row.promisedOn)
-      steps.push({ id: 'promise', at: row.promisedOn, title: 'Promised payment', state: 'current', date: row.promisedOn, note: `Reminders pause until ${sheetDate(row.promisedOn)}` });
+      steps.push({ id: 'promise', at: row.promisedOn, title: 'Promised payment', state: 'current', note: `${sheetDate(row.promisedOn)} · reminders pause until then` });
   } else if (row.paidOn) {
-    steps.push({ id: 'paid', at: row.paidOn, title: 'Received', state: 'done', date: row.paidOn, note: row.paidAmount ? `₹${inr(row.paidAmount)}` : undefined });
+    steps.push({ id: 'paid', at: row.paidOn, title: 'Received', state: 'done', note: `${sheetDate(row.paidOn)}${row.paidAmount ? ` · ₹${inr(row.paidAmount)}` : ''}` });
   }
   return steps.sort((a, b) => a.at.localeCompare(b.at)).map(({ at: _at, ...s }) => s);
 }
