@@ -1,9 +1,10 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { type CSSProperties, useId, useState } from 'react';
 import { AlertCircle, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ReadinessLine, ReadinessSummary } from '@/lib/labour-registers/readiness';
+import { LR_TOKENS, lr } from './theme';
 
 /**
  * The monthly close, as one decision.
@@ -38,7 +39,11 @@ export interface ReadinessDialogProps {
 
 function Line({ line, onFix }: { line: ReadinessLine; onFix?: ReadinessDialogProps['onFix'] }) {
   const tone =
-    line.kind === 'ok' ? 'text-positive' : line.kind === 'short' ? 'text-warning' : 'text-danger';
+    line.kind === 'ok'
+      ? 'text-[var(--lr-ok)]'
+      : line.kind === 'short'
+        ? 'text-[var(--lr-warn)]'
+        : 'text-[var(--lr-bad)]';
   return (
     <li className="flex items-start gap-2.5 py-1.5">
       {line.kind === 'ok' ? (
@@ -46,12 +51,12 @@ function Line({ line, onFix }: { line: ReadinessLine; onFix?: ReadinessDialogPro
       ) : (
         <AlertCircle className={cn('mt-px size-4 flex-none', tone)} strokeWidth={1.6} aria-hidden="true" />
       )}
-      <span className="min-w-0 flex-1 text-[13px] leading-relaxed text-ink">{line.text}</span>
+      <span className="min-w-0 flex-1 text-[13px] leading-relaxed text-[var(--lr-ink)]">{line.text}</span>
       {line.fix && onFix ? (
         <button
           type="button"
           onClick={() => onFix(line.fix!.to)}
-          className="flex-none text-[13px] font-medium text-brand hover:underline"
+          className={cn(lr.link, 'flex-none')}
         >
           {line.fix.label}
         </button>
@@ -79,40 +84,42 @@ export function ReadinessDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(10, 37, 64, 0.42)' }}
+      /* The dialog is fixed to the viewport, so it renders outside `LabourRegistersTheme` and
+         carries the feature's tokens itself. */
+      className={cn('fixed inset-0 z-50 flex items-center justify-center p-4', lr.page)}
+      style={{ ...LR_TOKENS, background: 'rgba(31, 39, 51, 0.42)' } as CSSProperties}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="w-full max-w-[520px] rounded-md border-2 border-line bg-surface"
-        style={{ boxShadow: '0 32px 64px -16px rgba(10,37,64,0.4), 0 12px 24px -12px rgba(10,37,64,0.18)' }}
+        className={cn('w-full max-w-[520px]', lr.card)}
+        style={{ boxShadow: '0 32px 64px -16px rgba(31,39,51,0.32), 0 12px 24px -12px rgba(31,39,51,0.16)' }}
       >
         <div className="flex items-start gap-3 px-6 pb-3 pt-5">
-          <h2 id={titleId} className="min-w-0 flex-1 text-[20px] font-medium leading-tight text-ink">
+          <h2 id={titleId} className={cn(lr.heading, 'm-0 min-w-0 flex-1')}>
             Mark register inputs as ready?
           </h2>
           <button
             type="button"
             onClick={onCancel}
             aria-label="Close"
-            className="flex size-7 flex-none items-center justify-center rounded-md border-[1.5px] border-line-strong text-ink-muted"
+            className="flex size-7 flex-none items-center justify-center rounded-[var(--lr-radius-chip)] border border-[var(--lr-line-2)] text-[var(--lr-muted)]"
           >
             <X className="size-3.5" strokeWidth={2} aria-hidden="true" />
           </button>
         </div>
 
-        <p className="px-6 text-[14px] leading-relaxed text-ink-muted">{sentence}</p>
+        <p className="px-6 text-[14px] leading-relaxed text-[var(--lr-muted)]">{sentence}</p>
 
-        <ul className="mx-6 my-4 list-none rounded-md bg-surface-raised px-4 py-2">
+        <ul className="mx-6 my-4 list-none rounded-[var(--lr-radius-control)] bg-[var(--lr-canvas)] px-4 py-2">
           {summary.lines.map((line, i) => (
             <Line key={i} line={line} onFix={onFix} />
           ))}
         </ul>
 
         {blocked ? (
-          <p className="mx-6 mb-4 rounded-md bg-danger-soft px-4 py-3 text-[13px] leading-relaxed text-danger">
+          <p className="mx-6 mb-4 rounded-[var(--lr-radius-control)] bg-[var(--lr-bad-soft)] px-4 py-3 text-[13px] leading-relaxed text-[var(--lr-bad)]">
             The period cannot be closed until the items above are resolved. Each would put a figure in a statutory
             register that cannot be stood behind.
           </p>
@@ -123,34 +130,29 @@ export function ReadinessDialog({
               type="checkbox"
               checked={confirmed}
               onChange={(e) => setConfirmed(e.target.checked)}
-              className="mt-0.5 size-4 flex-none rounded-bar border-[1.5px] border-line-strong accent-brand"
+              className="mt-0.5 size-4 flex-none rounded-[3px] border border-[var(--lr-line-2)] accent-[var(--lr-primary)]"
             />
-            <label htmlFor={tickId} className="text-[13px] leading-relaxed text-ink">
+            <label htmlFor={tickId} className="text-[13px] leading-relaxed text-[var(--lr-ink)]">
               I confirm the employee, attendance and wage data is accurate for this period.
             </label>
           </div>
         )}
 
-        <p className="px-6 pb-4 text-[12px] leading-relaxed text-ink-faint">
+        <p className="px-6 pb-4 text-[12px] leading-relaxed text-[var(--lr-faint)]">
           Need changes later? Reopen the inputs from this page. Reopening asks for a reason, and the registers are
           generated again from the inputs as they stand afterwards.
         </p>
 
-        <div className="flex items-center gap-2 border-t border-line-soft px-6 py-4">
+        <div className="flex items-center gap-2 border-t border-[var(--lr-raised)] px-6 py-4">
           <div className="flex-grow" />
-          <button
-            type="button"
-            onClick={onCancel}
-            className="h-9 rounded-md border-[1.5px] border-line-strong bg-surface px-4 text-[14px] font-medium text-ink"
-          >
+          <button type="button" onClick={onCancel} className={cn(lr.quiet, 'text-[14px]')}>
             Cancel
           </button>
           <button
             type="button"
             disabled={blocked || !confirmed || busy}
             onClick={() => onConfirm(summary)}
-            className="h-9 rounded-md bg-brand px-4 text-[14px] font-medium text-white disabled:opacity-40"
-            style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.22)' }}
+            className={cn(lr.primary, 'text-[14px] font-medium')}
           >
             {busy ? 'Generating…' : 'Mark as ready & generate'}
           </button>

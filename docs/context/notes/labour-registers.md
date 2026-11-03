@@ -184,3 +184,47 @@ form scale.
 
 A grouped, keyboard-navigable list is the control. **Do not add the map back** without counsel
 sign-off on the boundary depiction and a licence that permits commercial use.
+
+
+## The screens' own design tokens (2026-11-03)
+
+The labour register screens do not use Spectrum. They use the reference design the owner
+supplied, which is a different system on nearly every count: `#1660d8` rather than the blurple,
+12 px cards with a single hairline and no shadow rather than 6 px with 2 px, 44 px controls
+rather than 36, content-width chips rather than the fixed 104, the system font stack rather
+than Roboto, and no ribbon.
+
+Those values live in `src/components/labour-registers/theme.ts` as custom properties and are
+applied by `LabourRegistersTheme`, which wraps each screen. They are **scoped to this feature
+on purpose**: putting them in `app/globals.css` or `tailwind.config.ts` would repaint
+incorporation, the compliance calendar, the client portal and all six shells — every screen in
+the product, most of which nobody has looked at in this light.
+
+The feature therefore has its own `LrCard`, `LrCardHead`, `LrHero`, `LrChip`, `LrStatTile` and
+`LrBanner` in `primitives.tsx`, which is a fork of `DashHero` / `DashSection` / `Chip` and is
+the one place the house rule against forking a primitive is deliberately broken. A `variant`
+prop on the shared components would have carried the reference's values into every other
+screen's props. A unit test in `labour-registers-page.test.ts` fails if anything outside the
+feature folder imports `theme.ts`, which is what keeps the scoping true.
+
+If the whole product ever moves to these values, delete `theme.ts` and the `LabourRegistersTheme`
+wrappers and the components fall back to the shared tokens.
+
+### Screens
+
+- `LabourRegistersPage` — the staff picker: hero and figures, the India map beside a list of the
+  same states, the side rail, then the catalogue act by act.
+- `ClientRegistersPage` — the client's own view. A separate screen, not the staff one with
+  buttons removed: a client asks "where do I employ people, and can I have last month's file",
+  which needs their establishments first and a download beside each register.
+- `BatchPage` — one batch: the provenance card (with the reopen and download actions in its
+  footer), what the batch cost, then the registers laid out as the folders they download as
+  (`ActDirectory`).
+
+### Verifying a change here
+
+jsdom will not catch the failure these screens are prone to. They hand Lucide icons to client
+components, and a function cannot cross the server-to-client boundary, so a screen that loses
+its `'use client'` throws on every request while every unit test still passes. Render through
+the real pipeline: `npm run e2e:smoke`, or a throwaway page under `app/` requested from a
+running `next dev` and screenshotted.

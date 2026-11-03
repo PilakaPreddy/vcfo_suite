@@ -2,15 +2,20 @@ import { notFound } from 'next/navigation';
 
 import { requireAuth } from '@/auth/guards';
 import { BatchPage } from '@/views/labour-registers/BatchPage';
-import { LabourRegistersPage } from '@/views/labour-registers/LabourRegistersPage';
+import { ClientRegistersPage } from '@/views/labour-registers/ClientRegistersPage';
 import { loadBatchView } from '@/views/labour-registers/load-batch';
 import { pageMetadata } from '@/lib/shell/page-metadata';
 
 export const metadata = pageMetadata('Labour registers', 'Statutory labour registers, state by state');
 
 /**
- * Route shell only. `?state=` and `?period=` carry the picker's choice across a refresh, and
- * `?batch=` opens one batch: its provenance, its close and its registers.
+ * Route shell only. `?state=` and `?period=` carry the choice across a refresh, and `?batch=`
+ * opens one batch.
+ *
+ * The client gets `ClientRegistersPage`, not the staff picker with its buttons hidden: the
+ * question a client opens this page with is "where do I employ people, and can I have last
+ * month's file", which is a different screen. The staff view is the one that picks a
+ * jurisdiction to prepare.
  */
 export default async function Page({
   searchParams,
@@ -29,12 +34,5 @@ export default async function Page({
     return <BatchPage view={view} shellBase="/app/client" />;
   }
 
-  return (
-    <LabourRegistersPage
-      shellBase="/app/client"
-      stateCode={one('state')}
-      period={one('period')}
-      canPrepare={false}
-    />
-  );
+  return <ClientRegistersPage shellBase="/app/client" stateCode={one('state')} period={one('period')} />;
 }

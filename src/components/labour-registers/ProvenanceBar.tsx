@@ -1,7 +1,10 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { CheckCircle2, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { lr } from './theme';
+import { LrBanner, LrCard } from './primitives';
 
 /**
  * What happened to this batch, said out loud.
@@ -14,6 +17,10 @@ import { cn } from '@/lib/utils';
  * It also does a quieter job: it is the first thing an inspector-facing conversation needs.
  * "Marked ready on 3 November by Krishna, generated at 14:05, twenty registers across six
  * acts" answers most of what gets asked before anyone opens a file.
+ *
+ * The actions live in this card's footer rather than beside the page title, which is where they
+ * were first put. Reopening and downloading are both statements about this batch, and the row
+ * of facts above them is the thing a person checks before doing either.
  */
 
 export interface ProvenanceBarProps {
@@ -23,11 +30,14 @@ export interface ProvenanceBarProps {
   markedReadyAt?: string | null;
   markedReadyByName?: string | null;
   generatedAt?: string | null;
+  employees?: number;
   registers?: number;
   acts?: number;
   fromStorage?: number;
   reopenCount?: number;
   reopenReason?: string;
+  /** The buttons for this batch, in the footer. */
+  actions?: ReactNode;
   className?: string;
 }
 
@@ -43,11 +53,11 @@ function dayTime(iso?: string | null): string {
   return `${day(iso)}, ${time}`;
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Field({ label, value, tone }: { label: string; value: string; tone?: 'ok' }) {
   return (
     <div className="min-w-0">
-      <div className="text-[12px] font-medium text-ink-faint">{label}</div>
-      <div className="mt-0.5 truncate text-[14px] font-medium tabular-nums text-ink">{value}</div>
+      <div className={lr.fieldLabel}>{label}</div>
+      <div className={cn(lr.fieldValue, 'mt-0.5 truncate', tone === 'ok' && 'text-[var(--lr-ok)]')}>{value}</div>
     </div>
   );
 }
@@ -58,56 +68,67 @@ export function ProvenanceBar({
   markedReadyAt,
   markedReadyByName,
   generatedAt,
+  employees,
   registers,
   acts,
   fromStorage,
   reopenCount = 0,
   reopenReason,
+  actions,
   className,
 }: ProvenanceBarProps) {
   const locked = Boolean(markedReadyAt);
+  /* Every file answered from storage is the whole-cache case, and it is worth colouring. A
+     partial figure is reported plainly: it is a fact, not an achievement. */
+  const allCached = fromStorage !== undefined && registers !== undefined && registers > 0 && fromStorage === registers;
 
   return (
-    <section className={cn('rounded-md border-2 border-line bg-surface', className)}>
-      <div className="flex flex-wrap items-start gap-x-8 gap-y-4 p-5">
+    <LrCard className={className}>
+      <div className="flex flex-wrap gap-x-8 gap-y-4 p-5">
         <Field label="Register period" value={periodLabel} />
         <Field label="Inputs marked ready" value={locked ? day(markedReadyAt) : 'Not yet'} />
         <Field label="Generated on" value={dayTime(generatedAt)} />
+        {employees !== undefined ? <Field label="Employees" value={String(employees)} /> : null}
         {registers !== undefined ? (
           <Field label="Registers" value={acts ? `${registers} across ${acts} acts` : String(registers)} />
         ) : null}
         {fromStorage !== undefined && registers ? (
-          <Field label="Served from storage" value={`${fromStorage} of ${registers}`} />
+          <Field
+            label="Served from storage"
+            value={`${fromStorage} of ${registers}`}
+            tone={allCached ? 'ok' : undefined}
+          />
         ) : null}
       </div>
 
       {locked ? (
-        <div className="flex items-start gap-2.5 border-t border-line-soft bg-positive-soft px-5 py-3">
-          <CheckCircle2 className="mt-px size-4 flex-none text-positive" strokeWidth={1.6} aria-hidden="true" />
-          <p className="text-[13px] leading-relaxed text-positive">
-            Inputs were marked ready on {day(markedReadyAt)}
-            {markedReadyByName ? ` by ${markedReadyByName}` : ''}. Every register for this period has been generated
-            and is ready for review.
-          </p>
-        </div>
+        <LrBanner icon={CheckCircle2} tone="ok" inset>
+          Inputs were marked ready on {day(markedReadyAt)}
+          {markedReadyByName ? ` by ${markedReadyByName}` : ''}. Every register for this period has been generated
+          and is ready for review.
+        </LrBanner>
       ) : null}
 
       {reopenCount > 0 ? (
-        <div className="flex items-start gap-2.5 border-t border-line-soft bg-warning-soft px-5 py-3">
-          <RotateCcw className="mt-px size-4 flex-none text-warning" strokeWidth={1.6} aria-hidden="true" />
-          <p className="text-[13px] leading-relaxed text-warning">
-            Reopened {reopenCount === 1 ? 'once' : `${reopenCount} times`}
-            {reopenReason ? ` — ${reopenReason}` : ''}. Registers were regenerated from the inputs as they stood
-            afterwards; the earlier files are kept.
-          </p>
-        </div>
+        <LrBanner icon={RotateCcw} tone="warn" inset>
+          Reopened {reopenCount === 1 ? 'once' : `${reopenCount} times`}
+          {reopenReason ? ` — ${reopenReason}` : ''}. Registers were regenerated from the inputs as they stood
+          afterwards; the earlier files are kept.
+        </LrBanner>
       ) : null}
 
       {status === 'open' && !locked ? (
-        <div className="border-t border-line-soft px-5 py-3 text-[13px] text-ink-muted">
+        <div className={cn(lr.small, 'border-t border-[var(--lr-raised)] px-5 py-3')}>
           Nothing is generated until the inputs are marked ready.
         </div>
       ) : null}
-    </section>
+
+      {actions ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-[var(--lr-raised)] px-5 py-3">
+          <div className="flex-grow" />
+          {actions}
+        </div>
+      ) : null}
+    </LrCard>
   );
 }

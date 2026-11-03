@@ -57,20 +57,26 @@ const SMALL: Record<string, { x: number; y: number }> = {
   NL: { x: 527, y: 277 },
 };
 
+/*
+ * The fills read from the feature's own tokens, so the map and the chips beside it cannot drift
+ * apart. A configured state with nothing wrong is the register-green; a selected one is the
+ * solid action blue; everything else is the canvas with a hairline, plus a hatch so the
+ * distinction survives without colour.
+ */
 function fillFor(state: MapState, isSelected: boolean, dimmed: boolean): string {
-  if (isSelected) return 'oklch(54.6% 0.215 263)';
-  if (dimmed || !state.configured) return 'oklch(96.8% 0.006 250)';
-  if (state.status === 'Overdue') return 'oklch(96% 0.025 18)';
-  if (state.status === 'Due soon') return 'oklch(96.8% 0.04 35)';
-  return 'oklch(96.2% 0.04 200)';
+  if (isSelected) return 'var(--lr-primary)';
+  if (dimmed || !state.configured) return 'var(--lr-canvas)';
+  if (state.status === 'Overdue') return 'var(--lr-bad-soft)';
+  if (state.status === 'Due soon') return 'var(--lr-warn-soft)';
+  return 'var(--lr-reg-soft)';
 }
 
 function strokeFor(state: MapState, isSelected: boolean, dimmed: boolean): string {
-  if (isSelected) return 'oklch(48.8% 0.217 264)';
-  if (dimmed || !state.configured) return 'oklch(91.5% 0.012 255)';
-  if (state.status === 'Overdue') return 'oklch(59% 0.19 18)';
-  if (state.status === 'Due soon') return 'oklch(70% 0.16 35)';
-  return 'oklch(50% 0.14 200)';
+  if (isSelected) return 'var(--lr-primary-deep)';
+  if (dimmed || !state.configured) return 'var(--lr-line)';
+  if (state.status === 'Overdue') return 'var(--lr-bad)';
+  if (state.status === 'Due soon') return 'var(--lr-warn)';
+  return 'var(--lr-reg)';
 }
 
 export function IndiaMap({ states, selected, href, focusRelevant = false, className }: IndiaMapProps) {
@@ -80,9 +86,11 @@ export function IndiaMap({ states, selected, href, focusRelevant = false, classN
     <div className={cn('relative w-full', className)}>
       <svg viewBox={OUTLINE_VIEWBOX} className="block h-auto w-full" aria-hidden="true" focusable="false">
         <defs>
-          {/* A hatch, so "not configured" is readable without colour. */}
-          <pattern id="lr-map-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <line x1="0" y1="0" x2="0" y2="6" stroke="oklch(55% 0.022 255)" strokeWidth="1.2" opacity="0.3" />
+          {/* A hatch, so "not configured" is readable without colour. It is kept faint on
+              purpose: at the weight it first shipped at, the twenty-odd unconfigured states
+              read as the subject of the drawing and the four live ones disappeared. */}
+          <pattern id="lr-map-hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="7" stroke="var(--lr-line-2)" strokeWidth="1" opacity="0.5" />
           </pattern>
         </defs>
 
@@ -98,7 +106,7 @@ export function IndiaMap({ states, selected, href, focusRelevant = false, classN
                   d={d}
                   fill={fillFor(state, isSelected, dimmed)}
                   stroke={strokeFor(state, isSelected, dimmed)}
-                  strokeWidth={isSelected ? 2.2 : 0.9}
+                  strokeWidth={isSelected ? 2 : state.configured && !dimmed ? 1 : 0.8}
                   opacity={dimmed ? 0.5 : 1}
                 />
               ))}
@@ -121,8 +129,8 @@ export function IndiaMap({ states, selected, href, focusRelevant = false, classN
               cx={at.x}
               cy={at.y}
               r={7}
-              fill={selected === code ? 'oklch(54.6% 0.215 263)' : 'oklch(100% 0 0)'}
-              stroke={selected === code ? 'oklch(48.8% 0.217 264)' : 'oklch(50% 0.14 200)'}
+              fill={selected === code ? 'var(--lr-primary)' : 'var(--lr-surface)'}
+              stroke={selected === code ? 'var(--lr-primary-deep)' : 'var(--lr-reg)'}
               strokeWidth={1.8}
             />
           );
@@ -159,7 +167,7 @@ export function IndiaMap({ states, selected, href, focusRelevant = false, classN
                 aria-label={label}
                 title={label}
                 aria-current={selected === region.code ? 'page' : undefined}
-                className="block size-11 rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand"
+                className="block size-11 rounded-[var(--lr-radius-chip)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--lr-primary)]"
               >
                 <span className="sr-only">{label}</span>
               </Link>
@@ -168,13 +176,13 @@ export function IndiaMap({ states, selected, href, focusRelevant = false, classN
         })}
       </ul>
 
-      <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
+      <p className="mt-2 text-[12px] leading-relaxed text-[var(--lr-muted)]">
         Map geometry:{' '}
-        <a href="https://github.com/VictorCazanave/svg-maps/tree/master/packages/india" className="underline">
+        <a href="https://github.com/VictorCazanave/svg-maps/tree/master/packages/india" className="text-[var(--lr-primary)] underline">
           svg-maps/india
         </a>{' '}
         by Victor Cazanave,{' '}
-        <a href="https://creativecommons.org/licenses/by/4.0/" className="underline">
+        <a href="https://creativecommons.org/licenses/by/4.0/" className="text-[var(--lr-primary)] underline">
           CC BY 4.0
         </a>
         . Modified: the two Daman and Diu shapes are served as one union territory, and the states are recoloured. The
@@ -186,17 +194,21 @@ export function IndiaMap({ states, selected, href, focusRelevant = false, classN
 
 /** The legend. Colour is never the only explanation. */
 export function IndiaMapLegend({ className }: { className?: string }) {
-  const items = [
-    { label: 'Selected', style: 'bg-brand border-brand' },
-    { label: 'Registers due', style: 'bg-reg-labour/10 border-reg-labour/40' },
-    { label: 'Overdue', style: 'bg-danger-soft border-danger-mid' },
-    { label: 'Not configured', style: 'bg-surface-raised border-line' },
+  const items: Array<{ label: string; fill: string; stroke: string }> = [
+    { label: 'Selected', fill: 'var(--lr-primary)', stroke: 'var(--lr-primary-deep)' },
+    { label: 'Registers due', fill: 'var(--lr-reg-soft)', stroke: 'var(--lr-reg)' },
+    { label: 'Overdue', fill: 'var(--lr-bad-soft)', stroke: 'var(--lr-bad)' },
+    { label: 'Not configured', fill: 'var(--lr-canvas)', stroke: 'var(--lr-line)' },
   ];
   return (
     <ul className={cn('flex list-none flex-wrap gap-x-3 gap-y-1.5', className)}>
       {items.map((i) => (
-        <li key={i.label} className="flex items-center gap-1.5 text-[11px] text-ink-muted">
-          <span aria-hidden="true" className={cn('size-2.5 rounded-bar border-[1.5px]', i.style)} />
+        <li key={i.label} className="flex items-center gap-1.5 text-[12px] text-[var(--lr-muted)]">
+          <span
+            aria-hidden="true"
+            className="size-2.5 rounded-[3px] border-[1.5px]"
+            style={{ background: i.fill, borderColor: i.stroke }}
+          />
           {i.label}
         </li>
       ))}
