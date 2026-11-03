@@ -29,6 +29,16 @@ const TD = 'border-t border-line-soft px-2 py-1.5 align-middle';
 const STICK_PICK = 'max-xl:sticky max-xl:left-0 max-xl:z-[1] max-xl:bg-surface-raised';
 const STICK_CLIENT = 'max-xl:sticky max-xl:left-9 max-xl:z-[1] max-xl:bg-surface-raised max-xl:shadow-[1px_0_0_var(--line)]';
 
+/** Phase 10: the FX column head names today's rate of each foreign currency on open rows. */
+function fxHeader(data: ManagerSheetDto): string {
+  const codes = [...new Set(data.invoices.filter((i) => i.status === 'open' && isForeign(fxInput(i))).map((i) => i.currency.toUpperCase()))];
+  const parts = codes.map((c) => {
+    const r = data.fxRates?.[c] ?? (c === 'USD' ? data.usdRate : null);
+    return `${c} ${r ? r.rate.toFixed(2) : '—'}`;
+  });
+  return parts.length ? `FX · ${parts.join(' · ')}` : 'FX';
+}
+
 export function SheetTable({
   s,
   data,
@@ -88,7 +98,7 @@ export function SheetTable({
             <th className={TH}>Client partner</th>
             <th className={TH}>Due date</th>
             <th className={cn(TH, 'text-right')}>{readOnly ? 'Paid INR' : 'Amount INR'}</th>
-            {fx ? <th className={TH}>{data.usdRate ? `FX · USD ${data.usdRate.rate.toFixed(2)}` : 'FX'}</th> : null}
+            {fx ? <th className={TH}>{fxHeader(data)}</th> : null}
             <th className={TH}>Status</th>
             <th className={TH}>{readOnly ? 'Paid' : 'Next reminder'}</th>
             <th className={cn(TH, 'rounded-tr-[4px]')}>
@@ -209,7 +219,7 @@ function Row({
             inv.status === 'received' ? (
               <span className="block truncate px-1.5 font-mono text-[12px]">{fcText(inv, inv.receivedFc ?? inv.fcAmount)}</span>
             ) : (
-              <FxCell invoice={inv} todayRate={todayRate} onEdit={readOnly ? undefined : () => s.runRow('fx', inv)} />
+              <FxCell invoice={inv} todayRate={todayRate} rates={data.fxRates} onEdit={readOnly ? undefined : () => s.runRow('fx', inv)} />
             )
           ) : null}
         </td>

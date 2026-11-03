@@ -2,7 +2,7 @@
 
 export const TH = 'whitespace-nowrap bg-surface-sunken px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-[.04em] text-ink-muted';
 export const TD = 'border-t border-line-soft px-2.5 py-2 align-middle';
-export const NUM = `${TD} text-right font-mono tabular-nums`;
+export const NUM = `${TD} whitespace-nowrap text-right font-mono tabular-nums`;
 export const SELECT = 'h-10 rounded-md border-1.5 border-line-strong bg-surface-raised px-3 text-[14px]';
 
 export function errorText(e: unknown) {

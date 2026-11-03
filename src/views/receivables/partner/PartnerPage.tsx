@@ -143,7 +143,7 @@ export function PartnerPage() {
 
   const today = data.today;
   const first = data.partner.name.trim().split(/\s+/)[0] || data.partner.name;
-  const details = openId ? <InvoiceDetails invoiceId={openId} today={today} onClose={() => showInvoice(null)} /> : null;
+  const details = openId ? <InvoiceDetails invoiceId={openId} today={today} preview={rows.find((r) => r.id === openId)} onClose={() => showInvoice(null)} /> : null;
 
   if (!data.publishedAt) {
     return (
@@ -186,9 +186,9 @@ export function PartnerPage() {
   ];
 
   const tabs = [
-    { key: 'open', label: 'All open', count: overdue.length + notDue.length },
+    { key: 'open', label: 'Open', count: overdue.length + notDue.length },
     { key: 'overdue', label: 'Overdue', count: overdue.length },
-    { key: 'not_due', label: 'Not yet due', count: notDue.length },
+    { key: 'not_due', label: 'Not due', count: notDue.length },
     { key: 'received', label: 'Received', count: received.length },
   ];
   const empty = (what: string) => (
@@ -254,15 +254,16 @@ export function PartnerPage() {
           <ul>
             {changes.map((c) => (
               <li key={`${c.invoiceId}-${c.kind}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line-soft px-4 py-2.5 text-[13px] first:border-t-0 md:px-5">
-                <Chip raw tone={c.kind === 'removed' ? 'idle' : c.status === 'received' ? 'ok' : 'prog'} className="min-w-[120px]">
+                <Chip raw tone={c.kind === 'removed' ? 'idle' : c.status === 'received' ? 'ok' : 'prog'} className="w-[136px]">
                   {changeWord(c)}
                 </Chip>
-                <span className="min-w-0 flex-1 truncate">
+                <span className="ml-auto tabular-nums text-ink-2 sm:order-3 sm:ml-0">₹{inr(c.amountInr)}</span>
+                <span className="min-w-0 basis-full truncate sm:order-2 sm:flex-1 sm:basis-auto">
                   <span className="font-medium">{c.clientName}</span>
                   {c.invoiceNo ? <span className="ml-2 font-mono text-[12px] text-ink-muted">{c.invoiceNo}</span> : null}
+                  <span className="ml-2 text-[12.5px] text-ink-muted sm:hidden">due {sheetDate(c.dueDate)}</span>
                 </span>
-                <span className="tabular-nums text-ink-2">₹{inr(c.amountInr)}</span>
-                <span className="w-[92px] text-right text-[12.5px] text-ink-muted">due {sheetDate(c.dueDate)}</span>
+                <span className="hidden w-[92px] text-right text-[12.5px] text-ink-muted sm:order-4 sm:inline">due {sheetDate(c.dueDate)}</span>
               </li>
             ))}
           </ul>
@@ -270,11 +271,13 @@ export function PartnerPage() {
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2.5 print:hidden">
-        <label className="relative min-w-0 flex-[1_1_240px] sm:max-w-[340px]">
-          <span className="sr-only">Search invoices</span>
+        <div className="relative min-w-0 flex-[1_1_240px] sm:max-w-[340px]">
+          <label htmlFor="rcv-partner-search" className="sr-only">
+            Search invoices
+          </label>
           <Search size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted" aria-hidden />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search client, invoice no. or amount" className="h-control-sm pl-8 text-[13px]" />
-        </label>
+          <Input id="rcv-partner-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search client, invoice no. or amount" className="h-control-sm pl-8 text-[13px]" />
+        </div>
         {clients.length > 1 ? (
           <FilterSelect
             aria-label="Client"

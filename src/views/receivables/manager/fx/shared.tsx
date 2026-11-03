@@ -27,7 +27,7 @@ export function Section({ title, aside, action, children, id }: { title: string;
 
 export function Table({ head, children, minWidth = 640, label }: { head: ReactNode; children: ReactNode; minWidth?: number; label?: string }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-line bg-surface-raised">
+    <div className="relative overflow-x-auto rounded-md border border-line bg-surface-raised">
       <table className="w-full border-collapse text-[13px]" style={{ minWidth }} aria-label={label}>
         <thead>
           <tr>{head}</tr>

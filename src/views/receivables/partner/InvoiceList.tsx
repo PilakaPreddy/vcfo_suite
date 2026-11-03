@@ -45,7 +45,17 @@ export function InvoiceList({
   return (
     <>
       <div className="hidden overflow-x-auto md:block">
-        <table className="w-full border-collapse text-[13px]">
+        {/* Fixed column widths, so the Needs attention and Coming up tables line up. */}
+        <table className="w-full table-fixed border-collapse text-[13px]">
+          <colgroup>
+            <col className="w-[18%]" />
+            <col className="w-[13%]" />
+            <col className="w-[8%]" />
+            <col className="w-[11%]" />
+            <col className="w-[14%]" />
+            <col />
+            <col className="w-[104px]" />
+          </colgroup>
           <thead>
             <tr>
               <th className={TH}>Client</th>
@@ -64,8 +74,8 @@ export function InvoiceList({
               const fc = received ? fcText(r, r.receivedFc) : fcText(r);
               return (
                 <tr key={r.id} className="transition-colors hover:bg-hover">
-                  <td className={TD}>{r.clientName}</td>
-                  <td className={`${TD} font-mono text-[12px]`}>{r.invoiceNo}</td>
+                  <td className={`${TD} truncate`}>{r.clientName}</td>
+                  <td className={`${TD} truncate font-mono text-[12px]`}>{r.invoiceNo}</td>
                   <td className={`${TD} whitespace-nowrap text-ink-muted`}>{monthShort(r.invoiceMonth)}</td>
                   <td className={`${TD} whitespace-nowrap`}>{sheetDate(received ? r.paidOn : r.dueDate)}</td>
                   <td className={`${TD} text-right tabular-nums`}>

@@ -36,11 +36,11 @@ export function SheetTile({
   good?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 items-start gap-3 rounded-md border border-line bg-surface-raised px-4 py-3.5">
-      {icon ? <IconChip icon={icon} tone={tone} size="md" className="print:hidden" /> : null}
+    <div className="flex min-w-0 items-start gap-3 rounded-md border border-line bg-surface-raised px-3.5 py-3 sm:px-4 sm:py-3.5">
+      {icon ? <IconChip icon={icon} tone={tone} size="md" className="max-sm:hidden print:hidden" /> : null}
       <div className="min-w-0">
         <div className="truncate text-[12.5px] text-ink-muted">{label}</div>
-        <div className={cn('mt-0.5 whitespace-nowrap text-[20px] font-medium tabular-nums', hot ? 'text-danger' : good ? 'text-positive' : 'text-ink')}>{value}</div>
+        <div className={cn('mt-0.5 truncate text-[18px] font-medium tabular-nums sm:text-[20px]', hot ? 'text-danger' : good ? 'text-positive' : 'text-ink')}>{value}</div>
         <div className="truncate text-[12px] text-ink-muted">{sub}</div>
       </div>
     </div>

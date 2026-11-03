@@ -209,12 +209,14 @@ export function PartnersTab({ data, actions }: { data: ManagerSheetDto; actions:
                     </div>
                     <PartnerLoginCell sheetId={data.sheet.id} partner={p} />
                     <div className="flex flex-wrap gap-x-5 gap-y-2 text-[13px]">
-                      <label className="inline-flex items-center gap-2">
-                        <Switch checked={p.active} aria-label={`${p.name} active`} onCheckedChange={(v) => setActive(p, v)} /> Active
-                      </label>
-                      <label className="inline-flex items-center gap-2">
-                        <Switch checked={p.notifyOnPublish} aria-label={`Email ${p.name} after each Update that changes their invoices`} onCheckedChange={(v) => setAlerts(p, v)} /> Publish alerts
-                      </label>
+                      <span className="inline-flex items-center gap-2">
+                        <Switch id={`rcv-p-active-${p.id}`} checked={p.active} onCheckedChange={(v) => setActive(p, v)} />
+                        <label htmlFor={`rcv-p-active-${p.id}`}>Active</label>
+                      </span>
+                      <span className="inline-flex items-center gap-2">
+                        <Switch id={`rcv-p-alerts-${p.id}`} checked={p.notifyOnPublish} onCheckedChange={(v) => setAlerts(p, v)} />
+                        <label htmlFor={`rcv-p-alerts-${p.id}`}>Publish alerts</label>
+                      </span>
                     </div>
                   </li>
                 );

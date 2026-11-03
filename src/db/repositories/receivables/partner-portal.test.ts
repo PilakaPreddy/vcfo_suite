@@ -280,3 +280,43 @@ describe('notes and the publish email switch', () => {
     expect(update?.set).toEqual({ notifyOnPublish: false });
   });
 });
+
+describe('partnerStatement (Phase 10)', () => {
+  const Q = { client: null, from: '2026-09-01', to: '2026-11-03' };
+
+  for (const role of ['super_admin', 'admin', 'manager', 'intern', 'client', 'developer'] as const) {
+    it(`refuses ${role} with 403 before any query`, async () => {
+      await expect(repo.partnerStatement(ctx(role), Q)).rejects.toMatchObject({ status: 403 });
+      expect(calls).toHaveLength(0);
+    });
+  }
+
+  it("builds the statement from the partner's own published rows only", async () => {
+    results = [[link()], [version([snapRow(MINE, P_ME), snapRow(THEIRS, P_OTHER, { clientName: 'Bonterra' })])]];
+    const { clientOrgName, statement } = await repo.partnerStatement(ctx('partner'), Q);
+    expect(clientOrgName).toBe('Summit Consulting');
+    expect(statement.lines.map((l) => l.id)).toEqual([MINE]);
+    expect(statement.clients).toEqual(['Duravant']);
+    expect(statement.closing.inr).toBe(6456984);
+  });
+
+  it("gives an empty statement for another partner's client", async () => {
+    results = [[link()], [version([snapRow(MINE, P_ME), snapRow(THEIRS, P_OTHER, { clientName: 'Bonterra' })])]];
+    const { statement } = await repo.partnerStatement(ctx('partner'), { ...Q, client: 'Bonterra' });
+    expect(statement.lines).toEqual([]);
+  });
+});
+
+describe('sheetStatement (Phase 10)', () => {
+  for (const role of ['intern', 'client', 'developer', 'partner'] as const) {
+    it(`refuses ${role} before any query`, async () => {
+      await expect(repo.sheetStatement(ctx(role), SHEET, { client: null, from: '2026-09-01', to: '2026-11-03' })).rejects.toMatchObject({ status: 404 });
+      expect(calls).toHaveLength(0);
+    });
+  }
+
+  it("reads another manager's sheet as not found", async () => {
+    results = [[{ id: SHEET, managerUserId: 'someone-else', clientOrgName: 'Summit Consulting' }]];
+    await expect(repo.sheetStatement(ctx('manager'), SHEET, { client: null, from: '2026-09-01', to: '2026-11-03' })).rejects.toMatchObject({ status: 404 });
+  });
+});

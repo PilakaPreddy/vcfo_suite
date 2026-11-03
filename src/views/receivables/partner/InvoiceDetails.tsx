@@ -12,7 +12,7 @@ import { PanelSection, SidePanel } from '@/components/ui/side-panel';
 import { Chip, OwnerChip } from '@/components/ui/spectrum-chip';
 import { Textarea } from '@/components/ui/textarea';
 import { addDaysIso, daysLeft, sheetDate } from '@/lib/receivables/dates';
-import type { PartnerInvoiceDetailDto, PartnerReminderDto } from '@/lib/receivables/partner-wire';
+import type { PartnerInvoiceDetailDto, PartnerReminderDto, PartnerRowDto } from '@/lib/receivables/partner-wire';
 import { toastError, toastSuccess } from '@/lib/toast-errors';
 import { cn } from '@/lib/utils';
 import { usePartnerInvoice, usePartnerInvoiceActions } from '@/hooks/use-receivables-partner';
@@ -30,6 +30,8 @@ import { StatusChip } from '../StatusChip';
 export type InvoiceDetailsProps = {
   invoiceId: string;
   today: string;
+  /** The row from the list, shown in the head while the details load. */
+  preview?: PartnerRowDto;
   onClose: () => void;
 };
 
@@ -88,7 +90,7 @@ function Fact({ label, children, className }: { label: string; children: React.R
   );
 }
 
-export function InvoiceDetails({ invoiceId, today, onClose }: InvoiceDetailsProps) {
+export function InvoiceDetails({ invoiceId, today, preview, onClose }: InvoiceDetailsProps) {
   const q = usePartnerInvoice(invoiceId);
   const actions = usePartnerInvoiceActions(invoiceId);
   const [promisedOn, setPromisedOn] = useState('');
@@ -97,6 +99,7 @@ export function InvoiceDetails({ invoiceId, today, onClose }: InvoiceDetailsProp
 
   const d = q.data;
   const row = d?.row;
+  const head = row ?? preview;
   const open = row?.status === 'open';
   const latest = addDaysIso(today, PROMISE_MAX_DAYS);
   const badDate = Boolean(promisedOn) && (promisedOn < today || promisedOn > latest);
@@ -130,13 +133,13 @@ export function InvoiceDetails({ invoiceId, today, onClose }: InvoiceDetailsProp
       onOpenChange={(o) => !o && onClose()}
       width={480}
       eyebrow="Invoice details"
-      title={row ? `${row.clientName}${row.invoiceNo ? ` · ${row.invoiceNo}` : ''}` : 'Invoice'}
+      title={head ? `${head.clientName}${head.invoiceNo ? ` · ${head.invoiceNo}` : ''}` : 'Invoice'}
       sub={
-        row ? (
+        head ? (
           <>
-            <StatusChip invoice={row} today={today} />
-            {row.promisedOn && open ? <Chip raw tone="teal">{`Promised ${sheetDate(row.promisedOn)}`}</Chip> : null}
-            {d?.pause && !row.promisedOn ? <Chip raw tone="idle">{`Paused to ${sheetDate(d.pause.until)}`}</Chip> : null}
+            <StatusChip invoice={head} today={today} />
+            {head.promisedOn && head.status === 'open' ? <Chip raw tone="teal">{`Promised ${sheetDate(head.promisedOn)}`}</Chip> : null}
+            {d?.pause && !head.promisedOn ? <Chip raw tone="idle">{`Paused to ${sheetDate(d.pause.until)}`}</Chip> : null}
           </>
         ) : undefined
       }
@@ -183,7 +186,7 @@ export function InvoiceDetails({ invoiceId, today, onClose }: InvoiceDetailsProp
                   )}
                 </p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-[170px_1fr]">
+              <div className="grid gap-3">
                 <Field label="Promised by" htmlFor="rcv-promise-date" error={badDate ? 'Pick a date from today to a year ahead.' : undefined}>
                   <Input id="rcv-promise-date" type="date" value={promisedOn} min={today} max={latest} aria-invalid={badDate} onChange={(e) => setPromisedOn(e.target.value)} />
                 </Field>

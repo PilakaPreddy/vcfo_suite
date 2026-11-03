@@ -132,13 +132,13 @@ function RulesCard({ rules, onSave, busy }: { rules: ReminderRules; onSave: (r: 
   return (
     <DashSection title="Rules" headIcon={{ icon: Settings2, tone: 'blue' }} meta="Each open invoice with a client partner">
       <div className="grid gap-4">
-        <label className="flex items-center justify-between gap-4 rounded-md border border-line px-3 py-2.5">
-          <span className="grid gap-0.5">
+        <div className="flex items-center justify-between gap-4 rounded-md border border-line px-3 py-2.5">
+          <label htmlFor="rcv-rule-on" className="grid gap-0.5">
             <span className="text-[14px] font-medium">Send reminders to client partners</span>
             <span className="text-[12.5px] text-ink-muted">A reminder stops as soon as the invoice is marked received.</span>
-          </span>
-          <Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Send reminders to client partners" />
-        </label>
+          </label>
+          <Switch id="rcv-rule-on" checked={enabled} onCheckedChange={setEnabled} />
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Days before the due date" htmlFor="rcv-rule-days" error={badDays ? 'Whole days between 1 and 60, separated by commas.' : undefined} hint="For example: 5, 3">
             <Input id="rcv-rule-days" value={days} aria-invalid={badDays} onChange={(e) => setDays(e.target.value)} />
@@ -183,21 +183,16 @@ function DigestCard({ rules, onSave, busy, email }: { rules: ReminderRules; onSa
   const on = rules.digestEnabled !== false;
   return (
     <DashSection title="Monday digest" headIcon={{ icon: Mail, tone: 'violet' }}>
-      <label className="flex items-start justify-between gap-4">
-        <span className="grid gap-1">
+      <div className="flex items-start justify-between gap-4">
+        <label htmlFor="rcv-digest" className="grid gap-1">
           <span className="text-[14px] font-medium">Email me a summary every Monday</span>
           <span className="text-[12.5px] leading-snug text-ink-muted">
             At 08:40 India time{email ? ` to ${email}` : ''}: collected last week, the five largest overdue invoices, promises and invoices due this week, reminders that failed, and
             changes waiting for an Update.
           </span>
-        </span>
-        <Switch
-          checked={on}
-          disabled={busy}
-          aria-label="Monday digest email"
-          onCheckedChange={(v) => onSave({ ...rules, digestEnabled: v })}
-        />
-      </label>
+        </label>
+        <Switch id="rcv-digest" checked={on} disabled={busy} onCheckedChange={(v) => onSave({ ...rules, digestEnabled: v })} />
+      </div>
     </DashSection>
   );
 }

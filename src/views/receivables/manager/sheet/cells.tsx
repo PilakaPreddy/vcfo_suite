@@ -60,7 +60,10 @@ export function AmountCell({ value, onCommit, label }: { value: number; onCommit
  * A foreign invoice's FX in two lines: the foreign amount at the booked rate, then the INR at
  * today's rate and the change against the booked INR. A click opens Edit FX.
  */
-export function FxCell({ invoice, todayRate, onEdit }: { invoice: SheetInvoice; todayRate: number | null; onEdit?: () => void }) {
+export function FxCell({ invoice, todayRate: usdRate, rates, onEdit }: { invoice: SheetInvoice; todayRate: number | null; rates?: Record<string, { rate: number } | null>; onEdit?: () => void }) {
+  // Phase 10: each row converts at its own currency's rate (`rates`); `todayRate` is the USD rate.
+  const cur = (invoice.currency ?? '').toUpperCase();
+  const todayRate = rates && cur in rates ? (rates[cur]?.rate ?? null) : cur === 'USD' ? usdRate : null;
   const change = fxChange(fxInput(invoice), todayRate);
   const tone = change ? (change.changeInr < 0 ? 'text-danger' : change.changeInr > 0 ? 'text-positive' : 'text-ink-muted') : '';
   const body = (

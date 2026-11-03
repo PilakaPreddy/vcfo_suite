@@ -168,37 +168,38 @@ export function StatementView({ statement: st, clientOrgName, basePath, keep = {
         </header>
 
         <form onSubmit={apply} className="flex flex-wrap items-end gap-3 rounded-md border border-line bg-surface-raised px-4 py-3 print:hidden" aria-label="Statement period">
-          <label className="grid gap-1 text-[12.5px] text-ink-muted">
-            Client
+          <div className="grid gap-1 text-[12.5px] text-ink-muted">
+            <label htmlFor="rcv-st-client">Client</label>
             <FilterSelect
+              id="rcv-st-client"
               value={client}
               onChange={(e) => setClient(e.target.value)}
               size="md"
               options={[{ value: '', label: 'All clients' }, ...st.clients.map((c) => ({ value: c, label: c }))]}
             />
-          </label>
-          <label className="grid gap-1 text-[12.5px] text-ink-muted">
-            From
-            <Input type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="w-[160px]" />
-          </label>
-          <label className="grid gap-1 text-[12.5px] text-ink-muted">
-            To
-            <Input type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="w-[160px]" />
-          </label>
+          </div>
+          <div className="grid gap-1 text-[12.5px] text-ink-muted">
+            <label htmlFor="rcv-st-from">From</label>
+            <Input id="rcv-st-from" type="date" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} className="w-[160px]" />
+          </div>
+          <div className="grid gap-1 text-[12.5px] text-ink-muted">
+            <label htmlFor="rcv-st-to">To</label>
+            <Input id="rcv-st-to" type="date" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} className="w-[160px]" />
+          </div>
           <Button type="submit" disabled={bad}>
             Show statement
           </Button>
           {bad ? <span className="text-[12.5px] text-danger">Pick a From date on or before the To date.</span> : null}
         </form>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4">
           <SheetTile icon={Wallet} label={`Opening on ${sheetDate(st.from)}`} value={`₹${inr(st.opening.inr)}`} sub={plural(st.opening.count, 'invoice')} />
           <SheetTile icon={FileText} tone="primary" label="Invoiced in the period" value={`₹${inr(st.invoiced.inr)}`} sub={plural(st.invoiced.count, 'invoice')} />
           <SheetTile icon={ArrowUpFromLine} tone="success" label="Received in the period" value={`₹${inr(st.received.inr)}`} sub={plural(st.received.count, 'payment')} good={st.received.inr > 0} />
           <SheetTile icon={Wallet} tone="warning" label={`Closing on ${sheetDate(st.to)}`} value={`₹${inr(st.closing.inr)}`} sub={plural(st.closing.count, 'invoice')} />
         </div>
 
-        <DashSection title="Invoices" meta={`${plural(st.lines.length, 'line')} · opening + invoiced − received = closing`} flush>
+        <DashSection title="Invoices" headIcon={{ icon: FileText, tone: 'blue' }} meta={`${plural(st.lines.length, 'line')} · opening + invoiced − received = closing`} flush>
           {st.lines.length ? (
             <Lines lines={st.lines} />
           ) : (
@@ -208,7 +209,7 @@ export function StatementView({ statement: st, clientOrgName, basePath, keep = {
           )}
         </DashSection>
 
-        <DashSection title="Receipts in the period" meta={st.receipts.length ? `₹${inr(st.received.inr)}` : undefined} flush>
+        <DashSection title="Receipts in the period" headIcon={{ icon: ArrowUpFromLine, tone: 'green' }} meta={st.receipts.length ? `₹${inr(st.received.inr)}` : undefined} flush>
           {st.receipts.length ? (
             <ul>
               {st.receipts.map((l) => (

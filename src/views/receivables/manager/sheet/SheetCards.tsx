@@ -87,7 +87,7 @@ function Card({ inv, s, data, today, todayRate }: { inv: ManagerInvoiceDto; s: S
           </div>
           {foreign && open ? (
             <div className="mt-1">
-              <FxCell invoice={inv} todayRate={todayRate} onEdit={() => s.runRow('fx', inv)} />
+              <FxCell invoice={inv} todayRate={todayRate} rates={data.fxRates} onEdit={() => s.runRow('fx', inv)} />
             </div>
           ) : null}
           <div className="mt-2 flex items-start justify-between gap-2">
