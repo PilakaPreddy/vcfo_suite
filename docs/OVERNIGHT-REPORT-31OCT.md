@@ -125,3 +125,15 @@ Then run `npm run totp:reencrypt` through the tunnel (docs/context/AWS-DEPLOY.md
 | Rollback image | ✓ | `vcfo-suite:rollback-fd08d4ac`. |
 | Image | ✓ | `vcfo-suite:7fb6b705` and `:latest`. App Runner deployment succeeded at 18:41 IST. |
 | Live check | ✓ | `/` and `/login` answer 200. No errors in the application log. Not checked signed in. |
+
+## 10. Deploy, 3 Nov 2026 12:17 IST
+
+| Step | Done | Detail |
+|---|---|---|
+| `main` | ✓ | `b54acd9d`: Client Details rework (PR #3), the previous landing page with the Ask VCFO robot (revert and PR #7), Board meetings (PR #8, migration 0034), Labour registers fix (PR #9) and the India map picker (PR #10). |
+| Gate | ✓ | 0 type errors, 0 lint errors (529 warnings), 3,832 tests pass. Migration chain checked; no schema drift. |
+| RDS snapshot | ✓ | `vcfo-suite-db-pre-0034-20261103-1202`. |
+| Migration 0034 on RDS | ✓ | 9 new tables, additive only. Applied through the SSM tunnel; RDS stayed private; the tunnel is closed. |
+| Rollback image | ✓ | `vcfo-suite:rollback-7fb6b705`. |
+| Image | ✓ | `vcfo-suite:b54acd9d` and `:latest`. App Runner deployment succeeded at 12:17 IST. |
+| Live check | ✓ | `/` and `/login` answer 200. No errors in the application log. Not checked signed in. |
