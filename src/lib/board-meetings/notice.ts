@@ -94,7 +94,7 @@ export function buildNotice(input: NoticeInput): NoticeDoc {
         ? `${input.venue} and through Video Conferencing ("VC")`
         : 'Through Video Conferencing ("VC") / Other Audio-Visual Means ("OAVM"), deemed to be held at the Registered Office of the Company.';
   return {
-    title: `NOTICE OF ${title} TO BE HELD ON ${longDate(input.meetingDate).toUpperCase()}`,
+    title: `NOTICE OF ${title} TO BE HELD ON ${longDate(input.meetingDate)}`,
     ref: input.meetingNo,
     dated: longDate(input.noticeOn),
     salutation: input.kind === 'board' ? 'Dear Directors,' : 'Dear Members,',
@@ -114,7 +114,7 @@ export function buildNotice(input: NoticeInput): NoticeDoc {
     ],
     agendaIntro: 'Following are the Agenda Items:',
     agenda,
-    footer: [input.companyName.toUpperCase(), ...(input.cin ? [`CIN: ${input.cin}`] : []), ...(input.address ? [`Address: ${input.address}`] : [])],
+    footer: [input.companyName.toUpperCase(), ...(input.address ? [`Address: ${input.address}`] : []), ...(input.cin ? [`CIN: ${input.cin}`] : [])],
   };
 }
 

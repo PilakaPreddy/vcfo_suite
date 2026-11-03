@@ -41,9 +41,9 @@ export function NoticePreview({
           {tab === 'notice' ? (
             <div className="flex flex-col gap-2.5">
               <p className="m-0 mb-1 text-center text-[14px] font-bold tracking-wide">{n.title}</p>
-              <p className="m-0">{n.ref}</p>
-              <p className="m-0">{n.dated}</p>
-              <p className="m-0 mt-1">{n.salutation}</p>
+              <p className="m-0 font-bold">{n.ref}</p>
+              <p className="m-0 font-bold">{n.dated}</p>
+              <p className="m-0 mt-1 font-bold">{n.salutation}</p>
               <p className="m-0 text-center font-bold">{n.subject}</p>
               {paragraphs.map((p, i) =>
                 editBody ? (
@@ -61,22 +61,22 @@ export function NoticePreview({
                   </p>
                 ),
               )}
-              {n.closing.map((c) => (
-                <p key={c} className="m-0">
+              {n.closing.map((c, i) => (
+                <p key={c} className={i === 0 ? 'm-0 mb-2' : 'm-0 font-bold'}>
                   {c}
                 </p>
               ))}
               <div className="mt-2 flex flex-col">
                 <span className="grid h-9 w-44 place-items-center rounded border border-dashed border-line-strong font-sans text-[11px] text-ink-faint">Signature</span>
                 {n.signatory.map((s, i) => (
-                  <span key={s} className={i === 0 ? 'mt-1 font-bold' : ''}>
+                  <span key={s} className={i === 0 ? 'mt-1 font-bold' : 'font-bold'}>
                     {s}
                   </span>
                 ))}
               </div>
               <div className="mt-2">
-                <p className="m-0">{n.toHeading}</p>
-                <ol className="m-0 mt-1 pl-6">
+                <p className="m-0 font-bold">{n.toHeading}</p>
+                <ol className="m-0 mt-1 pl-6 font-bold">
                   {n.to.map((t) => (
                     <li key={t}>{t}</li>
                   ))}
@@ -85,7 +85,7 @@ export function NoticePreview({
             </div>
           ) : (
             <div className="flex flex-col gap-2.5">
-              <p className="m-0 mb-1 text-center text-[14px] font-bold">{n.agendaTitle}</p>
+              <p className="m-0 mb-1 text-center text-[14px] font-bold underline">{n.agendaTitle}</p>
               <dl className="m-0 grid grid-cols-[120px_minmax(0,1fr)] gap-x-3 gap-y-1.5">
                 {n.agendaMeta.map(([k, v]) => (
                   <div key={k} className="contents">
@@ -94,7 +94,7 @@ export function NoticePreview({
                   </div>
                 ))}
               </dl>
-              <p className="m-0 mt-2">{n.agendaIntro}</p>
+              <p className="m-0 mt-2 font-bold">{n.agendaIntro}</p>
               <ol className="m-0 flex list-none flex-col gap-1 pl-0">
                 {n.agenda.map((a) => (
                   <li key={a.n} className="flex flex-col gap-0.5">

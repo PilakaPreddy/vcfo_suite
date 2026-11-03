@@ -8,7 +8,7 @@ import { assertEngagementAccess, checklistStateFromRow } from '@/db/repositories
 import type { EngagementDbRow } from '@/db/repositories/engagements';
 import { createNotificationsForUsers } from '@/db/repositories/notifications';
 import { appEngagementId } from '@/lib/projects/legacy-engagement-ids';
-import { identifiersFromState } from '@/lib/client/client-overview';
+import { companyFactsFromState, type CompanyFacts } from '@/lib/board-meetings/company-facts';
 import type { MeetingStatus } from '@/lib/board-meetings/model';
 
 /**
@@ -108,15 +108,20 @@ export interface CompanyInfo {
 }
 
 /** Name, CIN (from the checklist answers) and registered office of the client company. */
+/**
+ * The company on the notice: the legal name from the Certificate of Incorporation step (else
+ * the MCA-approved name, else the project's legal or display name), the CIN, and the
+ * registered office from the incorporation steps (else the project's address).
+ */
 export function companyInfoOf(row: EngagementDbRow): CompanyInfo {
-  let cin: string | null;
+  let facts: CompanyFacts = { legalName: null, cin: null, registeredOffice: null };
   try {
-    cin = identifiersFromState(checklistStateFromRow(row) as never).cin?.trim() || null;
+    facts = companyFactsFromState(checklistStateFromRow(row) as never);
   } catch {
-    cin = null;
+    // Old or partial checklist state: fall back to the project's own fields.
   }
-  const name = row.subsidiaryLegalName?.trim() || row.companyName;
-  return { name, cin, address: row.subsidiaryRegisteredAddress?.trim() || null };
+  const name = facts.legalName || row.subsidiaryLegalName?.trim() || row.companyName;
+  return { name, cin: facts.cin, address: facts.registeredOffice || row.subsidiaryRegisteredAddress?.trim() || null };
 }
 
 export type PersonLite = { id: string; name: string; email: string; role: string };
