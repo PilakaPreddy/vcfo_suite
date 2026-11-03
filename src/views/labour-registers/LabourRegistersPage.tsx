@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { AlertTriangle, FileSpreadsheet, Printer, ScrollText, ShieldCheck } from 'lucide-react';
 
@@ -7,6 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Chip } from '@/components/ui/spectrum-chip';
 import { regimeNote, stateByCode, statesForPicker } from '@/data/labour-registers/states';
 import { formsByAct, formsFor, monthPeriod, needsAttendanceGrid, regimeSummary, retentionYears } from '@/lib/labour-registers/catalogue';
+import { StateTileGrid, StateTileLegend, type TileState } from '@/components/labour-registers/StateTileGrid';
 
 /**
  * LABOUR REGISTERS — the state and period picker, and the catalogue of what is due.
@@ -23,8 +26,11 @@ import { formsByAct, formsFor, monthPeriod, needsAttendanceGrid, regimeSummary, 
  * Ladakh) or barred from commercial use. Not shipping a boundary map removes that whole risk
  * at no cost to the person using the page.
  *
- * A server component: it reads the catalogue, which is pure data, so there is nothing to fetch
- * and no spinner to show.
+ * A client component, and it has to be one. It reads the catalogue, which is pure data, so there
+ * is nothing to fetch and no spinner to show — but `DashHero` and `DashSection` are client
+ * components, and this page hands them Lucide icons. A function cannot cross the server-to-client
+ * boundary, so rendering this as a server component throws at request time. A unit test does not
+ * catch it (jsdom renders everything as plain React, with no boundary); `npm run e2e:smoke` does.
  */
 
 /** `?state=` and `?period=` carry the choice across a refresh. */
@@ -35,6 +41,12 @@ export interface LabourRegistersPageProps {
   period?: string;
   /** False on the client portal, where the page is download-only. */
   canPrepare?: boolean;
+  /**
+   * The states this client actually has an establishment in. When given, the tile grid shows
+   * those at full strength and fades the rest, so a client with one establishment is not asked
+   * to find it among thirty-six tiles. Left out, every configured state reads as reachable.
+   */
+  relevantStates?: string[];
 }
 
 function parsePeriod(period: string | undefined): { year: number; month: number } {
@@ -57,7 +69,13 @@ function formStatus(hasPeriodClosed: boolean): string {
   return hasPeriodClosed ? 'Not started' : 'Upcoming';
 }
 
-export function LabourRegistersPage({ shellBase, stateCode, period, canPrepare = true }: LabourRegistersPageProps) {
+export function LabourRegistersPage({
+  shellBase,
+  stateCode,
+  period,
+  canPrepare = true,
+  relevantStates,
+}: LabourRegistersPageProps) {
   const states = statesForPicker();
   const selected = stateByCode(stateCode ?? '') ?? states.find((s) => s.configured)!;
   const { year, month } = parsePeriod(period);
@@ -70,6 +88,16 @@ export function LabourRegistersPage({ shellBase, stateCode, period, canPrepare =
   const closed = periodRange.to < new Date().toISOString().slice(0, 10);
 
   const href = (code: string) => `${shellBase}/labour-registers?state=${code}&period=${year}-${String(month).padStart(2, '0')}`;
+
+  /* The tile grid and the list below it read the same rows, so the two cannot disagree. */
+  const relevant = relevantStates ? new Set(relevantStates) : null;
+  const tiles: TileState[] = states.map((state) => ({
+    code: state.code,
+    configured: state.configured,
+    relevant: relevant ? relevant.has(state.code) : true,
+    count: state.configured ? formsFor(state.code, periodRange).length : undefined,
+    status: closed ? 'Not started' : 'Upcoming',
+  }));
 
   return (
     <div className="flex flex-col gap-3">
@@ -131,7 +159,15 @@ export function LabourRegistersPage({ shellBase, stateCode, period, canPrepare =
 
         <aside className="flex flex-col gap-3">
           <DashSection title="Jurisdiction" headIcon={{ icon: ShieldCheck, tone: 'blue' }}>
-            <ul className="divide-y divide-line-soft">
+            <StateTileGrid
+              states={tiles}
+              selected={selected.code}
+              href={href}
+              focusRelevant={Boolean(relevant)}
+              className="pb-3"
+            />
+            <StateTileLegend className="pb-3" />
+            <ul className="divide-y divide-line-soft border-t border-line-soft">
               {states.map((state) => (
                 <li key={state.code}>
                   {state.configured ? (
