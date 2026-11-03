@@ -9,7 +9,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Chip } from '@/components/ui/spectrum-chip';
 import { regimeNote, stateByCode, statesForPicker } from '@/data/labour-registers/states';
 import { formsByAct, formsFor, monthPeriod, needsAttendanceGrid, regimeSummary, retentionYears } from '@/lib/labour-registers/catalogue';
-import { StateTileGrid, StateTileLegend, type TileState } from '@/components/labour-registers/StateTileGrid';
+import { IndiaMap, IndiaMapLegend, type MapState } from '@/components/labour-registers/IndiaMap';
 
 /**
  * LABOUR REGISTERS — the state and period picker, and the catalogue of what is due.
@@ -89,9 +89,9 @@ export function LabourRegistersPage({
 
   const href = (code: string) => `${shellBase}/labour-registers?state=${code}&period=${year}-${String(month).padStart(2, '0')}`;
 
-  /* The tile grid and the list below it read the same rows, so the two cannot disagree. */
+  /* The map and the list below it read the same rows, so the two cannot disagree. */
   const relevant = relevantStates ? new Set(relevantStates) : null;
-  const tiles: TileState[] = states.map((state) => ({
+  const tiles: MapState[] = states.map((state) => ({
     code: state.code,
     configured: state.configured,
     relevant: relevant ? relevant.has(state.code) : true,
@@ -159,14 +159,14 @@ export function LabourRegistersPage({
 
         <aside className="flex flex-col gap-3">
           <DashSection title="Jurisdiction" headIcon={{ icon: ShieldCheck, tone: 'blue' }}>
-            <StateTileGrid
+            <IndiaMap
               states={tiles}
               selected={selected.code}
               href={href}
               focusRelevant={Boolean(relevant)}
-              className="pb-3"
+              className="pb-2"
             />
-            <StateTileLegend className="pb-3" />
+            <IndiaMapLegend className="pb-3" />
             <ul className="divide-y divide-line-soft border-t border-line-soft">
               {states.map((state) => (
                 <li key={state.code}>
