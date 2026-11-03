@@ -6,7 +6,7 @@
  * sheet, so the unpublished count and totals stay right.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { EmailRecipient, InvoiceInput, InvoicePatch, ReminderRules } from '@/lib/receivables/model';
+import type { EmailRecipient, InvoiceInput, InvoicePatch, ReceiptInput, ReminderRules } from '@/lib/receivables/model';
 import type { CreditsDto, ImportResultDto, InvoiceNoteDto, ManagerSheetDto, OutlookStatusDto, PartnerDto, ReminderDeskDto, SummaryDto, VersionDto, VersionMetaDto } from '@/lib/receivables/wire';
 
 const ERROR_TEXT: Record<string, string> = {
@@ -47,6 +47,11 @@ const ERROR_TEXT: Record<string, string> = {
   not_accepted: 'The partner has not set a password yet. Use Resend invite.',
   not_disabled: 'This login is not disabled.',
   note: 'Write a note of up to 2000 characters.',
+  currency: 'Pick INR or USD.',
+  fc_amount: 'Enter the USD amount above zero.',
+  fx_rate: 'Enter the booked rate (INR per USD) above zero.',
+  invoice_date: 'Enter the invoice date of the USD invoice.',
+  tds: 'Enter the TDS in rupees, zero or more.',
 };
 
 export class ReceivablesApiError extends Error {
@@ -185,7 +190,7 @@ export function useReceivablesActions(sheetId: string) {
     updateInvoice: useMutation({ mutationFn: ({ id, patch }: { id: string; patch: InvoicePatch }) => call(`/api/receivables/invoices/${id}`, json('PATCH', patch)), onSettled }),
     deleteInvoice: useMutation({ mutationFn: (id: string) => call(`/api/receivables/invoices/${id}`, json('DELETE')), onSettled }),
     markReceived: useMutation({
-      mutationFn: ({ id, ...body }: { id: string; paidOn: string; amount: number; part: boolean }) => call(`/api/receivables/invoices/${id}/received`, json('POST', body)),
+      mutationFn: ({ id, ...body }: { id: string } & ReceiptInput) => call(`/api/receivables/invoices/${id}/received`, json('POST', body)),
       onSettled,
     }),
     reopen: useMutation({ mutationFn: (id: string) => call(`/api/receivables/invoices/${id}/received`, json('DELETE')), onSettled }),
@@ -199,10 +204,9 @@ export function useReceivablesActions(sheetId: string) {
     }),
     addPartner: useMutation({ mutationFn: (input: { name: string; email: string }) => call(`${sheetUrl}/partners`, json('POST', input)), onSettled }),
     updatePartner: useMutation({
-      mutationFn: ({ id, ...patch }: { id: string; name?: string; email?: string; active?: boolean }) => call(`/api/receivables/partners/${id}`, json('PATCH', patch)),
+      mutationFn: ({ id, ...patch }: { id: string; name?: string; email?: string; active?: boolean; notifyOnPublish?: boolean }) => call(`/api/receivables/partners/${id}`, json('PATCH', patch)),
       onSettled,
     }),
-    resetKey: useMutation({ mutationFn: () => call<{ publicUrl: string }>(`${sheetUrl}/key`, json('POST')), onSettled }),
   };
 }
 

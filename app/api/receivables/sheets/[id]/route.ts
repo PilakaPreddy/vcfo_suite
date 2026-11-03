@@ -3,13 +3,14 @@ import { z } from 'zod';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { siteUrl } from '@/lib/site-url';
 import { publicPageUrl } from '@/lib/receivables/links';
-import { getManagerSheet, updateSheetSettings } from '@/db/repositories/receivables';
+import { getManagerSheet, systemRateFor, updateSheetSettings } from '@/db/repositories/receivables';
+import { todayIst } from '@/lib/receivables/dates';
 import { denied, guardReceivables, receivablesError, type RouteContext } from '../../_respond';
 import { sheetDto } from '../../_dto';
 
 /**
  * GET   /api/receivables/sheets/:id — the manager area: sheet, partners, the live draft, the
- *       unpublished change count and the latest version.
+ *       unpublished change count, the latest version and today's USD rate in force (Phase 9).
  * PATCH /api/receivables/sheets/:id — settings: whether the link needs the key, reminder rules.
  */
 export async function GET(_request: Request, context: RouteContext) {
@@ -18,10 +19,12 @@ export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
   try {
     const data = await getManagerSheet(guard.ctx, id);
+    const usdRate = await systemRateFor('USD', todayIst());
     return NextResponse.json({
       ...data,
       sheet: sheetDto(data.sheet),
       publicUrl: publicPageUrl(siteUrl(), data.sheet),
+      usdRate,
     });
   } catch (e) {
     return receivablesError(e);

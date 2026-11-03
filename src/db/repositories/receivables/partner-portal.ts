@@ -89,12 +89,21 @@ async function partnerScope(ctx: AuthContext): Promise<PartnerScope> {
     if (!out.publishedAt || v.publishedAt > out.publishedAt) out.publishedAt = v.publishedAt;
     for (const r of v.snapshot ?? []) {
       if (!r.partnerId || !mine.has(r.partnerId)) continue;
-      // The page never needs internal ids beyond the invoice's own.
-      out.rows.push({ ...r, partnerId: null });
+      out.rows.push(partnerRow(r));
       out.sheetOf.set(r.id, v.sheetId);
     }
   }
   return out;
+}
+
+/**
+ * A snapshot row as the partner sees it: the currency and foreign amounts stay (the USD view),
+ * while the internal parts go. The page never needs internal ids beyond the invoice's own, and
+ * the TDS and a dispute are SBC's own records, never shown on the client page.
+ */
+function partnerRow(r: SnapshotRow): SnapshotRow {
+  const { tdsInr: _tds, disputed: _disputed, ...rest } = r;
+  return { ...rest, partnerId: null };
 }
 
 function orgName(links: PartnerLink[]): string {

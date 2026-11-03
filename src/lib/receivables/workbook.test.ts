@@ -68,6 +68,28 @@ describe('receivablesWorkbook', () => {
   });
 });
 
+describe('receivablesWorkbook with a foreign row', () => {
+  const base = { partnerId: null, partnerSlug: 'yash', partnerName: 'Yash Babbar', paidOn: null, paidAmount: null, paidVia: null, partPaid: 0, remindersPausedUntil: null, pauseReason: null, status: 'open' as const };
+  it('adds Currency and USD columns only when a row is foreign', async () => {
+    const rows: SnapshotRow[] = [
+      { ...base, id: 'a', invoiceMonth: '2026-09-01', clientName: 'Duravant', invoiceNo: 'SC/09/03', dueDate: '2026-10-16', amountInr: 6456984 },
+      { ...base, id: 'b', invoiceMonth: '2026-09-01', clientName: 'Vena US', invoiceNo: 'SC/09/04', dueDate: '2026-10-20', amountInr: 999000, currency: 'USD', fcAmount: 12000, fxRate: 83.25 },
+    ];
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load((await receivablesWorkbook(rows, '2026-11-03')) as unknown as WorkbookInput);
+    const summary = wb.getWorksheet('Summary')!;
+    expect(summary.getRow(2).values).toEqual([undefined, 'Client', 'Due Date', 'Currency', 'USD Amount', 'Invoice Amount INR', 'No of Days Over Due', 'Remarks']);
+    expect(summary.getCell('C3').value).toBe('INR');
+    expect(summary.getCell('D4').value).toBe(12000);
+    expect(summary.getCell('E4').value).toBe(999000);
+    const flat = wb.getWorksheet('Invoices')!;
+    expect(flat.getCell('G1').value).toBe('Currency');
+    expect(flat.getCell('H3').value).toBe(12000);
+    expect(flat.getCell('I3').value).toBe(83.25);
+    expect(flat.getCell('K1').value).toBe('Status');
+  });
+});
+
 describe('links', () => {
   it('makes 12-character keys and the plain page link', () => {
     const k = newPublicKey();

@@ -11,7 +11,7 @@ import { addDaysIso, sheetDate } from '@/lib/receivables/dates';
 import type { PartnerReminderDto } from '@/lib/receivables/partner-wire';
 import { toastError, toastSuccess } from '@/lib/toast-errors';
 import { usePartnerInvoice, usePartnerInvoiceActions } from '@/hooks/use-receivables-partner';
-import { inr, stamp } from '../format';
+import { fcText, inr, stamp } from '../format';
 import { StatusChip } from '../StatusChip';
 
 /**
@@ -110,6 +110,12 @@ export function InvoiceDetails({ invoiceId, today, onClose }: InvoiceDetailsProp
       ) : (
         <div className="grid gap-4">
           <dl className="grid grid-cols-2 gap-3 text-[13px] sm:grid-cols-3">
+            {fcText(row) ? (
+              <div>
+                <dt className="text-[12px] text-ink-muted">Amount {row.currency}</dt>
+                <dd className="font-mono text-[15px] font-medium">{fcText(row)}</dd>
+              </div>
+            ) : null}
             <div>
               <dt className="text-[12px] text-ink-muted">Amount INR</dt>
               <dd className="font-mono text-[15px] font-medium">₹{inr(row.amountInr)}</dd>
@@ -128,6 +134,15 @@ export function InvoiceDetails({ invoiceId, today, onClose }: InvoiceDetailsProp
               <div>
                 <dt className="text-[12px] text-ink-muted">Paid on</dt>
                 <dd>{sheetDate(row.paidOn)}</dd>
+              </div>
+            ) : null}
+            {row.status === 'received' && fcText(row, row.receivedFc) ? (
+              <div>
+                <dt className="text-[12px] text-ink-muted">Received</dt>
+                <dd className="font-mono">
+                  {fcText(row, row.receivedFc)}
+                  {row.paidAmount ? <span className="text-ink-muted"> · ₹{inr(row.paidAmount)}</span> : null}
+                </dd>
               </div>
             ) : null}
           </dl>

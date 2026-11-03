@@ -16,10 +16,11 @@ import { inr } from '../format';
 import { PartnerLoginCell } from './PartnerLogin';
 
 /**
- * The Partners tab: the client page link (with its secret key), and the client partners. Their
- * email gets the reminders. Since Phase 8 each partner can also have a login (the Login column,
- * `PartnerLogin.tsx`): the manager invites them, resends the invite, resets the password or
- * disables the login.
+ * The Partners tab: the client partner page link and the client partners. Their email gets the
+ * reminders. Since Phase 8 each partner signs in (the Login column, `PartnerLogin.tsx`): the
+ * manager invites them, resends the invite, resets the password or disables the login, and turns
+ * their publish alert emails on or off (the Alerts column). The page link carries no secret, so
+ * there is no key to reset and no per-partner link.
  */
 
 type Actions = ReturnType<typeof useReceivablesActions>;
@@ -85,32 +86,14 @@ export function PartnersTab({ data, actions }: { data: ManagerSheetDto; actions:
     setEditing(null);
     setError(null);
   };
-  const resetKey = () => {
-    if (!window.confirm('Make a new client link? Every link sent before stops working.')) return;
-    actions.resetKey.mutate(undefined, {
-      onSuccess: () => toastSuccess('New client link made', 'Send the new link to the client partners.'),
-      onError: (e) => toastError('Could not reset the link', errorText(e)),
-    });
-  };
-  const partnerLink = (slug: string) => `${data.publicUrl}${data.publicUrl.includes('?') ? '&' : '?'}partner=${encodeURIComponent(slug)}`;
 
   return (
     <>
       <section className="mb-4 rounded-md border border-line bg-surface-raised p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-[13px] font-semibold uppercase tracking-[.04em] text-ink-2">Client page link</h2>
-            <p className="mt-1 text-[13px] text-ink-muted">Anyone with this link sees the published sheet. No login. A new link stops the old one.</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" asChild>
-              <a href={data.publicUrl} target="_blank" rel="noreferrer">
-                Open client page
-              </a>
-            </Button>
-            <Button variant="quiet" onClick={resetKey} disabled={actions.resetKey.isPending}>
-              New link
-            </Button>
+            <h2 className="text-[13px] font-semibold uppercase tracking-[.04em] text-ink-2">Client partner page</h2>
+            <p className="mt-1 text-[13px] text-ink-muted">Each client partner signs in here and sees only their own invoices of the published version.</p>
           </div>
         </div>
         <div className="mt-3 flex gap-2">
@@ -128,7 +111,7 @@ export function PartnersTab({ data, actions }: { data: ManagerSheetDto; actions:
         </Button>
       </div>
       <div className="relative overflow-x-auto rounded-md border border-line bg-surface-raised">
-        <table className="w-full min-w-[980px] border-collapse text-[13px]">
+        <table className="w-full min-w-[1040px] border-collapse text-[13px]">
           <thead>
             <tr>
               <th className={TH}>Name</th>
@@ -137,6 +120,7 @@ export function PartnersTab({ data, actions }: { data: ManagerSheetDto; actions:
               <th className={`${TH} text-right`}>Open INR</th>
               <th className={TH}>Active</th>
               <th className={TH}>Login</th>
+              <th className={TH}>Alerts</th>
               <th className={TH}>
                 <span className="sr-only">Actions</span>
               </th>
@@ -145,7 +129,7 @@ export function PartnersTab({ data, actions }: { data: ManagerSheetDto; actions:
           <tbody>
             {data.partners.length === 0 ? (
               <tr>
-                <td colSpan={7} className={`${TD} text-ink-muted`}>
+                <td colSpan={8} className={`${TD} text-ink-muted`}>
                   No client partners yet. Add them, then pick a partner on each invoice.
                 </td>
               </tr>
@@ -171,10 +155,20 @@ export function PartnersTab({ data, actions }: { data: ManagerSheetDto; actions:
                   <td className={TD}>
                     <PartnerLoginCell sheetId={data.sheet.id} partner={p} />
                   </td>
+                  <td className={TD}>
+                    <Switch
+                      checked={p.notifyOnPublish}
+                      aria-label={`Email ${p.name} after each Update that changes their invoices`}
+                      title="Email after each Update that changes their invoices"
+                      onCheckedChange={(notifyOnPublish) =>
+                        actions.updatePartner.mutate(
+                          { id: p.id, notifyOnPublish },
+                          { onSuccess: () => toastSuccess(notifyOnPublish ? `${p.name} gets publish alerts` : `No publish alerts for ${p.name}`), onError: (e) => toastError('Not saved', errorText(e)) },
+                        )
+                      }
+                    />
+                  </td>
                   <td className={`${TD} whitespace-nowrap text-right`}>
-                    <Button size="sm" variant="quiet" onClick={() => copy(partnerLink(p.slug), `${p.name.split(' ')[0]}'s link`)}>
-                      Copy their link
-                    </Button>{' '}
                     <Button size="sm" variant="secondary" onClick={() => setEditing(p)}>
                       Edit
                     </Button>

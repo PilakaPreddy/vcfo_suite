@@ -84,6 +84,27 @@ describe('summaryEmailHtml', () => {
     expect(summaryEmailHtml({ rows: [row({ clientName: '<x>', amountInr: 1 })], today: TODAY, liveUrl: 'u', signerName: 's' })).toContain('&lt;x&gt;');
   });
 
+  it('keeps the INR-only layout with no currency columns', () => {
+    expect(html).not.toContain('Currency');
+    expect(html).not.toContain('USD Amount');
+    expect(html).toContain('colspan="5"');
+  });
+
+  it('adds Currency and USD Amount columns when a row is foreign', () => {
+    const mixed = summaryEmailHtml({
+      rows: [...ROWS, row({ id: 'f', clientName: 'Vena US', dueDate: '2026-11-20', amountInr: 999000, currency: 'USD', fcAmount: 12000, fxRate: 83.25 })],
+      today: TODAY,
+      liveUrl: 'u',
+      signerName: 's',
+    });
+    expect(mixed).toContain('>Currency<');
+    expect(mixed).toContain('>USD Amount<');
+    expect(mixed).toContain('colspan="7"');
+    expect(mixed).toContain('>12,000.00<');
+    expect(mixed).toContain('>INR<');
+    expect(mixed).toContain('1,29,10,394'); // total open now includes the booked INR of the USD row
+  });
+
   it('builds the subject from the date', () => {
     expect(summaryEmailSubject(TODAY)).toBe('Receivables update - 3 November');
   });

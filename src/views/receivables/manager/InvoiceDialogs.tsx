@@ -6,10 +6,18 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { addDaysIso, monthLong, sheetDate } from '@/lib/receivables/dates';
-import type { InvoiceInput, Partner, SheetInvoice } from '@/lib/receivables/model';
-import { inr, parseInr } from '../format';
+import { isForeign, realisedFx } from '@/lib/receivables/fx';
+import type { InvoiceInput, Partner, ReceiptInput, SheetInvoice } from '@/lib/receivables/model';
+import { fc, fcText, inr, parseInr, rateText, signedInr } from '../format';
+import { FxFields } from './FxFields';
+import { fxDraftOf, fxFigures, fxPayload, useDraftRate } from './fx-draft';
 
-/** The three dialogs of the Sheet tab: Mark received, Pause reminders and Add invoice. */
+/**
+ * The dialogs of the Sheet tab: Mark received, Pause reminders and Add invoice (the Edit FX
+ * dialog is in FxFields.tsx). Mark received on a USD invoice asks for the USD received and the
+ * INR credited and previews the realised gain or loss and the bank charges; on an INR invoice it
+ * takes an optional TDS.
+ */
 
 type Busy = { busy: boolean; error: string | null };
 
@@ -25,27 +33,38 @@ export function MarkReceivedDialog({
   partnerName: string;
   today: string;
   onClose: () => void;
-  onSave: (input: { paidOn: string; amount: number; part: boolean }) => void;
+  onSave: (input: ReceiptInput) => void;
   state: Busy;
 }) {
+  const foreign = isForeign({ currency: invoice.currency ?? 'INR' });
   const [paidOn, setPaidOn] = useState(today);
-  const [amount, setAmount] = useState(inr(invoice.amountInr));
+  const [amount, setAmount] = useState(foreign ? '' : inr(invoice.amountInr));
+  const [receivedFc, setReceivedFc] = useState(foreign && invoice.fcAmount ? String(invoice.fcAmount) : '');
+  const [tds, setTds] = useState('');
   const [part, setPart] = useState(false);
   const value = parseInr(amount);
-  const bad = !(value > 0);
+  const fcValue = Number(receivedFc.replace(/[$,\s]/g, ''));
+  const tdsValue = tds.trim() ? parseInr(tds) : 0;
+  const badAmount = !(value > 0);
+  const badFc = foreign && !(fcValue > 0);
+  const badTds = !foreign && !(tdsValue >= 0);
+  const bad = badAmount || badFc || badTds;
+  const realised = foreign ? realisedFx({ fcAmount: invoice.fcAmount ?? null, invoiceRate: invoice.fxRate ?? null, receivedFc: fcValue || null, receivedInr: value || null }) : null;
+  const fcDue = fcText(invoice);
+  const save = () => onSave(foreign ? { paidOn, amount: value, part, receivedFc: fcValue } : { paidOn, amount: value, part, ...(tdsValue > 0 ? { tdsInr: tdsValue } : {}) });
   return (
     <Modal
       open
       onOpenChange={(o) => !o && onClose()}
       title={`Mark received · ${invoice.clientName}${invoice.invoiceNo ? ` ${invoice.invoiceNo}` : ''}`}
-      sub={`₹${inr(invoice.amountInr)} due ${sheetDate(invoice.dueDate)} · ${partnerName}`}
+      sub={`${fcDue ? `${fcDue} · ` : ''}₹${inr(invoice.amountInr)} due ${sheetDate(invoice.dueDate)} · ${partnerName}`}
       size="sm"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button disabled={bad || state.busy} onClick={() => onSave({ paidOn, amount: value, part })}>
+          <Button disabled={bad || state.busy} onClick={save}>
             {state.busy ? 'Saving…' : 'Save'}
           </Button>
         </>
@@ -55,9 +74,38 @@ export function MarkReceivedDialog({
         <Field label="Paid on" htmlFor="rcv-paid-on">
           <Input id="rcv-paid-on" type="date" value={paidOn} max={today} onChange={(e) => setPaidOn(e.target.value)} />
         </Field>
-        <Field label="Amount received (INR)" htmlFor="rcv-amount" error={bad ? 'Enter an amount above zero.' : undefined}>
-          <Input id="rcv-amount" inputMode="numeric" value={amount} aria-invalid={bad} onChange={(e) => setAmount(e.target.value)} className="font-mono" />
+        {foreign ? (
+          <Field label={`Amount received (${invoice.currency})`} htmlFor="rcv-fc" error={badFc && receivedFc ? 'Enter an amount above zero.' : undefined}>
+            <Input id="rcv-fc" inputMode="decimal" value={receivedFc} aria-invalid={badFc} onChange={(e) => setReceivedFc(e.target.value)} className="font-mono" />
+          </Field>
+        ) : null}
+        <Field
+          label={foreign ? 'INR credited by the bank' : 'Amount received (INR)'}
+          htmlFor="rcv-amount"
+          error={badAmount && (amount || !foreign) ? 'Enter an amount above zero.' : undefined}
+          hint={foreign ? 'The rupees on the bank credit advice.' : undefined}
+        >
+          <Input id="rcv-amount" inputMode="numeric" value={amount} aria-invalid={badAmount} onChange={(e) => setAmount(e.target.value)} className="font-mono" />
         </Field>
+        {!foreign ? (
+          <Field label="TDS deducted (INR)" htmlFor="rcv-tds" hint="Optional. It settles the invoice along with the amount received." error={badTds ? 'Enter the TDS in rupees.' : undefined}>
+            <Input id="rcv-tds" inputMode="numeric" value={tds} aria-invalid={badTds} onChange={(e) => setTds(e.target.value)} className="font-mono" />
+          </Field>
+        ) : null}
+        {realised ? (
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-md bg-surface-sunken px-3 py-2 text-[12.5px]">
+            <dt className="text-ink-muted">Effective rate</dt>
+            <dd className="text-right font-mono">{rateText(realised.effectiveRate)} (booked {rateText(invoice.fxRate)})</dd>
+            <dt className="text-ink-muted">Booked INR for this {invoice.currency}</dt>
+            <dd className="text-right font-mono">₹{inr(realised.bookedInrForReceived)}</dd>
+            <dt className="text-ink-muted">Realised {realised.realisedInr < 0 ? 'loss' : 'gain'}</dt>
+            <dd className={`text-right font-mono ${realised.realisedInr < 0 ? 'text-danger' : 'text-positive'}`}>{signedInr(realised.realisedInr)}</dd>
+            <dt className="text-ink-muted">Bank charges</dt>
+            <dd className="text-right font-mono">{realised.bankChargesFc > 0 ? `${invoice.currency} ${fc(realised.bankChargesFc)} (₹${inr(realised.bankChargesInr)})` : 'None'}</dd>
+          </dl>
+        ) : foreign && !invoice.fxRate ? (
+          <p className="text-[12.5px] text-ink-muted">No booked rate on this invoice, so the gain or loss cannot be worked out.</p>
+        ) : null}
         <fieldset className="grid gap-2 text-[13px]">
           <legend className="sr-only">Payment kind</legend>
           <label className="flex items-center gap-2">
@@ -67,7 +115,11 @@ export function MarkReceivedDialog({
             <input type="radio" name="rcv-kind" checked={part} onChange={() => setPart(true)} /> Part payment, keep the balance open
           </label>
         </fieldset>
-        <p className="text-[12.5px] text-ink-muted">A small difference from FX, TDS or bank charges still counts as full payment.</p>
+        <p className="text-[12.5px] text-ink-muted">
+          {foreign
+            ? 'Bank charges or a rate difference still count as full payment. An awaited FIRA is added on the Reports tab.'
+            : 'A small difference from TDS or bank charges still counts as full payment.'}
+        </p>
         {state.error ? (
           <p role="alert" className="text-[12.5px] text-danger">
             {state.error}
@@ -134,6 +186,7 @@ export function PauseDialog({
 }
 
 export function AddInvoiceDialog({
+  sheetId,
   months,
   partners,
   clients,
@@ -142,6 +195,7 @@ export function AddInvoiceDialog({
   onSave,
   state,
 }: {
+  sheetId: string;
   months: string[];
   partners: Partner[];
   clients: string[];
@@ -158,8 +212,11 @@ export function AddInvoiceDialog({
   const [invoiceMonth, setInvoiceMonth] = useState(months.at(-1) ?? thisMonth);
   const [dueDate, setDueDate] = useState(addDaysIso(today, 30));
   const [amount, setAmount] = useState('');
-  const value = parseInr(amount);
-  const ok = clientName.trim() && value > 0 && dueDate;
+  const [fx, setFx] = useState(() => fxDraftOf(null, today));
+  const stored = useDraftRate(sheetId, fx);
+  const figures = fxFigures(fx, stored);
+  const value = fx.currency === 'USD' ? (figures.bookedInr ?? NaN) : parseInr(amount);
+  const ok = clientName.trim() && value > 0 && dueDate && figures.ok;
   return (
     <Modal
       open
@@ -174,7 +231,9 @@ export function AddInvoiceDialog({
           </Button>
           <Button
             disabled={!ok || state.busy}
-            onClick={() => onSave({ clientName: clientName.trim(), invoiceNo: invoiceNo.trim() || null, partnerId: partnerId || null, invoiceMonth, dueDate, amountInr: value })}
+            onClick={() =>
+              onSave({ clientName: clientName.trim(), invoiceNo: invoiceNo.trim() || null, partnerId: partnerId || null, invoiceMonth, dueDate, amountInr: value, ...fxPayload(fx, stored) })
+            }
           >
             Add to draft
           </Button>
@@ -219,9 +278,12 @@ export function AddInvoiceDialog({
             <Input id="rcv-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           </Field>
         </div>
-        <Field label="Amount (INR)" htmlFor="rcv-amt">
-          <Input id="rcv-amt" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} className="font-mono" />
-        </Field>
+        <FxFields draft={fx} onChange={setFx} stored={stored} idPrefix="rcv-add" />
+        {fx.currency === 'INR' ? (
+          <Field label="Amount (INR)" htmlFor="rcv-amt">
+            <Input id="rcv-amt" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} className="font-mono" />
+          </Field>
+        ) : null}
         {state.error ? (
           <p role="alert" className="text-[12.5px] text-danger">
             {state.error}

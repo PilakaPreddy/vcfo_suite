@@ -139,6 +139,15 @@ describe('the partner home', () => {
     expect(writes()).toHaveLength(0);
   });
 
+  it('keeps a USD row’s currency and amounts but drops the TDS and the dispute', async () => {
+    const usd = snapRow(MINE, P_ME, { currency: 'USD', fcAmount: 12000, fxRate: 83.25, amountInr: 999000, tdsInr: 500, disputed: true });
+    results = [[link()], [version([usd])], [], []];
+    const home = await repo.partnerHome(ctx('partner'), TODAY);
+    expect(home.rows[0]).toMatchObject({ currency: 'USD', fcAmount: 12000, fxRate: 83.25, amountInr: 999000 });
+    expect(home.rows[0]).not.toHaveProperty('tdsInr');
+    expect(home.rows[0]).not.toHaveProperty('disputed');
+  });
+
   it('is empty, with no published date, before the first Update', async () => {
     results = [[link({ publishedVersionId: null })]];
     const home = await repo.partnerHome(ctx('partner'), TODAY);

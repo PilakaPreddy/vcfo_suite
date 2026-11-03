@@ -119,4 +119,5 @@ export type CreditNoteDto = {
   createdAt: string;
 };
 
-export type FxRatesDto = { rates: FxRateDto[]; today: RateInForceDto | null };
+/** `onDate` is present when the request named a day: the USD rate in force on it, or null. */
+export type FxRatesDto = { rates: FxRateDto[]; today: RateInForceDto | null; onDate?: RateInForceDto | null };

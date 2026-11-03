@@ -4,11 +4,15 @@ import { parseJsonBody } from '@/lib/api/parse-body';
 import { updatePartner } from '@/db/repositories/receivables';
 import { denied, guardReceivables, receivablesError, type RouteContext } from '../../_respond';
 
-/** PATCH /api/receivables/partners/:id — rename, change the email, or deactivate a client partner. */
+/**
+ * PATCH /api/receivables/partners/:id — rename, change the email, deactivate a client partner, or
+ * turn their publish alert emails on or off (`notifyOnPublish`).
+ */
 const schema = z.object({
   name: z.string().min(1, 'name').max(120, 'name').optional(),
   email: z.string().email('email').max(200, 'email').optional(),
   active: z.boolean().optional(),
+  notifyOnPublish: z.boolean().optional(),
 });
 
 export async function PATCH(request: Request, context: RouteContext) {

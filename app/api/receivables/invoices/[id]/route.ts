@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { deleteInvoice, updateInvoice } from '@/db/repositories/receivables';
-import { amount, denied, guardReceivables, isoDate, receivablesError, type RouteContext } from '../../_respond';
+import { amount, denied, fxFields, guardReceivables, isoDate, receivablesError, type RouteContext } from '../../_respond';
 
 /**
  * PATCH  /api/receivables/invoices/:id — an inline edit from the sheet (one or more fields).
@@ -15,6 +15,7 @@ const schema = z.object({
   partnerId: z.string().uuid('partner').nullable().optional(),
   dueDate: isoDate.optional(),
   amountInr: amount.optional(),
+  ...fxFields,
 });
 
 export async function PATCH(request: Request, context: RouteContext) {

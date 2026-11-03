@@ -26,3 +26,12 @@ export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'invalid_date');
 export const amount = z.number().positive('amount').max(1e12, 'amount');
 
 export type RouteContext = { params: Promise<{ id: string }> };
+
+/** Phase 9: the invoice currency (only INR and USD today) and the foreign-currency fields. */
+export const currency = z.enum(['INR', 'USD'], { message: 'currency' });
+export const fxFields = {
+  currency: currency.optional(),
+  fcAmount: z.number().positive('fc_amount').max(1e12, 'fc_amount').nullable().optional(),
+  fxRate: z.number().positive('fx_rate').max(100_000, 'fx_rate').nullable().optional(),
+  invoiceDate: isoDate.nullable().optional(),
+};

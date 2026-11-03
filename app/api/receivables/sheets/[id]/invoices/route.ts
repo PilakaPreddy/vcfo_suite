@@ -2,9 +2,12 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { addInvoice } from '@/db/repositories/receivables';
-import { amount, denied, guardReceivables, isoDate, receivablesError, type RouteContext } from '../../../_respond';
+import { amount, denied, fxFields, guardReceivables, isoDate, receivablesError, type RouteContext } from '../../../_respond';
 
-/** POST /api/receivables/sheets/:id/invoices — add an invoice to the draft. */
+/**
+ * POST /api/receivables/sheets/:id/invoices — add an invoice to the draft. A USD invoice sends
+ * `currency`, `fcAmount`, `fxRate` and `invoiceDate`; its INR is then booked at that rate.
+ */
 const schema = z.object({
   invoiceMonth: isoDate,
   clientName: z.string().min(1, 'client').max(120, 'client'),
@@ -12,6 +15,7 @@ const schema = z.object({
   partnerId: z.string().uuid('partner').nullable().optional(),
   dueDate: isoDate,
   amountInr: amount,
+  ...fxFields,
 });
 
 export async function POST(request: Request, context: RouteContext) {

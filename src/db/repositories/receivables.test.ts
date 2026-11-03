@@ -151,6 +151,65 @@ describe('the sheet’s manager', () => {
     expect(writes()[0].set).not.toHaveProperty('status');
   });
 
+  it('books a USD invoice at its rate and ignores the typed INR', async () => {
+    results = [[sheetRow()], [invoiceRow({ currency: 'USD', fcAmount: '12000.00', fxRate: '83.250000', amountInr: '999000.00' })], []];
+    const inv = await repo.addInvoice(me, SHEET, {
+      invoiceMonth: '2026-10-01',
+      clientName: 'Vena',
+      dueDate: '2026-11-30',
+      amountInr: 1,
+      currency: 'USD',
+      fcAmount: 12000,
+      fxRate: 83.25,
+      invoiceDate: '2026-10-31',
+    });
+    expect(writes()[0].values).toMatchObject({ currency: 'USD', fcAmount: '12000.00', fxRate: '83.250000', invoiceDate: '2026-10-31', amountInr: '999000.00' });
+    expect(inv).toMatchObject({ currency: 'USD', fcAmount: 12000, fxRate: 83.25 });
+  });
+
+  it('refuses a USD invoice without a rate or an invoice date', async () => {
+    results = [[sheetRow()]];
+    await expect(repo.addInvoice(me, SHEET, { invoiceMonth: '2026-10-01', clientName: 'Vena', dueDate: '2026-11-30', amountInr: 1, currency: 'USD', fcAmount: 12000, invoiceDate: '2026-10-31' })).rejects.toMatchObject({ code: 'fx_rate' });
+    results = [[sheetRow()]];
+    await expect(repo.addInvoice(me, SHEET, { invoiceMonth: '2026-10-01', clientName: 'Vena', dueDate: '2026-11-30', amountInr: 1, currency: 'USD', fcAmount: 12000, fxRate: 83 })).rejects.toMatchObject({ code: 'invoice_date' });
+    results = [[sheetRow()]];
+    await expect(repo.addInvoice(me, SHEET, { invoiceMonth: '2026-10-01', clientName: 'Vena', dueDate: '2026-11-30', amountInr: 1, currency: 'EUR' })).rejects.toMatchObject({ code: 'currency' });
+    expect(writes()).toHaveLength(0);
+  });
+
+  it('moves the open INR with an edited booked rate', async () => {
+    const usd = { currency: 'USD', fcAmount: '12000.00', fxRate: '83.250000', invoiceDate: '2026-10-31', amountInr: '999000.00' };
+    results = [[invoiceRow(usd)], [sheetRow()], [invoiceRow({ ...usd, fxRate: '84.000000', amountInr: '1008000.00' })], [], []];
+    await repo.updateInvoice(me, INVOICE, { fxRate: 84 });
+    expect(writes()[0].set).toMatchObject({ fxRate: '84.000000', amountInr: '1008000.00' });
+    expect(writes()[0].set).not.toHaveProperty('currency');
+  });
+
+  it('stores the USD received and the INR credited on a foreign receipt', async () => {
+    const usd = { currency: 'USD', fcAmount: '12000.00', fxRate: '83.250000', amountInr: '999000.00' };
+    results = [[invoiceRow(usd)], [sheetRow()], [invoiceRow({ ...usd, status: 'received', paidOn: '2026-11-03', paidAmount: '995000.00', receivedFc: '11950.00' })], []];
+    const inv = await repo.markReceived(me, INVOICE, { paidOn: '2026-11-03', amount: 995000, receivedFc: 11950, tdsInr: 500 });
+    expect(writes()[0].set).toMatchObject({ status: 'received', paidAmount: '995000.00', receivedFc: '11950.00' });
+    // TDS applies to INR invoices only.
+    expect(writes()[0].set).not.toHaveProperty('tdsInr');
+    expect(inv).toMatchObject({ receivedFc: 11950, paidAmount: 995000 });
+  });
+
+  it('lowers a USD balance by the booked INR of a part receipt', async () => {
+    const usd = { currency: 'USD', fcAmount: '12000.00', fxRate: '83.250000', amountInr: '999000.00' };
+    results = [[invoiceRow(usd)], [sheetRow()], [invoiceRow({ ...usd, fcAmount: '7000.00', amountInr: '582750.00' })], []];
+    await repo.markReceived(me, INVOICE, { paidOn: '2026-11-03', amount: 420000, receivedFc: 5000, part: true });
+    expect(writes()[0].set).toMatchObject({ amountInr: '582750.00', fcAmount: '7000.00', partPaid: '420000.00' });
+  });
+
+  it('adds the TDS of an INR receipt and lets it settle a part payment', async () => {
+    results = [[invoiceRow({ amountInr: '100000.00', tdsInr: '0' })], [sheetRow()], [invoiceRow({ amountInr: '40000.00' })], []];
+    await repo.markReceived(me, INVOICE, { paidOn: '2026-11-03', amount: 50000, tdsInr: 10000, part: true });
+    expect(writes()[0].set).toMatchObject({ amountInr: '40000.00', partPaid: '50000.00', tdsInr: '10000.00' });
+    results = [[invoiceRow({ tdsInr: '0' })], [sheetRow()]];
+    await expect(repo.markReceived(me, INVOICE, { paidOn: '2026-11-03', amount: 5, tdsInr: -1 })).rejects.toMatchObject({ code: 'tds' });
+  });
+
   it('logs a reminder pause as not affecting the page', async () => {
     results = [[invoiceRow()], [sheetRow()], [invoiceRow({ remindersPausedUntil: '2026-11-12' })], []];
     await repo.setReminderPause(me, INVOICE, { until: '2026-11-12', reason: 'Promised by 12 Nov' });

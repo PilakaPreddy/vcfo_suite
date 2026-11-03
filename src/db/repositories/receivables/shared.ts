@@ -97,6 +97,13 @@ export function toInvoice(row: InvoiceRow): SheetInvoice {
     partPaid: num(row.partPaid) ?? 0,
     remindersPausedUntil: row.remindersPausedUntil ? String(row.remindersPausedUntil) : null,
     pauseReason: row.pauseReason,
+    currency: (row.currency ?? 'INR').trim().toUpperCase() || 'INR',
+    fcAmount: num(row.fcAmount),
+    fxRate: num(row.fxRate),
+    invoiceDate: row.invoiceDate ? String(row.invoiceDate) : null,
+    receivedFc: num(row.receivedFc),
+    tdsInr: num(row.tdsInr) ?? 0,
+    disputed: Boolean(row.disputedAt) && !row.disputeResolvedAt,
   };
 }
 

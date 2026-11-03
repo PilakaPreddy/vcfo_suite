@@ -53,6 +53,24 @@ export type SheetInvoice = {
   partPaid: number;
   remindersPausedUntil: string | null;
   pauseReason: string | null;
+  /*
+   * Phase 9, all optional: snapshots published before Phase 9 do not carry them and read as an
+   * INR invoice with no TDS and no dispute.
+   */
+  /** `INR` or a foreign currency (today only `USD`). Missing reads as INR. */
+  currency?: string;
+  /** The invoiced amount in the foreign currency; null for INR. */
+  fcAmount?: number | null;
+  /** The booked rate (INR per unit) on the invoice date; null for INR. */
+  fxRate?: number | null;
+  /** The invoice date, the FX booking date of a foreign invoice. */
+  invoiceDate?: string | null;
+  /** The foreign amount that actually arrived; `paidAmount` holds the INR credited. */
+  receivedFc?: number | null;
+  /** TDS the client deducted, in INR. */
+  tdsInr?: number;
+  /** True while a dispute is open. Never shown to the client partner. */
+  disputed?: boolean;
 };
 
 /** One row of a published version: the invoice plus its partner, frozen at publish time. */
@@ -79,6 +97,23 @@ export type InvoiceInput = {
   partnerId?: string | null;
   dueDate: string;
   amountInr: number;
+  /** Phase 9: `INR` (the default) or `USD`. A USD invoice also needs `fcAmount` and `fxRate`. */
+  currency?: string;
+  fcAmount?: number | null;
+  fxRate?: number | null;
+  invoiceDate?: string | null;
 };
 
-export type InvoicePatch = Partial<Pick<InvoiceInput, 'clientName' | 'invoiceNo' | 'partnerId' | 'dueDate' | 'amountInr' | 'invoiceMonth'>>;
+export type InvoicePatch = Partial<
+  Pick<InvoiceInput, 'clientName' | 'invoiceNo' | 'partnerId' | 'dueDate' | 'amountInr' | 'invoiceMonth' | 'currency' | 'fcAmount' | 'fxRate' | 'invoiceDate'>
+>;
+
+/** Mark received (Phase 9): `amount` is the INR credited; `receivedFc` the foreign amount that arrived. */
+export type ReceiptInput = {
+  paidOn: string;
+  amount: number;
+  part?: boolean;
+  receivedFc?: number | null;
+  /** TDS the client deducted from an INR invoice; it settles the balance along with `amount`. */
+  tdsInr?: number | null;
+};

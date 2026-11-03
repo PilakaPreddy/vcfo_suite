@@ -3,6 +3,7 @@
  * timestamps arrive as ISO strings.
  */
 import type { EmailRecipient, Partner, ReminderRules, SheetInvoice, SnapshotRow } from './model';
+import type { RateInForceDto } from './reports-wire';
 
 export type SheetDto = {
   id: string;
@@ -19,8 +20,10 @@ export type ManagerSheetDto = {
   invoices: ManagerInvoiceDto[];
   unpublishedChanges: number;
   latestVersion: { id: string; seq: number; publishedAt: string; publishedByName: string } | null;
-  /** The client page link, key included. */
+  /** The client partner page link (`/receivables`; the partners sign in there). */
   publicUrl: string;
+  /** Phase 9: the USD rate in force today (or the latest within ten days); null before the first fetch. */
+  usdRate: RateInForceDto | null;
 };
 
 /** Phase 8: a client partner's login, as the Partners tab shows it. */

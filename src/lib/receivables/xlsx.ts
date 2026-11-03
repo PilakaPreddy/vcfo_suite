@@ -1,13 +1,17 @@
 import ExcelJS from 'exceljs';
 import { daysLeft, monthBlockTitle, monthShort } from './dates';
 import type { SnapshotRow } from './model';
-import { isOpen, monthsOf, receivedThisWeek, sumInr } from './summary';
+import { foreignAmountOf, isForeignRow, isOpen, monthsOf, receivedThisWeek, sumInr } from './summary';
 
 /**
  * RECEIVABLES EXCEL EXPORT — the published version as an .xlsx in the finance team's own layout
  * (sheet "Summary": month blocks with Client, Due Date, Invoice Amount INR, No of Days Over Due,
  * Remarks and totals), plus a flat "Invoices" sheet with one row per invoice for filtering.
  * Used for the email attachment and the Download Excel buttons.
+ *
+ * Phase 9: when any row is in a foreign currency, the Summary blocks gain Currency and USD Amount
+ * columns before the INR, and the Invoices sheet gains Currency, USD amount and Booked rate after
+ * Amount INR. With every row in INR both sheets keep exactly the layout above.
  */
 
 const BLACK = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF000000' } } as const;
@@ -23,38 +27,48 @@ export async function receivablesWorkbook(rows: SnapshotRow[], today: string): P
   const wb = new ExcelJS.Workbook();
   wb.creator = 'VCFO Suite';
   const ws = wb.addWorksheet('Summary');
-  ws.columns = [{ width: 24 }, { width: 14 }, { width: 20 }, { width: 20 }, { width: 14 }];
+  const foreign = rows.some(isForeignRow);
+  const width = foreign ? 7 : 5;
+  /** The 1-based column of the INR amount on the Summary sheet. */
+  const inrCol = foreign ? 5 : 3;
+  ws.columns = foreign
+    ? [{ width: 24 }, { width: 14 }, { width: 10 }, { width: 16 }, { width: 20 }, { width: 20 }, { width: 14 }]
+    : [{ width: 24 }, { width: 14 }, { width: 20 }, { width: 20 }, { width: 14 }];
 
   const boxRow = (r: ExcelJS.Row) => r.eachCell({ includeEmpty: true }, (c) => (c.border = BOX));
+  /** The Currency and USD Amount cells of a row, only when the workbook has a foreign row. */
+  const fxCells = (r: SnapshotRow): ExcelJS.CellValue[] => (foreign ? [isForeignRow(r) ? (r.currency ?? '').toUpperCase() : 'INR', foreignAmountOf(r) ?? ''] : []);
+  const pad = foreign ? ['', ''] : [];
 
   for (const m of monthsOf(rows)) {
     const list = rows.filter((r) => r.invoiceMonth === m && (isOpen(r) || receivedThisWeek(r, today))).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
     if (!list.length) continue;
     const title = ws.addRow([monthBlockTitle(m)]);
-    ws.mergeCells(title.number, 1, title.number, 5);
+    ws.mergeCells(title.number, 1, title.number, width);
     title.getCell(1).fill = BLACK;
     title.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     title.getCell(1).alignment = { horizontal: 'center' };
-    const head = ws.addRow(['Client', 'Due Date', 'Invoice Amount INR', 'No of Days Over Due', 'Remarks']);
+    const head = ws.addRow(['Client', 'Due Date', ...(foreign ? ['Currency', 'USD Amount'] : []), 'Invoice Amount INR', 'No of Days Over Due', 'Remarks']);
     head.font = { bold: true };
     boxRow(head);
     for (const r of list) {
       const dl = daysLeft(r.dueDate, today);
-      const row = ws.addRow([r.clientName, isoToDate(r.dueDate), isOpen(r) ? r.amountInr : r.paidAmount ?? r.amountInr, isOpen(r) ? (dl < 0 ? -dl : '-') : '', isOpen(r) ? '' : 'Received']);
+      const row = ws.addRow([r.clientName, isoToDate(r.dueDate), ...fxCells(r), isOpen(r) ? r.amountInr : r.paidAmount ?? r.amountInr, isOpen(r) ? (dl < 0 ? -dl : '-') : '', isOpen(r) ? '' : 'Received']);
       row.getCell(2).numFmt = 'dd-mmm-yy';
-      row.getCell(3).numFmt = '#,##,##0';
+      if (foreign) row.getCell(4).numFmt = '#,##0.00';
+      row.getCell(inrCol).numFmt = '#,##,##0';
       if (!isOpen(r)) row.eachCell({ includeEmpty: true }, (c) => (c.fill = GREEN));
       boxRow(row);
     }
-    const total = ws.addRow([`${monthShort(m)}- Receivables`, '', sumInr(list.filter(isOpen)), '', '']);
+    const total = ws.addRow([`${monthShort(m)}- Receivables`, '', ...pad, sumInr(list.filter(isOpen)), '', '']);
     total.font = { bold: true };
-    total.getCell(3).numFmt = '#,##,##0';
+    total.getCell(inrCol).numFmt = '#,##,##0';
     boxRow(total);
     ws.addRow([]);
   }
-  const grand = ws.addRow(['Total Receivables', '', sumInr(rows.filter(isOpen)), '', '']);
+  const grand = ws.addRow(['Total Receivables', '', ...pad, sumInr(rows.filter(isOpen)), '', '']);
   grand.font = { bold: true };
-  grand.getCell(3).numFmt = '#,##,##0';
+  grand.getCell(inrCol).numFmt = '#,##,##0';
   boxRow(grand);
 
   const flat = wb.addWorksheet('Invoices');
@@ -65,18 +79,36 @@ export async function receivablesWorkbook(rows: SnapshotRow[], today: string): P
     { header: 'Client partner', width: 22 },
     { header: 'Due date', width: 12 },
     { header: 'Amount INR', width: 16 },
+    ...(foreign ? [{ header: 'Currency', width: 10 }, { header: 'USD amount', width: 14 }, { header: 'Booked rate', width: 12 }] : []),
     { header: 'Days overdue', width: 13 },
     { header: 'Status', width: 11 },
     { header: 'Paid on', width: 12 },
   ];
   flat.getRow(1).font = { bold: true };
+  const paidCol = foreign ? 12 : 9;
   for (const r of [...rows].sort((a, b) => a.invoiceMonth.localeCompare(b.invoiceMonth) || a.dueDate.localeCompare(b.dueDate))) {
     const dl = daysLeft(r.dueDate, today);
-    const row = flat.addRow([isoToDate(r.invoiceMonth), r.clientName, r.invoiceNo ?? '', r.partnerName ?? '', isoToDate(r.dueDate), isOpen(r) ? r.amountInr : r.paidAmount ?? r.amountInr, isOpen(r) && dl < 0 ? -dl : '', isOpen(r) ? 'Open' : 'Received', r.paidOn ? isoToDate(r.paidOn) : '']);
+    const fx: ExcelJS.CellValue[] = foreign ? [isForeignRow(r) ? (r.currency ?? '').toUpperCase() : 'INR', foreignAmountOf(r) ?? '', isForeignRow(r) && r.fxRate ? r.fxRate : ''] : [];
+    const row = flat.addRow([
+      isoToDate(r.invoiceMonth),
+      r.clientName,
+      r.invoiceNo ?? '',
+      r.partnerName ?? '',
+      isoToDate(r.dueDate),
+      isOpen(r) ? r.amountInr : r.paidAmount ?? r.amountInr,
+      ...fx,
+      isOpen(r) && dl < 0 ? -dl : '',
+      isOpen(r) ? 'Open' : 'Received',
+      r.paidOn ? isoToDate(r.paidOn) : '',
+    ]);
     row.getCell(1).numFmt = 'mmm-yy';
     row.getCell(5).numFmt = 'dd-mmm-yy';
     row.getCell(6).numFmt = '#,##,##0';
-    if (r.paidOn) row.getCell(9).numFmt = 'dd-mmm-yy';
+    if (foreign) {
+      row.getCell(8).numFmt = '#,##0.00';
+      row.getCell(9).numFmt = '0.0000';
+    }
+    if (r.paidOn) row.getCell(paidCol).numFmt = 'dd-mmm-yy';
   }
 
   const buf = await wb.xlsx.writeBuffer();

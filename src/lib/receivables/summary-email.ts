@@ -1,7 +1,7 @@
 import { escapeHtml } from '@/lib/email/email-layout';
 import { daysLeft, monthBlockTitle, monthLong, monthShort, sheetDate } from './dates';
 import type { SnapshotRow } from './model';
-import { isOpen, monthsOf, receivedThisWeek, sumInr } from './summary';
+import { foreignAmountOf, isForeignRow, isOpen, monthsOf, receivedThisWeek, sumInr } from './summary';
 
 /**
  * RECEIVABLES SUMMARY EMAIL — the body of "RE: Receivables update", in the format SBC's finance
@@ -9,10 +9,14 @@ import { isOpen, monthsOf, receivedThisWeek, sumInr } from './summary';
  * Client, Due Date, Invoice Amount INR, No of Days Over Due and Remarks, received rows shaded green
  * with "Received", a month total of what is still open, and the total receivables. Built from a
  * published version only, so the email never shows draft edits. Inline styles, for Outlook.
+ *
+ * Phase 9: when any row is in a foreign currency, each table gains Currency and USD Amount
+ * columns before the INR. With every row in INR the email is exactly the format above.
  */
 
 const inr = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 const money = (n: number) => inr.format(Math.round(n));
+const fcFormat = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const CELL = 'border:1px solid #333;padding:3px 8px;font-size:12px;font-family:Calibri,Arial,sans-serif;';
 const HEAD = `${CELL}background:#000;color:#fff;font-weight:bold;text-align:center;`;
@@ -46,6 +50,17 @@ export function summaryEmailHtml(input: SummaryEmailInput): string {
         .join('')}</ul>`
     : '<p>No new payments have been received since the last update.</p>';
 
+  const foreign = rows.some(isForeignRow);
+  const cols = foreign ? 7 : 5;
+  const fxCells = (r: SnapshotRow, bg: string) => {
+    if (!foreign) return '';
+    const fc = foreignAmountOf(r);
+    return `<td style="${CELL}${bg}text-align:center">${isForeignRow(r) ? escapeHtml((r.currency ?? '').toUpperCase()) : 'INR'}</td><td style="${CELL}${bg}text-align:right">${fc === null ? '' : fcFormat.format(fc)}</td>`;
+  };
+  const blank = `<td style="${CELL}"></td>`;
+  const heads = foreign
+    ? ['Client', 'Due Date', 'Currency', 'USD Amount', 'Invoice Amount INR', 'No of Days Over Due', 'Remarks']
+    : ['Client', 'Due Date', 'Invoice Amount INR', 'No of Days Over Due', 'Remarks'];
   const tables = monthsOf(rows)
     .map((m) => {
       const list = rows
@@ -57,13 +72,13 @@ export function summaryEmailHtml(input: SummaryEmailInput): string {
           const bg = isOpen(r) ? '' : PAID_BG;
           const dl = daysLeft(r.dueDate, input.today);
           const overdue = isOpen(r) && dl < 0 ? String(-dl) : isOpen(r) ? '-' : '';
-          return `<tr><td style="${CELL}${bg}">${escapeHtml(r.clientName)}</td><td style="${CELL}${bg}text-align:center">${sheetDate(r.dueDate)}</td><td style="${CELL}${bg}text-align:right">${money(isOpen(r) ? r.amountInr : r.paidAmount ?? r.amountInr)}</td><td style="${CELL}${bg}text-align:center">${overdue}</td><td style="${CELL}${bg}">${isOpen(r) ? '' : 'Received'}</td></tr>`;
+          return `<tr><td style="${CELL}${bg}">${escapeHtml(r.clientName)}</td><td style="${CELL}${bg}text-align:center">${sheetDate(r.dueDate)}</td>${fxCells(r, bg)}<td style="${CELL}${bg}text-align:right">${money(isOpen(r) ? r.amountInr : r.paidAmount ?? r.amountInr)}</td><td style="${CELL}${bg}text-align:center">${overdue}</td><td style="${CELL}${bg}">${isOpen(r) ? '' : 'Received'}</td></tr>`;
         })
         .join('');
       const title = monthBlockTitle(m).replace(' Receivables', ' -Receivables');
-      return `<table style="${TABLE}"><tr><td colspan="5" style="${HEAD}">${escapeHtml(title)}</td></tr><tr>${['Client', 'Due Date', 'Invoice Amount INR', 'No of Days Over Due', 'Remarks']
+      return `<table style="${TABLE}"><tr><td colspan="${cols}" style="${HEAD}">${escapeHtml(title)}</td></tr><tr>${heads
         .map((h) => `<td style="${CELL}font-weight:bold;text-align:center">${h}</td>`)
-        .join('')}</tr>${body}<tr><td style="${CELL}font-weight:bold;text-align:center">${escapeHtml(monthShort(m))}- Receivables</td><td style="${CELL}"></td><td style="${CELL}font-weight:bold;text-align:right">${money(sumInr(list.filter(isOpen)))}</td><td style="${CELL}"></td><td style="${CELL}"></td></tr></table>`;
+        .join('')}</tr>${body}<tr><td style="${CELL}font-weight:bold;text-align:center">${escapeHtml(monthShort(m))}- Receivables</td><td style="${CELL}"></td>${foreign ? blank + blank : ''}<td style="${CELL}font-weight:bold;text-align:right">${money(sumInr(list.filter(isOpen)))}</td><td style="${CELL}"></td><td style="${CELL}"></td></tr></table>`;
     })
     .join('');
 

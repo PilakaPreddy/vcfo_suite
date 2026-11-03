@@ -98,14 +98,6 @@ export async function updateSheetSettings(ctx: AuthContext, sheetId: string, pat
   return row;
 }
 
-/** A new secret key: every link sent before stops working. */
-export async function resetPublicKey(ctx: AuthContext, sheetId: string): Promise<string> {
-  const sheet = await scopedSheet(ctx, sheetId);
-  const key = newPublicKey();
-  await db.update(receivableSheets).set({ publicKey: key, updatedAt: new Date() }).where(eq(receivableSheets.id, sheet.id));
-  return key;
-}
-
 /**
  * SYSTEM (no AuthContext): creates a sheet for the seed and import scripts, which run outside a
  * request. Not reachable from any route.

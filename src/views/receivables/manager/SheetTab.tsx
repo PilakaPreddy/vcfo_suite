@@ -10,10 +10,12 @@ import type { InvoicePatch, Partner, SheetInvoice } from '@/lib/receivables/mode
 import { nextReminderDate } from '@/lib/receivables/reminder-rule';
 import { monthsOf, payTiming, receivedThisWeek, sumInr } from '@/lib/receivables/summary';
 import type { ManagerInvoiceDto, ManagerSheetDto } from '@/lib/receivables/wire';
+import { fxChange, isForeign } from '@/lib/receivables/fx';
 import type { useReceivablesActions } from '@/hooks/use-receivables';
-import { inr, parseInr, stamp } from '../format';
+import { fcText, inr, parseInr, rateText, signedInr, stamp } from '../format';
 import { StatusChip } from '../StatusChip';
 import { AddInvoiceDialog, MarkReceivedDialog, PauseDialog } from './InvoiceDialogs';
+import { FxEditDialog } from './FxFields';
 import { ComposeSummary } from './ComposeSummary';
 import { ShareDialog } from './ShareDialog';
 import { NotesButton, NotesDialog, PromiseChip } from './InvoiceNotes';
@@ -21,10 +23,44 @@ import { NotesButton, NotesDialog, PromiseChip } from './InvoiceNotes';
 /**
  * The Sheet tab (prototype "Sheet"): today's month-block layout, one row per invoice, every cell
  * edited in place. Edits land in the draft; Update publishes them to the client page.
+ *
+ * Phase 9: when any open invoice is in USD the table gains an FX column. A USD row shows its USD
+ * amount, the booked rate, the INR at today's rate and the change against the booked INR; its INR
+ * amount is the booked INR and is changed through Edit FX, not typed. INR rows are unchanged. An
+ * invoice under dispute carries a Disputed chip.
  */
 
 type Actions = ReturnType<typeof useReceivablesActions>;
-type Dialog = { kind: 'mark' | 'pause'; invoice: SheetInvoice } | { kind: 'notes'; invoice: ManagerInvoiceDto } | { kind: 'add' } | null;
+type Dialog = { kind: 'mark' | 'pause' | 'fx'; invoice: SheetInvoice } | { kind: 'notes'; invoice: ManagerInvoiceDto } | { kind: 'add' } | null;
+
+const fxInput = (inv: SheetInvoice) => ({ currency: inv.currency ?? 'INR', fcAmount: inv.fcAmount ?? null, invoiceRate: inv.fxRate ?? null, amountInr: inv.amountInr });
+
+/** The FX cell of a USD row: USD amount, booked rate, INR today and the change. */
+function FxCell({ invoice, todayRate, onEdit }: { invoice: SheetInvoice; todayRate: number | null; onEdit: () => void }) {
+  const change = fxChange(fxInput(invoice), todayRate);
+  return (
+    <div className="min-w-[170px] text-[12px] leading-[1.45]">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono">{fcText(invoice) ?? `${invoice.currency} —`}</span>
+        <Button size="sm" variant="quiet" onClick={onEdit} aria-label={`Edit currency of ${invoice.clientName}${invoice.invoiceNo ? ` ${invoice.invoiceNo}` : ''}`}>
+          Edit
+        </Button>
+      </div>
+      <div className="text-ink-muted">Booked @ {rateText(invoice.fxRate)}</div>
+      {change ? (
+        <div>
+          Today ₹{inr(change.inrToday)}{' '}
+          <span className={change.changeInr < 0 ? 'text-danger' : change.changeInr > 0 ? 'text-positive' : 'text-ink-muted'}>
+            {signedInr(change.changeInr)} ({change.changePct > 0 ? '+' : ''}
+            {change.changePct.toFixed(2)}%)
+          </span>
+        </div>
+      ) : (
+        <div className="text-ink-faint">{todayRate ? 'No booked rate' : 'No rate for today yet'}</div>
+      )}
+    </div>
+  );
+}
 
 const CELL = 'h-8 w-full rounded-md border border-transparent bg-transparent px-1.5 text-[13px] outline-none placeholder:text-ink-faint placeholder:font-sans hover:border-line focus:border-brand focus:bg-surface-raised focus:ring-4 focus:ring-focus-ring/25';
 const TH = 'whitespace-nowrap bg-surface-sunken px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-[.04em] text-ink-muted';
@@ -139,6 +175,9 @@ export function SheetTab({ data, actions, today }: { data: ManagerSheetDto; acti
   );
   const received = data.invoices.filter((i) => receivedThisWeek(i, today) && (partner === 'all' || i.partnerId === partner));
   const clients = [...new Set(data.invoices.map((i) => i.clientName))].sort();
+  const hasForeign = data.invoices.some((i) => i.status === 'open' && isForeign(fxInput(i)));
+  const cols = hasForeign ? 9 : 8;
+  const todayRate = data.usdRate?.rate ?? null;
 
   const edit = (inv: SheetInvoice, patch: InvoicePatch) =>
     actions.updateInvoice.mutate({ id: inv.id, patch }, { onError: (e) => toastError('Not saved', errorText(e)) });
@@ -176,7 +215,7 @@ export function SheetTab({ data, actions, today }: { data: ManagerSheetDto; acti
       </div>
 
       <div className="relative mb-4 overflow-x-auto rounded-md border border-line bg-surface-raised">
-        <table className="w-full min-w-[1040px] border-collapse text-[13px]">
+        <table className={`w-full ${hasForeign ? 'min-w-[1240px]' : 'min-w-[1040px]'} border-collapse text-[13px]`}>
           <thead>
             <tr>
               <th className={TH}>Client</th>
@@ -184,6 +223,7 @@ export function SheetTab({ data, actions, today }: { data: ManagerSheetDto; acti
               <th className={TH}>Client partner</th>
               <th className={TH}>Due date</th>
               <th className={`${TH} text-right`}>Amount INR</th>
+              {hasForeign ? <th className={TH}>{`FX${data.usdRate ? ` · USD ${rateText(data.usdRate.rate)} (${sheetDate(data.usdRate.rateDate)})` : ''}`}</th> : null}
               <th className={TH}>Status</th>
               <th className={TH}>Next reminder</th>
               <th className={TH}>
@@ -196,18 +236,19 @@ export function SheetTab({ data, actions, today }: { data: ManagerSheetDto; acti
             return (
               <tbody key={m}>
                 <tr>
-                  <td colSpan={8} className="border-t border-line px-2.5 pb-1.5 pt-3 text-[12px] font-semibold uppercase tracking-[.04em] text-ink">
+                  <td colSpan={cols} className="border-t border-line px-2.5 pb-1.5 pt-3 text-[12px] font-semibold uppercase tracking-[.04em] text-ink">
                     {monthBlockTitle(m)}
                   </td>
                 </tr>
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className={`${TD} text-ink-muted`}>
+                    <td colSpan={cols} className={`${TD} text-ink-muted`}>
                       No open invoices{filtered ? ' for this filter' : ''}.
                     </td>
                   </tr>
                 ) : null}
                 {rows.map((inv) => {
+                  const foreign = isForeign(fxInput(inv));
                   const next = inv.remindersPausedUntil && inv.remindersPausedUntil >= today ? `Paused to ${sheetDate(inv.remindersPausedUntil)}` : nextReminderDate(inv, today, data.sheet.reminderRules);
                   return (
                     <tr key={inv.id}>
@@ -238,10 +279,24 @@ export function SheetTab({ data, actions, today }: { data: ManagerSheetDto; acti
                         />
                       </td>
                       <td className={TD}>
-                        <AmountCell value={inv.amountInr} onCommit={(v) => edit(inv, { amountInr: v })} />
+                        {foreign ? (
+                          <div className="min-w-[110px] px-1.5 text-right font-mono text-[12px]" title="Booked INR; change it with Edit in the FX column">
+                            {inr(inv.amountInr)}
+                          </div>
+                        ) : (
+                          <AmountCell value={inv.amountInr} onCommit={(v) => edit(inv, { amountInr: v })} />
+                        )}
                       </td>
+                      {hasForeign ? <td className={TD}>{foreign ? <FxCell invoice={inv} todayRate={todayRate} onEdit={() => setDialog({ kind: 'fx', invoice: inv })} /> : null}</td> : null}
                       <td className={TD}>
-                        <StatusChip invoice={inv} today={today} />
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <StatusChip invoice={inv} today={today} />
+                          {inv.disputed ? (
+                            <Chip raw tone="bad" title="Disputed: no reminders until it is resolved on the Reports tab">
+                              Disputed
+                            </Chip>
+                          ) : null}
+                        </div>
                         {inv.partPaid > 0 ? <div className="mt-0.5 text-[11px] text-ink-faint">₹{inr(inv.partPaid)} part-paid</div> : null}
                         {inv.promisedOn ? (
                           <div className="mt-0.5">
@@ -267,7 +322,7 @@ export function SheetTab({ data, actions, today }: { data: ManagerSheetDto; acti
                     {monthShort(m)} receivables{filtered ? ' (filtered)' : ''}
                   </td>
                   <td className={`${TD} text-right font-mono text-[12px]`}>{inr(sumInr(rows))}</td>
-                  <td colSpan={3} className={TD} />
+                  <td colSpan={cols - 5} className={TD} />
                 </tr>
               </tbody>
             );
@@ -315,7 +370,10 @@ export function SheetTab({ data, actions, today }: { data: ManagerSheetDto; acti
                   <td className={`${TD} font-mono text-[12px]`}>{inv.invoiceNo}</td>
                   <td className={TD}>{(inv.partnerId && partnersById.get(inv.partnerId)?.name) || '—'}</td>
                   <td className={TD}>{sheetDate(inv.dueDate)}</td>
-                  <td className={`${TD} text-right font-mono text-[12px]`}>{inr(inv.paidAmount ?? inv.amountInr)}</td>
+                  <td className={`${TD} text-right font-mono text-[12px]`}>
+                    {inr(inv.paidAmount ?? inv.amountInr)}
+                    {fcText(inv, inv.receivedFc) ? <div className="text-[11px] text-ink-muted">{fcText(inv, inv.receivedFc)}</div> : null}
+                  </td>
                   <td className={TD}>
                     {sheetDate(inv.paidOn)}
                     {inv.paidVia === 'bank' ? <span className="text-ink-faint"> · bank</span> : null}
@@ -367,9 +425,22 @@ export function SheetTab({ data, actions, today }: { data: ManagerSheetDto; acti
           }
         />
       ) : null}
+      {dialog?.kind === 'fx' ? (
+        <FxEditDialog
+          sheetId={data.sheet.id}
+          invoice={dialog.invoice}
+          today={today}
+          state={{ busy: actions.updateInvoice.isPending, error: dialogError }}
+          onClose={close}
+          onSave={(patch) =>
+            actions.updateInvoice.mutate({ id: dialog.invoice.id, patch }, { onSuccess: () => (close(), toastSuccess('Saved in the draft', 'Click Update to show it on the client page.')), onError: (e) => setDialogError(errorText(e)) })
+          }
+        />
+      ) : null}
       {dialog?.kind === 'notes' ? <NotesDialog sheetId={data.sheet.id} invoice={dialog.invoice} onClose={close} /> : null}
       {dialog?.kind === 'add' ? (
         <AddInvoiceDialog
+          sheetId={data.sheet.id}
           months={months}
           partners={data.partners}
           clients={clients}

@@ -10,7 +10,7 @@ import type { PartnerRowDto } from '@/lib/receivables/partner-wire';
 import { publicView } from '@/lib/receivables/public-view';
 import { payTiming, sumInr } from '@/lib/receivables/summary';
 import { PARTNER_EXPORT_HREF, usePartnerHome } from '@/hooks/use-receivables-partner';
-import { inr, stamp } from '../format';
+import { fcText, inr, stamp } from '../format';
 import { StatusChip } from '../StatusChip';
 import { SHEET_TD, SHEET_TH, SheetTile as Tile, plural } from '../sheet-parts';
 import { InvoiceDetails } from './InvoiceDetails';
@@ -21,7 +21,8 @@ import { PartnerHeader } from './PartnerHeader';
  * the partner's own invoices of the latest published version, laid out like the retired public
  * client page (month blocks, totals tiles, received this week), plus per-invoice details
  * (reminders, pause, promise to pay, notes) and the Excel download. `?invoice=<id>` opens that
- * invoice's details on load; reminder emails link there.
+ * invoice's details on load; reminder emails link there. A USD invoice shows its USD amount under
+ * the INR (Phase 9); a snapshot from before Phase 9 has no currency and reads as INR.
  */
 
 const TH = SHEET_TH;
@@ -193,7 +194,10 @@ export function PartnerPage() {
                     <td className={TD}>{r.clientName}</td>
                     <td className={`${TD} hidden font-mono text-[12px] sm:table-cell`}>{r.invoiceNo}</td>
                     <td className={`${TD} whitespace-nowrap`}>{sheetDate(r.dueDate)}</td>
-                    <td className={`${TD} text-right font-mono text-[12px]`}>{inr(r.amountInr)}</td>
+                    <td className={`${TD} text-right font-mono text-[12px]`}>
+                      {inr(r.amountInr)}
+                      {fcText(r) ? <div className="text-[11px] text-ink-muted">{fcText(r)}</div> : null}
+                    </td>
                     <td className={TD}>
                       <div className="flex flex-wrap items-center gap-1.5">
                         <StatusChip invoice={r} today={today} />
@@ -248,7 +252,10 @@ export function PartnerPage() {
                     <td className={TD}>{r.clientName}</td>
                     <td className={`${TD} hidden font-mono text-[12px] sm:table-cell`}>{r.invoiceNo}</td>
                     <td className={`${TD} whitespace-nowrap`}>{sheetDate(r.paidOn)}</td>
-                    <td className={`${TD} text-right font-mono text-[12px]`}>{inr(r.paidAmount)}</td>
+                    <td className={`${TD} text-right font-mono text-[12px]`}>
+                      {inr(r.paidAmount)}
+                      {fcText(r, r.receivedFc) ? <div className="text-[11px] text-ink-muted">{fcText(r, r.receivedFc)}</div> : null}
+                    </td>
                     <td className={TD}>{payTiming(r)}</td>
                   </tr>
                 ))}

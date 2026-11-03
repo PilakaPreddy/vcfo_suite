@@ -7,7 +7,8 @@ import { listRates, setManualRate, systemRateFor } from '@/db/repositories/recei
 import { denied, guardReceivables, isoDate, receivablesError, type RouteContext } from '../../../_respond';
 
 /**
- * GET  /api/receivables/sheets/:id/fx-rates?days=30 — the stored daily rates and today's rate in force.
+ * GET  /api/receivables/sheets/:id/fx-rates?days=30[&date=YYYY-MM-DD] — the stored daily rates,
+ *      today's rate in force and, with `date`, the USD rate in force on that day (`onDate`).
  * POST /api/receivables/sheets/:id/fx-rates — the manager's override for one day (source `manual`).
  */
 const schema = z.object({
@@ -21,10 +22,13 @@ export async function GET(request: Request, context: RouteContext) {
   const guard = await guardReceivables();
   if (guard.ok === false) return denied(guard);
   const { id } = await context.params;
-  const days = Number(new URL(request.url).searchParams.get('days') ?? 30);
+  const url = new URL(request.url);
+  const days = Number(url.searchParams.get('days') ?? 30);
+  const date = url.searchParams.get('date');
   try {
     const rates = await listRates(guard.ctx, id, days);
     const body: FxRatesDto = { rates, today: await systemRateFor('USD', todayIst()) };
+    if (date && isoDate.safeParse(date).success) body.onDate = await systemRateFor('USD', date);
     return NextResponse.json(body);
   } catch (e) {
     return receivablesError(e);

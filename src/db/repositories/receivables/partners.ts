@@ -38,13 +38,15 @@ export async function addPartner(ctx: AuthContext, sheetId: string, input: { nam
   return toPartner(row);
 }
 
-export async function updatePartner(ctx: AuthContext, partnerId: string, patch: { name?: string; email?: string; active?: boolean }): Promise<Partner> {
+/** Edits a partner. `notifyOnPublish` is the manager's switch for the partner's publish alert emails. */
+export async function updatePartner(ctx: AuthContext, partnerId: string, patch: { name?: string; email?: string; active?: boolean; notifyOnPublish?: boolean }): Promise<Partner> {
   if (!UUID.test(partnerId ?? '')) throw notFound();
   const [p] = await db.select().from(receivablePartners).where(eq(receivablePartners.id, partnerId)).limit(1);
   if (!p) throw notFound();
   const sheet = await scopedSheet(ctx, p.sheetId);
   const set: Partial<typeof receivablePartners.$inferInsert> = cleanPartner(patch, false);
   if (typeof patch.active === 'boolean') set.active = patch.active;
+  if (typeof patch.notifyOnPublish === 'boolean') set.notifyOnPublish = patch.notifyOnPublish;
   const [row] = await db
     .update(receivablePartners)
     .set(set)

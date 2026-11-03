@@ -1,4 +1,5 @@
 import { addDaysIso, daysLeft } from './dates';
+import { isForeign } from './fx';
 import type { SheetInvoice } from './model';
 
 /**
@@ -61,4 +62,19 @@ export function payTiming(r: Pick<SheetInvoice, 'dueDate' | 'paidOn'>): string {
   if (late > 0) return `${late} day${late === 1 ? '' : 's'} late`;
   if (late === 0) return 'On the due date';
   return `${-late} day${late === -1 ? '' : 's'} early`;
+}
+
+/**
+ * Phase 9: true for a row raised in a foreign currency. A row of a snapshot published before
+ * Phase 9 has no currency and reads as INR.
+ */
+export function isForeignRow(r: Pick<SheetInvoice, 'currency'>): boolean {
+  return isForeign({ currency: r.currency ?? 'INR' });
+}
+
+/** The foreign amount a row shows: what arrived for a received row, else what is open; null for INR. */
+export function foreignAmountOf(r: Pick<SheetInvoice, 'currency' | 'status' | 'fcAmount' | 'receivedFc'>): number | null {
+  if (!isForeignRow(r)) return null;
+  const v = r.status === 'received' ? (r.receivedFc ?? r.fcAmount) : r.fcAmount;
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }

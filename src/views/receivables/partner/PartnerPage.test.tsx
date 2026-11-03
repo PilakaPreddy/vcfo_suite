@@ -98,6 +98,13 @@ describe('PartnerPage', () => {
     expect(screen.getByRole('link', { name: 'My account' }).getAttribute('href')).toBe('/receivables/account');
   });
 
+  it('shows the USD amount under the INR of a foreign row and nothing extra on INR rows', async () => {
+    fetchMock.mockImplementation(() => json(home({ rows: [row({ currency: 'USD', fcAmount: 12000, fxRate: 83.25, amountInr: 999000 }), row({ id: '22222222-2222-2222-2222-222222222209', clientName: 'Acme' })] })));
+    render(wrap(<PartnerPage />));
+    expect(await screen.findByText('USD 12,000.00')).toBeTruthy();
+    expect(screen.getAllByText(/^USD /)).toHaveLength(1);
+  });
+
   it('says nothing is published before the first Update', async () => {
     fetchMock.mockImplementation(() => json(home({ publishedAt: null, rows: [] })));
     render(wrap(<PartnerPage />));

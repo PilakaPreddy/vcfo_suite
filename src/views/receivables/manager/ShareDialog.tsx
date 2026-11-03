@@ -9,14 +9,14 @@ import type { ManagerSheetDto } from '@/lib/receivables/wire';
 import { stamp } from '../format';
 
 /**
- * Share (Phase 4): the client page link, WhatsApp (opens the manager's own WhatsApp with the
- * message filled in; no WhatsApp API), Email (the Send email box), PDF (the client page in print
- * view) and Excel (the published version).
+ * Share (Phase 4): the client partner page link, WhatsApp (opens the manager's own WhatsApp with
+ * the message filled in; no WhatsApp API), Email (the Send email box), PDF (the published version
+ * in the manager print view, /receivables/manager/print) and Excel (the published version).
  */
 export function ShareDialog({ data, onClose, onEmail }: { data: ManagerSheetDto; onClose: () => void; onEmail: () => void }) {
   const when = data.latestVersion ? stamp(data.latestVersion.publishedAt) : null;
   const message = `Receivables update from SBC${when ? ` (${when})` : ''}. The live page, always current: ${data.publicUrl}`;
-  const printUrl = `${data.publicUrl}${data.publicUrl.includes('?') ? '&' : '?'}print=1`;
+  const printUrl = `/receivables/manager/print?sheet=${encodeURIComponent(data.sheet.id)}`;
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(data.publicUrl);
@@ -70,7 +70,7 @@ export function ShareDialog({ data, onClose, onEmail }: { data: ManagerSheetDto;
               </a>
             </Button>
           </div>
-          <p className="text-[12.5px] text-ink-muted">PDF opens the client page ready to print; choose “Save as PDF” in the print box.</p>
+          <p className="text-[12.5px] text-ink-muted">PDF opens the published version ready to print; choose “Save as PDF” in the print box.</p>
         </div>
       )}
     </Modal>
