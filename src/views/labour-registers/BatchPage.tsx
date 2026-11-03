@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { ArrowLeft, Download, Info, Lock, RotateCcw } from 'lucide-react';
 
 import { ActDirectory, type DirectoryFolder } from '@/components/labour-registers/ActDirectory';
+import { UploadCard, type SlotKey, type SlotState } from '@/components/labour-registers/UploadCard';
+import { useRegisterUpload } from '@/components/labour-registers/use-register-upload';
 import { LabourRegistersTheme } from '@/components/labour-registers/LabourRegistersTheme';
 import { ProvenanceBar } from '@/components/labour-registers/ProvenanceBar';
 import { ReadinessDialog } from '@/components/labour-registers/ReadinessDialog';
-import { LrBanner, LrCard, LrCardHead, LrChip, LrHero, type LrStat } from '@/components/labour-registers/primitives';
+import { LrBanner, LrCard, LrHero, type LrStat } from '@/components/labour-registers/primitives';
 import { lr } from '@/components/labour-registers/theme';
 import type { ReadinessSummary } from '@/lib/labour-registers/readiness';
 import { stateByCode } from '@/data/labour-registers/states';
@@ -47,7 +49,7 @@ export interface BatchView {
   } | null;
   acts: number;
   formsByAct: Array<{ act: string; forms: Array<{ id: string; formNumber: string; title: string; rule: string }> }>;
-  uploads: Partial<Record<'paysheet' | 'attendance' | 'overtime' | 'employees', { rowCount: number; fileName: string }>>;
+  uploads: Partial<Record<SlotKey, SlotState>>;
   readiness: ReadinessSummary;
   sentence: string;
 }
@@ -108,11 +110,14 @@ function foldersFor(view: BatchView): DirectoryFolder[] {
 
 export function BatchPage({ view, shellBase }: { view: BatchView; shellBase: string }) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { uploads, busySlot, errors, upload } = useRegisterUpload(view.batchId, view.uploads);
   const state = stateByCode(view.stateCode);
   const label = periodLabel(view.period.from, view.period.to);
   const registers = view.provenance?.registers;
   const fromStorage = view.provenance?.fromStorage;
-  const employees = view.uploads.paysheet?.rowCount;
+  /* The paysheet is the roll, so its row count is the employee count. It comes from the live
+     upload state rather than the server view, so it updates the moment a file is read. */
+  const employees = uploads.paysheet?.rowCount;
 
   const stats: LrStat[] = view.locked
     ? [
@@ -216,6 +221,12 @@ export function BatchPage({ view, shellBase }: { view: BatchView; shellBase: str
             }
           />
 
+          {/* The inputs come before the registers, because that is the order of the work and
+              because an empty directory makes no sense until somebody has seen why it is
+              empty. Once the period is locked the card goes read-only rather than away: what
+              was uploaded is part of what the registers were built from. */}
+          <UploadCard uploads={uploads} busySlot={busySlot} errors={errors} locked={view.locked} onPick={upload} />
+
           <ActDirectory folders={foldersFor(view)} />
         </div>
 
@@ -243,29 +254,6 @@ export function BatchPage({ view, shellBase }: { view: BatchView; shellBase: str
             </p>
           </LrCard>
 
-          <LrCard>
-            <LrCardHead label="Inputs on file" />
-            <ul className="m-0 list-none p-0">
-              {(['paysheet', 'attendance', 'overtime', 'employees'] as const).map((slot, i) => {
-                const upload = view.uploads[slot];
-                return (
-                  <li
-                    key={slot}
-                    className={`flex items-center gap-2.5 px-4 py-2.5 ${i > 0 ? 'border-t border-[var(--lr-raised)]' : ''}`}
-                  >
-                    <span className="min-w-0 flex-grow text-[13px] capitalize text-[var(--lr-ink)]">{slot}</span>
-                    {upload ? (
-                      <span className="text-[12px] tabular-nums text-[var(--lr-muted)]">
-                        {upload.rowCount} rows
-                      </span>
-                    ) : (
-                      <LrChip tone="neutral">Not uploaded</LrChip>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </LrCard>
 
           {view.locked ? (
             <LrBanner icon={Info} tone="info">

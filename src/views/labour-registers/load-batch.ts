@@ -28,7 +28,18 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
 
   const bySlot: BatchView['uploads'] = {};
   for (const u of uploads) {
-    bySlot[u.slot as keyof BatchView['uploads']] = { rowCount: u.rowCount, fileName: u.fileName };
+    /* The sheet and the heading row matter as much as the row count: a payroll workbook has
+       thirteen sheets and a title row above the headings, so what the reader chose is the
+       thing a preparer needs to see. `gridDetection` is stored as jsonb, hence the shape
+       check rather than a cast. */
+    const grid = u.gridDetection as { days?: unknown[] } | null;
+    bySlot[u.slot as keyof BatchView['uploads']] = {
+      fileName: u.fileName,
+      rowCount: u.rowCount,
+      sheetName: u.sheetName || undefined,
+      headerRow: u.headerRow,
+      gridDays: Array.isArray(grid?.days) ? grid.days.length : undefined,
+    };
   }
 
   const mapping = (map?.mapping ?? {}) as Record<string, string>;

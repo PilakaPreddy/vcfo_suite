@@ -167,3 +167,42 @@ export function validateUploadFileType(
 
   return null;
 }
+
+/**
+ * Spreadsheets a labour-register batch takes as an input.
+ *
+ * Narrower than the document buckets on purpose: these files are parsed, not merely stored, so
+ * accepting a PDF or an image would mean failing after the upload instead of refusing it.
+ * The reader is `src/lib/labour-registers/parse.ts`.
+ *
+ * `xlsm` and `csv` are deliberately **not** added to `EXTENSION_TO_MIME`:
+ * `KNOWLEDGE_BANK_EXTENSIONS` is derived from its keys, so putting them there would quietly
+ * widen what the knowledge bank accepts. This pair stands on its own.
+ *
+ * Legacy `.xls` is absent on purpose. exceljs cannot read the BIFF format at all, so accepting
+ * one would fail after the upload rather than at it.
+ */
+export const LABOUR_REGISTER_MIME_TYPES = new Set<string>([
+  EXTENSION_TO_MIME.xlsx,
+  'application/vnd.ms-excel.sheet.macroEnabled.12',
+  'text/csv',
+  /* Windows reports a .csv as this, having handed the extension to Excel. The file name still
+     governs — `.xls` is not an allowed extension, so a real one is refused whatever its MIME
+     says — and without this a perfectly good CSV is rejected on a Windows machine. */
+  'application/vnd.ms-excel',
+]);
+
+/** Extensions allowed as a labour-register input. */
+export const LABOUR_REGISTER_EXTENSIONS = new Set<string>(['xlsx', 'xlsm', 'csv']);
+
+/** The MIME to store a labour-register input under, by its extension. */
+export function labourRegisterContentType(file: Pick<File, 'name' | 'type'>): string {
+  const ext = resolveUploadExtension(file, LABOUR_REGISTER_EXTENSIONS);
+  if (ext === 'csv') return 'text/csv';
+  if (ext === 'xlsm') return 'application/vnd.ms-excel.sheet.macroEnabled.12';
+  return EXTENSION_TO_MIME.xlsx;
+}
+
+/** What to tell somebody who tried to upload something else. */
+export const LABOUR_REGISTER_FILE_ERROR =
+  'Upload a spreadsheet: .xlsx, .xlsm or .csv. A legacy .xls cannot be read — open it in Excel and save as .xlsx.';

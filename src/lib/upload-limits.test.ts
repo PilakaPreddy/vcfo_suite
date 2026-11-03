@@ -7,6 +7,10 @@ import {
   validateUploadFileType,
   KNOWLEDGE_BANK_EXTENSIONS,
   KNOWLEDGE_BANK_MIME_TYPES,
+  LABOUR_REGISTER_EXTENSIONS,
+  LABOUR_REGISTER_FILE_ERROR,
+  LABOUR_REGISTER_MIME_TYPES,
+  labourRegisterContentType,
   MILESTONE_DOCUMENT_EXTENSIONS,
   SIGNED_BOARD_RESOLUTION_EXTENSIONS,
 } from '@/lib/upload-limits';
@@ -77,3 +81,42 @@ describe('upload MIME allowlists', () => {
   });
 });
 
+describe('labour-register inputs', () => {
+  const check = (f: File) =>
+    validateUploadFileType(f, LABOUR_REGISTER_EXTENSIONS, LABOUR_REGISTER_MIME_TYPES, LABOUR_REGISTER_FILE_ERROR);
+
+  it('takes the three formats the reader can actually read', () => {
+    expect(check(mockFile('paysheet.xlsx', EXTENSION_TO_MIME.xlsx))).toBeNull();
+    expect(check(mockFile('paysheet.xlsm', 'application/vnd.ms-excel.sheet.macroEnabled.12'))).toBeNull();
+    expect(check(mockFile('paysheet.csv', 'text/csv'))).toBeNull();
+  });
+
+  it('takes a CSV that Windows reports as an Excel file', () => {
+    /* Windows hands .csv to Excel and reports its MIME, which would otherwise look like a
+       legacy .xls and be refused. The extension is what governs. */
+    expect(check(mockFile('paysheet.csv', 'application/vnd.ms-excel'))).toBeNull();
+  });
+
+  it('refuses a legacy .xls, because exceljs cannot read one at all', () => {
+    /* Accepting it would fail after the upload instead of at it. */
+    expect(check(mockFile('paysheet.xls', 'application/vnd.ms-excel'))).toBe(LABOUR_REGISTER_FILE_ERROR);
+  });
+
+  it('refuses a document, which is not an input to anything', () => {
+    expect(check(mockFile('scan.pdf', EXTENSION_TO_MIME.pdf))).toBe(LABOUR_REGISTER_FILE_ERROR);
+    expect(check(mockFile('photo.png', EXTENSION_TO_MIME.png))).toBe(LABOUR_REGISTER_FILE_ERROR);
+  });
+
+  it('stores each format under its own content type', () => {
+    expect(labourRegisterContentType(mockFile('a.csv', 'application/vnd.ms-excel'))).toBe('text/csv');
+    expect(labourRegisterContentType(mockFile('a.xlsm', ''))).toBe('application/vnd.ms-excel.sheet.macroEnabled.12');
+    expect(labourRegisterContentType(mockFile('a.xlsx', ''))).toBe(EXTENSION_TO_MIME.xlsx);
+  });
+
+  it('does not widen what the knowledge bank accepts', () => {
+    /* KNOWLEDGE_BANK_EXTENSIONS is derived from EXTENSION_TO_MIME's keys, so a register format
+       added there would quietly become a knowledge-bank format too. It nearly was. */
+    expect(KNOWLEDGE_BANK_EXTENSIONS.has('csv')).toBe(false);
+    expect(KNOWLEDGE_BANK_EXTENSIONS.has('xlsm')).toBe(false);
+  });
+});
