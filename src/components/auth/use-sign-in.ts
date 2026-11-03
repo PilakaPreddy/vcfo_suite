@@ -19,9 +19,13 @@ import { toastError, toastSuccess } from '@/lib/toast-errors';
  */
 export type SignInStep = 'password' | 'code';
 
-/** `?next=` of the login page; `postLoginPath` decides whether it is honoured. */
-function nextParam(): string | null {
-  return typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('next');
+/**
+ * `?next=` of the login page, or `fallback` when there is none (the partner login defaults to
+ * `/receivables`). `postLoginPath` decides whether it is honoured.
+ */
+function nextParam(fallback: string | null = null): string | null {
+  if (typeof window === 'undefined') return fallback;
+  return new URLSearchParams(window.location.search).get('next') ?? fallback;
 }
 
 export type SignInState = {
@@ -85,7 +89,12 @@ async function needsCode(email: string, password: string): Promise<boolean> {
   }
 }
 
-export function useSignIn() {
+export type UseSignInOptions = {
+  /** Where to go after sign-in when the page has no `?next=`; the role home when unset. */
+  defaultNext?: string;
+};
+
+export function useSignIn({ defaultNext }: UseSignInOptions = {}) {
   const { signIn, refreshAuth } = useApp();
   const router = useRouter();
   const [state, dispatch] = useReducer(signInReducer, initialSignInState);
@@ -108,7 +117,7 @@ export function useSignIn() {
       return;
     }
     if (result.user) {
-      router.push(postLoginPath(result.user.role, nextParam()));
+      router.push(postLoginPath(result.user.role, nextParam(defaultNext)));
     }
   };
 
@@ -144,7 +153,7 @@ export function useSignIn() {
     }
     await refreshAuth();
     patch({ loading: false });
-    router.push(postLoginPath(role, nextParam()));
+    router.push(postLoginPath(role, nextParam(defaultNext)));
   };
 
   const backToPassword = () => patch({ step: 'password', code: '', error: null });

@@ -68,6 +68,9 @@ export function tabBarTabs(role: Role | undefined, { staffBase = '/app/manager',
         { label: 'Jobs', href: '/app/dev/jobs', Icon: Terminal },
         { label: 'Connections', href: '/app/dev/connections', Icon: Plug },
       ];
+    case 'partner':
+      // A client partner never gets the /app shell, so there are no tabs.
+      return [];
     default:
       return [];
   }

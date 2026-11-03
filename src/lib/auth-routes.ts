@@ -15,16 +15,35 @@ export function roleHomePath(role: Role): string {
       return '/app/client/overview';
     case 'developer':
       return '/app/dev/overview';
+    case 'partner':
+      // A client partner has no /app shell; their receivables page is their home.
+      return '/receivables';
   }
 }
 
+/** The receivables manager area, which lives outside /app. */
+const RECEIVABLES_MANAGER_NEXT = /^\/receivables\/manager(\/[A-Za-z0-9/_-]*)?$/;
+
 /**
- * Where to go after sign-in when the login page was opened with `?next=`. Only the receivables
- * manager area is honoured (it lives outside /app, so the role home would lose it); anything else,
- * including other sites and `//host` tricks, falls back to the role home.
+ * The client partner pages: `/receivables` and its sub-pages, with an optional plain query such as
+ * the `?invoice=<id>` of a reminder email. The manager area and the partner login page are not
+ * partner destinations, and `//` never matches, so another host cannot be reached.
+ */
+const RECEIVABLES_PARTNER_NEXT =
+  /^\/receivables(?!\/(manager|login)(\/|\?|$))(\/[A-Za-z0-9_-]+)*(\?[A-Za-z0-9=&_.%-]*)?$/;
+
+/**
+ * Where to go after sign-in when the login page was opened with `?next=`. Staff are sent back to
+ * the receivables manager area (it lives outside /app, so the role home would lose it). A client
+ * partner is sent back to the partner page they asked for and otherwise lands on `/receivables`,
+ * never on /app. Anything else, including other sites and `//host` tricks, falls back to the
+ * role home.
  */
 export function postLoginPath(role: Role, next: string | null | undefined): string {
-  if (next && /^\/receivables\/manager(\/[A-Za-z0-9/_-]*)?$/.test(next)) return next;
+  if (role === 'partner') {
+    return next && RECEIVABLES_PARTNER_NEXT.test(next) ? next : roleHomePath(role);
+  }
+  if (next && RECEIVABLES_MANAGER_NEXT.test(next)) return next;
   return roleHomePath(role);
 }
 
@@ -43,6 +62,9 @@ export function roleNotificationsPath(role: Role): string {
       return '/app/client/notifications';
     case 'developer':
       return '/app/dev/overview';
+    case 'partner':
+      // A client partner has no notification history page; the receivables page is all they see.
+      return '/receivables';
   }
 }
 
@@ -62,6 +84,8 @@ export function roleSettingsPath(role: Role): string {
       return '/app/client/settings';
     case 'developer':
       return '/app/dev/overview';
+    case 'partner':
+      return '/receivables/account';
   }
 }
 
@@ -69,7 +93,7 @@ export function roleSettingsPath(role: Role): string {
  * The profile page the account row opens (P-608, P-644, P-258). Every role has its own
  * `/app/<role>/profile` (super admin: `/app/super/profile`, developer: `/app/dev/profile`). Links that
  * point at a settings section (`#email`, `#appearance`, notification preferences, the Outlook
- * callback) keep `roleSettingsPath`.
+ * callback) keep `roleSettingsPath`. A client partner's account page is `/receivables/account`.
  */
 export function roleProfilePath(role: Role): string {
   if (role === 'admin' || role === 'manager' || role === 'intern') return `/app/${role}/profile`;

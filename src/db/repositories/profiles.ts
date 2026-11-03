@@ -303,7 +303,10 @@ export type StaffPersonRow = {
   twoStepOn?: boolean;
 };
 
-/** Firm admin / super admin: list all accounts. */
+/**
+ * Firm admin / super admin: list all accounts. Client partner logins (receivables) are left out:
+ * they are not firm people and are managed on the receivables Partners tab.
+ */
 export async function listStaffPeople(ctx: AuthContext): Promise<StaffPersonRow[]> {
   if (!isFirmWideAdmin(ctx.role)) {
     throw new Error('Only firm admins may list all staff');
@@ -321,6 +324,7 @@ export async function listStaffPeople(ctx: AuthContext): Promise<StaffPersonRow[
       totpEnabledAt: profiles.totpEnabledAt,
     })
     .from(profiles)
+    .where(ne(profiles.role, 'partner'))
     .orderBy(asc(profiles.role), asc(profiles.name));
 
   return rows.map((r) => ({

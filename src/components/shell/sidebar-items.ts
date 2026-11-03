@@ -291,6 +291,9 @@ export function sidebarItemsFor(role: Role, staffBase: string, inDevConsole = fa
       return internItems;
     case 'developer':
       return developerItems;
+    case 'partner':
+      // A client partner never gets the /app shell (the proxy keeps them on /receivables).
+      return [];
     default:
       return clientItems;
   }

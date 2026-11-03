@@ -35,7 +35,7 @@ export class FilingStatusError extends Error {
 type FiledRow = { id: string; status: string; filedOn: string | null };
 
 async function loadScoped(ctx: AuthContext, instanceId: string) {
-  if (ctx.role === 'client' || ctx.role === 'developer') {
+  if (ctx.role === 'client' || ctx.role === 'developer' || ctx.role === 'partner') {
     throw new FilingStatusError('Only firm staff can change a filing', 403);
   }
   const [row] = await db

@@ -17,7 +17,7 @@ import {
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 
 function assertStaff(ctx: AuthContext) {
-  if (ctx.role === 'client' || ctx.role === 'developer') {
+  if (ctx.role === 'client' || ctx.role === 'developer' || ctx.role === 'partner') {
     throw new Error('not permitted');
   }
 }
