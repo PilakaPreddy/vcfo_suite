@@ -1,19 +1,23 @@
 import 'server-only';
 import { and, asc, count, desc, eq, gt, isNull } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { receivableChanges, receivableInvoices, receivablePartners, receivableSheets, receivableVersions } from '@/db/schema';
+import { profiles, receivableChanges, receivableInvoiceNotes, receivableInvoices, receivablePartners, receivableSheets, receivableVersions } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
 import { isFirmWideAdmin } from '@/lib/auth';
 import { newPublicKey } from '@/lib/receivables/public-key';
-import { DEFAULT_REMINDER_RULES, type Partner, type ReminderRules, type SheetInvoice } from '@/lib/receivables/model';
+import { DEFAULT_REMINDER_RULES, type Partner, type ReminderRules } from '@/lib/receivables/model';
+import type { ManagerInvoiceDto, PartnerDto } from '@/lib/receivables/wire';
+import { toPartnerDto } from './partner-logins';
 import { assertEditorRole, invalid, scopedSheet, toInvoice, type SheetRow } from './shared';
 
 export type SheetSummary = Pick<SheetRow, 'id' | 'name' | 'clientOrgName' | 'managerUserId' | 'requireKey' | 'publishedVersionId'>;
 
 export type ManagerSheet = {
   sheet: SheetRow;
-  partners: Partner[];
-  invoices: SheetInvoice[];
+  /** Phase 8: each partner carries their login state. */
+  partners: PartnerDto[];
+  /** Phase 8: each invoice carries the partner's promise date and its note count. */
+  invoices: ManagerInvoiceDto[];
   /** Changes since the last Update that the public page does not show yet. */
   unpublishedChanges: number;
   latestVersion: { id: string; seq: number; publishedAt: Date; publishedByName: string } | null;
@@ -42,7 +46,12 @@ export function toPartner(row: typeof receivablePartners.$inferSelect): Partner 
 export async function getManagerSheet(ctx: AuthContext, sheetId: string): Promise<ManagerSheet> {
   const sheet = await scopedSheet(ctx, sheetId);
   const [partners, invoices, versions] = await Promise.all([
-    db.select().from(receivablePartners).where(eq(receivablePartners.sheetId, sheet.id)).orderBy(asc(receivablePartners.name)),
+    db
+      .select({ partner: receivablePartners, profileStatus: profiles.status })
+      .from(receivablePartners)
+      .leftJoin(profiles, eq(profiles.id, receivablePartners.profileId))
+      .where(eq(receivablePartners.sheetId, sheet.id))
+      .orderBy(asc(receivablePartners.name)),
     db
       .select()
       .from(receivableInvoices)
@@ -60,7 +69,17 @@ export async function getManagerSheet(ctx: AuthContext, sheetId: string): Promis
     ? and(eq(receivableChanges.sheetId, sheet.id), eq(receivableChanges.affectsPage, true), gt(receivableChanges.createdAt, latestVersion.publishedAt))
     : and(eq(receivableChanges.sheetId, sheet.id), eq(receivableChanges.affectsPage, true));
   const [{ n }] = await db.select({ n: count() }).from(receivableChanges).where(since);
-  return { sheet, partners: partners.map(toPartner), invoices: invoices.map(toInvoice), unpublishedChanges: Number(n), latestVersion };
+  // The notes are few per sheet, so they are counted here rather than with a GROUP BY.
+  const notes = await db.select({ invoiceId: receivableInvoiceNotes.invoiceId }).from(receivableInvoiceNotes).where(eq(receivableInvoiceNotes.sheetId, sheet.id));
+  const noteCount = new Map<string, number>();
+  for (const note of notes ?? []) noteCount.set(note.invoiceId, (noteCount.get(note.invoiceId) ?? 0) + 1);
+  return {
+    sheet,
+    partners: partners.map((r) => toPartnerDto(r.partner, r.partner.profileId ? { status: r.profileStatus ?? null } : null)),
+    invoices: invoices.map((row) => ({ ...toInvoice(row), promisedOn: row.promisedOn ? String(row.promisedOn) : null, noteCount: noteCount.get(row.id) ?? 0 })),
+    unpublishedChanges: Number(n),
+    latestVersion,
+  };
 }
 
 function validRules(r: ReminderRules): ReminderRules {

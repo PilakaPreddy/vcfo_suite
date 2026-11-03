@@ -12,8 +12,9 @@ import type { PartnerHomeDto, PartnerInvoiceDetailDto } from '@/lib/receivables/
 const ERROR_TEXT: Record<string, string> = {
   invalid_credentials: 'Your current password is not right.',
   password_too_short: 'Use at least 8 characters.',
-  promised_on: 'Pick a date from today on.',
-  text: 'Write a note of up to 1000 characters.',
+  promised_on: 'Pick a date from today to a year ahead.',
+  text: 'Write a note of up to 2000 characters.',
+  forbidden: 'Your login is not linked to a receivables sheet. Ask SBC.',
   note: 'The note is too long.',
   not_open: 'This invoice is already received.',
   not_found: 'This invoice is not one of yours.',

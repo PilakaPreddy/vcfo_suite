@@ -1,18 +1,22 @@
 /**
- * RECEIVABLES LINKS — the public page address and its secret key (owner decision 3 Nov 2026:
- * the link carries a key the manager can reset, so the plain /receivables URL shows nothing).
- * Browser-safe; the key itself is made in public-key.ts on the server.
+ * RECEIVABLES LINKS. Since Phase 8 (docs/specs/receivables/PLAN.md) each client partner signs in
+ * at /receivables, so the page address is the same for everyone and carries no secret. The old
+ * key link (/receivables/k/<key>) is retired; the key column stays in the database unused.
+ * Browser-safe; the per-invoice link the reminder emails use is `partnerInvoiceUrl` in
+ * partner-emails.ts.
  */
 
 export function isPublicKeyShape(key: string): boolean {
   return /^[A-Za-z0-9_-]{12}$/.test(key);
 }
 
-/** The client page link, optionally opened on one partner. */
-export function publicPageUrl(siteUrl: string, sheet: { publicKey: string; requireKey: boolean }, partnerSlug?: string | null): string {
-  const base = siteUrl.replace(/\/$/, '');
-  const path = sheet.requireKey ? `/receivables/k/${sheet.publicKey}` : '/receivables';
-  return partnerSlug ? `${base}${path}?partner=${encodeURIComponent(partnerSlug)}` : `${base}${path}`;
+/**
+ * The client partner page link, `/receivables`. The sheet and partner arguments are kept for the
+ * callers written for the key link; the partner page shows each partner only their own invoices,
+ * so neither changes the address any more.
+ */
+export function publicPageUrl(siteUrl: string, _sheet?: { publicKey: string; requireKey: boolean }, _partnerSlug?: string | null): string {
+  return `${siteUrl.replace(/\/$/, '')}/receivables`;
 }
 
 /** "Sandeep Sharma" → "sandeep"; adds -2, -3 … until it is free. */

@@ -16,9 +16,10 @@ import { complianceTaskRepeatOnComplete, complianceTaskRepeatSweep } from '@/job
 import { boardMeetingReminders } from '@/jobs/board-meeting-reminders';
 import { receivablesReminders } from '@/jobs/receivables-reminders';
 import { receivablesBankFeed } from '@/jobs/receivables-bank-feed';
+import { receivablesFxRates } from '@/jobs/receivables-fx-rates';
 import { devCleanup } from '@/jobs/dev-cleanup';
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [complianceGenerate, announcementFeeds, whatsappSend, askIngest, complianceReminders, savedReportsSend, weeklyDigest, kpiSnapshots, staffAlerts, dailyDigest, serviceChecks, devCleanup, complianceTaskReminders, complianceTaskRepeatOnComplete, complianceTaskRepeatSweep, boardMeetingReminders, receivablesReminders, receivablesBankFeed],
+  functions: [complianceGenerate, announcementFeeds, whatsappSend, askIngest, complianceReminders, savedReportsSend, weeklyDigest, kpiSnapshots, staffAlerts, dailyDigest, serviceChecks, devCleanup, complianceTaskReminders, complianceTaskRepeatOnComplete, complianceTaskRepeatSweep, boardMeetingReminders, receivablesReminders, receivablesBankFeed, receivablesFxRates],
 });

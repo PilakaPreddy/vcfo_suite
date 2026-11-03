@@ -9,13 +9,14 @@ import { daysLeft, monthBlockTitle, monthLong, monthShort, sheetDate } from '@/l
 import type { InvoicePatch, Partner, SheetInvoice } from '@/lib/receivables/model';
 import { nextReminderDate } from '@/lib/receivables/reminder-rule';
 import { monthsOf, payTiming, receivedThisWeek, sumInr } from '@/lib/receivables/summary';
-import type { ManagerSheetDto } from '@/lib/receivables/wire';
+import type { ManagerInvoiceDto, ManagerSheetDto } from '@/lib/receivables/wire';
 import type { useReceivablesActions } from '@/hooks/use-receivables';
 import { inr, parseInr, stamp } from '../format';
 import { StatusChip } from '../StatusChip';
 import { AddInvoiceDialog, MarkReceivedDialog, PauseDialog } from './InvoiceDialogs';
 import { ComposeSummary } from './ComposeSummary';
 import { ShareDialog } from './ShareDialog';
+import { NotesButton, NotesDialog, PromiseChip } from './InvoiceNotes';
 
 /**
  * The Sheet tab (prototype "Sheet"): today's month-block layout, one row per invoice, every cell
@@ -23,7 +24,7 @@ import { ShareDialog } from './ShareDialog';
  */
 
 type Actions = ReturnType<typeof useReceivablesActions>;
-type Dialog = { kind: 'mark' | 'pause'; invoice: SheetInvoice } | { kind: 'add' } | null;
+type Dialog = { kind: 'mark' | 'pause'; invoice: SheetInvoice } | { kind: 'notes'; invoice: ManagerInvoiceDto } | { kind: 'add' } | null;
 
 const CELL = 'h-8 w-full rounded-md border border-transparent bg-transparent px-1.5 text-[13px] outline-none placeholder:text-ink-faint placeholder:font-sans hover:border-line focus:border-brand focus:bg-surface-raised focus:ring-4 focus:ring-focus-ring/25';
 const TH = 'whitespace-nowrap bg-surface-sunken px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-[.04em] text-ink-muted';
@@ -242,6 +243,11 @@ export function SheetTab({ data, actions, today }: { data: ManagerSheetDto; acti
                       <td className={TD}>
                         <StatusChip invoice={inv} today={today} />
                         {inv.partPaid > 0 ? <div className="mt-0.5 text-[11px] text-ink-faint">₹{inr(inv.partPaid)} part-paid</div> : null}
+                        {inv.promisedOn ? (
+                          <div className="mt-0.5">
+                            <PromiseChip invoice={inv} today={today} />
+                          </div>
+                        ) : null}
                       </td>
                       <td className={`${TD} whitespace-nowrap text-ink-muted`}>{next ? (next.startsWith('Paused') ? next : next === today ? 'Today' : sheetDate(next)) : '—'}</td>
                       <td className={`${TD} whitespace-nowrap text-right`}>
@@ -250,7 +256,8 @@ export function SheetTab({ data, actions, today }: { data: ManagerSheetDto; acti
                         </Button>{' '}
                         <Button size="sm" variant="quiet" onClick={() => setDialog({ kind: 'pause', invoice: inv })}>
                           {inv.remindersPausedUntil && inv.remindersPausedUntil >= today ? 'Paused' : 'Pause'}
-                        </Button>
+                        </Button>{' '}
+                        <NotesButton invoice={inv} onOpen={() => setDialog({ kind: 'notes', invoice: inv })} />
                       </td>
                     </tr>
                   );
@@ -360,6 +367,7 @@ export function SheetTab({ data, actions, today }: { data: ManagerSheetDto; acti
           }
         />
       ) : null}
+      {dialog?.kind === 'notes' ? <NotesDialog sheetId={data.sheet.id} invoice={dialog.invoice} onClose={close} /> : null}
       {dialog?.kind === 'add' ? (
         <AddInvoiceDialog
           months={months}

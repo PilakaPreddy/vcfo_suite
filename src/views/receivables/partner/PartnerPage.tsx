@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Chip, Tag } from '@/components/ui/spectrum-chip';
 import { FilterSelect } from '@/components/ui/native-select';
@@ -14,17 +12,20 @@ import { payTiming, sumInr } from '@/lib/receivables/summary';
 import { PARTNER_EXPORT_HREF, usePartnerHome } from '@/hooks/use-receivables-partner';
 import { inr, stamp } from '../format';
 import { StatusChip } from '../StatusChip';
+import { SHEET_TD, SHEET_TH, SheetTile as Tile, plural } from '../sheet-parts';
 import { InvoiceDetails } from './InvoiceDetails';
+import { PartnerHeader } from './PartnerHeader';
 
 /**
  * The signed-in client partner's page (/receivables, Phase 8 of docs/specs/receivables/PLAN.md):
- * the partner's own invoices of the latest published version, laid out like the client page
- * (ClientPage) without its partner filter, plus per-invoice details (reminders, pause, Promise,
- * notes). `?invoice=<id>` opens that invoice's details on load; reminder emails link there.
+ * the partner's own invoices of the latest published version, laid out like the retired public
+ * client page (month blocks, totals tiles, received this week), plus per-invoice details
+ * (reminders, pause, promise to pay, notes) and the Excel download. `?invoice=<id>` opens that
+ * invoice's details on load; reminder emails link there.
  */
 
-const TH = 'whitespace-nowrap bg-surface-sunken px-2.5 py-2 text-left text-[11px] font-semibold uppercase tracking-[.04em] text-ink-muted';
-const TD = 'border-t border-line-soft px-2.5 py-2 align-middle';
+const TH = SHEET_TH;
+const TD = SHEET_TD;
 const COLS = 6;
 
 type StatusFilter = 'open' | 'overdue' | 'not_due';
@@ -35,34 +36,8 @@ const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
   { value: 'not_due', label: 'Not yet due' },
 ];
 
-function Tile({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <div className="rounded-md border border-line bg-surface-raised px-4 py-3.5">
-      <div className="text-[12px] text-ink-muted">{label}</div>
-      <div className="mt-0.5 font-mono text-[20px] font-medium">{value}</div>
-      <div className="text-[12px] text-ink-muted">{sub}</div>
-    </div>
-  );
-}
-
-const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`;
-
 function Header({ clientOrgName, partnerName }: { clientOrgName?: string; partnerName?: string }) {
-  return (
-    <header className="flex flex-wrap items-center gap-x-3 gap-y-2 py-4 print:hidden">
-      <span className="text-[13px] font-bold tracking-[.06em]">VCFO SUITE</span>
-      <span className="min-w-0 text-[13px] text-ink-muted">/ Receivables{clientOrgName ? ` · ${clientOrgName}` : ''}</span>
-      <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
-        {partnerName ? <span className="font-medium">{partnerName}</span> : null}
-        <Link href="/receivables/account" className="text-ink-2 underline-offset-4 hover:underline">
-          My account
-        </Link>
-        <Button size="sm" variant="quiet" onClick={() => void signOut({ callbackUrl: '/receivables/login' })}>
-          Log out
-        </Button>
-      </div>
-    </header>
-  );
+  return <PartnerHeader clientOrgName={clientOrgName} partnerName={partnerName} current="sheet" />;
 }
 
 export function PartnerPage() {

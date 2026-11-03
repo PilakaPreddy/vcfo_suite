@@ -7,7 +7,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { EmailRecipient, InvoiceInput, InvoicePatch, ReminderRules } from '@/lib/receivables/model';
-import type { CreditsDto, ImportResultDto, ManagerSheetDto, OutlookStatusDto, ReminderDeskDto, SummaryDto, VersionDto, VersionMetaDto } from '@/lib/receivables/wire';
+import type { CreditsDto, ImportResultDto, InvoiceNoteDto, ManagerSheetDto, OutlookStatusDto, PartnerDto, ReminderDeskDto, SummaryDto, VersionDto, VersionMetaDto } from '@/lib/receivables/wire';
 
 const ERROR_TEXT: Record<string, string> = {
   client: 'Enter the client name.',
@@ -38,6 +38,15 @@ const ERROR_TEXT: Record<string, string> = {
   invoice: 'Pick an open invoice of this sheet.',
   send_hour: 'Pick a send hour between 6 and 20.',
   Forbidden: 'Your role cannot open receivables.',
+  already_invited: 'This partner already has a login.',
+  partner_inactive: 'Turn the partner on (Active) before inviting them.',
+  email_in_use: 'This email belongs to a staff or client account. Use another email for the partner.',
+  login_disabled: 'This login is disabled. Enable it first.',
+  not_invited: 'Invite the partner first.',
+  already_accepted: 'The partner has set a password already. Use Reset password.',
+  not_accepted: 'The partner has not set a password yet. Use Resend invite.',
+  not_disabled: 'This login is not disabled.',
+  note: 'Write a note of up to 2000 characters.',
 };
 
 export class ReceivablesApiError extends Error {
@@ -195,4 +204,46 @@ export function useReceivablesActions(sheetId: string) {
     }),
     resetKey: useMutation({ mutationFn: () => call<{ publicUrl: string }>(`${sheetUrl}/key`, json('POST')), onSettled }),
   };
+}
+
+export type PartnerLoginActionName = 'invite' | 'resend' | 'reset' | 'disable' | 'enable';
+
+/** Phase 8: a URL-safe set-password token made in the browser (32 random bytes); the server keeps its hash. */
+function makeSetPasswordToken(): string {
+  const b = new Uint8Array(32);
+  crypto.getRandomValues(b);
+  return btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** Phase 8: invite, resend, reset password, disable or enable a client partner's login. */
+export function usePartnerLogin(sheetId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, action }: { id: string; action: PartnerLoginActionName }) =>
+      call<{ partner: PartnerDto; emailed: boolean | null }>(
+        `/api/receivables/partners/${id}/login`,
+        json('POST', { action, ...(action === 'invite' || action === 'resend' || action === 'reset' ? { setPasswordToken: makeSetPasswordToken() } : {}) }),
+      ),
+    onSettled: () => qc.invalidateQueries({ queryKey: sheetKey(sheetId) }),
+  });
+}
+
+const notesKey = (invoiceId: string) => ['receivables', 'notes', invoiceId] as const;
+
+/** Phase 8: the notes on one invoice, fetched while the notes dialog is open. */
+export function useInvoiceNotes(invoiceId: string | null) {
+  return useQuery({
+    queryKey: notesKey(invoiceId ?? ''),
+    queryFn: async () => (await call<{ notes: InvoiceNoteDto[] }>(`/api/receivables/invoices/${invoiceId}/notes`)).notes,
+    enabled: Boolean(invoiceId),
+  });
+}
+
+/** Phase 8: an SBC reply on an invoice; refreshes the notes and the sheet's note count. */
+export function useAddSbcNote(sheetId: string, invoiceId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (text: string) => call<{ note: InvoiceNoteDto }>(`/api/receivables/invoices/${invoiceId}/notes`, json('POST', { text })),
+    onSettled: () => Promise.all([qc.invalidateQueries({ queryKey: notesKey(invoiceId) }), qc.invalidateQueries({ queryKey: sheetKey(sheetId) })]),
+  });
 }

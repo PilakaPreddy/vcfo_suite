@@ -12,9 +12,9 @@ import type { PaidVia, SheetInvoice } from '@/lib/receivables/model';
  * >>> ACCESS CONTROL (docs/specs/receivables/PLAN.md) <<<
  *   A sheet belongs to one manager (`receivable_sheets.manager_user_id`). That manager and the
  *   firm-wide admins (super admin, admin) read and write it; any other manager reads it as not
- *   found. Interns, clients and developers are refused before the first query. The public client
- *   page has no session: it reads only a published snapshot through `systemPublicSheet`, found
- *   by the secret key in the link.
+ *   found. Interns, clients and developers are refused before the first query. A signed-in client
+ *   partner reads only their own rows of the latest published snapshot, through
+ *   partner-portal.ts (the public key link was retired in Phase 8).
  */
 
 export type SheetRow = typeof receivableSheets.$inferSelect;

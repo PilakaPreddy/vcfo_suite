@@ -13,10 +13,13 @@ import type { Partner } from '@/lib/receivables/model';
 import type { ManagerSheetDto } from '@/lib/receivables/wire';
 import type { useReceivablesActions } from '@/hooks/use-receivables';
 import { inr } from '../format';
+import { PartnerLoginCell } from './PartnerLogin';
 
 /**
- * The Partners tab: the client page link (with its secret key), and the client partners. Partners
- * have no login; their name is the client page filter and their email gets the reminders.
+ * The Partners tab: the client page link (with its secret key), and the client partners. Their
+ * email gets the reminders. Since Phase 8 each partner can also have a login (the Login column,
+ * `PartnerLogin.tsx`): the manager invites them, resends the invite, resets the password or
+ * disables the login.
  */
 
 type Actions = ReturnType<typeof useReceivablesActions>;
@@ -125,7 +128,7 @@ export function PartnersTab({ data, actions }: { data: ManagerSheetDto; actions:
         </Button>
       </div>
       <div className="relative overflow-x-auto rounded-md border border-line bg-surface-raised">
-        <table className="w-full min-w-[760px] border-collapse text-[13px]">
+        <table className="w-full min-w-[980px] border-collapse text-[13px]">
           <thead>
             <tr>
               <th className={TH}>Name</th>
@@ -133,6 +136,7 @@ export function PartnersTab({ data, actions }: { data: ManagerSheetDto; actions:
               <th className={TH}>Clients</th>
               <th className={`${TH} text-right`}>Open INR</th>
               <th className={TH}>Active</th>
+              <th className={TH}>Login</th>
               <th className={TH}>
                 <span className="sr-only">Actions</span>
               </th>
@@ -141,7 +145,7 @@ export function PartnersTab({ data, actions }: { data: ManagerSheetDto; actions:
           <tbody>
             {data.partners.length === 0 ? (
               <tr>
-                <td colSpan={6} className={`${TD} text-ink-muted`}>
+                <td colSpan={7} className={`${TD} text-ink-muted`}>
                   No client partners yet. Add them, then pick a partner on each invoice.
                 </td>
               </tr>
@@ -163,6 +167,9 @@ export function PartnersTab({ data, actions }: { data: ManagerSheetDto; actions:
                       />
                       {p.active ? null : <Chip raw tone="idle">Inactive</Chip>}
                     </span>
+                  </td>
+                  <td className={TD}>
+                    <PartnerLoginCell sheetId={data.sheet.id} partner={p} />
                   </td>
                   <td className={`${TD} whitespace-nowrap text-right`}>
                     <Button size="sm" variant="quiet" onClick={() => copy(partnerLink(p.slug), `${p.name.split(' ')[0]}'s link`)}>

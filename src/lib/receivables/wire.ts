@@ -15,13 +15,33 @@ export type SheetDto = {
 
 export type ManagerSheetDto = {
   sheet: SheetDto;
-  partners: Partner[];
-  invoices: SheetInvoice[];
+  partners: PartnerDto[];
+  invoices: ManagerInvoiceDto[];
   unpublishedChanges: number;
   latestVersion: { id: string; seq: number; publishedAt: string; publishedByName: string } | null;
   /** The client page link, key included. */
   publicUrl: string;
 };
+
+/** Phase 8: a client partner's login, as the Partners tab shows it. */
+export type PartnerLoginState = 'none' | 'invited' | 'active' | 'disabled';
+
+/** A client partner with their login state (Phase 8). The base fields are the plain `Partner`. */
+export type PartnerDto = Partner & {
+  loginState: PartnerLoginState;
+  invitedAt: string | null;
+  acceptedAt: string | null;
+  notifyOnPublish: boolean;
+};
+
+/** A draft invoice on the manager sheet, with the partner's promise date and the note count (Phase 8). */
+export type ManagerInvoiceDto = SheetInvoice & {
+  promisedOn: string | null;
+  noteCount: number;
+};
+
+/** One note on an invoice. `fromSbc` marks a reply by SBC staff; otherwise the partner wrote it. */
+export type InvoiceNoteDto = { id: string; invoiceId: string; authorName: string; fromSbc: boolean; text: string; createdAt: string };
 
 export type VersionMetaDto = { id: string; seq: number; note: string; publishedAt: string; publishedByName: string };
 export type VersionDto = VersionMetaDto & { snapshot: SnapshotRow[] };

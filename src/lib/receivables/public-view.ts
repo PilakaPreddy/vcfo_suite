@@ -2,9 +2,9 @@ import type { SnapshotRow } from './model';
 import { isOpen, monthsOf, receivedThisWeek, sheetTotals, type SheetTotals } from './summary';
 
 /**
- * RECEIVABLES PUBLIC VIEW — what the client page shows for one partner (or all): the open
- * invoices by month, oldest due first, the receipts of the last seven days, and the totals. Built
- * only from a published snapshot.
+ * RECEIVABLES PUBLIC VIEW — what the client partner page shows: the open invoices by month,
+ * oldest due first, the receipts of the last seven days, and the totals. Built only from a
+ * published snapshot (already cut to the partner's own rows by the repository).
  */
 
 export type PublicView = {
@@ -28,9 +28,4 @@ export function publicView(rows: SnapshotRow[], partnerSlug: string | null, toda
     received: mine.filter((r) => receivedThisWeek(r, today)).sort((a, b) => (b.paidOn ?? '').localeCompare(a.paidOn ?? '')),
     totals: sheetTotals(mine, today),
   };
-}
-
-/** `?partner=` is honoured only when it names a partner in the snapshot. */
-export function validPartner(slug: string | null | undefined, partners: Array<{ slug: string }>): string | null {
-  return slug && partners.some((p) => p.slug === slug) ? slug : null;
 }

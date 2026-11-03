@@ -69,10 +69,11 @@ describe('receivablesWorkbook', () => {
 });
 
 describe('links', () => {
-  it('makes 12-character keys and the key link', () => {
+  it('makes 12-character keys and the plain page link', () => {
     const k = newPublicKey();
     expect(isPublicKeyShape(k)).toBe(true);
-    expect(publicPageUrl('https://app.sbctrack.in/', { publicKey: 'abcdefghijkl', requireKey: true }, 'yash')).toBe('https://app.sbctrack.in/receivables/k/abcdefghijkl?partner=yash');
+    // Phase 8: the key link is retired; every partner signs in at the plain address.
+    expect(publicPageUrl('https://app.sbctrack.in/', { publicKey: 'abcdefghijkl', requireKey: true }, 'yash')).toBe('https://app.sbctrack.in/receivables');
     expect(publicPageUrl('https://app.sbctrack.in', { publicKey: 'abcdefghijkl', requireKey: false })).toBe('https://app.sbctrack.in/receivables');
   });
 

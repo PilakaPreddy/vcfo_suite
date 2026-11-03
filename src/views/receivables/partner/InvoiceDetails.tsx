@@ -7,7 +7,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
-import { sheetDate } from '@/lib/receivables/dates';
+import { addDaysIso, sheetDate } from '@/lib/receivables/dates';
 import type { PartnerReminderDto } from '@/lib/receivables/partner-wire';
 import { toastError, toastSuccess } from '@/lib/toast-errors';
 import { usePartnerInvoice, usePartnerInvoiceActions } from '@/hooks/use-receivables-partner';
@@ -26,7 +26,10 @@ export type InvoiceDetailsProps = {
   onClose: () => void;
 };
 
-const NOTE_MAX = 1000;
+/** The server's cap (PARTNER_NOTE_MAX in the partner portal repository). */
+const NOTE_MAX = 2000;
+/** The furthest promise date the server takes. */
+const PROMISE_MAX_DAYS = 366;
 
 const REMINDER_STATUS: Record<PartnerReminderDto['status'], { text: string; tone: 'ok' | 'bad' | 'warn' | 'idle' }> = {
   sent: { text: 'Sent', tone: 'ok' },
@@ -58,7 +61,8 @@ export function InvoiceDetails({ invoiceId, today, onClose }: InvoiceDetailsProp
   const d = q.data;
   const row = d?.row;
   const open = row?.status === 'open';
-  const badDate = Boolean(promisedOn) && promisedOn < today;
+  const latest = addDaysIso(today, PROMISE_MAX_DAYS);
+  const badDate = Boolean(promisedOn) && (promisedOn < today || promisedOn > latest);
   const noteText = note.trim();
 
   const sendPromise = () =>
@@ -157,10 +161,13 @@ export function InvoiceDetails({ invoiceId, today, onClose }: InvoiceDetailsProp
 
           {open ? (
             <Section title="Client promised payment">
-              <p className="text-[12.5px] text-ink-muted">Reminders pause until this date and SBC sees it.</p>
+              <p className="text-[12.5px] text-ink-muted">
+                {row.promisedOn ? `The client promised payment by ${sheetDate(row.promisedOn)}. Pick a new date to change it. ` : ''}
+                Reminders pause until this date and SBC sees it.
+              </p>
               <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
-                <Field label="Promised by" htmlFor="rcv-promise-date" error={badDate ? 'Pick a date from today on.' : undefined}>
-                  <Input id="rcv-promise-date" type="date" value={promisedOn} min={today} aria-invalid={badDate} onChange={(e) => setPromisedOn(e.target.value)} />
+                <Field label="Promised by" htmlFor="rcv-promise-date" error={badDate ? 'Pick a date from today to a year ahead.' : undefined}>
+                  <Input id="rcv-promise-date" type="date" value={promisedOn} min={today} max={latest} aria-invalid={badDate} onChange={(e) => setPromisedOn(e.target.value)} />
                 </Field>
                 <Field label="Note" htmlFor="rcv-promise-note" hint="Optional.">
                   <Input id="rcv-promise-note" value={promiseNote} maxLength={NOTE_MAX} onChange={(e) => setPromiseNote(e.target.value)} />
@@ -168,7 +175,7 @@ export function InvoiceDetails({ invoiceId, today, onClose }: InvoiceDetailsProp
               </div>
               <div>
                 <Button size="sm" disabled={!promisedOn || badDate || actions.promise.isPending} onClick={sendPromise}>
-                  {actions.promise.isPending ? 'Saving…' : 'Save promise'}
+                  {actions.promise.isPending ? 'Saving…' : row.promisedOn ? 'Change promise' : 'Save promise'}
                 </Button>
               </div>
             </Section>

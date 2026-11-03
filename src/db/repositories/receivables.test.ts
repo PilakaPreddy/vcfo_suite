@@ -4,8 +4,8 @@ import type { AuthContext } from '@/auth/guards';
 /**
  * Access rules for the receivables repositories (docs/specs/receivables/PLAN.md): a sheet is
  * edited only by its own manager and the firm-wide admins; another manager reads it as not found
- * and writes nothing; interns, clients and developers are refused before any query; the public
- * page reads only a published snapshot, by a well-formed key.
+ * and writes nothing; interns, clients and developers are refused before any query. The client
+ * partner's access is tested in receivables/partner-portal.test.ts.
  */
 
 type Call = { op: string; values?: unknown; set?: unknown };
@@ -179,34 +179,6 @@ describe('firm-wide admins', () => {
   it('may edit any sheet', async () => {
     results = [[sheetRow()], [], [], [], [{ n: 0 }]];
     await expect(repo.getManagerSheet(ctx('admin'), SHEET)).resolves.toMatchObject({ unpublishedChanges: 0, latestVersion: null });
-  });
-});
-
-describe('systemPublicSheet', () => {
-  it('refuses a malformed key without a query', async () => {
-    await expect(repo.systemPublicSheet({ key: "x' or 1=1" })).resolves.toBeNull();
-    expect(calls).toHaveLength(0);
-  });
-
-  it('serves nothing before the first Update', async () => {
-    results = [[{ id: SHEET, clientOrgName: 'Summit Consulting', publishedVersionId: null }]];
-    await expect(repo.systemPublicSheet({ key: 'abcdefghijkl' })).resolves.toBeNull();
-  });
-
-  it('without a key, serves only when exactly one sheet has the key turned off', async () => {
-    results = [[]];
-    await expect(repo.systemPublicSheet({})).resolves.toBeNull();
-    results = [[{ id: SHEET }, { id: 'other' }]];
-    await expect(repo.systemPublicSheet({})).resolves.toBeNull();
-  });
-
-  it('returns the published snapshot without internal partner ids', async () => {
-    const snap = [{ ...invoiceRow(), amountInr: 6456984, partnerId: 'p1', partnerSlug: 'yash', partnerName: 'Yash Babbar' }];
-    results = [[{ id: SHEET, clientOrgName: 'Summit Consulting', publishedVersionId: 'v3' }], [{ snapshot: snap, publishedAt: new Date(), publishedByName: 'Krishna' }]];
-    const page = await repo.systemPublicSheet({ key: 'abcdefghijkl' });
-    expect(page?.rows[0].partnerId).toBeNull();
-    expect(page?.partners).toEqual([{ slug: 'yash', name: 'Yash Babbar' }]);
-    expect(writes()).toHaveLength(0);
   });
 });
 

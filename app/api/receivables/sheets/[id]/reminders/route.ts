@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { siteUrl } from '@/lib/site-url';
 import { addDaysIso, todayIst } from '@/lib/receivables/dates';
-import { publicPageUrl } from '@/lib/receivables/links';
+import { partnerInvoiceUrl } from '@/lib/receivables/partner-emails';
 import { hitFromRow, reminderDraft } from '@/lib/receivables/reminder-rule';
 import { getReminderDesk } from '@/db/repositories/receivables';
 import { denied, guardReceivables, receivablesError, type RouteContext } from '../../../_respond';
@@ -24,7 +24,7 @@ export async function GET(_request: Request, context: RouteContext) {
         { clientName: r.clientName, invoiceNo: r.invoiceNo, amountInr: Number(r.amountInr) || 0, dueDate: String(r.dueDate) },
         hit,
         { name: r.partnerName ?? '' },
-        { liveUrl: publicPageUrl(site, sheet, r.partnerSlug), signerName: guard.ctx.name },
+        { liveUrl: partnerInvoiceUrl(site, r.reminder.invoiceId), signerName: guard.ctx.name },
       );
       return {
         id: r.reminder.id,

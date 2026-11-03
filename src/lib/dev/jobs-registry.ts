@@ -15,6 +15,7 @@ import { complianceTaskRepeatOnComplete, complianceTaskRepeatSweep } from '@/job
 import { boardMeetingReminders } from '@/jobs/board-meeting-reminders';
 import { receivablesReminders } from '@/jobs/receivables-reminders';
 import { receivablesBankFeed } from '@/jobs/receivables-bank-feed';
+import { receivablesFxRates } from '@/jobs/receivables-fx-rates';
 import { devCleanup } from '@/jobs/dev-cleanup';
 import { describeFunctions } from './parse';
 import type { JobFunction } from './types';
@@ -43,5 +44,6 @@ export function registeredJobs(): JobFunction[] {
     boardMeetingReminders,
     receivablesReminders,
     receivablesBankFeed,
+    receivablesFxRates,
   ]);
 }

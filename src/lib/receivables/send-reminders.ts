@@ -5,7 +5,7 @@ import { wrapComposeBodyHtml } from '@/lib/email/compose-branding';
 import { sendEmailNoLog } from '@/lib/email/send-email';
 import { formatReplyTo } from '@/lib/email/send-email-shared';
 import { siteUrl } from '@/lib/site-url';
-import { publicPageUrl } from './links';
+import { partnerInvoiceUrl } from './partner-emails';
 import { hitFromRow, reminderDraft } from './reminder-rule';
 
 /**
@@ -23,7 +23,8 @@ export type SendOutcome = { sent: number; failed: number; viaOutlook: number; vi
 
 export function reminderMessage(r: DueReminder, site: string) {
   const hit = hitFromRow(r.reminder);
-  const liveUrl = publicPageUrl(site, { publicKey: r.publicKey, requireKey: r.requireKey }, r.partnerSlug);
+  // The partner signs in and lands on this invoice's details (Phase 8).
+  const liveUrl = partnerInvoiceUrl(site, r.reminder.invoiceId);
   const draft = reminderDraft(
     { clientName: r.invoice.clientName, invoiceNo: r.invoice.invoiceNo, amountInr: Number(r.invoice.amountInr) || 0, dueDate: String(r.invoice.dueDate) },
     hit,

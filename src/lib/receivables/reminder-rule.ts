@@ -50,7 +50,10 @@ export function reminderQueue<T extends RuleInvoice>(invoices: T[], today: strin
 
 const inr = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
 
-/** The default reminder email to a client partner. The manager may override it for one day. */
+/**
+ * The default reminder email to a client partner. The manager may override it for one day.
+ * `liveUrl` is the partner page opened on this invoice (`/receivables?invoice=<id>`).
+ */
 export function reminderDraft(
   inv: Pick<SheetInvoice, 'clientName' | 'invoiceNo' | 'amountInr' | 'dueDate'>,
   hit: ReminderHit,
@@ -66,7 +69,7 @@ export function reminderDraft(
   else line = `${ref} for ${amount} falls due on ${sheetDate(inv.dueDate)}, ${hit.daysLeft} days from today.`;
   return {
     subject: `Reminder: ${ref} · ${hit.label}`,
-    text: `Hi ${first},\n\n${line}\n\nThe live receivables page: ${opts.liveUrl}\n\nRegards,\n${opts.signerName}\nSBC`,
+    text: `Hi ${first},\n\n${line}\n\nSee the invoice, record the client's promised payment date or leave SBC a note on your receivables page: ${opts.liveUrl}\n\nRegards,\n${opts.signerName}\nSBC`,
   };
 }
 

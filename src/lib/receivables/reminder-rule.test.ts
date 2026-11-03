@@ -72,11 +72,11 @@ describe('reminderQueue', () => {
 describe('reminderDraft', () => {
   it('addresses the partner by first name and names the invoice', () => {
     const hit = reminderOn(inv('2026-10-16'), TODAY, RULES)!;
-    const d = reminderDraft({ clientName: 'Duravant', invoiceNo: 'SC/09/03', amountInr: 6456984, dueDate: '2026-10-16' }, hit, { name: 'Yash Babbar' }, { liveUrl: 'https://x/receivables/k/abc', signerName: 'Krishna Tungam' });
+    const d = reminderDraft({ clientName: 'Duravant', invoiceNo: 'SC/09/03', amountInr: 6456984, dueDate: '2026-10-16' }, hit, { name: 'Yash Babbar' }, { liveUrl: 'https://x/receivables?invoice=abc', signerName: 'Krishna Tungam' });
     expect(d.subject).toBe('Reminder: Duravant invoice SC/09/03 · 18 days overdue');
     expect(d.text).toContain('Hi Yash,');
     expect(d.text).toContain('₹64,56,984');
     expect(d.text).toContain('16-Oct-26');
-    expect(d.text).toContain('https://x/receivables/k/abc');
+    expect(d.text).toContain('https://x/receivables?invoice=abc');
   });
 });

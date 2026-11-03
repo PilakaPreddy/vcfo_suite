@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchCredit, payerScore } from './match';
+import { fcAmountFit, matchCredit, payerScore } from './match';
 
 const inv = (id: string, clientName: string, amountInr: number, dueDate = '2026-10-30', status: 'open' | 'received' = 'open') => ({ id, clientName, amountInr, dueDate, status });
 
@@ -60,5 +60,45 @@ describe('matchCredit', () => {
   it('skips received invoices and uses aliases', () => {
     const list = [inv('nd', 'Net Documents', 1630448, '2026-10-15', 'received'), inv('nd2', 'Net Documents', 500000)];
     expect(matchCredit({ payer: 'ND INC', inrAmount: 500000 }, list, { 'Net Documents': ['ND'] })).toMatchObject({ status: 'auto', invoiceIds: ['nd2'] });
+  });
+});
+
+describe('USD credits', () => {
+  const usd = (id: string, clientName: string, fcAmount: number, amountInr: number, dueDate = '2026-10-30') => ({ ...inv(id, clientName, amountInr, dueDate), currency: 'USD', fcAmount });
+  const BOOK = [usd('emb-usd', 'Emburse', 27000, 2268000), usd('bupa-usd1', 'Bupa', 10000, 840000, '2026-11-01'), usd('bupa-usd2', 'Bupa', 5000, 420000, '2026-11-14'), inv('bupa-inr', 'Bupa', 100000)];
+
+  it('reads the bank-charge tolerance as the larger of USD 50 and 2%', () => {
+    expect(fcAmountFit(1000, 1000)).toBe('exact');
+    expect(fcAmountFit(955, 1000)).toBe('charges');
+    expect(fcAmountFit(940, 1000)).toBeNull();
+    expect(fcAmountFit(9810, 10000)).toBe('charges');
+    expect(fcAmountFit(9790, 10000)).toBeNull();
+    expect(fcAmountFit(1010, 1000)).toBeNull();
+  });
+
+  it('auto-matches the exact USD amount whatever the rupees credited', () => {
+    expect(matchCredit({ payer: 'EMBURSE INC', inrAmount: 2290500, currency: 'USD', fcAmount: 27000 }, BOOK)).toMatchObject({ status: 'auto', invoiceIds: ['emb-usd'], note: 'Payer and USD amount match.' });
+  });
+
+  it('asks to confirm a USD shortfall within bank charges', () => {
+    const r = matchCredit({ payer: 'EMBURSE INC', inrAmount: 2280000, currency: 'USD', fcAmount: 26975 }, BOOK);
+    expect(r).toMatchObject({ status: 'to_confirm', invoiceIds: ['emb-usd'] });
+    expect(r.note).toContain('USD 25 short');
+  });
+
+  it('auto-matches one USD credit for all of a client’s USD invoices', () => {
+    expect(matchCredit({ payer: 'BUPA GLOBAL', inrAmount: 1260000, currency: 'USD', fcAmount: 15000 }, BOOK)).toMatchObject({ status: 'auto', invoiceIds: ['bupa-usd1', 'bupa-usd2'] });
+  });
+
+  it('suggests by USD amount alone when the payer is unknown', () => {
+    expect(matchCredit({ payer: 'WIRE 0042', inrAmount: 1, currency: 'USD', fcAmount: 27000 }, BOOK)).toMatchObject({ status: 'to_confirm', invoiceIds: ['emb-usd'] });
+  });
+
+  it('falls back to the INR rules when no USD amount fits', () => {
+    expect(matchCredit({ payer: 'BUPA GLOBAL', inrAmount: 100000, currency: 'USD', fcAmount: 1190 }, BOOK)).toMatchObject({ status: 'auto', invoiceIds: ['bupa-inr'] });
+  });
+
+  it('never matches a rupee credit by foreign amount', () => {
+    expect(matchCredit({ payer: 'EMBURSE INC', inrAmount: 27000 }, BOOK).status).not.toBe('auto');
   });
 });

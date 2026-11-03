@@ -110,7 +110,10 @@ async function ingest(sheetId: string, credits: IncomingCredit[], actorId: strin
       .select()
       .from(receivableInvoices)
       .where(and(eq(receivableInvoices.sheetId, sheetId), eq(receivableInvoices.status, 'open'), isNull(receivableInvoices.deletedAt)));
-    const m = matchCredit({ payer: c.payer, inrAmount: c.inrAmount }, open.map(toInvoice));
+    const m = matchCredit(
+      { payer: c.payer, inrAmount: c.inrAmount, currency: c.currency, fcAmount: c.fcAmount },
+      open.map((r) => ({ ...toInvoice(r), currency: r.currency, fcAmount: num(r.fcAmount) })),
+    );
     if (m.status === 'auto') {
       await settle(sheetId, row, m.invoiceIds, actorId);
       out.auto++;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SnapshotRow } from './model';
-import { publicView, rowsForPartner, validPartner } from './public-view';
+import { publicView, rowsForPartner } from './public-view';
 
 const TODAY = '2026-11-03';
 const row = (over: Partial<SnapshotRow>): SnapshotRow => ({
@@ -51,11 +51,7 @@ describe('publicView', () => {
 });
 
 describe('partner filter', () => {
-  it('honours only partners in the snapshot', () => {
-    const partners = [{ slug: 'yash' }, { slug: 'sandeep' }];
-    expect(validPartner('yash', partners)).toBe('yash');
-    expect(validPartner('mallory', partners)).toBeNull();
-    expect(validPartner(undefined, partners)).toBeNull();
+  it('shows nothing for an unknown partner', () => {
     expect(rowsForPartner(ROWS, 'nobody')).toEqual([]);
   });
 });

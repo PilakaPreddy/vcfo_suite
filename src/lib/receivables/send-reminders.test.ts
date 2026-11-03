@@ -18,7 +18,7 @@ vi.mock('@/lib/site-url', () => ({ siteUrl: () => 'https://app.sbctrack.in' }));
 const { sendDueReminders } = await import('./send-reminders');
 
 const due = (over: Record<string, unknown> = {}, reminder: Record<string, unknown> = {}) => ({
-  reminder: { id: 'r1', kind: 'overdue', daysLeft: -18, subjectOverride: null, bodyOverride: null, ...reminder },
+  reminder: { id: 'r1', invoiceId: '22222222-2222-2222-2222-222222222202', kind: 'overdue', daysLeft: -18, subjectOverride: null, bodyOverride: null, ...reminder },
   invoice: { clientName: 'Duravant', invoiceNo: 'SC/09/03', amountInr: '6456984.00', dueDate: '2026-10-16' },
   partnerName: 'Yash Babbar',
   partnerEmail: 'yash.babbar@summitconsulting.in',
@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 describe('sendDueReminders', () => {
-  it('sends from the manager’s Outlook with the partner’s own link', async () => {
+  it('sends from the manager’s Outlook with a link to the invoice on the partner page', async () => {
     systemDueReminders.mockResolvedValue([due()]);
     expect(await sendDueReminders('2026-11-03', { hourIst: 9 })).toEqual({ sent: 1, failed: 0, viaOutlook: 1, viaEmail: 0 });
     const [userId, mail] = systemSendMailAs.mock.calls[0];
@@ -48,7 +48,8 @@ describe('sendDueReminders', () => {
     expect(mail.to).toEqual(['yash.babbar@summitconsulting.in']);
     expect(mail.subject).toBe('Reminder: Duravant invoice SC/09/03 · 18 days overdue');
     expect(mail.text).toContain('Hi Yash,');
-    expect(mail.text).toContain('https://app.sbctrack.in/receivables/k/abcdefghijkl?partner=yash');
+    expect(mail.text).toContain('https://app.sbctrack.in/receivables?invoice=22222222-2222-2222-2222-222222222202');
+    expect(mail.text).not.toContain('/receivables/k/');
     expect(systemRecordReminder).toHaveBeenCalledWith(['r1'], { status: 'sent', channel: 'outlook', toEmail: 'yash.babbar@summitconsulting.in' });
     expect(sendEmailNoLog).not.toHaveBeenCalled();
   });

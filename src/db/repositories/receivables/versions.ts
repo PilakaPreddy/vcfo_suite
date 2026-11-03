@@ -1,10 +1,12 @@
 import 'server-only';
-import { and, asc, desc, eq, gt, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { receivableChanges, receivableInvoices, receivablePartners, receivableSheets, receivableVersions } from '@/db/schema';
+import { profiles, receivableChanges, receivableInvoices, receivablePartners, receivableSheets, receivableVersions } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
-import { isPublicKeyShape } from '@/lib/receivables/links';
 import type { SnapshotRow } from '@/lib/receivables/model';
+import { diffPublishForPartners, publishAlertEmail } from '@/lib/receivables/publish-alerts';
+import { partnerHomeUrl } from '@/lib/receivables/partner-emails';
+import { siteUrl } from '@/lib/site-url';
 import { UUID, notFound, scopedSheet, toInvoice } from './shared';
 
 export type VersionMeta = { id: string; seq: number; note: string; publishedAt: Date; publishedByName: string };
@@ -27,7 +29,7 @@ async function snapshotOf(sheetId: string): Promise<SnapshotRow[]> {
 export async function publishSheet(ctx: AuthContext, sheetId: string, note?: string): Promise<VersionMeta> {
   const sheet = await scopedSheet(ctx, sheetId);
   const [last] = await db
-    .select({ seq: receivableVersions.seq, publishedAt: receivableVersions.publishedAt })
+    .select({ seq: receivableVersions.seq, publishedAt: receivableVersions.publishedAt, snapshot: receivableVersions.snapshot })
     .from(receivableVersions)
     .where(eq(receivableVersions.sheetId, sheet.id))
     .orderBy(desc(receivableVersions.seq))
@@ -48,7 +50,7 @@ export async function publishSheet(ctx: AuthContext, sheetId: string, note?: str
   }
   const snapshot = await snapshotOf(sheet.id);
   const seq = (last?.seq ?? 0) + 1;
-  return db.transaction(async (tx) => {
+  const meta = await db.transaction(async (tx) => {
     const [version] = await tx
       .insert(receivableVersions)
       .values({ sheetId: sheet.id, seq, note: text, snapshot, publishedBy: ctx.userId, publishedByName: ctx.name })
@@ -56,6 +58,47 @@ export async function publishSheet(ctx: AuthContext, sheetId: string, note?: str
     await tx.update(receivableSheets).set({ publishedVersionId: version.id, updatedAt: new Date() }).where(eq(receivableSheets.id, sheet.id));
     return { id: version.id, seq: version.seq, note: version.note, publishedAt: version.publishedAt, publishedByName: version.publishedByName };
   });
+  // Phase 8: the partner alerts go after the commit, fire-and-forget. A failure is logged and
+  // never blocks or fails the publish.
+  void sendPublishAlerts({ sheetId: sheet.id, clientOrgName: sheet.clientOrgName, previous: last?.snapshot ?? [], next: snapshot }).catch((e) =>
+    console.error('[receivables] publish alerts failed', e instanceof Error ? e.message : e),
+  );
+  return meta;
+}
+
+/**
+ * Emails each partner of the sheet whose invoices changed in this Update, when they have an
+ * active, accepted login and `notify_on_publish` on. Called only by `publishSheet`, after the
+ * sheet's manager was checked there.
+ */
+async function sendPublishAlerts(input: { sheetId: string; clientOrgName: string; previous: SnapshotRow[]; next: SnapshotRow[] }): Promise<void> {
+  const changes = diffPublishForPartners(input.previous, input.next);
+  if (!changes.size) return;
+  const partners = await db
+    .select({ id: receivablePartners.id, name: receivablePartners.name, email: profiles.email, status: profiles.status })
+    .from(receivablePartners)
+    .innerJoin(profiles, eq(profiles.id, receivablePartners.profileId))
+    .where(
+      and(
+        eq(receivablePartners.sheetId, input.sheetId),
+        eq(receivablePartners.active, true),
+        eq(receivablePartners.notifyOnPublish, true),
+        isNotNull(receivablePartners.acceptedAt),
+      ),
+    );
+  const due = (partners ?? []).filter((p) => p.status === 'active' && changes.has(p.id));
+  if (!due.length) return;
+  const { sendEmail } = await import('@/lib/email/send-email');
+  const url = partnerHomeUrl(siteUrl());
+  for (const p of due) {
+    const mail = publishAlertEmail({ partnerName: p.name, clientOrgName: input.clientOrgName, changes: changes.get(p.id) ?? [], url });
+    try {
+      const res = await sendEmail({ to: p.email, subject: mail.subject, html: mail.html, text: mail.text, purpose: 'receivables.publish_alert' });
+      if (!res.ok && !res.skipped) console.error('[receivables] publish alert not sent', res.error);
+    } catch (e) {
+      console.error('[receivables] publish alert failed', e instanceof Error ? e.message : e);
+    }
+  }
 }
 
 export async function listVersions(ctx: AuthContext, sheetId: string): Promise<VersionMeta[]> {
@@ -73,49 +116,4 @@ export async function getVersion(ctx: AuthContext, versionId: string): Promise<V
   if (!v) throw notFound();
   await scopedSheet(ctx, v.sheetId);
   return { id: v.id, seq: v.seq, note: v.note, publishedAt: v.publishedAt, publishedByName: v.publishedByName, snapshot: v.snapshot };
-}
-
-export type PublicSheet = {
-  clientOrgName: string;
-  publishedAt: Date;
-  publishedByName: string;
-  rows: SnapshotRow[];
-  partners: Array<{ slug: string; name: string }>;
-};
-
-/**
- * SYSTEM (no AuthContext): the public client page has no session. It is found by the secret key
- * in the link; without a key, only a sheet whose manager turned the key off (`require_key` false)
- * is served, and only when exactly one such sheet exists. Returns only the latest published
- * snapshot, never the draft, and no ids of people or settings.
- */
-export async function systemPublicSheet(input: { key?: string | null }): Promise<PublicSheet | null> {
-  let sheet: { id: string; clientOrgName: string; publishedVersionId: string | null } | undefined;
-  const cols = { id: receivableSheets.id, clientOrgName: receivableSheets.clientOrgName, publishedVersionId: receivableSheets.publishedVersionId };
-  if (input.key) {
-    if (!isPublicKeyShape(input.key)) return null;
-    [sheet] = await db.select(cols).from(receivableSheets).where(eq(receivableSheets.publicKey, input.key)).limit(1);
-  } else {
-    const open = await db.select(cols).from(receivableSheets).where(eq(receivableSheets.requireKey, false)).limit(2);
-    if (open.length !== 1) return null;
-    sheet = open[0];
-  }
-  if (!sheet?.publishedVersionId) return null;
-  const [v] = await db
-    .select({ snapshot: receivableVersions.snapshot, publishedAt: receivableVersions.publishedAt, publishedByName: receivableVersions.publishedByName })
-    .from(receivableVersions)
-    .where(and(eq(receivableVersions.id, sheet.publishedVersionId), eq(receivableVersions.sheetId, sheet.id)))
-    .limit(1);
-  if (!v) return null;
-  const partners = new Map<string, string>();
-  for (const r of v.snapshot) if (r.partnerSlug && r.partnerName) partners.set(r.partnerSlug, r.partnerName);
-  // The public page never needs internal ids.
-  const rows = v.snapshot.map((r) => ({ ...r, partnerId: null }));
-  return {
-    clientOrgName: sheet.clientOrgName,
-    publishedAt: v.publishedAt,
-    publishedByName: v.publishedByName,
-    rows,
-    partners: [...partners].map(([slug, name]) => ({ slug, name })).sort((a, b) => a.name.localeCompare(b.name)),
-  };
 }
