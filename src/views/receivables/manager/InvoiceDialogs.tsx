@@ -10,18 +10,22 @@ import { isForeign, realisedFx } from '@/lib/receivables/fx';
 import type { InvoiceInput, Partner, ReceiptInput, SheetInvoice } from '@/lib/receivables/model';
 import { fc, fcText, inr, parseInr, rateText, signedInr } from '../format';
 import { FxFields } from './FxFields';
-import { fxDraftOf, fxFigures, fxPayload, useDraftRate } from './fx-draft';
+import { draftIsForeign, fxDraftOf, fxFigures, fxPayload, useDraftRate } from './fx-draft';
+import { ForwardPicker } from './fx/ForwardPicker';
+import { DatePick } from './sheet/DatePick';
 
 /**
  * The dialogs of the Sheet tab: Mark received, Pause reminders and Add invoice (the Edit FX
- * dialog is in FxFields.tsx). Mark received on a USD invoice asks for the USD received and the
- * INR credited and previews the realised gain or loss and the bank charges; on an INR invoice it
- * takes an optional TDS.
+ * dialog is in FxFields.tsx). Mark received on a foreign invoice asks for the foreign amount
+ * received and the INR credited, previews the realised gain or loss and the bank charges, and may
+ * deliver the receipt against an open forward contract of that currency (Phase 10); on an INR
+ * invoice it takes an optional TDS.
  */
 
 type Busy = { busy: boolean; error: string | null };
 
 export function MarkReceivedDialog({
+  sheetId,
   invoice,
   partnerName,
   today,
@@ -29,6 +33,8 @@ export function MarkReceivedDialog({
   onSave,
   state,
 }: {
+  /** The sheet, for the forward contract picker of a foreign invoice. */
+  sheetId?: string;
   invoice: SheetInvoice;
   partnerName: string;
   today: string;
@@ -42,6 +48,7 @@ export function MarkReceivedDialog({
   const [receivedFc, setReceivedFc] = useState(foreign && invoice.fcAmount ? String(invoice.fcAmount) : '');
   const [tds, setTds] = useState('');
   const [part, setPart] = useState(false);
+  const [forwardId, setForwardId] = useState('');
   const value = parseInr(amount);
   const fcValue = Number(receivedFc.replace(/[$,\s]/g, ''));
   const tdsValue = tds.trim() ? parseInr(tds) : 0;
@@ -51,7 +58,7 @@ export function MarkReceivedDialog({
   const bad = badAmount || badFc || badTds;
   const realised = foreign ? realisedFx({ fcAmount: invoice.fcAmount ?? null, invoiceRate: invoice.fxRate ?? null, receivedFc: fcValue || null, receivedInr: value || null }) : null;
   const fcDue = fcText(invoice);
-  const save = () => onSave(foreign ? { paidOn, amount: value, part, receivedFc: fcValue } : { paidOn, amount: value, part, ...(tdsValue > 0 ? { tdsInr: tdsValue } : {}) });
+  const save = () => onSave(foreign ? { paidOn, amount: value, part, receivedFc: fcValue, ...(forwardId ? { forwardId } : {}) } : { paidOn, amount: value, part, ...(tdsValue > 0 ? { tdsInr: tdsValue } : {}) });
   return (
     <Modal
       open
@@ -72,7 +79,7 @@ export function MarkReceivedDialog({
     >
       <div className="grid gap-3">
         <Field label="Paid on" htmlFor="rcv-paid-on">
-          <Input id="rcv-paid-on" type="date" value={paidOn} max={today} onChange={(e) => setPaidOn(e.target.value)} />
+          <DatePick id="rcv-paid-on" label="Paid on" value={paidOn} max={today} onChange={setPaidOn} quick={[0]} />
         </Field>
         {foreign ? (
           <Field label={`Amount received (${invoice.currency})`} htmlFor="rcv-fc" error={badFc && receivedFc ? 'Enter an amount above zero.' : undefined}>
@@ -92,6 +99,7 @@ export function MarkReceivedDialog({
             <Input id="rcv-tds" inputMode="numeric" value={tds} aria-invalid={badTds} onChange={(e) => setTds(e.target.value)} className="font-mono" />
           </Field>
         ) : null}
+        {foreign && sheetId ? <ForwardPicker sheetId={sheetId} currency={invoice.currency} value={forwardId} onChange={setForwardId} receivedFc={fcValue > 0 ? fcValue : null} /> : null}
         {realised ? (
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-md bg-surface-sunken px-3 py-2 text-[12.5px]">
             <dt className="text-ink-muted">Effective rate</dt>
@@ -169,7 +177,7 @@ export function PauseDialog({
     >
       <div className="grid gap-3">
         <Field label="No reminders until" htmlFor="rcv-until">
-          <Input id="rcv-until" type="date" value={until} min={today} onChange={(e) => setUntil(e.target.value)} />
+          <DatePick id="rcv-until" label="No reminders until" value={until} min={today} onChange={setUntil} quick={[7, 15, 30]} />
         </Field>
         <Field label="Reason" htmlFor="rcv-reason" hint="For example: client promised payment by 10 Nov.">
           <Input id="rcv-reason" value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} />
@@ -215,7 +223,7 @@ export function AddInvoiceDialog({
   const [fx, setFx] = useState(() => fxDraftOf(null, today));
   const stored = useDraftRate(sheetId, fx);
   const figures = fxFigures(fx, stored);
-  const value = fx.currency === 'USD' ? (figures.bookedInr ?? NaN) : parseInr(amount);
+  const value = draftIsForeign(fx) ? (figures.bookedInr ?? NaN) : parseInr(amount);
   const ok = clientName.trim() && value > 0 && dueDate && figures.ok;
   return (
     <Modal
@@ -275,7 +283,7 @@ export function AddInvoiceDialog({
             </select>
           </Field>
           <Field label="Due date" htmlFor="rcv-due">
-            <Input id="rcv-due" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+            <DatePick id="rcv-due" label="Due date" value={dueDate} onChange={setDueDate} quick={[15, 30, 45, 60]} />
           </Field>
         </div>
         <FxFields draft={fx} onChange={setFx} stored={stored} idPrefix="rcv-add" />

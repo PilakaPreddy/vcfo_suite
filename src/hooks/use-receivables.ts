@@ -7,6 +7,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { EmailRecipient, InvoiceInput, InvoicePatch, ReceiptInput, ReminderRules } from '@/lib/receivables/model';
+import type { InvoiceHistoryDto, PendingChangesDto } from '@/lib/receivables/history-wire';
 import type { CreditsDto, ImportResultDto, InvoiceNoteDto, ManagerSheetDto, OutlookStatusDto, PartnerDto, ReminderDeskDto, SummaryDto, VersionDto, VersionMetaDto } from '@/lib/receivables/wire';
 
 const ERROR_TEXT: Record<string, string> = {
@@ -47,10 +48,11 @@ const ERROR_TEXT: Record<string, string> = {
   not_accepted: 'The partner has not set a password yet. Use Resend invite.',
   not_disabled: 'This login is not disabled.',
   note: 'Write a note of up to 2000 characters.',
-  currency: 'Pick INR or USD.',
-  fc_amount: 'Enter the USD amount above zero.',
-  fx_rate: 'Enter the booked rate (INR per USD) above zero.',
-  invoice_date: 'Enter the invoice date of the USD invoice.',
+  currency: 'Pick INR or one of the listed foreign currencies.',
+  fc_amount: 'Enter the foreign amount above zero.',
+  fx_rate: 'Enter the booked rate (INR per unit) above zero.',
+  invoice_date: 'Enter the invoice date of the foreign invoice.',
+  forward: 'Pick an open forward contract of this currency with an amount left.',
   tds: 'Enter the TDS in rupees, zero or more.',
 };
 
@@ -250,4 +252,67 @@ export function useAddSbcNote(sheetId: string, invoiceId: string) {
     mutationFn: (text: string) => call<{ note: InvoiceNoteDto }>(`/api/receivables/invoices/${invoiceId}/notes`, json('POST', { text })),
     onSettled: () => Promise.all([qc.invalidateQueries({ queryKey: notesKey(invoiceId) }), qc.invalidateQueries({ queryKey: sheetKey(sheetId) })]),
   });
+}
+
+/** Phase 10: the changes the next Update publishes, fetched while the "What changes" list is open. */
+export function usePendingChanges(sheetId: string, enabled: boolean, unpublished: number) {
+  return useQuery({
+    // The unpublished count is part of the key, so a new edit refetches the list.
+    queryKey: ['receivables', 'changes', sheetId, unpublished] as const,
+    queryFn: () => call<PendingChangesDto>(`/api/receivables/sheets/${sheetId}/changes`),
+    enabled,
+  });
+}
+
+/** Phase 10: one invoice's history (changes, reminders and notes), newest first, while the drawer is open. */
+export function useInvoiceHistory(invoiceId: string | null) {
+  return useQuery({
+    queryKey: ['receivables', 'history', invoiceId ?? ''] as const,
+    queryFn: () => call<InvoiceHistoryDto>(`/api/receivables/invoices/${invoiceId}/history`),
+    enabled: Boolean(invoiceId),
+  });
+}
+
+export type BulkResult = { done: number; failed: Array<{ id: string; error: string }> };
+
+/**
+ * Phase 10: the sheet's bulk actions. Each runs the single-invoice route once per invoice, one
+ * after another (the same checks and change rows as a single edit), and refetches the sheet once
+ * at the end. A failure on one invoice does not stop the rest; the result lists what failed.
+ */
+export function useBulkInvoiceActions(sheetId: string) {
+  const qc = useQueryClient();
+  const run = async (ids: string[], one: (id: string) => Promise<unknown>): Promise<BulkResult> => {
+    const out: BulkResult = { done: 0, failed: [] };
+    try {
+      for (const id of ids) {
+        try {
+          await one(id);
+          out.done += 1;
+        } catch (e) {
+          out.failed.push({ id, error: e instanceof Error ? e.message : 'Something went wrong. Try again.' });
+        }
+      }
+    } finally {
+      await qc.invalidateQueries({ queryKey: sheetKey(sheetId) });
+    }
+    return out;
+  };
+  return {
+    markReceived: useMutation({
+      mutationFn: ({ items, paidOn }: { items: Array<{ id: string; amount: number }>; paidOn: string }) => {
+        const amounts = new Map(items.map((i) => [i.id, i.amount]));
+        return run(
+          items.map((i) => i.id),
+          (id) => call(`/api/receivables/invoices/${id}/received`, json('POST', { paidOn, amount: amounts.get(id), part: false })),
+        );
+      },
+    }),
+    assignPartner: useMutation({
+      mutationFn: ({ ids, partnerId }: { ids: string[]; partnerId: string | null }) => run(ids, (id) => call(`/api/receivables/invoices/${id}`, json('PATCH', { partnerId }))),
+    }),
+    pause: useMutation({
+      mutationFn: ({ ids, until, reason }: { ids: string[]; until: string | null; reason: string | null }) => run(ids, (id) => call(`/api/receivables/invoices/${id}/pause`, json('PUT', { until, reason }))),
+    }),
+  };
 }

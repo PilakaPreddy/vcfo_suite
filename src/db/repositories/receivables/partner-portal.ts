@@ -7,6 +7,7 @@ import { addDaysIso, sheetDate, todayIst } from '@/lib/receivables/dates';
 import type { SnapshotRow } from '@/lib/receivables/model';
 import type { PartnerHomeDto, PartnerInvoiceDetailDto, PartnerNoteDto, PartnerReminderDto, PartnerRowDto } from '@/lib/receivables/partner-wire';
 import { hitFromRow } from '@/lib/receivables/reminder-rule';
+import { buildStatement, type Statement, type StatementQuery } from '@/lib/receivables/statement';
 import { ISO_DATE, ReceivablesError, UUID, invalid, invoiceLabel, logChange, notFound } from './shared';
 
 /**
@@ -288,4 +289,14 @@ export async function addPartnerNote(ctx: AuthContext, invoiceId: string, text: 
 export async function partnerExportRows(ctx: AuthContext): Promise<{ clientOrgName: string; rows: SnapshotRow[] }> {
   const scope = await partnerScope(ctx);
   return { clientOrgName: orgName(scope.links), rows: scope.rows };
+}
+
+/**
+ * GET /api/receivables/partner/statement — a statement of account (Phase 10) built from the
+ * partner's own rows of the latest published version only, so it never shows a draft edit or
+ * another partner's invoice. A client name outside those rows gives an empty statement.
+ */
+export async function partnerStatement(ctx: AuthContext, query: StatementQuery): Promise<{ clientOrgName: string; statement: Statement }> {
+  const scope = await partnerScope(ctx);
+  return { clientOrgName: orgName(scope.links), statement: buildStatement(scope.rows, query) };
 }

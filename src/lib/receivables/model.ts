@@ -24,6 +24,11 @@ export type ReminderRules = {
   skipWeekends: boolean;
   /** Hour of the IST day the queue sends (the queue itself is built an hour earlier). */
   sendHourIst: number;
+  /**
+   * Phase 10: the Monday digest email to the sheet's manager (src/jobs/receivables-digest.ts).
+   * Missing (older rows) reads as on.
+   */
+  digestEnabled?: boolean;
 };
 
 export const DEFAULT_REMINDER_RULES: ReminderRules = {
@@ -57,7 +62,7 @@ export type SheetInvoice = {
    * Phase 9, all optional: snapshots published before Phase 9 do not carry them and read as an
    * INR invoice with no TDS and no dispute.
    */
-  /** `INR` or a foreign currency (today only `USD`). Missing reads as INR. */
+  /** `INR` or a foreign currency (src/lib/receivables/currencies.ts). Missing reads as INR. */
   currency?: string;
   /** The invoiced amount in the foreign currency; null for INR. */
   fcAmount?: number | null;
@@ -97,7 +102,7 @@ export type InvoiceInput = {
   partnerId?: string | null;
   dueDate: string;
   amountInr: number;
-  /** Phase 9: `INR` (the default) or `USD`. A USD invoice also needs `fcAmount` and `fxRate`. */
+  /** Phase 9: `INR` (the default) or a foreign currency. A foreign invoice also needs `fcAmount` and `fxRate`. */
   currency?: string;
   fcAmount?: number | null;
   fxRate?: number | null;
@@ -116,4 +121,6 @@ export type ReceiptInput = {
   receivedFc?: number | null;
   /** TDS the client deducted from an INR invoice; it settles the balance along with `amount`. */
   tdsInr?: number | null;
+  /** Phase 10: an open forward contract of the invoice's currency the receipt is delivered against. */
+  forwardId?: string | null;
 };

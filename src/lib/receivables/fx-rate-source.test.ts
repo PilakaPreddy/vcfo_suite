@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fetchReferenceRate, parseFbilLike, parseFrankfurter, parseRateDate } from './fx-rate-source';
+import { fetchReferenceRate, fetchReferenceRates, parseFbilLike, parseFrankfurter, parseFrankfurterCross, parseRateDate } from './fx-rate-source';
 
 const TODAY = '2026-11-03';
 
@@ -91,5 +91,57 @@ describe('fetchReferenceRate', () => {
     await expect(fetchReferenceRate('USD', TODAY, { fetchImpl: none, env: {} })).resolves.toBeNull();
     await expect(fetchReferenceRate('INR', TODAY, { fetchImpl: none, env: {} })).resolves.toBeNull();
     expect(none).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('parseFrankfurterCross', () => {
+  const body = { amount: 1, base: 'EUR', date: '2026-11-03', rates: { INR: 97.5, USD: 1.16, GBP: 0.875, JPY: 176.4 } };
+
+  it('turns EUR-based quotes into INR per unit of each currency', () => {
+    const rows = parseFrankfurterCross(body, ['EUR', 'USD', 'GBP', 'JPY', 'CHF']);
+    expect(rows?.map((r) => r.currency)).toEqual(['EUR', 'USD', 'GBP', 'JPY']);
+    expect(rows?.find((r) => r.currency === 'EUR')?.rate).toBe(97.5);
+    expect(rows?.find((r) => r.currency === 'USD')?.rate).toBeCloseTo(97.5 / 1.16, 6);
+    expect(rows?.find((r) => r.currency === 'JPY')?.rate).toBeCloseTo(0.552721, 6);
+    expect(rows?.every((r) => r.rateDate === '2026-11-03')).toBe(true);
+  });
+
+  it('refuses an answer without INR or a date', () => {
+    expect(parseFrankfurterCross({ ...body, rates: { USD: 1.1 } }, ['USD'])).toBeNull();
+    expect(parseFrankfurterCross({ ...body, date: 'soon' }, ['USD'])).toBeNull();
+    expect(parseFrankfurterCross(null, ['USD'])).toBeNull();
+  });
+});
+
+describe('fetchReferenceRates', () => {
+  const ecb = { amount: 1, base: 'EUR', date: TODAY, rates: { INR: 97.5, USD: 1.16, GBP: 0.875 } };
+
+  it('asks Frankfurter once for every currency and derives AED from the USD peg', async () => {
+    const f = fakeFetch({ 'https://api.frankfurter.dev/v1/latest?base=EUR': ecb });
+    const rows = await fetchReferenceRates(['usd', 'EUR', 'GBP', 'AED', 'INR', 'bad!'], TODAY, { fetchImpl: f, env: {} });
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(String(f.mock.calls[0][0])).toContain('symbols=INR%2CUSD%2CGBP');
+    expect(rows.map((r) => r.currency)).toEqual(['USD', 'EUR', 'GBP', 'AED']);
+    expect(rows.every((r) => r.source === 'ecb')).toBe(true);
+    const usd = rows.find((r) => r.currency === 'USD')!.rate;
+    expect(rows.find((r) => r.currency === 'AED')!.rate).toBeCloseTo(usd / 3.6725, 5);
+  });
+
+  it('prefers the FBIL-compatible source per currency and fills the rest from Frankfurter', async () => {
+    const f = fakeFetch({ 'https://fbil.example/USD': { currency: 'USD', rate: '84.2000', date: '03-11-2026' }, 'https://api.frankfurter.dev/v1/latest?base=EUR': ecb });
+    const rows = await fetchReferenceRates(['USD', 'GBP'], TODAY, { fetchImpl: f, env: { FX_RATE_SOURCE_URL: 'https://fbil.example/{currency}' } });
+    expect(rows).toEqual([
+      { currency: 'USD', rateDate: TODAY, rate: 84.2, source: 'fbil' },
+      expect.objectContaining({ currency: 'GBP', source: 'ecb' }),
+    ]);
+    expect(String(f.mock.calls.at(-1)![0])).toContain('symbols=INR%2CGBP');
+  });
+
+  it('falls back to one call per currency when the combined call fails, and leaves out what no source has', async () => {
+    const f = fakeFetch({
+      'https://api.frankfurter.dev/v1/latest?base=USD': { amount: 1, base: 'USD', date: TODAY, rates: { INR: 84.1 } },
+    });
+    const rows = await fetchReferenceRates(['USD', 'CHF'], TODAY, { fetchImpl: f, env: {} });
+    expect(rows).toEqual([{ currency: 'USD', rateDate: TODAY, rate: 84.1, source: 'ecb' }]);
   });
 });

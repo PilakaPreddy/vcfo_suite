@@ -14,10 +14,13 @@ import type { SheetListItem } from '@/lib/receivables/wire';
 import { useManagerSheet, useOutlookStatus, useReceivablesActions } from '@/hooks/use-receivables';
 import { OUTLOOK_CONNECT_HREF } from './ComposeSummary';
 import { BankTab } from './BankTab';
+import { FxTab } from './FxTab';
+import { LinksTab } from './LinksTab';
 import { PartnersTab } from './PartnersTab';
 import { RemindersTab } from './RemindersTab';
 import { ReportsTab } from './ReportsTab';
 import { SheetTab } from './SheetTab';
+import { paramsWithFilters } from './sheet/sheet-filters';
 import { VersionsTab } from './VersionsTab';
 
 /**
@@ -32,7 +35,9 @@ const TABS = [
   { key: 'reminders', label: 'Reminders' },
   { key: 'partners', label: 'Partners' },
   { key: 'versions', label: 'Versions' },
+  { key: 'links', label: 'Links' },
   { key: 'reports', label: 'Reports' },
+  { key: 'fx', label: 'FX' },
 ] as const;
 type Tab = (typeof TABS)[number]['key'];
 
@@ -58,7 +63,8 @@ export function ReceivablesManager({ sheets, sheetId, userName, homeHref }: { sh
   }, [params, router]);
 
   const go = (next: { tab?: string; sheet?: string }) => {
-    const q = new URLSearchParams(params.toString());
+    // Another sheet has other partners and clients, so the Sheet tab's filters are dropped then.
+    const q = new URLSearchParams(next.sheet ? paramsWithFilters(params.toString(), {}) : params.toString());
     if (next.tab) q.set('tab', next.tab);
     if (next.sheet) q.set('sheet', next.sheet);
     router.replace(`/receivables/manager?${q.toString()}`, { scroll: false });
@@ -66,7 +72,7 @@ export function ReceivablesManager({ sheets, sheetId, userName, homeHref }: { sh
 
   return (
     <div className="min-h-screen bg-surface text-ink">
-      <div className="mx-auto max-w-[1180px] px-4 pb-12">
+      <div className="mx-auto max-w-[1320px] px-4 pb-12">
         <header className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div className="flex flex-wrap items-center gap-3">
             <Link href={homeHref} className="text-[13px] font-bold tracking-[.06em] text-ink">
@@ -114,6 +120,10 @@ export function ReceivablesManager({ sheets, sheetId, userName, homeHref }: { sh
             <PartnersTab data={data} actions={actions} />
           ) : tab === 'reports' ? (
             <ReportsTab sheetId={sheetId} />
+          ) : tab === 'fx' ? (
+            <FxTab sheetId={sheetId} />
+          ) : tab === 'links' ? (
+            <LinksTab data={data} />
           ) : (
             <VersionsTab sheetId={sheetId} />
           )

@@ -5,6 +5,7 @@ import { siteUrl } from '@/lib/site-url';
 import { publicPageUrl } from '@/lib/receivables/links';
 import { getManagerSheet, systemRateFor, updateSheetSettings } from '@/db/repositories/receivables';
 import { todayIst } from '@/lib/receivables/dates';
+import type { RateInForceDto } from '@/lib/receivables/reports-wire';
 import { denied, guardReceivables, receivablesError, type RouteContext } from '../../_respond';
 import { sheetDto } from '../../_dto';
 
@@ -20,11 +21,15 @@ export async function GET(_request: Request, context: RouteContext) {
   try {
     const data = await getManagerSheet(guard.ctx, id);
     const usdRate = await systemRateFor('USD', todayIst());
+    // Phase 10: today's rate of every foreign currency on the draft, so each row converts at its own rate.
+    const fxRates: Record<string, RateInForceDto | null> = { USD: usdRate };
+    for (const c of new Set(data.invoices.map((i) => (i.currency ?? 'INR').toUpperCase()).filter((c) => c !== 'INR' && c !== 'USD'))) fxRates[c] = await systemRateFor(c, todayIst());
     return NextResponse.json({
       ...data,
       sheet: sheetDto(data.sheet),
       publicUrl: publicPageUrl(siteUrl(), data.sheet),
       usdRate,
+      fxRates,
     });
   } catch (e) {
     return receivablesError(e);
@@ -38,6 +43,8 @@ const rules = z.object({
   dailyAfterDue: z.boolean(),
   skipWeekends: z.boolean(),
   sendHourIst: z.number().int().min(6).max(20),
+  /** Phase 10: the Monday digest email to the manager; missing keeps it on. */
+  digestEnabled: z.boolean().optional(),
 });
 const patchSchema = z.object({ requireKey: z.boolean().optional(), reminderRules: rules.optional() });
 

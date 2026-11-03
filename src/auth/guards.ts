@@ -170,6 +170,15 @@ export async function requireOwnAccount(): Promise<GuardResult> {
   return { ok: true, ctx };
 }
 
+/**
+ * The signed-in person of any role, or null when signed out. Only for a page or route whose own
+ * rule decides who may see it without a tenant-scoped repository: the shared receivables views,
+ * where `systemOpenShareLink` applies the link's visibility rule to this viewer.
+ */
+export async function optionalViewer(): Promise<AuthContext | null> {
+  return currentContext({ allowDeveloper: true, allowPartner: true });
+}
+
 /** The receivables client partner pages (/receivables): a signed-in `partner` only. */
 export async function requirePartner(): Promise<GuardResult> {
   const ctx = await currentContext({ allowPartner: true });

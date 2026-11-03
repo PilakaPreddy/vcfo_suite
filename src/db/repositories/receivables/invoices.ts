@@ -4,14 +4,13 @@ import { db } from '@/db/client';
 import { receivableInvoices, receivablePartners } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
 import { monthStart } from '@/lib/receivables/dates';
+import { isInvoiceCurrency } from '@/lib/receivables/currencies';
 import { isForeign, round2 } from '@/lib/receivables/fx';
 import type { InvoiceInput, InvoicePatch, ReceiptInput, SheetInvoice } from '@/lib/receivables/model';
+import { forwardForReceipt, utiliseForward } from './fx-desk';
 import { ISO_DATE, UUID, invalid, invoiceLabel, logChange, money, num, scopedInvoice, scopedSheet, toInvoice } from './shared';
 
 export type { InvoiceInput, InvoicePatch, ReceiptInput };
-
-/** The currencies an invoice may be raised in today. */
-const CURRENCIES = new Set(['INR', 'USD']);
 
 function cleanText(v: unknown, max: number, code: string, required = true): string | null {
   const s = typeof v === 'string' ? v.trim() : '';
@@ -36,7 +35,8 @@ function cleanAmount(v: unknown): number {
 
 function cleanCurrency(v: unknown): string {
   const c = typeof v === 'string' && v.trim() ? v.trim().toUpperCase() : 'INR';
-  if (!CURRENCIES.has(c)) throw invalid('currency');
+  // INR or one of the supported foreign currencies (src/lib/receivables/currencies.ts).
+  if (!isInvoiceCurrency(c)) throw invalid('currency');
   return c;
 }
 
@@ -52,7 +52,7 @@ function cleanFc(v: unknown): number {
   return Math.round(n * 100) / 100;
 }
 
-/** The foreign-currency columns of an invoice: all null for INR, all required for USD. */
+/** The foreign-currency columns of an invoice: all null for INR, all required for a foreign currency. */
 type FxColumns = { currency: string; fcAmount: string | null; fxRate: string | null; invoiceDate: string | null };
 
 function cleanFx(input: { currency?: unknown; fcAmount?: unknown; fxRate?: unknown; invoiceDate?: unknown }): FxColumns & { bookedInr: number | null } {
@@ -193,6 +193,10 @@ export async function updateInvoice(ctx: AuthContext, invoiceId: string, patch: 
  * payment lowers the open balance by the booked INR of that foreign amount. For an INR invoice
  * `tdsInr` is the TDS the client deducted; it adds to the invoice's TDS and, on a part payment,
  * settles the balance along with the amount.
+ *
+ * Phase 10: a foreign receipt may name `forwardId`, an open forward contract of the same sheet and
+ * currency; the foreign amount received (or the invoiced amount when none is given) is delivered
+ * against it, up to what is left on the contract.
  */
 export async function markReceived(ctx: AuthContext, invoiceId: string, input: ReceiptInput): Promise<SheetInvoice> {
   const { invoice, sheet } = await scopedInvoice(ctx, invoiceId);
@@ -208,6 +212,10 @@ export async function markReceived(ctx: AuthContext, invoiceId: string, input: R
     if (!Number.isFinite(tds) || tds < 0 || tds >= 1e12) throw invalid('tds');
   }
   const tdsSet = tds > 0 ? { tdsInr: money((num(invoice.tdsInr) ?? 0) + tds) } : {};
+  const forward = foreign && input.forwardId ? await forwardForReceipt(sheet.id, input.forwardId, invoice.currency) : null;
+  const deliver = async () => {
+    if (forward) await utiliseForward({ forward, fc: receivedFc ?? num(invoice.fcAmount) ?? 0, actorId: ctx.userId, invoiceId: invoice.id, invoiceLabel: invoiceLabel(invoice) });
+  };
   const rate = num(invoice.fxRate);
   const settled = foreign && receivedFc !== null && rate ? round2(receivedFc * rate) : round2(amount + tds);
   if (input.part && settled < open) {
@@ -226,6 +234,7 @@ export async function markReceived(ctx: AuthContext, invoiceId: string, input: R
       .returning();
     const what = receivedFc !== null ? `${invoice.currency} ${money(receivedFc)} (₹${money(amount)})` : `₹${amount}`;
     await logChange({ sheetId: sheet.id, invoiceId: invoice.id, actorId: ctx.userId, summary: `${invoiceLabel(row)} part payment ${what} on ${paidOn}`, field: 'partPaid', before: money(open), after: money(open - settled) });
+    await deliver();
     return toInvoice(row);
   }
   const [row] = await db
@@ -244,6 +253,7 @@ export async function markReceived(ctx: AuthContext, invoiceId: string, input: R
     .where(eq(receivableInvoices.id, invoice.id))
     .returning();
   await logChange({ sheetId: sheet.id, invoiceId: invoice.id, actorId: ctx.userId, summary: `${invoiceLabel(row)} marked received`, field: 'status', before: 'open', after: 'received' });
+  await deliver();
   return toInvoice(row);
 }
 

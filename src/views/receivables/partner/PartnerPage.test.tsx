@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { PartnerHomeDto, PartnerInvoiceDetailDto, PartnerRowDto } from '@/lib/receivables/partner-wire';
 
 /**
@@ -92,8 +92,13 @@ describe('PartnerPage', () => {
     expect(await screen.findByRole('cell', { name: 'Duravant' })).toBeTruthy();
     expect(screen.getByRole('cell', { name: 'Acme' })).toBeTruthy();
     expect(screen.getByText('Open receivables')).toBeTruthy();
-    expect(screen.getByText('Promised 20-Nov-26')).toBeTruthy();
-    expect(screen.getByText('2 notes')).toBeTruthy();
+    // The table and the phone cards are both in the DOM; CSS shows one.
+    expect(screen.getAllByText('Promised 20-Nov-26').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('2 notes').length).toBeGreaterThan(0);
+    // Overdue first, under Needs attention; the rest under Coming up.
+    expect(screen.getByRole('region', { name: 'Needs attention' }).textContent).toContain('Duravant');
+    expect(screen.getByRole('region', { name: 'Coming up' }).textContent).toContain('Acme');
+    for (const link of screen.getAllByRole('link', { name: 'Statement' })) expect(link.getAttribute('href')).toBe('/receivables/statement');
     expect(screen.getByRole('link', { name: 'Download Excel' }).getAttribute('href')).toBe('/api/receivables/partner/export');
     expect(screen.getByRole('link', { name: 'My account' }).getAttribute('href')).toBe('/receivables/account');
   });
@@ -101,8 +106,32 @@ describe('PartnerPage', () => {
   it('shows the USD amount under the INR of a foreign row and nothing extra on INR rows', async () => {
     fetchMock.mockImplementation(() => json(home({ rows: [row({ currency: 'USD', fcAmount: 12000, fxRate: 83.25, amountInr: 999000 }), row({ id: '22222222-2222-2222-2222-222222222209', clientName: 'Acme' })] })));
     render(wrap(<PartnerPage />));
-    expect(await screen.findByText('USD 12,000.00')).toBeTruthy();
-    expect(screen.getAllByText(/^USD /)).toHaveLength(1);
+    expect((await screen.findAllByText('USD 12,000.00')).length).toBe(2);
+    // Once in the table and once on the phone card, and only for the USD row.
+    expect(screen.getAllByText(/^USD /)).toHaveLength(2);
+  });
+
+  it('narrows the lists with the search box', async () => {
+    render(wrap(<PartnerPage />));
+    await screen.findByRole('cell', { name: 'Duravant' });
+    fireEvent.change(screen.getByLabelText('Search invoices'), { target: { value: 'sc/10' } });
+    expect(screen.queryByRole('cell', { name: 'Duravant' })).toBeNull();
+    expect(screen.getByRole('cell', { name: 'Acme' })).toBeTruthy();
+    expect(screen.getByText('No overdue invoices match your search.')).toBeTruthy();
+  });
+
+  it('shows what changed since the last visit from this browser', async () => {
+    window.localStorage.setItem(
+      'vcfo:rcv-partner-seen:yash@summit.example',
+      JSON.stringify({ publishedAt: '2026-10-30T10:00:00.000Z', rows: [{ id: MINE, clientName: 'Duravant', invoiceNo: 'SC/09/03', amountInr: 6000000, status: 'open', dueDate: '2026-10-16' }] }),
+    );
+    render(wrap(<PartnerPage />));
+    const box = await screen.findByRole('region', { name: 'What changed since your last visit' });
+    expect(box.textContent).toContain('Amount changed');
+    expect(box.textContent).toContain('New');
+    // The visit is remembered, so the next one starts from this version.
+    expect(JSON.parse(window.localStorage.getItem('vcfo:rcv-partner-seen:yash@summit.example')!).publishedAt).toBe('2026-11-02T10:00:00.000Z');
+    window.localStorage.clear();
   });
 
   it('says nothing is published before the first Update', async () => {
@@ -116,7 +145,8 @@ describe('PartnerPage', () => {
     render(wrap(<PartnerPage />));
     expect(await screen.findByText('17 days overdue')).toBeTruthy();
     expect(screen.getByText('Client says Friday')).toBeTruthy();
-    expect(screen.getByText('SBC')).toBeTruthy();
+    // SBC's note carries the SBC owner chip inside the drawer.
+    expect(within(screen.getByRole('dialog')).getByText('SBC')).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith(`/api/receivables/partner/invoices/${MINE}`, undefined);
   });
 
