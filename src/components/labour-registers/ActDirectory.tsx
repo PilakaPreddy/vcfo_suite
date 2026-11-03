@@ -1,0 +1,112 @@
+'use client';
+
+import { Folder } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { LR_TONES, type LrTone, lr } from './theme';
+import { LrCard, LrCardHead } from './primitives';
+
+/**
+ * The batch as the download it becomes: one folder per act, the files inside it named.
+ *
+ * It is shown as a directory because that is what arrives. The registers download as an
+ * act-wise zip, and an inspection is conducted act by act — "show me the Minimum Wages
+ * registers" — so the screen is laid out the way both the filing cabinet and the zip already
+ * are. A flat table of thirty forms makes the person rebuild that grouping in their head.
+ *
+ * File names are printed in full, in mono, exactly as they appear inside the archive. That is
+ * not decoration: a practitioner forwards these to an inspector or a client, and the name is
+ * what identifies the form once it has left this screen.
+ */
+
+export interface DirectoryFile {
+  /** The name inside the zip, in full. */
+  name: string;
+  /** XLSX, PDF, DOCX. Drives the badge colour. */
+  format: string;
+}
+
+export interface DirectoryFolder {
+  /** The act, which is also the folder name. */
+  act: string;
+  tone?: LrTone;
+  /**
+   * The files in it. An empty list is legitimate before the period is closed — the folder is
+   * known from the catalogue, its contents are not built yet.
+   */
+  files: DirectoryFile[];
+  /** How many files the folder will hold, when they are not generated yet. */
+  expected?: number;
+}
+
+const FORMAT_TONE: Record<string, LrTone> = { xlsx: 'ok', pdf: 'bad', docx: 'blue', zip: 'warn' };
+
+function FileBadge({ format }: { format: string }) {
+  const tone = LR_TONES[FORMAT_TONE[format.toLowerCase()] ?? 'neutral'];
+  return (
+    <span
+      className="rounded-[4px] px-1.5 py-0.5 text-[9px] font-medium [font-family:var(--lr-mono)]"
+      style={{ background: tone.soft, color: tone.ink }}
+    >
+      {format.toUpperCase()}
+    </span>
+  );
+}
+
+export function ActDirectory({
+  folders,
+  label = 'The zip, folder by folder',
+  size,
+  className,
+}: {
+  folders: DirectoryFolder[];
+  label?: string;
+  /** "2.4 MB". Left out, nothing is claimed about the size. */
+  size?: string;
+  className?: string;
+}) {
+  return (
+    <LrCard className={className}>
+      <LrCardHead
+        icon={Folder}
+        tone="ok"
+        label={label}
+        right={size ? <span className={cn(lr.code, 'text-[12px] text-[var(--lr-muted)]')}>{size}</span> : undefined}
+      />
+
+      <div className="py-1.5">
+        {folders.map((folder, i) => {
+          const tone = LR_TONES[folder.tone ?? 'reg'];
+          const count = folder.files.length || folder.expected || 0;
+          return (
+            <div key={folder.act} className={i > 0 ? 'border-t border-[var(--lr-raised)]' : undefined}>
+              <div className="flex items-center gap-2.5 px-4 py-2.5">
+                <Folder
+                  className="size-4 flex-none"
+                  strokeWidth={1.8}
+                  style={{ color: tone.ink }}
+                  aria-hidden="true"
+                />
+                <span className={cn(lr.code, 'font-medium text-[var(--lr-ink)]')}>{folder.act}/</span>
+                <span className="text-[12px] text-[var(--lr-muted)]">
+                  {folder.files.length
+                    ? `${count} ${count === 1 ? 'file' : 'files'}`
+                    : `${count} ${count === 1 ? 'file' : 'files'} · not generated`}
+                </span>
+              </div>
+              {folder.files.length ? (
+                <ul className="m-0 flex list-none flex-col gap-1.5 pb-2 pl-[50px] pr-4">
+                  {folder.files.map((file) => (
+                    <li key={file.name} className="flex items-center gap-2 text-[13px]">
+                      <FileBadge format={file.format} />
+                      <span className={cn(lr.code, 'min-w-0 break-all text-[var(--lr-ink-2)]')}>{file.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </LrCard>
+  );
+}

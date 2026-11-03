@@ -2,6 +2,7 @@ import 'server-only';
 
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
+import * as base from '@/db/schema';
 import {
   labourRegisterBatches,
   labourRegisterChecklist,
@@ -150,6 +151,139 @@ export async function updateBatch(
     .where(eq(labourRegisterBatches.id, batch.id))
     .returning();
   return row ?? null;
+}
+
+/**
+ * Close the period. This is the one transition that permits generation: before it, the batch
+ * is being gathered; after it, the uploads and the mapping are fixed and the registers are
+ * built from exactly what was locked.
+ *
+ * `readiness` is the summary the preparer was shown when they confirmed, stored verbatim —
+ * what somebody was told at the moment they took responsibility is part of the record, and
+ * recomputing it later would answer a different question.
+ */
+export async function markReady(
+  ctx: AuthContext,
+  input: { batchId: string; accuracyConfirmed: boolean; readiness: Record<string, unknown> },
+): Promise<BatchRow | null> {
+  assertStaff(ctx);
+  if (!input.accuracyConfirmed) throw new Error('the accuracy confirmation is required');
+  const batch = await getBatch(ctx, input.batchId);
+  if (!batch) return null;
+  if (batch.markedReadyAt) throw new Error('already marked ready — reopen the inputs to change them');
+
+  const [row] = await db
+    .update(labourRegisterBatches)
+    .set({
+      status: 'ready',
+      markedReadyBy: ctx.userId,
+      markedReadyAt: new Date(),
+      accuracyConfirmed: true,
+      readinessSnapshot: input.readiness,
+      updatedAt: new Date(),
+    })
+    .where(eq(labourRegisterBatches.id, batch.id))
+    .returning();
+  return row ?? null;
+}
+
+/**
+ * Reopen a locked period. The only way back, and it takes a reason: a register that changed
+ * after it was produced is a question somebody will eventually ask, and the answer should be
+ * on the batch rather than in somebody's memory.
+ *
+ * Documents already generated are left alone. They keep their content address, so if the
+ * inputs come back unchanged the same files answer and nothing is rebuilt; if they change,
+ * the address moves and new documents are produced beside the old ones.
+ */
+export async function reopenInputs(
+  ctx: AuthContext,
+  input: { batchId: string; reason: string },
+): Promise<BatchRow | null> {
+  assertStaff(ctx);
+  const reason = input.reason.trim();
+  if (!reason) throw new Error('a reason is required to reopen a locked period');
+  const batch = await getBatch(ctx, input.batchId);
+  if (!batch) return null;
+  if (!batch.markedReadyAt) return batch;
+
+  const [row] = await db
+    .update(labourRegisterBatches)
+    .set({
+      status: 'open',
+      markedReadyBy: null,
+      markedReadyAt: null,
+      accuracyConfirmed: false,
+      reopenedBy: ctx.userId,
+      reopenedAt: new Date(),
+      reopenReason: reason,
+      reopenCount: batch.reopenCount + 1,
+      updatedAt: new Date(),
+    })
+    .where(eq(labourRegisterBatches.id, batch.id))
+    .returning();
+  return row ?? null;
+}
+
+/** What the provenance bar above a generated batch says. */
+export interface BatchProvenance {
+  periodFrom: string;
+  periodTo: string;
+  status: string;
+  markedReadyAt: string | null;
+  markedReadyByName: string | null;
+  generatedAt: string | null;
+  /** Registers that exist for this batch, and how many were served rather than built. */
+  registers: number;
+  fromStorage: number;
+  /** How many times the period has been reopened, so the bar can say so plainly. */
+  reopenCount: number;
+  reopenReason: string;
+}
+
+/**
+ * The provenance of a batch, in one read: who locked it, when, what was generated and how much
+ * of it came back from storage rather than being built again. It is the evidence manifest said
+ * out loud, which is the point — a number nobody can see is a number nobody trusts.
+ */
+export async function batchProvenance(ctx: AuthContext, batchId: string): Promise<BatchProvenance | null> {
+  const batch = await getBatch(ctx, batchId);
+  if (!batch) return null;
+
+  const docs = await db
+    .select()
+    .from(labourRegisterDocuments)
+    .where(eq(labourRegisterDocuments.batchId, batch.id));
+
+  let readyByName: string | null = null;
+  if (batch.markedReadyBy) {
+    const [who] = await db
+      .select({ name: base.profiles.name })
+      .from(base.profiles)
+      .where(eq(base.profiles.id, batch.markedReadyBy))
+      .limit(1);
+    readyByName = who?.name ?? null;
+  }
+
+  const generatedAt = docs.reduce<Date | null>(
+    (latest, d) => (!latest || d.generatedAt > latest ? d.generatedAt : latest),
+    null,
+  );
+
+  return {
+    periodFrom: batch.periodFrom,
+    periodTo: batch.periodTo,
+    status: batch.status,
+    markedReadyAt: batch.markedReadyAt ? batch.markedReadyAt.toISOString() : null,
+    markedReadyByName: readyByName,
+    generatedAt: generatedAt ? generatedAt.toISOString() : null,
+    registers: docs.length,
+    /* A document downloaded more than once was served from storage every time after the
+       first, which is the saving this feature exists to make. */
+    fromStorage: docs.filter((d) => d.downloadCount > 0).length,
+    reopenCount: batch.reopenCount,
+    reopenReason: batch.reopenReason,
+  };
 }
 
 /* ── The payroll checklist ────────────────────────────────────────────────── */
@@ -400,6 +534,9 @@ export async function recordDocument(
   assertStaff(ctx);
   const batch = await getBatch(ctx, input.batchId);
   if (!batch) return null;
+  /* Generation follows the close, never precedes it: a register built from a half-gathered
+     month looks exactly like a finished one. */
+  if (!batch.markedReadyAt) throw new Error('mark the inputs ready before generating registers');
   const [row] = await db
     .insert(labourRegisterDocuments)
     .values({ ...input, format: input.format ?? 'xlsx', generatedBy: ctx.userId })
