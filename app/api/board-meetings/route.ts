@@ -31,6 +31,7 @@ const createSchema = z.object({
   venue: z.string().max(500).optional(),
   postInc: z.boolean().optional(),
   copyFromLast: z.boolean().optional(),
+  alreadyHeld: z.boolean().optional(),
 });
 
 export async function POST(request: Request) {

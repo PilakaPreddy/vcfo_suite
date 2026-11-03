@@ -33,6 +33,7 @@ const ERROR_TEXT: Record<string, string> = {
   not_found: 'This meeting is not in your clients.',
   cannot_cancel: 'This meeting cannot be cancelled.',
   not_sent: 'The notice is not sent yet.',
+  held_in_future: 'A meeting that already happened needs a date of today or earlier.',
 };
 
 export class MeetingApiError extends Error {
@@ -158,6 +159,8 @@ export interface CreateMeetingBody {
   venue?: string;
   postInc?: boolean;
   copyFromLast?: boolean;
+  /** The meeting already happened with a notice sent outside VCFO: it starts as held. */
+  alreadyHeld?: boolean;
 }
 
 export function useCreateMeeting() {
