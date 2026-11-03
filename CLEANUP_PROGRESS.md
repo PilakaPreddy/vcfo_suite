@@ -16,8 +16,8 @@ memory), and the tests need `npm run css:portal` first because the generated por
 
 - [x] Phase 1.1 — knip hints down to zero (4 rounds; production entries marked with !, css-src build inputs in ignoreFiles)
 - [x] Phase 1.2 — production report ready
-- [ ] Phase 1.3 — unused deps
-- [ ] Phase 1.3 — orphan files
+- [x] Phase 1.3 — unused deps (none; skipped)
+- [x] Phase 1.3 — orphan files (38 removed, gate GREEN)
 - [ ] Phase 1.3 — dead exports
 - [ ] Phase 1.4 — audit
 - [ ] Phase 1.5 — duplication survey
@@ -29,6 +29,6 @@ memory), and the tests need `npm run css:portal` first because the generated por
 
 ## Decisions
 - Production-only orphans (27 files used only by their own tests or fixtures) are not deleted in this run; the owner decides: src/components/dash/phase-rows.tsx, src/components/dash/stage-track.tsx, src/components/dash/week-strip.tsx, src/components/incorporation/PhaseCelebration.tsx, src/components/ui/chevron.tsx, src/db/repositories/dev-test-db.ts, src/db/repositories/work-test-stub.ts, src/lib/audit/audit-event-access.ts, src/views/announcements/AnnouncementDetailDialog.tsx, src/views/client/Overview.tsx, src/components/client/overview/ClientActivityFeed.tsx, src/components/client/overview/ClientBallInCourt.tsx, src/components/client/overview/ClientCard.tsx, src/components/client/overview/ClientCompanySnapshot.tsx, src/components/client/overview/ClientComplianceRunway.tsx, src/components/client/overview/ClientDeliverables.tsx, src/components/client/overview/ClientEntityCard.tsx, src/components/client/overview/ClientJourneyTrack.tsx, src/components/client/overview/ClientMilestoneCelebration.tsx, src/components/client/overview/ClientNextAction.tsx, src/components/client/overview/ClientOverviewHero.tsx, src/components/client/overview/ClientOverviewSkeleton.tsx, src/components/client/overview/ClientPhaseBars.tsx, src/components/client/overview/ClientTeamCard.tsx, src/components/client/overview/client-overview-format.ts, src/lib/assist-profile/__tests__/fixtures.ts, src/lib/doc-pack/__tests__/fixtures.ts
-- Unlisted dependency  in scripts/build-incorp-docs-er-pdf.mjs left alone (owner script; @playwright/test is installed).
+- Unlisted dependency `playwright` in scripts/build-incorp-docs-er-pdf.mjs left alone (owner script; @playwright/test is installed).
 ## Pending for the human
 - (none)
