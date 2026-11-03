@@ -1,17 +1,17 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": [
-    "app/**/{page,layout,loading,error,not-found,global-error,route,template,default}.{ts,tsx}",
-    "scripts/**/*.{ts,mjs}",
+    "app/**/{page,layout,loading,error,not-found,global-error,route,template,default,opengraph-image,icon,sitemap,robots,manifest}.{ts,tsx}!",
+    "scripts/**/*.{ts,mjs}!",
+    "src/jobs/*.ts!",
+    "src/db/schema*.ts!",
     "tests/**/*.ts",
-    "src/jobs/*.ts",
-    "src/db/schema*.ts",
     "src/test/*.ts"
   ],
   "project": [
-    "app/**/*.{ts,tsx,css}",
-    "src/**/*.{ts,tsx,css}",
-    "scripts/**/*.{ts,mjs}",
+    "app/**/*.{ts,tsx,css}!",
+    "src/**/*.{ts,tsx,css}!",
+    "scripts/**/*.{ts,mjs}!",
     "tests/**/*.ts",
     "e2e/**/*.ts"
   ],
@@ -61,5 +61,8 @@
   },
   "ignoreFiles": [
     "src/components/client-portal/css-src/**"
+  ],
+  "ignoreDependencies": [
+    "tailwindcss-animate"
   ]
 }
