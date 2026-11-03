@@ -13,6 +13,7 @@ import {
   type OutgoingEmailDraft,
 } from '@/lib/email/email-dispatch';
 import {
+  approvalBellLines,
   approvalCcEmails,
   collectAdminParties,
   collectLeadParties,
@@ -112,6 +113,7 @@ function emailKind(event: EngagementProcessEvent): ProgressEmailKind | null {
       return 'step_waiting_on_lead';
     case 'step_reopened':
     case 'request_created':
+    case 'client_approved_step':
       return null;
   }
 }
@@ -176,6 +178,7 @@ function notificationKind(event: EngagementProcessEvent): NotificationKind {
     case 'step_awaiting_client_approval':
       return 'request.created';
     case 'phase_approved':
+    case 'client_approved_step':
       return 'checklist.review';
     case 'client_change_requested':
       return 'checklist.review';
@@ -482,6 +485,20 @@ export async function notifyEngagementEvent(input: NotifyInput): Promise<EmailDi
           for (const mgr of collectManagerParties(recipients)) pushNotif(mgr.userId, 'manager', copy.title, copy.body);
         } else {
           for (const admin of collectAdminParties(recipients)) pushNotif(admin.userId, 'admin', copy.title, copy.body);
+        }
+      }
+    } else if (!input.skipInAppNotifications && approvalBellLines(input.event, { company, title })) {
+      // The client's approval round (`approvalBellLines`): the step handed to
+      // the client, and the client's approve / approve-the-phase / change ask.
+      for (const line of approvalBellLines(input.event, { company, title, note: input.note }) ?? []) {
+        if (line.audience === 'client') {
+          for (const c of clientParties(recipients)) pushNotif(c.userId, 'client', line.title, line.body);
+        } else if (line.audience === 'lead') {
+          for (const lead of collectLeadParties(recipients)) pushNotif(lead.userId, 'intern', line.title, line.body);
+        } else if (line.audience === 'manager') {
+          for (const mgr of collectManagerParties(recipients)) pushNotif(mgr.userId, 'manager', line.title, line.body);
+        } else {
+          for (const admin of collectAdminParties(recipients)) pushNotif(admin.userId, 'admin', line.title, line.body);
         }
       }
     } else if (!input.skipInAppNotifications) {

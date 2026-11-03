@@ -15,10 +15,12 @@ type RouteContext = { params: Promise<{ stepId: string }> };
  * an engagement they cannot see gets "not found", never a row from another
  * firm's file. Role scoping is in the repository, not here.
  *
- * Approving the last outstanding step in a phase sends ONE phase-approved
- * email to the lead and managers. The repository stamps the completing step
- * before returning, so a double-click, a refresh or a retry finds the stamp and
- * sends nothing.
+ * Every approval reaches the project leads and the managers. Approving the last
+ * outstanding step in a phase sends ONE phase-approved email and bell row to
+ * them; any other approval is a bell row ("{Step} approved"). The repository
+ * stamps the completing step before returning, so a double-click, a refresh or
+ * a retry finds the stamp and sends nothing; a second approve of the same step
+ * is a no-op there too.
  */
 export async function POST(request: Request, context: RouteContext) {
   const guard = await requireAuth();
@@ -51,13 +53,25 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   try {
-    const { checklistState, phaseCompleted } = await clientApproveStep(
+    const { checklistState, phaseCompleted, alreadyApproved } = await clientApproveStep(
       guard.ctx,
       engagementId,
       stepId.trim(),
     );
 
     let email: Awaited<ReturnType<typeof notifyEngagementEvent>> | null = null;
+    if (!phaseCompleted && !alreadyApproved) {
+      // The lead and the managers hear every approval, not only the last one
+      // of a phase. Bell only; a send failure never reaches the client.
+      email = await notifyEngagementEvent({
+        engagementId,
+        itemId: stepId.trim(),
+        event: 'client_approved_step',
+        actorUserId: guard.ctx.userId,
+        actorName: guard.ctx.name,
+        actorRole: guard.ctx.role,
+      }).catch(() => null);
+    }
     if (phaseCompleted) {
       // One email for the whole phase, to the lead and the managers. The
       // approval itself is already committed, so a send failure is reported,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
+import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 import {
   clientAttachRequestedFile,
   clientUndoRequestedFile,
@@ -16,6 +17,8 @@ type RouteContext = { params: Promise<{ stepId: string }> };
  * Body: { engagementId, requestId, path, fileName?, sizeBytes?, contentType? }
  *    or { engagementId, requestId, undo: true }
  * Only the client, only an open request of its own engagement (repository).
+ * An attach tells the project leads and the managers ("Client upload", bell +
+ * mail, the same event as the Documents page upload); an undo tells nobody.
  */
 export async function POST(request: Request, context: RouteContext) {
   const guard = await requireAuth();
@@ -50,6 +53,16 @@ export async function POST(request: Request, context: RouteContext) {
           sizeBytes: typeof body.sizeBytes === 'number' ? body.sizeBytes : undefined,
           contentType: body.contentType,
         });
+    if (!body.undo) {
+      // The upload is saved; a notification failure never reaches the client.
+      await notifyEngagementEvent({
+        engagementId,
+        itemId: stepId.trim(),
+        event: 'client_uploaded',
+        requestLabel: out.request.label,
+        actorUserId: guard.ctx.userId,
+      }).catch(() => null);
+    }
     return NextResponse.json(out);
   } catch (err) {
     if (err instanceof FileRequestError) return NextResponse.json({ error: err.message }, { status: err.status });

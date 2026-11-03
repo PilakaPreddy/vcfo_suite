@@ -69,6 +69,7 @@ export async function POST(request: Request) {
         engagementId: body.engagementId.trim(),
         itemId: 'pre-12',
         event: 'client_change_requested',
+        requestLabel: 'the timeline',
         note: `Timeline change request: ${created.reason}`,
         actorUserId: guard.ctx.userId,
       }).catch(() => null);
