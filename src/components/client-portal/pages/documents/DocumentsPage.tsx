@@ -9,6 +9,7 @@
  * Data: GET /api/client/documents (every source merged and access-checked on
  * the server) + the shared step model for phase / step names and numbers.
  */
+import { BoardMeetingDocs } from './BoardMeetingDocs';
 import { useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePortal, usePortalOptional, PORTAL_SHELL_KEY } from '@/components/client-portal/PortalProvider';
@@ -164,7 +165,10 @@ function DocumentsInner() {
       ) : (
         <div className="vdoc">
           <div className="vdoc-col">
-            <main className="vdoc-main">{body}</main>
+            <main className="vdoc-main">
+              {body}
+              <BoardMeetingDocs engagementId={shell?.engagementId} />
+            </main>
           </div>
         </div>
       )}

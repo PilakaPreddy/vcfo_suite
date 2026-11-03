@@ -49,7 +49,7 @@ export function TaskList({ tasks, today }: { tasks: ClientTask[]; today: string 
                   return (
                     <GoLink
                       key={t.id}
-                      href={taskHref(t.id)}
+                      href={taskHref(t.id, t.boardMeetingId)}
                       label={`${t.name} · ${w}`}
                       className={cn('grid min-h-[52px] items-center gap-3 border-t border-line-soft px-4 py-2 text-[14px] text-ink first:border-t-0 hover:bg-surface-sunken md:px-5', COLS)}
                     >

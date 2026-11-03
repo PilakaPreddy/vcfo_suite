@@ -88,6 +88,8 @@ export interface TaskRowDto {
   stageLabel: string;
   word: SixWord;
   hidden: boolean;
+  /** Set when the task stands for a board meeting. */
+  boardMeetingId?: string | null;
   week: WeekGroup;
   daysToStart: number;
   daysToDue: number;

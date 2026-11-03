@@ -28,6 +28,8 @@ const NOTIFICATION_KINDS = [
   'compliance.reminder',
   /** A non-statutory task was assigned, submitted, approved, sent back or commented on. */
   'compliance.task',
+  /** A board meeting notice, reply, MoM or resolution needs someone (board-meetings). */
+  'board.meeting',
   'team.assigned',
   'team.removed',
   'email.sent',

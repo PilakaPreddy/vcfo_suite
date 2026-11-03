@@ -183,7 +183,7 @@ function CalendarDesktop({ st, onOpenFilings }: { st: ReturnType<typeof useCalen
     return m;
   }, [statFy, railRows]);
   const detail = st.filing ? byId.get(st.filing) ?? null : null;
-  const openDetail = (f: PortalFiling) => (isTaskRow(f) ? go(taskHref(f.task.id)) : set({ filing: f.id }));
+  const openDetail = (f: PortalFiling) => (isTaskRow(f) ? go(taskHref(f.task.id, f.task.boardMeetingId)) : set({ filing: f.id }));
 
   /* day pop-over */
   const [sel, setSel] = useState<{ iso: string; style: React.CSSProperties; cls: string } | null>(null);

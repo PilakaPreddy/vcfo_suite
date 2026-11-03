@@ -160,7 +160,7 @@ export function ComplianceCalendarView({
   const statCount = (view === 'month' ? sortByDueDate(rowsInMonth(allRows, monthKey)) : allRows).length;
   const taskCount = (view === 'month' ? allTasks.filter((t) => t.dueDate.startsWith(monthKey)) : allTasks).length;
   const recordHref = (row: FilingRow) => hrefs?.record?.(row) ?? statHref(basePath, row.obligationId, row.id);
-  const taskLink = (t: TaskRowDto) => hrefs?.task?.(t) ?? taskHref(basePath, t.id);
+  const taskLink = (t: TaskRowDto) => hrefs?.task?.(t) ?? taskHref(basePath, t.id, t.boardMeetingId);
 
   const marks: CalendarMark[] = useMemo(
     () =>

@@ -73,6 +73,8 @@ export interface TaskRowDto {
   stageLabel: string;
   word: StatusWord;
   hidden: boolean;
+  /** Set when the task stands for a board meeting: the row opens the meeting page. */
+  boardMeetingId: string | null;
   week: WeekGroup;
   daysToStart: number;
   daysToDue: number;
@@ -158,6 +160,7 @@ export function toTaskRowDto(t: TaskRow, x: RowExtras): TaskRowDto {
     stageLabel: STAGE_LABEL[stage],
     word,
     hidden: stage === 'not-applicable',
+    boardMeetingId: t.boardMeetingId ?? null,
     week: weekGroup(stage, t.dueDate, x.day),
     daysToStart: daysBetweenIso(x.day, t.startDate),
     daysToDue: daysBetweenIso(x.day, t.dueDate),

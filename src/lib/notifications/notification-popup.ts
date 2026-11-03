@@ -26,6 +26,7 @@ export const NOTIFICATION_KIND_LABEL: Record<NotificationKind, string> = {
   'schedule.window': 'Dates',
   'compliance.reminder': 'Reminder',
   'compliance.task': 'Task',
+  'board.meeting': 'Meeting',
   'team.assigned': 'Assigned',
   'team.removed': 'Removed',
   'email.sent': 'Sent',

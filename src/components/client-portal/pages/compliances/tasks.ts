@@ -33,6 +33,8 @@ export interface ClientTask {
   notifyDays: number;
   /** The deliverable file of a done task (F-2). */
   deliverable: { id: string; fileName: string } | null;
+  /** Set when the task is a board meeting; the row opens the meeting page instead. */
+  boardMeetingId?: string | null;
 }
 
 export type StatusWord = 'Not started' | 'In progress' | 'Waiting' | 'Due soon' | 'Overdue' | 'Done';

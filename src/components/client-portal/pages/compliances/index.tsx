@@ -16,6 +16,8 @@ import { CompliancesFilings } from './FilingsPage';
 import { CompliancesObligations } from './ObligationsPage';
 import { CompliancesObligation } from './ObligationPage';
 import { CompliancesTask } from './TaskPage';
+import { CompliancesMeeting } from './MeetingPage';
+import { MeetingPage } from '@/views/board-meetings/MeetingPage';
 
 export function ClientCompliancesCalendarRoute() {
   const portal = usePortalOptional();
@@ -48,4 +50,13 @@ export function ClientCompliancesTaskRoute() {
   const params = useParams<{ id: string }>();
   if (!portal) return <FilingsPage basePath="/app/client/compliances" />;
   return <CompliancesTask id={decodeURIComponent(String(params?.id ?? ''))} />;
+}
+
+/** The client's board meeting page (read only; docs/specs/board-meetings/PLAN.md). */
+export function ClientCompliancesMeetingRoute() {
+  const portal = usePortalOptional();
+  const params = useParams<{ id: string }>();
+  const id = decodeURIComponent(String(params?.id ?? ''));
+  if (!portal) return <MeetingPage basePath="/app/admin/compliances" meetingId={id} />;
+  return <CompliancesMeeting id={id} />;
 }

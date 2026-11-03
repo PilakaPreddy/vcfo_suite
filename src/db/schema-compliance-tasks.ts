@@ -85,6 +85,8 @@ export const complianceTasks = pgTable(
     remindBefore: integer('remind_before').notNull().default(5),
     /** The first task of a repeating series (itself for the first one); null for a one-time task. */
     seriesId: uuid('series_id'),
+    /** Set when the task stands for a board meeting (board_meetings.task_id points back). */
+    boardMeetingId: uuid('board_meeting_id'),
     /** The occurrence this one was created from. */
     previousId: uuid('previous_id'),
     reviewNote: text('review_note'),

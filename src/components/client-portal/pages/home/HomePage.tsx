@@ -31,6 +31,7 @@ import { useDownload, useNeedUpload } from './ui';
 import { ActivityCard, AlertsCard, DocsCard, HoldsCard, HomeCard, NeedsCard, SbcCard } from './CardsA';
 import { AreaCard, CompCard, IdsCard, NextCard, PostIncCard, RegCard, TimelineCard } from './CardsB';
 import { TimelineEditor } from './TimelineEditor';
+import { MeetingsCard } from './MeetingsCard';
 import { MessagesCard } from './MessagesCard';
 import { UploadDialog } from './UploadDialog';
 import { complianceDrill, dLong, docUrl, type DocItem, type NeedRow } from './derive';
@@ -182,6 +183,7 @@ export function HomePage() {
                 <NeedsCard h={h} onUpload={upload} className="max-lg:order-1" />
                 <NextCard h={h} className="max-lg:order-2" />
                 <CompCard h={h} onOpen={(tab) => h.portal.drill(complianceDrill(h.filings, h.today, h.home?.filings.fyLabel ?? '', tab))} className="max-lg:order-4" />
+                <MeetingsCard engagementId={h.engagementId} today={h.today} className="max-lg:order-4" />
                 <IdsCard h={h} onReveal={setReveal} onCoi={coiOpen} className="max-lg:order-5" />
                 <AlertsCard h={h} className="max-lg:order-[10]" />
                 <SbcCard h={h} className="max-lg:order-[12]" />

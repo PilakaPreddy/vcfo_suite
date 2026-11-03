@@ -4,6 +4,7 @@ import { UrgencyPill, VisibilityTag } from '@/components/compliances/TaskMarks';
 import type { GridColumn, GridGroup } from '@/views/compliances/grouped-grid';
 import { PersonCell } from '@/views/compliances/identity';
 import { WordChip } from '@/views/compliances/spectrum-parts';
+import { Tag } from '@/components/ui/spectrum-chip';
 import { plainDate } from '@/views/compliances/spectrum-status';
 import type { TaskRowDto } from '@/views/compliances/tasks/api';
 import { WEEK_GROUPS, type StripKey } from '@/views/compliances/tasks/task-model';
@@ -26,8 +27,14 @@ export function statHref(basePath: string, obligationId: string, instanceId: str
   return `${basePath}/obligations/${encodeURIComponent(obligationId)}/${encodeURIComponent(instanceId)}`;
 }
 
-export function taskHref(basePath: string, id: string): string {
+export function taskHref(basePath: string, id: string, boardMeetingId?: string | null): string {
+  if (boardMeetingId) return meetingPageHref(basePath, boardMeetingId);
   return `${basePath}/obligations/tasks/${encodeURIComponent(id)}`;
+}
+
+/** A board meeting's page: Obligations › Non-statutory › the meeting (docs/specs/board-meetings/PLAN.md). */
+export function meetingPageHref(basePath: string, meetingId: string): string {
+  return `${basePath}/obligations/meetings/${encodeURIComponent(meetingId)}`;
 }
 
 /** Rows group by end-date week: This week, Next week, Later, Done (latest done first). */
@@ -58,8 +65,9 @@ export function taskColumns(now: Date): GridColumn<TaskRowDto>[] {
       className: 'w-full max-w-0',
       render: (t) => (
         <span className="block min-w-0">
-          <b className="block truncate text-[14px] font-medium text-ink" title={t.title}>
-            {t.title}
+          <b className="flex min-w-0 items-center gap-2 text-[14px] font-medium text-ink" title={t.title}>
+            {t.boardMeetingId ? <Tag tone="prog">Meeting</Tag> : null}
+            <span className="truncate">{t.title}</span>
           </b>
           <span className="block truncate text-[12.5px] text-ink-muted">{t.companyName}</span>
         </span>

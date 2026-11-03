@@ -11,6 +11,7 @@ Domain logic and helpers. Nothing here imports `db`; data access goes through
 - `assist-profile/` — builds the company profile that the vcfo_assist browser extension fills into MCA portals.
 - `audit/` — audit-log display formatting and the role rules for who sees which audit events.
 - `board-resolution/` — board resolution data model, docx generation, preview and storage keys.
+- `board-meetings/` — board meetings after incorporation: dates (T-10, T-7, T+30, 120-day gap), meeting numbers, quorum, agenda rules, the notice text and Word file, `.ics` invites and signed director links.
 - `checklist/` — the 34-step SPICe+ checklist: per-step validation, gating, review, locks, responses and Part A sections.
 - `client/` — client overview, home (`/api/client/home`) and progress-board shapes, shared by the portal and the legacy client views.
 - `client-portal/` — the v7 client portal's pure models (answers, compliances, credentials, documents, steps).

@@ -199,7 +199,7 @@ function FilingsBody({ st, tableRef }: { st: ReturnType<typeof useFilingsState>;
       })
       .catch(() => toast('Could not download the proof'));
   };
-  const open = (f: PortalFiling) => (isTaskRow(f) ? go(taskHref(f.task.id)) : set({ filing: f.id }));
+  const open = (f: PortalFiling) => (isTaskRow(f) ? go(taskHref(f.task.id, f.task.boardMeetingId)) : set({ filing: f.id }));
   const inWin = (r: PortalFiling) => fullYear || (r.dueDate >= `${start}-01` && r.dueDate <= `${end}-31`);
   const statusWord = status === 'all' ? '' : WORD[status].toLowerCase();
 

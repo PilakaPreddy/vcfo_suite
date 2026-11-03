@@ -316,7 +316,7 @@ function ObligationsBody({ today }: { today: string }) {
                     <span className="block truncate font-medium">{t.name}</span>
                     <span className="block truncate text-[12.5px] text-ink-muted">Inputs for SBC · ends {fmtDM(t.endDate)}</span>
                   </span>
-                  <Button size="sm" variant="outline" onClick={() => go(taskHref(t.id))}>
+                  <Button size="sm" variant="outline" onClick={() => go(taskHref(t.id, t.boardMeetingId))}>
                     Upload
                   </Button>
                 </ListRow>
@@ -402,7 +402,7 @@ function TaskDueRow({ t, today }: { t: ClientTask; today: string }) {
   const late = rel.tone === 'bad';
   return (
     <GoLink
-      href={taskHref(t.id)}
+      href={taskHref(t.id, t.boardMeetingId)}
       label={`${t.name} · ${rel.label}`}
       className={`flex min-w-0 items-center gap-3 border-t border-line-soft px-4 py-2.5 text-[14px] text-ink first:border-t-0 hover:bg-surface-sunken md:px-5${late ? ' bg-danger-soft' : ''}`}
     >

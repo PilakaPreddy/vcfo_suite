@@ -346,7 +346,7 @@ export function FilingsView({
   const recordHref = (row: FilingRow) => {
     const taskId = taskIdOfRow(row);
     const task = taskId ? taskById.get(taskId) : undefined;
-    if (task) return hrefs?.task?.(task) ?? taskHref(basePath, task.id);
+    if (task) return hrefs?.task?.(task) ?? taskHref(basePath, task.id, task.boardMeetingId);
     return hrefs?.record?.(row) ?? statHref(basePath, row.obligationId, row.id);
   };
   // Category counts of the window in view (F-1).
