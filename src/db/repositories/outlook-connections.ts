@@ -168,6 +168,7 @@ export async function sendMailViaOutlook(
   input: {
     to: string[];
     cc?: string[];
+    bcc?: string[];
     subject: string;
     html: string;
     text?: string;
@@ -204,7 +205,30 @@ async function systemAccessToken(userId: string): Promise<string | null> {
       .where(eq(outlookConnections.userId, userId));
     return tokens.access_token;
   } catch (err) {
-    console.error('[outlook] token refresh for a Teams meeting failed', err instanceof Error ? err.message : err);
+    console.error('[outlook] token refresh for a system call failed', err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+/**
+ * SYSTEM (receivables reminders, docs/specs/receivables/PLAN.md): sends one message as the named
+ * user from a job, using their stored connection. No AuthContext: the job has already resolved
+ * the sheet's manager. Returns null without a connection, on a failed refresh or a failed send,
+ * so the caller falls back to the firm's own email (SES or Resend).
+ */
+export async function systemSendMailAs(
+  userId: string,
+  input: { to: string[]; cc?: string[]; subject: string; html: string; text?: string },
+): Promise<{ msEmail: string } | null> {
+  const [row] = await db.select({ msEmail: outlookConnections.msEmail }).from(outlookConnections).where(eq(outlookConnections.userId, userId)).limit(1);
+  if (!row) return null;
+  const access = await systemAccessToken(userId);
+  if (!access) return null;
+  try {
+    await graphSendMail(access, input);
+    return { msEmail: row.msEmail };
+  } catch (err) {
+    console.error('[outlook] system send failed', err instanceof Error ? err.message.slice(0, 200) : err);
     return null;
   }
 }

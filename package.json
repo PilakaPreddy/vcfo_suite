@@ -34,6 +34,7 @@
     "db:seed": "node --conditions=react-server --import tsx scripts/seed.ts",
     "db:seed-demo": "node --conditions=react-server --import tsx scripts/seed-demo.ts",
     "db:purge-demo": "node --conditions=react-server --import tsx scripts/purge-demo-data.ts",
+    "receivables:import": "node --conditions=react-server --import tsx scripts/import-receivables.ts",
     "compliance:generate": "node --conditions=react-server --import tsx scripts/compliance-generate.ts",
     "totp:reencrypt": "node --conditions=react-server --import tsx scripts/reencrypt-totp.ts",
     "infra:up": "docker compose up -d",

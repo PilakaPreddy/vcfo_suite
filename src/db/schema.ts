@@ -1215,3 +1215,4 @@ export * from './schema-compliance-tasks';
 
 export * from './schema-labour-registers';
 export * from './schema-board-meetings';
+export * from './schema-receivables';

@@ -18,6 +18,16 @@ export function roleHomePath(role: Role): string {
   }
 }
 
+/**
+ * Where to go after sign-in when the login page was opened with `?next=`. Only the receivables
+ * manager area is honoured (it lives outside /app, so the role home would lose it); anything else,
+ * including other sites and `//host` tricks, falls back to the role home.
+ */
+export function postLoginPath(role: Role, next: string | null | undefined): string {
+  if (next && /^\/receivables\/manager(\/[A-Za-z0-9/_-]*)?$/.test(next)) return next;
+  return roleHomePath(role);
+}
+
 /** Per-user notification history (dismissed + current). */
 export function roleNotificationsPath(role: Role): string {
   switch (role) {

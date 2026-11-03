@@ -7,7 +7,8 @@ import { NextResponse } from 'next/server';
 /**
  * Route protection + role-home redirects.
  *
- *   - unauthenticated on /app/* -> /login?next=...
+ *   - unauthenticated on /app/* or /receivables/manager -> /login?next=...
+ *     (the public /receivables client page is outside the matcher)
  *   - authenticated on / or /login -> role home
  *   - cross-role guard: URL segment must match the session role
  *     (super_admin may enter every segment for bird's-eye review)
@@ -39,9 +40,10 @@ export default auth((req) => {
   const path = nextUrl.pathname;
 
   const isApp = path.startsWith('/app');
+  const isReceivablesManager = path === '/receivables/manager' || path.startsWith('/receivables/manager/');
   const isAuthPage = path === '/login' || path === '/';
 
-  if (isApp && (!session?.user || !role)) {
+  if ((isApp || isReceivablesManager) && (!session?.user || !role)) {
     const url = new URL('/login', nextUrl);
     url.searchParams.set('next', path);
     return NextResponse.redirect(url);
@@ -69,5 +71,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ['/', '/login', '/app/:path*'],
+  matcher: ['/', '/login', '/app/:path*', '/receivables/manager', '/receivables/manager/:path*'],
 };

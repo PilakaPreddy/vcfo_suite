@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getSession, signIn as authJsSignIn, signOut as authJsSignOut } from 'next-auth/react';
 import { useApp } from '@/context/AppContext';
 import { isValidDbRole } from '@/lib/auth';
-import { roleHomePath } from '@/lib/auth-routes';
+import { postLoginPath } from '@/lib/auth-routes';
 import { toastError, toastSuccess } from '@/lib/toast-errors';
 
 /**
@@ -18,6 +18,11 @@ import { toastError, toastSuccess } from '@/lib/toast-errors';
  * Auth.js with the password as the `otp` field; `authorize` checks both.
  */
 export type SignInStep = 'password' | 'code';
+
+/** `?next=` of the login page; `postLoginPath` decides whether it is honoured. */
+function nextParam(): string | null {
+  return typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('next');
+}
 
 export type SignInState = {
   step: SignInStep;
@@ -103,7 +108,7 @@ export function useSignIn() {
       return;
     }
     if (result.user) {
-      router.push(roleHomePath(result.user.role));
+      router.push(postLoginPath(result.user.role, nextParam()));
     }
   };
 
@@ -139,7 +144,7 @@ export function useSignIn() {
     }
     await refreshAuth();
     patch({ loading: false });
-    router.push(roleHomePath(role));
+    router.push(postLoginPath(role, nextParam()));
   };
 
   const backToPassword = () => patch({ step: 'password', code: '', error: null });

@@ -8,6 +8,7 @@ import {
 import { upsertOutlookConnection } from '@/db/repositories/outlook-connections';
 import { siteUrl } from '@/lib/site-url';
 import { roleSettingsPath } from '@/lib/auth-routes';
+import { OUTLOOK_RETURN_PATHS } from '@/lib/outlook/return-path';
 
 /** GET /api/outlook/callback — Microsoft OAuth redirect. */
 export async function GET(request: Request) {
@@ -18,9 +19,14 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?outlook=error`);
   }
 
-  const settings = `${origin}${roleSettingsPath(guard.ctx.role)}`;
-  const fail = (reason: string) =>
-    NextResponse.redirect(`${settings}?outlook=error&reason=${encodeURIComponent(reason)}`);
+  const returnCookie = request.headers.get('cookie')?.match(/(?:^|;\s*)vcfo_outlook_return=([^;]+)/)?.[1];
+  const returnPath = returnCookie ? decodeURIComponent(returnCookie) : '';
+  const settings = `${origin}${OUTLOOK_RETURN_PATHS.has(returnPath) ? returnPath : roleSettingsPath(guard.ctx.role)}`;
+  const fail = (reason: string) => {
+    const r = NextResponse.redirect(`${settings}?outlook=error&reason=${encodeURIComponent(reason)}`);
+    r.cookies.set('vcfo_outlook_return', '', { path: '/', maxAge: 0 });
+    return r;
+  };
 
   const url = new URL(request.url);
   const err = url.searchParams.get('error_description') || url.searchParams.get('error');
@@ -60,5 +66,6 @@ export async function GET(request: Request) {
 
   const res = NextResponse.redirect(`${settings}?outlook=connected`);
   res.cookies.set('vcfo_outlook_oauth', '', { path: '/', maxAge: 0 });
+  res.cookies.set('vcfo_outlook_return', '', { path: '/', maxAge: 0 });
   return res;
 }
