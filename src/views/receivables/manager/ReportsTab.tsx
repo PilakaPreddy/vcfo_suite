@@ -262,17 +262,17 @@ function RateCard({ data, sheetId }: { data: ReportsDto; sheetId: string }) {
           if (ok) save();
         }}
       >
-        <label className="grid gap-1 text-[12px] text-ink-muted">
+        <label htmlFor="rcv-fx-day" className="grid gap-1 text-[12px] text-ink-muted">
           Day
-          <Input type="date" value={day} max={data.today} onChange={(e) => setDay(e.target.value)} className="h-8 w-[150px]" />
+          <Input id="rcv-fx-day" type="date" value={day} max={data.today} onChange={(e) => setDay(e.target.value)} className="h-8 w-[150px]" />
         </label>
-        <label className="grid gap-1 text-[12px] text-ink-muted">
+        <label htmlFor="rcv-fx-rate" className="grid gap-1 text-[12px] text-ink-muted">
           INR per USD
-          <Input inputMode="decimal" placeholder="84.1250" value={value} onChange={(e) => setValue(e.target.value)} className="h-8 w-[110px]" />
+          <Input id="rcv-fx-rate" inputMode="decimal" placeholder="84.1250" value={value} onChange={(e) => setValue(e.target.value)} className="h-8 w-[110px]" />
         </label>
-        <label className="grid gap-1 text-[12px] text-ink-muted">
+        <label htmlFor="rcv-fx-note" className="grid gap-1 text-[12px] text-ink-muted">
           Note
-          <Input placeholder="e.g. HSBC rate" maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} className="h-8 w-[160px]" />
+          <Input id="rcv-fx-note" placeholder="e.g. HSBC rate" maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} className="h-8 w-[160px]" />
         </label>
         <Button size="sm" type="submit" disabled={!ok || act.setRate.isPending}>
           Override rate

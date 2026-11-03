@@ -16,13 +16,14 @@ import { OUTLOOK_CONNECT_HREF } from './ComposeSummary';
 import { BankTab } from './BankTab';
 import { PartnersTab } from './PartnersTab';
 import { RemindersTab } from './RemindersTab';
+import { ReportsTab } from './ReportsTab';
 import { SheetTab } from './SheetTab';
 import { VersionsTab } from './VersionsTab';
 
 /**
  * /receivables/manager (docs/specs/receivables/PLAN.md): the one manager's workspace, outside
- * the staff shell. A light header with the Outlook link, and five tabs: Sheet, From bank,
- * Reminders, Partners, Versions.
+ * the staff shell. A light header with the Outlook link, and six tabs: Sheet, From bank,
+ * Reminders, Partners, Versions, Reports.
  */
 
 const TABS = [
@@ -31,6 +32,7 @@ const TABS = [
   { key: 'reminders', label: 'Reminders' },
   { key: 'partners', label: 'Partners' },
   { key: 'versions', label: 'Versions' },
+  { key: 'reports', label: 'Reports' },
 ] as const;
 type Tab = (typeof TABS)[number]['key'];
 
@@ -110,6 +112,8 @@ export function ReceivablesManager({ sheets, sheetId, userName, homeHref }: { sh
             <RemindersTab data={data} actions={actions} />
           ) : tab === 'partners' ? (
             <PartnersTab data={data} actions={actions} />
+          ) : tab === 'reports' ? (
+            <ReportsTab sheetId={sheetId} />
           ) : (
             <VersionsTab sheetId={sheetId} />
           )
