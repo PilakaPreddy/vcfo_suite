@@ -59,8 +59,6 @@ export interface DocumentIdentity {
   period: string;
   /** Hash of the mapped input data, computed by the caller over the rows actually used. */
   inputsHash: string;
-  /** The payroll checklist heads in force, which decide the columns. */
-  activeHeads: string[];
   /** The form template's own version, from the form registry. */
   templateVersion: string;
   assumptions: AssumptionSet;
@@ -92,8 +90,6 @@ export function draftKey(id: DocumentIdentity): string {
     formId: id.formId,
     period: id.period,
     inputsHash: id.inputsHash,
-    /* Sorted, so the order a preparer ticked the checklist in cannot change the address. */
-    activeHeads: [...id.activeHeads].sort(),
     templateVersion: id.templateVersion,
     assumptions: id.assumptions,
     locale: id.locale,
@@ -168,9 +164,6 @@ export function mayReplaceInPlace(manifest: Pick<EvidenceManifest, 'attestation'
 export function stalenessReason(storedKey: string, storedIdentity: DocumentIdentity, now: DocumentIdentity): string | null {
   if (storedKey === draftKey(now)) return null;
   if (storedIdentity.inputsHash !== now.inputsHash) return 'the uploaded data changed';
-  if (canonical([...storedIdentity.activeHeads].sort()) !== canonical([...now.activeHeads].sort())) {
-    return 'the payroll checklist changed';
-  }
   if (canonical(storedIdentity.assumptions) !== canonical(now.assumptions)) return 'the attendance assumptions changed';
   if (storedIdentity.templateVersion !== now.templateVersion) return 'the form template changed';
   if (storedIdentity.locale !== now.locale || storedIdentity.timeZone !== now.timeZone) return 'the locale or time zone changed';

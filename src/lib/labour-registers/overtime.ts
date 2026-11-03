@@ -13,7 +13,7 @@
  * decide the question either way. It refuses to compute until somebody has answered it, and it
  * records who answered.
  *
- * That is why `minimum-wage-coverage` is a payroll checklist head: it makes the question part
+ * That is why coverage is recorded per employee: it makes the question part
  * of the monthly close rather than an assumption buried in a formula.
  */
 
@@ -108,7 +108,7 @@ export function overtimeBasisNote(result: OvertimeResult): string {
   return 'Overtime rate undetermined — minimum wage coverage not confirmed.';
 }
 
-/** How many employees of a roll still have no coverage decision, for the close checklist. */
+/** How many employees of a roll still have no coverage decision, for the close. */
 export function unresolvedCoverage(rows: Array<{ coverage: MinimumWageCoverage }>): number {
   return rows.filter((r) => r.coverage === 'unknown').length;
 }

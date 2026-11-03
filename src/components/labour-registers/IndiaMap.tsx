@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { INDIA_OUTLINE, OUTLINE_VIEWBOX } from '@/data/labour-registers/india-outline';
 
@@ -11,12 +12,15 @@ import { INDIA_OUTLINE, OUTLINE_VIEWBOX } from '@/data/labour-registers/india-ou
  * `src/data/labour-registers/india-outline.ts`. Read that before changing anything here: the
  * external boundary is the part with legal weight, and it is correct in the source.
  *
- * Accessibility is why this is a list of links over the paths rather than a bare `<svg>` full
- * of click handlers. Small states cannot be hit reliably with a pointer — Delhi, Goa, Sikkim,
- * Puducherry and the islands are a few pixels across at any sane page size — so each one also
- * gets a marker, and the caller renders a plain list of the same states beside the map. Both
- * read the same rows, so they cannot disagree. The `<svg>` itself is `aria-hidden`; the links
- * carry the labels.
+ * Every configured state is clickable on its own shape, and clicking one selects it. The
+ * small ones cannot be hit reliably with a pointer — Delhi, Goa, Sikkim, Puducherry and the
+ * islands are a few pixels across at any sane page size — so each also gets a marker with a
+ * full-size hit area over it, and the caller renders a plain list of the same states beside
+ * the map.
+ *
+ * The list is not a fallback, it is the keyboard and screen-reader path. The `<svg>` is
+ * `aria-hidden` and its shapes are not focusable: a path is a poor focus target and announces
+ * nothing useful. Both the map and the list read the same rows, so they cannot disagree.
  */
 
 export interface MapState {
@@ -81,6 +85,7 @@ function strokeFor(state: MapState, isSelected: boolean, dimmed: boolean): strin
 
 export function IndiaMap({ states, selected, href, focusRelevant = false, className }: IndiaMapProps) {
   const byCode = new Map(states.map((s) => [s.code, s]));
+  const router = useRouter();
 
   return (
     <div className={cn('relative w-full', className)}>
@@ -98,8 +103,18 @@ export function IndiaMap({ states, selected, href, focusRelevant = false, classN
           const state = byCode.get(region.code) ?? { code: region.code, configured: false };
           const isSelected = selected === region.code;
           const dimmed = focusRelevant && !state.relevant;
+          /* A state you can open is a state you can click on its own shape. The small ones
+             also carry a marker and a hit area below, because their shapes are unaimable. */
+          const pickable = state.configured && !dimmed;
           return (
-            <g key={region.code}>
+            <g
+              key={region.code}
+              onClick={pickable ? () => router.push(href(region.code)) : undefined}
+              className={pickable ? 'cursor-pointer' : undefined}
+            >
+              {/* Hovering a shape should say which state it is. The `<svg>` is aria-hidden, so
+                  this is for the pointer only; the list carries the accessible name. */}
+              <title>{region.name}</title>
               {region.paths.map((d, i) => (
                 <path
                   key={i}
@@ -137,8 +152,15 @@ export function IndiaMap({ states, selected, href, focusRelevant = false, classN
         })}
       </svg>
 
-      {/* The reachable layer: one link per state, over the drawing. */}
-      <ul className="absolute inset-0 m-0 list-none p-0">
+      {/*
+        The hit areas for the states too small to aim at, over the drawing.
+
+        `pointer-events-none` on the list is load-bearing. This layer covers the whole map, and
+        without it the list swallowed every click meant for a shape underneath — which is
+        exactly why clicking a large state did nothing at all. Only the links themselves take
+        the pointer back.
+      */}
+      <ul className="pointer-events-none absolute inset-0 m-0 list-none p-0">
         {INDIA_OUTLINE.map((region) => {
           const state = byCode.get(region.code);
           if (!state?.configured) return null;
@@ -167,7 +189,7 @@ export function IndiaMap({ states, selected, href, focusRelevant = false, classN
                 aria-label={label}
                 title={label}
                 aria-current={selected === region.code ? 'page' : undefined}
-                className="block size-11 rounded-[var(--lr-radius-chip)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--lr-primary)]"
+                className="pointer-events-auto block size-11 rounded-[var(--lr-radius-chip)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--lr-primary)]"
               >
                 <span className="sr-only">{label}</span>
               </Link>

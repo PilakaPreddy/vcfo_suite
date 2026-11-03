@@ -32,35 +32,6 @@
 import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import * as base from './schema';
 
-/**
- * A client's standing payroll checklist. One row per head the firm has considered for this
- * client, whether or not it is on, so turning a head off is a recorded decision rather than an
- * absent row.
- */
-export const labourRegisterChecklist = pgTable(
-  'labour_register_checklist',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    engagementId: uuid('engagement_id')
-      .notNull()
-      .references(() => base.engagements.id, { onDelete: 'cascade' }),
-    /** A head id from `src/data/labour-registers/checklist-heads.ts`. */
-    headId: text('head_id').notNull(),
-    /** Whether this client's payroll runs it. Off means its columns print nil and are not asked for. */
-    active: boolean('active').notNull().default(false),
-    /** Who supplies the figure: client-hr | client-finance | sbc. */
-    owner: text('owner').notNull().default('client-hr'),
-    /** Whether it applies in the full-and-final cycle as well as the regular one. */
-    inFinalSettlement: boolean('in_final_settlement').notNull().default(true),
-    note: text('note').notNull().default(''),
-    updatedBy: uuid('updated_by').references(() => base.profiles.id, { onDelete: 'set null' }),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => ({
-    oneHeadPerEngagement: uniqueIndex('labour_register_checklist_head_idx').on(t.engagementId, t.headId),
-  }),
-);
-
 /** One client, one state, one period: the unit everything else hangs off. */
 export const labourRegisterBatches = pgTable(
   'labour_register_batches',
@@ -119,26 +90,6 @@ export const labourRegisterBatches = pgTable(
   (t) => ({
     onePerPeriod: uniqueIndex('labour_register_batch_period_idx').on(t.engagementId, t.stateCode, t.periodFrom, t.periodTo),
     byEngagement: index('labour_register_batch_engagement_idx').on(t.engagementId, t.periodFrom),
-  }),
-);
-
-/** The monthly tick-off of the checklist against one batch. */
-export const labourRegisterChecklistTicks = pgTable(
-  'labour_register_checklist_ticks',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    batchId: uuid('batch_id')
-      .notNull()
-      .references(() => labourRegisterBatches.id, { onDelete: 'cascade' }),
-    headId: text('head_id').notNull(),
-    /** pending — expected, not yet in · received — figure is in · off — not applicable this period. */
-    state: text('state').notNull().default('pending'),
-    note: text('note').notNull().default(''),
-    updatedBy: uuid('updated_by').references(() => base.profiles.id, { onDelete: 'set null' }),
-    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => ({
-    oneTickPerHead: uniqueIndex('labour_register_tick_head_idx').on(t.batchId, t.headId),
   }),
 );
 

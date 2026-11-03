@@ -5,8 +5,6 @@ import { db } from '@/db/client';
 import * as base from '@/db/schema';
 import {
   labourRegisterBatches,
-  labourRegisterChecklist,
-  labourRegisterChecklistTicks,
   labourRegisterColumnMaps,
   labourRegisterDocuments,
   labourRegisterUploads,
@@ -14,8 +12,6 @@ import {
 import type { AuthContext } from '@/auth/guards';
 import { isAdminOrManager, isFirmWideAdmin } from '@/lib/auth';
 import { assertEngagementAccess, listScopedEngagementIds } from '@/db/repositories/engagements';
-import { CHECKLIST_HEADS, defaultHeadIds, type ChecklistOwner } from '@/data/labour-registers/checklist-heads';
-import { knownHeadIds } from '@/lib/labour-registers/catalogue';
 import type { UploadSlot } from '@/lib/labour-registers/parse';
 
 /**
@@ -41,8 +37,6 @@ import type { UploadSlot } from '@/lib/labour-registers/parse';
 export type BatchRow = typeof labourRegisterBatches.$inferSelect;
 export type UploadRow = typeof labourRegisterUploads.$inferSelect;
 export type DocumentRow = typeof labourRegisterDocuments.$inferSelect;
-export type ChecklistRow = typeof labourRegisterChecklist.$inferSelect;
-export type TickRow = typeof labourRegisterChecklistTicks.$inferSelect;
 
 function assertStaff(ctx: AuthContext) {
   if (!isAdminOrManager(ctx.role) && ctx.role !== 'intern') {
@@ -284,89 +278,6 @@ export async function batchProvenance(ctx: AuthContext, batchId: string): Promis
     reopenCount: batch.reopenCount,
     reopenReason: batch.reopenReason,
   };
-}
-
-/* ── The payroll checklist ────────────────────────────────────────────────── */
-
-/**
- * A client's standing checklist. A client with no rows yet gets the catalogue's defaults,
- * unsaved, so the screen has something to show on the first visit without a write.
- */
-export async function getChecklist(ctx: AuthContext, engagementId: string): Promise<ChecklistRow[] | null> {
-  const access = await engagement(ctx, engagementId);
-  if (!access) return null;
-  return db.select().from(labourRegisterChecklist).where(eq(labourRegisterChecklist.engagementId, access.dbId));
-}
-
-/** The head ids a client's payroll runs, falling back to the catalogue defaults. */
-export async function activeHeads(ctx: AuthContext, engagementId: string): Promise<string[]> {
-  const rows = await getChecklist(ctx, engagementId);
-  if (!rows) return [];
-  if (rows.length === 0) return defaultHeadIds();
-  return rows.filter((r) => r.active).map((r) => r.headId);
-}
-
-/** Turn a head on or off for a client, or change who supplies it. */
-export async function setChecklistHead(
-  ctx: AuthContext,
-  input: { engagementId: string; headId: string; active?: boolean; owner?: ChecklistOwner; note?: string },
-): Promise<ChecklistRow | null> {
-  assertStaff(ctx);
-  if (!knownHeadIds().has(input.headId)) throw new Error('unknown checklist head');
-  const access = await engagement(ctx, input.engagementId);
-  if (!access) return null;
-
-  const fallback = CHECKLIST_HEADS.find((h) => h.id === input.headId);
-  const [row] = await db
-    .insert(labourRegisterChecklist)
-    .values({
-      engagementId: access.dbId,
-      headId: input.headId,
-      active: input.active ?? fallback?.defaultOn ?? false,
-      owner: input.owner ?? fallback?.owner ?? 'client-hr',
-      inFinalSettlement: fallback?.inFinalSettlement ?? true,
-      note: input.note ?? '',
-      updatedBy: ctx.userId,
-    })
-    .onConflictDoUpdate({
-      target: [labourRegisterChecklist.engagementId, labourRegisterChecklist.headId],
-      set: {
-        ...(input.active === undefined ? {} : { active: input.active }),
-        ...(input.owner === undefined ? {} : { owner: input.owner }),
-        ...(input.note === undefined ? {} : { note: input.note }),
-        updatedBy: ctx.userId,
-        updatedAt: new Date(),
-      },
-    })
-    .returning();
-  return row ?? null;
-}
-
-/** The monthly tick-off for one batch. */
-export async function listTicks(ctx: AuthContext, batchId: string): Promise<TickRow[]> {
-  const batch = await getBatch(ctx, batchId);
-  if (!batch) return [];
-  return db.select().from(labourRegisterChecklistTicks).where(eq(labourRegisterChecklistTicks.batchId, batch.id));
-}
-
-/** Record that a head's figure is in, still awaited, or not applicable this period. */
-export async function setTick(
-  ctx: AuthContext,
-  input: { batchId: string; headId: string; state: 'pending' | 'received' | 'off'; note?: string },
-): Promise<TickRow | null> {
-  assertStaff(ctx);
-  if (!knownHeadIds().has(input.headId)) throw new Error('unknown checklist head');
-  const batch = await getBatch(ctx, input.batchId);
-  if (!batch) return null;
-  const [row] = await db
-    .insert(labourRegisterChecklistTicks)
-    .values({ batchId: batch.id, headId: input.headId, state: input.state, note: input.note ?? '', updatedBy: ctx.userId })
-    .onConflictDoUpdate({
-      target: [labourRegisterChecklistTicks.batchId, labourRegisterChecklistTicks.headId],
-      set: { state: input.state, ...(input.note === undefined ? {} : { note: input.note }), updatedBy: ctx.userId, updatedAt: new Date() },
-    })
-    .returning();
-  return row ?? null;
 }
 
 /* ── Uploads ──────────────────────────────────────────────────────────────── */

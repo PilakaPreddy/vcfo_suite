@@ -225,8 +225,8 @@ export function BatchPage({ view, shellBase }: { view: BatchView; shellBase: str
               {view.locked ? 'Why nothing was rebuilt' : 'What the cache key is'}
             </h2>
             <p className="m-0 mt-2.5 text-[13px] leading-relaxed text-[var(--lr-muted)]">
-              The batch is keyed by client, state, period and a hash of the mapped inputs plus the checklist run.
-              While the key does not move, the stored files answer.
+              The batch is keyed by client, state, period and a hash of the mapped inputs. While the key does not
+              move, the stored files answer.
             </p>
             <div
               className={`${lr.code} mt-3 rounded-[var(--lr-radius-chip)] border border-[var(--lr-line)] bg-[var(--lr-canvas)] px-3 py-2.5 text-[12px] leading-[1.7] text-[var(--lr-muted)]`}
@@ -238,8 +238,8 @@ export function BatchPage({ view, shellBase }: { view: BatchView; shellBase: str
               <div>status = {view.status}</div>
             </div>
             <p className="m-0 mt-2.5 text-[12px] leading-relaxed text-[var(--lr-faint)]">
-              Change a mapping, re-upload a sheet or tick a new head and the key moves — then, and only then, the
-              forms affected are rebuilt.
+              Change a mapping or re-upload a sheet and the key moves — then, and only then, the forms affected are
+              rebuilt.
             </p>
           </LrCard>
 

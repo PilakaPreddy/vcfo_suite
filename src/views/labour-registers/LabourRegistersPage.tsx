@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AlertTriangle, ArrowRight, CheckCheck, FileSpreadsheet, MapPin, Printer, TriangleAlert } from 'lucide-react';
 
 import { regimeNote, stateByCode, statesForPicker } from '@/data/labour-registers/states';
@@ -46,6 +48,11 @@ export interface LabourRegistersPageProps {
   period?: string;
   /** False on the client portal, where the page is download-only. */
   canPrepare?: boolean;
+  /**
+   * The clients this preparer can open a batch for. Opening one needs a client as well as a
+   * state, and this screen is state-first, so the client is chosen here.
+   */
+  engagements?: Array<{ id: string; name: string }>;
   /**
    * The states this client actually has an establishment in. When given, the map shows those at
    * full strength and fades the rest, so a client with one establishment is not asked to find
@@ -93,7 +100,12 @@ export function LabourRegistersPage({
   period,
   canPrepare = true,
   relevantStates,
+  engagements = [],
 }: LabourRegistersPageProps) {
+  const router = useRouter();
+  const [engagementId, setEngagementId] = useState(engagements[0]?.id ?? '');
+  const [opening, setOpening] = useState(false);
+  const [openError, setOpenError] = useState('');
   const states = statesForPicker();
   const selected = stateByCode(stateCode ?? '') ?? states.find((s) => s.configured)!;
   const { year, month } = parsePeriod(period);
@@ -122,6 +134,42 @@ export function LabourRegistersPage({
     count: state.configured ? formsFor(state.code, periodRange).length : undefined,
     status,
   }));
+
+  /**
+   * Open the batch for this client, state and period.
+   *
+   * It has to be a request rather than a link, because the batch may not exist yet: the route
+   * finds or creates it and hands back an id, which is what `?batch=` needs. Before this
+   * existed the button was a link back to this same page, which is why pressing it appeared to
+   * do nothing at all.
+   */
+  async function open() {
+    if (!engagementId || opening) return;
+    setOpening(true);
+    setOpenError('');
+    try {
+      const res = await fetch('/api/labour-registers/open', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          engagementId,
+          stateCode: selected.code,
+          periodFrom: periodRange.from,
+          periodTo: periodRange.to,
+        }),
+      });
+      if (!res.ok) {
+        setOpenError(res.status === 404 ? 'That client is not yours to open.' : 'Could not open the batch.');
+        return;
+      }
+      const { batchId } = (await res.json()) as { batchId: string };
+      router.push(`${shellBase}/labour-registers?batch=${batchId}`);
+    } catch {
+      setOpenError('Could not reach the server.');
+    } finally {
+      setOpening(false);
+    }
+  }
 
   const stats: LrStat[] = [
     { label: 'States live', value: configured.length },
@@ -204,11 +252,34 @@ export function LabourRegistersPage({
                 ) : null}
               </ul>
 
-              {selected.configured ? (
-                <Link href={`${shellBase}/labour-registers?state=${selected.code}`} className={`${lr.primary} mt-1`}>
-                  Open {selected.name} · {periodLabel}
-                  <ArrowRight className="size-4" strokeWidth={2} aria-hidden="true" />
-                </Link>
+              {selected.configured && canPrepare ? (
+                <div className="mt-1 flex flex-col gap-2">
+                  <label htmlFor="lr-client" className={lr.headLabel}>
+                    For which client
+                  </label>
+                  <select
+                    id="lr-client"
+                    value={engagementId}
+                    onChange={(e) => setEngagementId(e.target.value)}
+                    className={`${lr.select} w-full`}
+                  >
+                    {engagements.length === 0 ? <option value="">No clients you can prepare for</option> : null}
+                    {engagements.map((eng) => (
+                      <option key={eng.id} value={eng.id}>
+                        {eng.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={open} disabled={!engagementId || opening} className={lr.primary}>
+                    {opening ? 'Opening…' : `Open ${selected.name} · ${periodLabel}`}
+                    <ArrowRight className="size-4" strokeWidth={2} aria-hidden="true" />
+                  </button>
+                  {openError ? (
+                    <p className="m-0 text-[13px] text-[var(--lr-bad)]" role="alert">
+                      {openError}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           </div>
@@ -222,8 +293,8 @@ export function LabourRegistersPage({
               <ul className="m-0 flex list-none flex-col gap-2 px-4 py-3 text-[13px] leading-relaxed text-[var(--lr-muted)]">
                 <li>A paysheet, and a daily attendance sheet for the muster rolls.</li>
                 <li>
-                  An overtime report, if the payroll checklist has overtime on. Employee addresses and guardian names
-                  come from the client record, not from a sheet.
+                  An overtime report, where overtime was worked. Employee addresses and guardian names come from the
+                  client record, not from a sheet.
                 </li>
                 <li className="text-[var(--lr-faint)]">
                   Registers may be kept electronically, but a printout has to be produced to an inspector on demand,

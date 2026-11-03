@@ -13,7 +13,7 @@
  * The summary is also stored on the batch at the moment of locking, because what the preparer
  * was told when they confirmed is part of the record.
  */
-import { CHECKLIST_HEADS, headById } from '@/data/labour-registers/checklist-heads';
+import { fieldByKey } from '@/data/labour-registers/fields';
 import type { FormSpec } from '@/data/labour-registers/types';
 import { formsNeedingAttendance } from './catalogue';
 import type { UploadSlot } from './parse';
@@ -24,7 +24,7 @@ export interface ReadinessLine {
   kind: 'ok' | 'short' | 'blocked';
   text: string;
   /** Where to go and fix it, when there is somewhere. */
-  fix?: { label: string; to: 'uploads' | 'mapping' | 'checklist' | 'employees' };
+  fix?: { label: string; to: 'uploads' | 'mapping' | 'employees' };
   /** How many rows or employees the line is about, where it counts something. */
   count?: number;
 }
@@ -57,10 +57,12 @@ export interface ReadinessInput {
   /** Employees on the roll, and how many are missing a field a register prints. */
   employees: number;
   employeesShort: number;
-  /** Checklist heads this client runs, and the ones still awaited this period. */
-  activeHeads: string[];
-  headsAwaited: string[];
-  /** Employees whose minimum wage coverage has not been decided, where overtime is on. */
+  /**
+   * Optional fields nobody mapped. Their columns stay on the form and print nil, so this is
+   * reported rather than blocking — not every payroll runs a night shift allowance.
+   */
+  optionalUnmapped?: string[];
+  /** Employees whose minimum wage coverage has not been decided, where overtime was worked. */
   overtimeCoverageUnresolved: number;
 }
 
@@ -137,27 +139,30 @@ export function assessReadiness(input: ReadinessInput): ReadinessSummary {
     });
   }
 
-  /* The payroll checklist. An awaited head is a figure the client has not sent; that is a
-     judgement call, not a block — the firm may close without a referral bonus nobody paid. */
-  if (input.headsAwaited.length > 0) {
-    const labels = input.headsAwaited.map((id) => headById(id)?.label ?? id);
+  /* An optional column nobody mapped prints nil. That is a judgement call rather than a
+     block: the firm may close a month with no referral bonus because nobody was paid one.
+     What it must not do is go out silently, so it is said. */
+  const unmapped = input.optionalUnmapped ?? [];
+  if (unmapped.length > 0) {
+    const labels = unmapped.map((key) => fieldByKey(key)?.label ?? key);
     lines.push({
       kind: 'short',
-      count: input.headsAwaited.length,
-      text: `${input.headsAwaited.length} checklist heads still awaited — ${names(labels)}`,
-      fix: { label: 'Open', to: 'checklist' },
+      count: unmapped.length,
+      text: `${unmapped.length} optional columns will print nil — ${names(labels)}`,
+      fix: { label: 'Map', to: 'mapping' },
     });
   }
 
   /* Overtime at twice the ordinary rate applies only where a minimum wage is fixed under the
      Code. An undecided employee would put a figure in a statutory register that the firm
-     cannot stand behind, so this blocks. */
-  if (input.activeHeads.includes('overtime') && input.overtimeCoverageUnresolved > 0) {
+     cannot stand behind, so this blocks. The count is zero when no overtime was worked, so
+     nothing more is needed to scope it. */
+  if (input.overtimeCoverageUnresolved > 0) {
     lines.push({
       kind: 'blocked',
       count: input.overtimeCoverageUnresolved,
       text: `${input.overtimeCoverageUnresolved} employees have no minimum wage coverage decision, so their overtime rate cannot be set`,
-      fix: { label: 'Decide', to: 'checklist' },
+      fix: { label: 'Decide', to: 'employees' },
     });
   }
 
@@ -178,10 +183,4 @@ export function assessReadiness(input: ReadinessInput): ReadinessSummary {
  */
 export function closeSentence(summary: ReadinessSummary, period: { from: string; to: string }): string {
   return `Inputs for ${period.from} to ${period.to} will be locked, and ${summary.registers} registers under ${summary.acts} acts will be generated for ${summary.employees} employees.`;
-}
-
-/** Every head the client runs, for the checklist screen's own count. */
-export function headsFor(activeHeads: Iterable<string>): string[] {
-  const on = new Set(activeHeads);
-  return CHECKLIST_HEADS.filter((h) => on.has(h.id)).map((h) => h.id);
 }

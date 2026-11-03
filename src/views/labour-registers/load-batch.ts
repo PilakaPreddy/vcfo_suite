@@ -1,15 +1,8 @@
 import 'server-only';
 
 import type { AuthContext } from '@/auth/guards';
-import {
-  activeHeads,
-  batchProvenance,
-  getBatch,
-  getColumnMap,
-  listTicks,
-  listUploads,
-} from '@/db/repositories/labour-registers';
-import { formsFor, requiredFields } from '@/lib/labour-registers/catalogue';
+import { batchProvenance, getBatch, getColumnMap, listUploads } from '@/db/repositories/labour-registers';
+import { formsFor, optionalFields, requiredFields } from '@/lib/labour-registers/catalogue';
 import { assessReadiness, closeSentence } from '@/lib/labour-registers/readiness';
 import type { BatchView } from './BatchPage';
 
@@ -27,11 +20,9 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
   const period = { from: batch.periodFrom, to: batch.periodTo };
   const forms = formsFor(batch.stateCode, period);
 
-  const [provenance, uploads, heads, ticks, map] = await Promise.all([
+  const [provenance, uploads, map] = await Promise.all([
     batchProvenance(ctx, batch.id),
     listUploads(ctx, batch.id),
-    activeHeads(ctx, batch.engagementId),
-    listTicks(ctx, batch.id),
     getColumnMap(ctx, batch.engagementId, 'paysheet'),
   ]);
 
@@ -40,16 +31,16 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
     bySlot[u.slot as keyof BatchView['uploads']] = { rowCount: u.rowCount, fileName: u.fileName };
   }
 
-  const required = requiredFields(forms, heads);
   const mapping = (map?.mapping ?? {}) as Record<string, string>;
+  const mapped = new Set(Object.keys(mapping));
   const assumptions = (batch.assumptions ?? {}) as { fullAttendanceAssumed?: boolean };
 
   const summary = assessReadiness({
     forms,
     uploads: bySlot,
     attendanceAssumed: Boolean(assumptions.fullAttendanceAssumed),
-    requiredFields: required,
-    mappedFields: Object.keys(mapping),
+    requiredFields: requiredFields(forms),
+    mappedFields: [...mapped],
     /* Value mapping is not stored per batch yet, so nothing is reported as unresolved here.
        When it is, read it from the column map's `valueMaps` and count what has no target. */
     unresolvedValues: 0,
@@ -57,8 +48,11 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
     /* The employee record is not wired to this screen yet, so no shortfall is claimed rather
        than a zero being presented as a verified count. */
     employeesShort: 0,
-    activeHeads: heads,
-    headsAwaited: ticks.filter((t) => t.state === 'pending').map((t) => t.headId),
+    /* An optional column with nothing mapped to it prints nil. It is reported, not blocked —
+       not every payroll runs a night shift allowance. */
+    optionalUnmapped: optionalFields(forms).filter((key) => !mapped.has(key)),
+    /* Minimum wage coverage is not wired to this screen yet, so nothing is claimed rather
+       than a zero being presented as a verified count. */
     overtimeCoverageUnresolved: 0,
   });
 

@@ -64,10 +64,9 @@ export type PeriodKind = 'monthly' | 'quarterly' | 'halfYearly' | 'annual' | 'pe
  *  - `master`    — the client or employee record (address, registration number, shift timings).
  *  - `derived`   — computed from other values (age from date of birth, overtime wages).
  *  - `grid`      — the per-day attendance block, mapped once as a group.
- *  - `checklist` — present only when the client's payroll checklist ticks that head.
  *  - `signature` — left blank for a wet signature on the printed copy.
  */
-export type ColumnSource = 'input' | 'master' | 'derived' | 'grid' | 'checklist' | 'signature';
+export type ColumnSource = 'input' | 'master' | 'derived' | 'grid' | 'signature';
 
 /** One column of a form, in the order the prescribed sheet prints it. */
 export interface FormColumn {
@@ -78,8 +77,6 @@ export interface FormColumn {
   source: ColumnSource;
   /** The column number the form itself prints under the heading, where it numbers them. */
   ordinal?: number;
-  /** The payroll checklist head that must be ticked for a `checklist` column to appear. */
-  requiresHead?: string;
   /** A note for the preparer, printed nowhere. */
   note?: string;
 }
