@@ -456,6 +456,23 @@ export async function recordDocument(
 }
 
 /** Count a download, so the saving from not regenerating is observable rather than claimed. */
+/**
+ * One produced document, scoped the way everything else here is.
+ *
+ * A document belonging to another firm reads as absent rather than refused: whether a register
+ * exists for a client you cannot see is itself something not to disclose.
+ */
+export async function getDocument(ctx: AuthContext, documentId: string): Promise<DocumentRow | null> {
+  const [doc] = await db
+    .select()
+    .from(labourRegisterDocuments)
+    .where(eq(labourRegisterDocuments.id, documentId))
+    .limit(1);
+  if (!doc) return null;
+  const batch = await getBatch(ctx, doc.batchId);
+  return batch ? doc : null;
+}
+
 export async function countDownload(ctx: AuthContext, documentId: string): Promise<void> {
   const [doc] = await db.select().from(labourRegisterDocuments).where(eq(labourRegisterDocuments.id, documentId)).limit(1);
   if (!doc) return;
