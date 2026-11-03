@@ -3,13 +3,18 @@ import * as React from "react";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { demoLoginsOn } from "@/components/auth/demo-accounts";
+import { useAvatarYield } from "@/components/ask/use-avatar-yield";
+import { VisorBadge, VisorCharacter } from "@/components/ask/Visor";
+import "@/components/ask/ask-avatar.css";
 import { GUIDE, GUIDE_HELLO } from "./content";
 
 type Msg = { id: number; who: "bot" | "me"; text?: string; q?: number; typing?: boolean };
 
 /**
- * Ask VCFO quick answers on the landing page, as on the old v6 landing: a fixed text button (R-04, no mascot)
- * and a small panel. The answers are the fixed marketing list in content.ts; nothing reads client data.
+ * Ask VCFO quick answers on the landing page: the Ask VCFO robot gripping the bottom edge beside an
+ * "Ask VCFO" pill (owner decision 2 Nov 2026, the same robot as in the app; it replaces R-04's
+ * text-only button), and a small panel the robot peeks over. The answers are the fixed marketing
+ * list in content.ts; nothing reads client data.
  * "Book a demo" opens the landing's Book a demo dialog through `onDemo`. In demo mode
  * (`NEXT_PUBLIC_DEMO_LOGINS=on`) an answer also has "Open the screen" (P-434), a link to the real
  * portal screen it describes; signed out, the proxy asks for a demo login first.
@@ -22,6 +27,8 @@ export function AskGuide({ onDemo }: { onDemo: () => void }) {
   const panel = React.useRef<HTMLDivElement>(null);
   const logRef = React.useRef<HTMLDivElement>(null);
   const seq = React.useRef(1);
+  const guideRef = React.useRef<HTMLDivElement>(null);
+  const { yieldOn } = useAvatarYield(guideRef, open);
 
   React.useEffect(() => {
     if (!open) return;
@@ -50,7 +57,10 @@ export function AskGuide({ onDemo }: { onDemo: () => void }) {
   };
   const scrollTo = (sec: string) => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    document.getElementById(sec)?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    document.getElementById(sec)?.scrollIntoView({
+      behavior: reduce ? "auto" : "smooth",
+      block: "start",
+    });
   };
   // Escape inside the open panel closes it and gives focus back to the pill.
   React.useEffect(() => {
@@ -69,79 +79,100 @@ export function AskGuide({ onDemo }: { onDemo: () => void }) {
   const left = GUIDE.map((g, i) => ({ g, i })).filter(({ i }) => !asked.has(i));
 
   return (
-    <div className={`guide${open ? " open" : ""}`}>
+    <div ref={guideRef} className={`guide ask-avatar ask-vpv-scope${open ? " open" : ""}${yieldOn ? " yield" : ""}`}>
       {open ? (
-        <div
-          ref={panel}
-          className="guide-panel card"
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby="guide-t"
-        >
-          <div className="guide-head">
-            <div>
-              <b id="guide-t">Ask VCFO</b>
-              <span>Quick answers about the product</span>
-            </div>
-            <button type="button" className="guide-x" aria-label="Close Ask VCFO" onClick={hide}>
-              <X size={18} strokeWidth={1.6} />
-            </button>
-          </div>
-          <div ref={logRef} className="guide-log" aria-live="polite">
-            {log.map((m) => {
-              if (m.typing)
-                return (
-                  <div key={m.id} className="msg bot typing" aria-hidden>
-                    <i />
-                    <i />
-                    <i />
-                  </div>
-                );
-              if (m.q === undefined)
-                return (
-                  <div key={m.id} className={`msg ${m.who}`}>
-                    {m.text}
-                  </div>
-                );
-              const g = GUIDE[m.q];
-              return (
-                <div key={m.id} className="msg bot">
-                  {g.a}
-                  <div className="acts">
-                    <button type="button" className="btn btn-secondary" onClick={() => scrollTo(g.sec)}>
-                      Show me
-                    </button>
-                    {g.href && demoLoginsOn() ? (
-                      <Link className="btn btn-secondary" href={g.href}>
-                        Open the screen
-                      </Link>
-                    ) : null}
-                    <button type="button" className={`btn ${g.sales ? "btn-primary" : "btn-ghost"}`} onClick={onDemo}>
-                      Book a demo
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="guide-qs" role="group" aria-label="Suggested questions">
-            {left.length ? (
-              left.map(({ g, i }) => (
-                <button key={g.q} type="button" onClick={() => ask(i)}>
-                  {g.q}
-                </button>
-              ))
-            ) : (
-              <button type="button" className="btn btn-primary btn-sm" onClick={onDemo}>
-                Book a demo
+        <div className="guide-wrap">
+          <span className="ask-pk" aria-hidden="true">
+            <VisorCharacter variant="peek" />
+          </span>
+          <div ref={panel} className="guide-panel card" role="dialog" aria-modal="false" aria-labelledby="guide-t">
+            <div className="guide-head">
+              <VisorBadge size={34} />
+              <div>
+                <b id="guide-t">Ask VCFO</b>
+                <span>Quick answers about the product</span>
+              </div>
+              <button type="button" className="guide-x" aria-label="Close Ask VCFO" onClick={hide}>
+                <X size={18} strokeWidth={1.6} />
               </button>
-            )}
+            </div>
+            <div ref={logRef} className="guide-log" aria-live="polite">
+              {log.map((m) => {
+                if (m.typing)
+                  return (
+                    <div key={m.id} className="msg bot typing" aria-hidden>
+                      <i />
+                      <i />
+                      <i />
+                    </div>
+                  );
+                if (m.q === undefined)
+                  return m.who === "bot" ? (
+                    <div key={m.id} className="msg-row">
+                      <VisorBadge size={28} />
+                      <div className="msg bot">{m.text}</div>
+                    </div>
+                  ) : (
+                    <div key={m.id} className={`msg ${m.who}`}>
+                      {m.text}
+                    </div>
+                  );
+                const g = GUIDE[m.q];
+                return (
+                  <div key={m.id} className="msg-row">
+                    <VisorBadge size={28} />
+                    <div className="msg bot">
+                      {g.a}
+                      <div className="acts">
+                        <button type="button" className="btn btn-secondary" onClick={() => scrollTo(g.sec)}>
+                          Show me
+                        </button>
+                        {g.href && demoLoginsOn() ? (
+                          <Link className="btn btn-secondary" href={g.href}>
+                            Open the screen
+                          </Link>
+                        ) : null}
+                        <button
+                          type="button"
+                          className={`btn ${g.sales ? "btn-primary" : "btn-ghost"}`}
+                          onClick={onDemo}
+                        >
+                          Book a demo
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="guide-qs" role="group" aria-label="Suggested questions">
+              {left.length ? (
+                left.map(({ g, i }) => (
+                  <button key={g.q} type="button" onClick={() => ask(i)}>
+                    {g.q}
+                  </button>
+                ))
+              ) : (
+                <button type="button" className="btn btn-primary btn-sm" onClick={onDemo}>
+                  Book a demo
+                </button>
+              )}
+            </div>
           </div>
         </div>
       ) : (
-        <button ref={pill} type="button" className="guide-pill" aria-expanded={false} onClick={show}>
-          Ask VCFO
-        </button>
+        <>
+          {/* The robot is a second, mouse-only way in; the pill beside it is the keyboard control. */}
+          <span className="vpl-char" aria-hidden="true" onClick={show}>
+            <span className="vpl-lift">
+              <VisorCharacter variant="loop" />
+            </span>
+          </span>
+          <button ref={pill} type="button" className="guide-pill" aria-expanded={false} onClick={show}>
+            <i className="ask-av-dot" aria-hidden="true" />
+            Ask VCFO
+          </button>
+        </>
       )}
     </div>
   );

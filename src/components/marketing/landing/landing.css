@@ -335,6 +335,11 @@ html:has(.lp) { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; overflo
 .lp .guide-pill:active { transform: scale(0.97); }
 .lp .guide.open .guide-pill { display: none; }
 .lp .guide-panel { pointer-events: auto; margin-bottom: 20px; }
+/* The Ask VCFO robot (owner decision 2 Nov 2026): it grips the bottom edge beside the pill (ask-avatar.css)
+   and peeks over the open panel's top edge from .guide-wrap. Bot answers carry its head. */
+.lp .guide-wrap { position: relative; pointer-events: auto; }
+.lp .msg-row { justify-self: start; display: flex; align-items: flex-start; gap: 8px; max-width: 94%; }
+.lp .msg-row .msg { max-width: none; min-width: 0; }
 .lp .guide-panel { width: min(380px, calc(100vw - 24px)); max-height: min(620px, calc(100vh - 110px)); display: flex; flex-direction: column; overflow: hidden; border-radius: var(--lp-r-xl); box-shadow: var(--lp-shadow-float); }
 .lp .guide-panel[hidden] { display: none; }
 .lp .guide-head { display: flex; align-items: center; gap: 12px; padding: 14px 14px 14px 16px; border-bottom: 1px solid var(--lp-line); background: var(--lp-sunken); }

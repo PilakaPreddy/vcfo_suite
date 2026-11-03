@@ -1,30 +1,32 @@
 /*
- * The Ask VCFO robot outside the client portal (staff shell launcher, the pop-up's peek, the
- * full page's hero). Motion is prototype proto.js (inputs/visor-avatar-animated.svg) unchanged;
+ * The Ask VCFO robot outside the client portal (staff shell launcher, the landing page's Ask
+ * VCFO box, the pop-up's peek, the full page's hero). Motion is prototype proto.js (inputs/visor-avatar-animated.svg) unchanged;
  * every rule is scoped under `.ask-vpv-scope` so the client portal's own copy (`.cp #vp-launch`)
  * never meets it. Keyframes carry an `ask-` prefix for the same reason.
  */
 .ask-vpv-scope .vpv .vpv-eye{transform-box:fill-box;transform-origin:center}
 
-/* Launcher: the robot grips the bottom edge of the window, bottom right. */
-#ask-avatar{--ask-av-w:clamp(96px,4.5vw + 72px,148px);position:fixed;right:clamp(14px,1.25vw + 8px,24px);bottom:0;z-index:40;display:flex;align-items:flex-end;gap:4px;pointer-events:none}
-#ask-avatar .vpl-char{position:relative;display:block;flex:none;width:var(--ask-av-w);height:calc(var(--ask-av-w) * 200 / 340);overflow:hidden;pointer-events:none;background:none;border:0;padding:0}
-#ask-avatar .vpl-lift{display:block;width:100%;height:calc(var(--ask-av-w) * 216 / 340);transform:translate3d(0,0,0);transition:transform .5s cubic-bezier(.34,1.45,.5,1)}
-#ask-avatar .vpl-lift>svg{display:block;width:100%;height:100%}
-#ask-avatar .vpv-head{pointer-events:visiblePainted;cursor:pointer}
-#ask-avatar.yield .vpl-lift,#ask-avatar.open .vpl-lift{transform:translate3d(0,100%,0);transition:transform .32s cubic-bezier(.5,0,.75,.4)}
-#ask-avatar.yield .vpv-head,#ask-avatar.open .vpv-head{pointer-events:none}
+/* Launcher: the robot grips the bottom edge of the window. `.ask-avatar` is the robot and its
+   motion (staff shell and landing page); `#ask-avatar` places the staff one bottom right. */
+.ask-avatar{--ask-av-w:clamp(96px,4.5vw + 72px,148px)}
+.ask-avatar .vpl-char{position:relative;display:block;flex:none;width:var(--ask-av-w);height:calc(var(--ask-av-w) * 200 / 340);overflow:hidden;pointer-events:none;background:none;border:0;padding:0}
+.ask-avatar .vpl-lift{display:block;width:100%;height:calc(var(--ask-av-w) * 216 / 340);transform:translate3d(0,0,0);transition:transform .5s cubic-bezier(.34,1.45,.5,1)}
+.ask-avatar .vpl-lift>svg{display:block;width:100%;height:100%}
+.ask-avatar .vpv-head{pointer-events:visiblePainted;cursor:pointer}
+.ask-avatar.yield .vpl-lift,.ask-avatar.open .vpl-lift{transform:translate3d(0,100%,0);transition:transform .32s cubic-bezier(.5,0,.75,.4)}
+.ask-avatar.yield .vpv-head,.ask-avatar.open .vpv-head{pointer-events:none}
+.ask-av-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#2DD4BF;box-shadow:0 0 0 3px rgba(45,212,191,.22)}
+#ask-avatar{position:fixed;right:clamp(14px,1.25vw + 8px,24px);bottom:0;z-index:40;display:flex;align-items:flex-end;gap:4px;pointer-events:none}
 #ask-avatar .ask-av-pill{pointer-events:auto;margin-bottom:clamp(14px,1.25vw + 8px,24px)}
-#ask-avatar .ask-av-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#2DD4BF;box-shadow:0 0 0 3px rgba(45,212,191,.22)}
 /* Phones use the bottom tab bar's Ask tab. */
 @media (max-width:767px){#ask-avatar{display:none}}
 
 /* The 20.5 s loop: rise, look around, blink, sink. */
-#ask-avatar .vpv-loop .vpv-head{animation:ask-vpvRise 20.5s infinite}
-#ask-avatar .vpv-loop .vpv-eyes{animation:ask-vpvLook 20.5s infinite ease-in-out}
-#ask-avatar .vpv-loop .vpv-eye{animation:ask-vpvBlink 20.5s infinite}
-#ask-avatar .vpv-loop .vpv-hand{animation:ask-vpvGrip 20.5s infinite ease-out;animation-fill-mode:backwards}
-#ask-avatar .vpv-loop .vpv-hand-r{animation-delay:.09s}
+.ask-avatar .vpv-loop .vpv-head{animation:ask-vpvRise 20.5s infinite}
+.ask-avatar .vpv-loop .vpv-eyes{animation:ask-vpvLook 20.5s infinite ease-in-out}
+.ask-avatar .vpv-loop .vpv-eye{animation:ask-vpvBlink 20.5s infinite}
+.ask-avatar .vpv-loop .vpv-hand{animation:ask-vpvGrip 20.5s infinite ease-out;animation-fill-mode:backwards}
+.ask-avatar .vpv-loop .vpv-hand-r{animation-delay:.09s}
 @keyframes ask-vpvRise{0%,2.4%{transform:translateY(232px);animation-timing-function:cubic-bezier(.3,.75,.35,1)}14.1%,25.4%{transform:translateY(72px);animation-timing-function:cubic-bezier(.3,.75,.35,1)}33.2%,40%{transform:translateY(44px);animation-timing-function:cubic-bezier(.3,.75,.35,1)}48.3%,66.3%{transform:translateY(0);animation-timing-function:ease-in-out}74.6%,80%{transform:translateY(72px);animation-timing-function:cubic-bezier(.5,0,.75,.4)}89.3%,100%{transform:translateY(232px)}}
 @keyframes ask-vpvLook{0%,14.1%{transform:translate(0,0)}15.5%,19.5%{transform:translate(-12px,-2px)}21%,24%{transform:translate(12px,-2px)}25.5%,50%{transform:translate(0,0)}51.5%,55%{transform:translate(-12px,3px)}56.5%,60%{transform:translate(12px,-4px)}61.5%,74.6%{transform:translate(0,0)}76%,79%{transform:translate(10px,-3px)}80.5%,100%{transform:translate(0,0)}}
 @keyframes ask-vpvBlink{0%,25.6%,26.4%,34.4%,35.2%,35.8%,36.6%,63%,63.8%,100%{transform:scaleY(1)}26%,34.8%,36.2%,63.4%{transform:scaleY(.08)}}
@@ -53,7 +55,7 @@
 @keyframes ask-vpvBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 
 @media (prefers-reduced-motion: reduce){
-  #ask-avatar *,.ask-pk *,.ask-hero-bot,.ask-hero-bot *,.ask-think .vpv-ant{animation:none!important;transition:none!important}
-  #ask-avatar .vpv-head,.ask-pk .vpv-peek .vpv-head{transform:none}
-  #ask-avatar .vpv-hand,.ask-pk .vpv-peek .vpv-hand{opacity:1}
+  .ask-avatar *,.ask-pk *,.ask-hero-bot,.ask-hero-bot *,.ask-think .vpv-ant{animation:none!important;transition:none!important}
+  .ask-avatar .vpv-head,.ask-pk .vpv-peek .vpv-head{transform:none}
+  .ask-avatar .vpv-hand,.ask-pk .vpv-peek .vpv-hand{opacity:1}
 }
