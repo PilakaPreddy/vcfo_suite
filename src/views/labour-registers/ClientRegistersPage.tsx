@@ -37,6 +37,8 @@ export interface ClientRegistersPageProps {
   establishments?: string[];
   /** True once the period's registers have been generated and may be offered. */
   ready?: boolean;
+  /** The batch to download from, where one exists for the selected state and period. */
+  batchId?: string;
   /** What is still awaited from the client, if anything. */
   awaiting?: { what: string; by: string };
 }
@@ -77,6 +79,7 @@ export function ClientRegistersPage({
   period,
   establishments,
   ready = false,
+  batchId,
   awaiting,
 }: ClientRegistersPageProps) {
   const all = statesForPicker();
@@ -173,8 +176,9 @@ export function ClientRegistersPage({
             id: form.id,
             name: `Form ${form.formNumber} — ${form.title}`,
             note: ready ? `${form.period} · ${form.rule}` : `${form.period} · SBC is preparing it`,
-            /* A download is offered only once the period's registers exist. */
-            href: ready ? `${shellBase}/labour-registers?state=${selected.code}&form=${form.id}` : undefined,
+            /* A download is offered only once the period's registers exist, and it points at
+               the batch rather than at a query the route cannot answer. */
+            href: ready && batchId ? `${shellBase}/labour-registers?batch=${batchId}` : undefined,
             status,
           }));
           return (

@@ -10,7 +10,14 @@ import { recordExportFileForUser } from '@/db/repositories/export-files';
  * changes what the person downloads: a failed upload still writes the row, without a copy.
  */
 
-export type ExportKind = 'audit_log' | 'vault_zip' | 'client_vault_zip' | 'partner_report' | 'client_audit';
+export type ExportKind =
+  | 'audit_log'
+  | 'vault_zip'
+  | 'client_vault_zip'
+  | 'partner_report'
+  | 'client_audit'
+  /** An act-wise archive of one batch of labour registers. */
+  | 'labour_registers_zip';
 
 /** The largest file kept in S3; a bigger one is logged without a copy. */
 export const EXPORT_COPY_MAX_BYTES = 50 * 1024 * 1024;

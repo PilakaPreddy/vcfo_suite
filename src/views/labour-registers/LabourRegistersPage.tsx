@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, ArrowRight, CheckCheck, FileSpreadsheet, MapPin, Printer, TriangleAlert } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCheck, FileSpreadsheet, History, MapPin, Printer, TriangleAlert } from 'lucide-react';
 
 import { regimeNote, stateByCode, statesForPicker } from '@/data/labour-registers/states';
 import {
@@ -54,6 +54,13 @@ export interface LabourRegistersPageProps {
    */
   engagements?: Array<{ id: string; name: string }>;
   /**
+   * Batches already opened, newest period first.
+   *
+   * Without this there was no way back to last month at all: a batch could only be reached by
+   * pressing Open for exactly its client, state and period again.
+   */
+  recent?: Array<{ id: string; stateCode: string; periodFrom: string; status: string; client: string }>;
+  /**
    * The states this client actually has an establishment in. When given, the map shows those at
    * full strength and fades the rest, so a client with one establishment is not asked to find
    * it among thirty-six. Left out, every configured state reads as reachable.
@@ -101,6 +108,7 @@ export function LabourRegistersPage({
   canPrepare = true,
   relevantStates,
   engagements = [],
+  recent = [],
 }: LabourRegistersPageProps) {
   const router = useRouter();
   const [engagementId, setEngagementId] = useState(engagements[0]?.id ?? '');
@@ -300,6 +308,33 @@ export function LabourRegistersPage({
                   Registers may be kept electronically, but a printout has to be produced to an inspector on demand,
                   so every batch also builds a print bundle.
                 </li>
+              </ul>
+            </LrCard>
+          ) : null}
+
+          {recent.length > 0 ? (
+            <LrCard>
+              <LrCardHead icon={History} tone="neutral" label="Recently opened" />
+              <ul className="m-0 list-none p-0">
+                {recent.slice(0, 6).map((batch, i) => (
+                  <li key={batch.id} className={i > 0 ? 'border-t border-[var(--lr-raised)]' : undefined}>
+                    <Link
+                      href={`${shellBase}/labour-registers?batch=${batch.id}`}
+                      className="flex items-center gap-2.5 px-4 py-2.5"
+                    >
+                      <span className="min-w-0 flex-grow">
+                        <span className="block truncate text-[13px] font-semibold text-[var(--lr-ink)]">
+                          {batch.client}
+                        </span>
+                        <span className={`${lr.small} block`}>
+                          {stateByCode(batch.stateCode)?.name ?? batch.stateCode} ·{' '}
+                          {MONTH_NAMES[Number(batch.periodFrom.slice(5, 7)) - 1]} {batch.periodFrom.slice(0, 4)}
+                        </span>
+                      </span>
+                      <LrChip>{batch.status === 'open' ? 'In progress' : batch.status === 'generated' ? 'Done' : 'Waiting'}</LrChip>
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </LrCard>
           ) : null}

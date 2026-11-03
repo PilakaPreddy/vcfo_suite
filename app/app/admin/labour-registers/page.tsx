@@ -2,9 +2,12 @@ import { notFound } from 'next/navigation';
 
 import { requireAuth } from '@/auth/guards';
 import { listEngagements } from '@/db/repositories/engagements';
+import { listBatches } from '@/db/repositories/labour-registers';
 import { BatchPage } from '@/views/labour-registers/BatchPage';
 import { LabourRegistersPage } from '@/views/labour-registers/LabourRegistersPage';
 import { loadBatchView } from '@/views/labour-registers/load-batch';
+import { loadMappingView } from '@/views/labour-registers/load-mapping';
+import { MappingPage } from '@/views/labour-registers/MappingPage';
 import { pageMetadata } from '@/lib/shell/page-metadata';
 
 export const metadata = pageMetadata('Labour registers', 'Statutory labour registers, state by state');
@@ -25,6 +28,15 @@ export default async function Page({
   if (batchId) {
     const guard = await requireAuth();
     if (!guard.ok) notFound();
+
+    /* `?map=` opens the column reconciliation for one slot of that batch. */
+    const slot = one('map');
+    if (slot && ['paysheet', 'attendance', 'overtime', 'employees'].includes(slot)) {
+      const mapping = await loadMappingView(guard.ctx, batchId, slot as 'paysheet');
+      if (!mapping) notFound();
+      return <MappingPage view={mapping} shellBase="/app/admin" />;
+    }
+
     const view = await loadBatchView(guard.ctx, batchId);
     if (!view) notFound();
     return <BatchPage view={view} shellBase="/app/admin" />;
@@ -33,8 +45,19 @@ export default async function Page({
   /* Opening a batch needs a client as well as a state, and this screen is state-first, so the
      clients this preparer can reach are listed here and chosen on the page. */
   const guard = await requireAuth();
-  const engagements = guard.ok
-    ? (await listEngagements(guard.ctx)).map((e) => ({ id: e.id, name: e.companyName }))
+  const all = guard.ok ? await listEngagements(guard.ctx) : [];
+  const engagements = all.map((e) => ({ id: e.id, name: e.companyName }));
+
+  /* Batches already opened, so last month is reachable without opening it again. */
+  const byId = new Map(all.map((e) => [e.id, e.companyName]));
+  const recent = guard.ok
+    ? (await listBatches(guard.ctx)).slice(0, 6).map((b) => ({
+        id: b.id,
+        stateCode: b.stateCode,
+        periodFrom: b.periodFrom,
+        status: b.status,
+        client: byId.get(b.engagementId) ?? 'Client',
+      }))
     : [];
 
   return (
@@ -44,6 +67,7 @@ export default async function Page({
       period={one('period')}
       canPrepare={true}
       engagements={engagements}
+      recent={recent}
     />
   );
 }

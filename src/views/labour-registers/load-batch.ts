@@ -1,8 +1,8 @@
 import 'server-only';
 
 import type { AuthContext } from '@/auth/guards';
-import { batchProvenance, getBatch, getColumnMap, listUploads } from '@/db/repositories/labour-registers';
-import { formsFor, optionalFields, requiredFields } from '@/lib/labour-registers/catalogue';
+import { batchProvenance, getBatch, getColumnMap, listDocuments, listUploads } from '@/db/repositories/labour-registers';
+import { formsFor, formsNeedingAttendance, optionalFields, requiredFields } from '@/lib/labour-registers/catalogue';
 import { assessReadiness, closeSentence } from '@/lib/labour-registers/readiness';
 import type { BatchView } from './BatchPage';
 
@@ -20,15 +20,27 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
   const period = { from: batch.periodFrom, to: batch.periodTo };
   const forms = formsFor(batch.stateCode, period);
 
-  const [provenance, uploads, map] = await Promise.all([
+  const [provenance, uploads, documents, map] = await Promise.all([
     batchProvenance(ctx, batch.id),
     listUploads(ctx, batch.id),
+    listDocuments(ctx, batch.id),
     getColumnMap(ctx, batch.engagementId, 'paysheet'),
   ]);
 
   const bySlot: BatchView['uploads'] = {};
   for (const u of uploads) {
-    bySlot[u.slot as keyof BatchView['uploads']] = { rowCount: u.rowCount, fileName: u.fileName };
+    /* The sheet and the heading row matter as much as the row count: a payroll workbook has
+       thirteen sheets and a title row above the headings, so what the reader chose is the
+       thing a preparer needs to see. `gridDetection` is stored as jsonb, hence the shape
+       check rather than a cast. */
+    const grid = u.gridDetection as { days?: unknown[] } | null;
+    bySlot[u.slot as keyof BatchView['uploads']] = {
+      fileName: u.fileName,
+      rowCount: u.rowCount,
+      sheetName: u.sheetName || undefined,
+      headerRow: u.headerRow,
+      gridDays: Array.isArray(grid?.days) ? grid.days.length : undefined,
+    };
   }
 
   const mapping = (map?.mapping ?? {}) as Record<string, string>;
@@ -84,6 +96,18 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
       }, {}),
     ).map(([act, items]) => ({ act, forms: items })),
     uploads: bySlot,
+    /* The current document per form. `listDocuments` is newest first, and a superseded
+       document keeps its row, so the first seen for a form is the one to offer. */
+    documents: documents.reduce<Array<{ id: string; formId: string; byteLength: number; format: string }>>(
+      (acc, d) => {
+        if (acc.some((x) => x.formId === d.formId)) return acc;
+        acc.push({ id: d.id, formId: d.formId, byteLength: d.byteLength, format: d.format });
+        return acc;
+      },
+      [],
+    ),
+    needsAttendance: formsNeedingAttendance(forms).map((f) => `Form ${f.formNumber}`),
+    attendanceAssumed: Boolean(assumptions.fullAttendanceAssumed),
     readiness: summary,
     sentence: closeSentence(summary, period),
   };

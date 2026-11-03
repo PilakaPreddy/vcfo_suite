@@ -23,6 +23,8 @@ export interface DirectoryFile {
   name: string;
   /** XLSX, PDF, DOCX. Drives the badge colour. */
   format: string;
+  /** Where the file downloads from. Without one the row is a name, not a link. */
+  href?: string;
 }
 
 export interface DirectoryFolder {
@@ -98,7 +100,16 @@ export function ActDirectory({
                   {folder.files.map((file) => (
                     <li key={file.name} className="flex items-center gap-2 text-[13px]">
                       <FileBadge format={file.format} />
-                      <span className={cn(lr.code, 'min-w-0 break-all text-[var(--lr-ink-2)]')}>{file.name}</span>
+                      {file.href ? (
+                        <a
+                          href={file.href}
+                          className={cn(lr.code, 'min-w-0 break-all text-[var(--lr-primary)] hover:underline')}
+                        >
+                          {file.name}
+                        </a>
+                      ) : (
+                        <span className={cn(lr.code, 'min-w-0 break-all text-[var(--lr-ink-2)]')}>{file.name}</span>
+                      )}
                     </li>
                   ))}
                 </ul>

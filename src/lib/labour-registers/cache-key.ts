@@ -46,6 +46,16 @@ export interface AssumptionSet {
   dateOrder?: 'day-first' | 'month-first';
   /** True when overtime was computed at twice the ordinary rate for employees covered by a fixed minimum wage. */
   doubleRateOvertime?: boolean;
+  /**
+   * Whether this client's "rate of wages" means a month's wages or a day's.
+   *
+   * It is a property of their payroll rather than anything to infer from the numbers, and every
+   * form that prints a rate prints a different figure depending on it — so it is keyed, and
+   * changing it correctly rebuilds those registers.
+   */
+  wageRateBasis?: 'monthly' | 'daily';
+  /** Hours in a normal working day, where the client has said something other than eight. */
+  dailyHours?: number;
 }
 
 export interface DocumentIdentity {
