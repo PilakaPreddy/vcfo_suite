@@ -20,8 +20,8 @@ memory), and the tests need `npm run css:portal` first because the generated por
 - [x] Phase 1.3 — orphan files (38 removed, gate GREEN)
 - [x] Phase 1.3 — dead exports (values only, retry): 450 exports in 239 files un-exported, gate GREEN, lint 0 errors (warnings 527 -> 581: 54 newly visible unused locals, which are dead code for a later pass)
 - [!] Phase 1.3 — dead exports + types (first attempt): FAILED gate, rolled back. knip --fix-type exports,types (450 exports, 153 types, 285 files) broke typecheck: src/lib/incorporation/dir-2.ts uses `import(".../shared").IncorpDirectorKind`, an inline type import knip does not see. Retry by hand in smaller batches (per folder), or exclude types.
-- [ ] Phase 1.4 — audit
-- [ ] Phase 1.5 — duplication survey
+- [ ] Phase 1.4 — audit: deferred, not run in this session (owner asked for the cleanup to run now; the nine-dimension audit is a separate long pass)
+- [x] Phase 1.5 — duplication survey (DUPLICATION_SURVEY.md): 5.3% duplicated lines, 702 clone groups; feature-level client/staff page split documented
 
 ## Preview (phase 1.3)
 - unused deps: none (tailwindcss-animate is used by tailwind.config.ts; kept)
@@ -31,5 +31,12 @@ memory), and the tests need `npm run css:portal` first because the generated por
 ## Decisions
 - Production-only orphans (27 files used only by their own tests or fixtures) are not deleted in this run; the owner decides: src/components/dash/phase-rows.tsx, src/components/dash/stage-track.tsx, src/components/dash/week-strip.tsx, src/components/incorporation/PhaseCelebration.tsx, src/components/ui/chevron.tsx, src/db/repositories/dev-test-db.ts, src/db/repositories/work-test-stub.ts, src/lib/audit/audit-event-access.ts, src/views/announcements/AnnouncementDetailDialog.tsx, src/views/client/Overview.tsx, src/components/client/overview/ClientActivityFeed.tsx, src/components/client/overview/ClientBallInCourt.tsx, src/components/client/overview/ClientCard.tsx, src/components/client/overview/ClientCompanySnapshot.tsx, src/components/client/overview/ClientComplianceRunway.tsx, src/components/client/overview/ClientDeliverables.tsx, src/components/client/overview/ClientEntityCard.tsx, src/components/client/overview/ClientJourneyTrack.tsx, src/components/client/overview/ClientMilestoneCelebration.tsx, src/components/client/overview/ClientNextAction.tsx, src/components/client/overview/ClientOverviewHero.tsx, src/components/client/overview/ClientOverviewSkeleton.tsx, src/components/client/overview/ClientPhaseBars.tsx, src/components/client/overview/ClientTeamCard.tsx, src/components/client/overview/client-overview-format.ts, src/lib/assist-profile/__tests__/fixtures.ts, src/lib/doc-pack/__tests__/fixtures.ts
 - Unlisted dependency `playwright` in scripts/build-incorp-docs-er-pdf.mjs left alone (owner script; @playwright/test is installed).
+## Coverage
+### 1.5 duplication
+- reviewed: 18 (14 churn-checked pairs + 4 feature pairs) · skipped by class: route guards, schema columns, error pages, test fixtures
+- coverage_rate: below 100% by pair; gap accepted and recorded here
+
 ## Pending for the human
-- (none)
+- Phase 2 checkpoint: choose the first consolidation candidate
+- Phase 1.4 audit not run
+- 27 production-only orphans (see Decisions)
