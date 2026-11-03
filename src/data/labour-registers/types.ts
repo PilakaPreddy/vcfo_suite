@@ -21,8 +21,20 @@
  * generator prints it on the document rather than implying an authority we have not checked.
  */
 
-/** A state or union territory, by its ISO 3166-2:IN subdivision code without the `IN-` prefix. */
-export type StateCode = 'TG' | 'KA' | 'KL' | 'HR' | 'MH' | 'TN' | 'DL' | 'GJ' | 'UP' | 'WB' | 'AP';
+/**
+ * A state or union territory, by its ISO 3166-2:IN subdivision code without the `IN-` prefix.
+ *
+ * Every subdivision the map draws is here, whether or not its forms are configured. They used
+ * to be eleven, which made the picker say "7 other states and union territories" when the map
+ * beside it drew thirty-five — an undercount of twenty-four, and in the data rather than the
+ * copy. `JK` covers Jammu and Kashmir and Ladakh together, because the 2019 division is not in
+ * the licensed geometry and inventing that boundary is the thing not to do.
+ */
+export type StateCode =
+  | 'TG' | 'KA' | 'KL' | 'HR' | 'MH' | 'TN' | 'DL' | 'GJ' | 'UP' | 'WB' | 'AP'
+  | 'AN' | 'AR' | 'AS' | 'BR' | 'CH' | 'CG' | 'DH' | 'GA' | 'HP' | 'JK' | 'JH'
+  | 'LD' | 'MP' | 'MN' | 'ML' | 'MZ' | 'NL' | 'OD' | 'PY' | 'PB' | 'RJ' | 'SK'
+  | 'TR' | 'UK';
 
 /**
  * Which body of law a form belongs to. `state` forms are prescribed by a state's own rules,

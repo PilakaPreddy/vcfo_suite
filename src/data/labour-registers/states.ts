@@ -2,8 +2,10 @@
  * LABOUR REGISTERS — the jurisdictions.
  *
  * Four states are configured because four states' filed workbooks were available to check the
- * forms against. The rest are listed so the picker can say "not configured yet" rather than
- * pretend India has four states, and so adding one is a data change.
+ * forms against. **Every other subdivision the map draws is listed too**, so the picker can say
+ * "not configured yet" rather than pretend India has four states, and so adding one is a data
+ * change. The list and `india-outline.ts` must stay the same length: when they were eleven and
+ * thirty-five, the picker said "7 other states" beside a map of thirty-five.
  *
  * `codeRules` records whether a state has notified final rules under the four labour codes.
  * The research behind these values (28 October 2026) could not open a gazette, and trackers
@@ -56,6 +58,33 @@ export const STATES: StateSpec[] = [
   { code: 'TN', name: 'Tamil Nadu', zone: 'South', codeRules: 'draft', configured: false },
   { code: 'DL', name: 'Delhi', zone: 'North', codeRules: 'draft', configured: false },
   { code: 'WB', name: 'West Bengal', zone: 'East', codeRules: 'none', configured: false },
+  /* The remaining subdivisions, so the list and the map agree. `codeRules: 'none'` is the
+     honest default rather than a claim: the research covered the states above and did not
+     reach these. */
+  { code: 'AN', name: 'Andaman and Nicobar Islands', zone: 'South', codeRules: 'none', configured: false },
+  { code: 'AR', name: 'Arunachal Pradesh', zone: 'North East', codeRules: 'none', configured: false },
+  { code: 'AS', name: 'Assam', zone: 'North East', codeRules: 'none', configured: false },
+  { code: 'BR', name: 'Bihar', zone: 'East', codeRules: 'none', configured: false },
+  { code: 'CH', name: 'Chandigarh', zone: 'North', codeRules: 'none', configured: false },
+  { code: 'CG', name: 'Chhattisgarh', zone: 'Central', codeRules: 'none', configured: false },
+  { code: 'DH', name: 'Dadra and Nagar Haveli and Daman and Diu', zone: 'West', codeRules: 'none', configured: false },
+  { code: 'GA', name: 'Goa', zone: 'West', codeRules: 'none', configured: false },
+  { code: 'HP', name: 'Himachal Pradesh', zone: 'North', codeRules: 'none', configured: false },
+  { code: 'JK', name: 'Jammu and Kashmir and Ladakh', zone: 'North', codeRules: 'none', configured: false },
+  { code: 'JH', name: 'Jharkhand', zone: 'East', codeRules: 'none', configured: false },
+  { code: 'LD', name: 'Lakshadweep', zone: 'South', codeRules: 'none', configured: false },
+  { code: 'MP', name: 'Madhya Pradesh', zone: 'Central', codeRules: 'none', configured: false },
+  { code: 'MN', name: 'Manipur', zone: 'North East', codeRules: 'none', configured: false },
+  { code: 'ML', name: 'Meghalaya', zone: 'North East', codeRules: 'none', configured: false },
+  { code: 'MZ', name: 'Mizoram', zone: 'North East', codeRules: 'none', configured: false },
+  { code: 'NL', name: 'Nagaland', zone: 'North East', codeRules: 'none', configured: false },
+  { code: 'OD', name: 'Odisha', zone: 'East', codeRules: 'none', configured: false },
+  { code: 'PY', name: 'Puducherry', zone: 'South', codeRules: 'none', configured: false },
+  { code: 'PB', name: 'Punjab', zone: 'North', codeRules: 'none', configured: false },
+  { code: 'RJ', name: 'Rajasthan', zone: 'North', codeRules: 'none', configured: false },
+  { code: 'SK', name: 'Sikkim', zone: 'North East', codeRules: 'none', configured: false },
+  { code: 'TR', name: 'Tripura', zone: 'North East', codeRules: 'none', configured: false },
+  { code: 'UK', name: 'Uttarakhand', zone: 'North', codeRules: 'none', configured: false },
 ];
 
 const BY_CODE = new Map(STATES.map((s) => [s.code, s]));

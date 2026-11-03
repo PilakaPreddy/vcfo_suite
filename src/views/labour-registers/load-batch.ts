@@ -1,7 +1,7 @@
 import 'server-only';
 
 import type { AuthContext } from '@/auth/guards';
-import { batchProvenance, getBatch, getColumnMap, listUploads } from '@/db/repositories/labour-registers';
+import { batchProvenance, getBatch, getColumnMap, listDocuments, listUploads } from '@/db/repositories/labour-registers';
 import { formsFor, optionalFields, requiredFields } from '@/lib/labour-registers/catalogue';
 import { assessReadiness, closeSentence } from '@/lib/labour-registers/readiness';
 import type { BatchView } from './BatchPage';
@@ -20,9 +20,10 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
   const period = { from: batch.periodFrom, to: batch.periodTo };
   const forms = formsFor(batch.stateCode, period);
 
-  const [provenance, uploads, map] = await Promise.all([
+  const [provenance, uploads, documents, map] = await Promise.all([
     batchProvenance(ctx, batch.id),
     listUploads(ctx, batch.id),
+    listDocuments(ctx, batch.id),
     getColumnMap(ctx, batch.engagementId, 'paysheet'),
   ]);
 
@@ -95,6 +96,16 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
       }, {}),
     ).map(([act, items]) => ({ act, forms: items })),
     uploads: bySlot,
+    /* The current document per form. `listDocuments` is newest first, and a superseded
+       document keeps its row, so the first seen for a form is the one to offer. */
+    documents: documents.reduce<Array<{ id: string; formId: string; byteLength: number; format: string }>>(
+      (acc, d) => {
+        if (acc.some((x) => x.formId === d.formId)) return acc;
+        acc.push({ id: d.id, formId: d.formId, byteLength: d.byteLength, format: d.format });
+        return acc;
+      },
+      [],
+    ),
     readiness: summary,
     sentence: closeSentence(summary, period),
   };

@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Download, Info, Lock, RotateCcw } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Download, Info, Lock, RotateCcw } from 'lucide-react';
 
 import { ActDirectory, type DirectoryFolder } from '@/components/labour-registers/ActDirectory';
+import { ReopenDialog } from '@/components/labour-registers/ReopenDialog';
+import { useBatchActions } from '@/components/labour-registers/use-batch-actions';
 import { UploadCard, type SlotKey, type SlotState } from '@/components/labour-registers/UploadCard';
 import { useRegisterUpload } from '@/components/labour-registers/use-register-upload';
 import { LabourRegistersTheme } from '@/components/labour-registers/LabourRegistersTheme';
@@ -52,6 +54,10 @@ export interface BatchView {
   uploads: Partial<Record<SlotKey, SlotState>>;
   readiness: ReadinessSummary;
   sentence: string;
+  /** The client this batch belongs to, printed on every register. */
+  companyName?: string;
+  /** The documents produced, so the directory lists what exists rather than what might. */
+  documents?: Array<{ id: string; formId: string; byteLength: number; format: string }>;
 }
 
 const MONTHS = [
@@ -95,22 +101,59 @@ function fileStamp(from: string): string {
 function foldersFor(view: BatchView): DirectoryFolder[] {
   const stamp = fileStamp(view.period.from);
   const tones = ['reg', 'ok', 'blue', 'warn', 'info', 'bad'] as const;
+  /* What exists, not what might. A folder listing files that were never produced is the
+     version of this screen that told everybody the feature worked. */
+  const byForm = new Map((view.documents ?? []).map((d) => [d.formId, d]));
+
   return view.formsByAct.map(({ act, forms }, i) => ({
     act,
     tone: tones[i % tones.length],
     expected: forms.length,
-    files: view.locked
-      ? forms.map((form) => ({
-          name: `Form ${form.formNumber} - ${form.title} - ${stamp}.xlsx`,
-          format: 'XLSX',
-        }))
-      : [],
+    files: forms.flatMap((form) => {
+      const doc = byForm.get(form.id);
+      if (!doc) return [];
+      return [
+        {
+          name: `Form ${form.formNumber} - ${form.title} - ${stamp}.${doc.format}`,
+          format: doc.format.toUpperCase(),
+          href: `/api/labour-registers/download?document=${doc.id}`,
+        },
+      ];
+    }),
   }));
 }
 
-export function BatchPage({ view, shellBase }: { view: BatchView; shellBase: string }) {
+export function BatchPage({
+  view,
+  shellBase,
+  canPrepare = true,
+}: {
+  view: BatchView;
+  shellBase: string;
+  /**
+   * False in the client portal. A client may read a batch and never write to one, and the
+   * controls must not be drawn rather than drawn and refused — a client pressing "Mark as
+   * ready" and getting a 403 is a bug report. The write routes refuse them anyway; this is the
+   * other half of the same rule.
+   */
+  canPrepare?: boolean;
+}) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [reopenOpen, setReopenOpen] = useState(false);
   const { uploads, busySlot, errors, upload } = useRegisterUpload(view.batchId, view.uploads);
+  const actions = useBatchActions(view.batchId, view.companyName);
+
+  /* Where a readiness line's "fix this" link goes. The dialog has always taken an onFix and
+     has never been given one, so every fix link has been invisible. */
+  function goFix(to: 'uploads' | 'mapping' | 'employees') {
+    setDialogOpen(false);
+    if (to === 'uploads') {
+      document.getElementById('lr-inputs')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    const slot = to === 'employees' ? 'employees' : 'paysheet';
+    window.location.href = `${shellBase}/labour-registers?batch=${view.batchId}&map=${slot}`;
+  }
   const state = stateByCode(view.stateCode);
   const label = periodLabel(view.period.from, view.period.to);
   const registers = view.provenance?.registers;
@@ -175,23 +218,59 @@ export function BatchPage({ view, shellBase }: { view: BatchView; shellBase: str
         actions={
           view.locked ? (
             <>
-              <button type="button" className={lr.quiet}>
-                <RotateCcw className="size-4" strokeWidth={1.6} aria-hidden="true" />
-                Reopen inputs
-              </button>
-              <button type="button" className={lr.primary}>
+              {canPrepare ? (
+                <button
+                  type="button"
+                  onClick={() => setReopenOpen(true)}
+                  disabled={actions.busy !== null}
+                  className={lr.quiet}
+                >
+                  <RotateCcw className="size-4" strokeWidth={1.6} aria-hidden="true" />
+                  Reopen inputs
+                </button>
+              ) : null}
+              <a href={`/api/labour-registers/zip?batch=${view.batchId}`} className={lr.primary}>
                 <Download className="size-4" strokeWidth={1.8} aria-hidden="true" />
                 Download all
-              </button>
+              </a>
             </>
-          ) : (
-            <button type="button" onClick={() => setDialogOpen(true)} className={lr.primary}>
+          ) : canPrepare ? (
+            <button
+              type="button"
+              onClick={() => setDialogOpen(true)}
+              disabled={actions.busy !== null}
+              className={lr.primary}
+            >
               <Lock className="size-4" strokeWidth={1.8} aria-hidden="true" />
-              Mark as ready
+              {actions.busy === 'closing' ? 'Closing…' : actions.busy === 'generating' ? 'Generating…' : 'Mark as ready'}
             </button>
-          )
+          ) : null
         }
       />
+
+      {actions.error ? (
+        <LrBanner icon={AlertCircle} tone="bad">
+          {actions.error}
+        </LrBanner>
+      ) : null}
+
+      {actions.outcome ? (
+        <LrBanner icon={Info} tone={actions.outcome.blocked.length > 0 ? 'warn' : 'ok'}>
+          {actions.outcome.built > 0
+            ? `${actions.outcome.built} registers built`
+            : 'Nothing needed building'}
+          {actions.outcome.fromStorage > 0 ? `, ${actions.outcome.fromStorage} served from storage` : ''}.
+          {actions.outcome.blocked.length > 0
+            ? ` ${actions.outcome.blocked.length} could not be produced: ${actions.outcome.blocked
+                .slice(0, 2)
+                .map((b) => b.reason)
+                .join(' ')}`
+            : ''}
+          {actions.outcome.deferred.length > 0
+            ? ` ${actions.outcome.deferred.length} use a form shape that is not built yet.`
+            : ''}
+        </LrBanner>
+      ) : null}
 
       <div className="flex flex-wrap items-start gap-3">
         <div className="flex min-w-0 flex-[999_1_620px] flex-col gap-3">
@@ -225,12 +304,19 @@ export function BatchPage({ view, shellBase }: { view: BatchView; shellBase: str
               because an empty directory makes no sense until somebody has seen why it is
               empty. Once the period is locked the card goes read-only rather than away: what
               was uploaded is part of what the registers were built from. */}
+          <div id="lr-inputs" />
           <UploadCard
             uploads={uploads}
             busySlot={busySlot}
             errors={errors}
-            locked={view.locked}
-            mapHref={(slot) => `${shellBase}/labour-registers?batch=${view.batchId}&map=${slot}`}
+            locked={view.locked || !canPrepare}
+            /* Column reconciliation is the firm's work. A client sees what was uploaded and
+               never how it was mapped. */
+            mapHref={
+              canPrepare
+                ? (slot) => `${shellBase}/labour-registers?batch=${view.batchId}&map=${slot}`
+                : undefined
+            }
             onPick={upload}
           />
 
@@ -275,8 +361,25 @@ export function BatchPage({ view, shellBase }: { view: BatchView; shellBase: str
         open={dialogOpen}
         summary={view.readiness}
         sentence={view.sentence}
+        busy={actions.busy === 'closing' || actions.busy === 'generating'}
         onCancel={() => setDialogOpen(false)}
-        onConfirm={() => setDialogOpen(false)}
+        onFix={goFix}
+        onConfirm={(summary) => {
+          setDialogOpen(false);
+          void actions.closeAndGenerate(summary);
+        }}
+      />
+
+      <ReopenDialog
+        open={reopenOpen}
+        periodLabel={label}
+        registers={registers}
+        busy={actions.busy === 'reopening'}
+        onCancel={() => setReopenOpen(false)}
+        onConfirm={(reason) => {
+          setReopenOpen(false);
+          void actions.reopen(reason);
+        }}
       />
     </LabourRegistersTheme>
   );

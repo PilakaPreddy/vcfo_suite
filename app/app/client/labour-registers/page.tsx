@@ -31,7 +31,10 @@ export default async function Page({
     if (!guard.ok) notFound();
     const view = await loadBatchView(guard.ctx, batchId);
     if (!view) notFound();
-    return <BatchPage view={view} shellBase="/app/client" />;
+    /* A client may read a batch and never write to one. The write routes refuse them anyway;
+       this stops the controls being drawn, because a client pressing "Mark as ready" and
+       getting a 403 is a bug report. */
+    return <BatchPage view={view} shellBase="/app/client" canPrepare={false} />;
   }
 
   return <ClientRegistersPage shellBase="/app/client" stateCode={one('state')} period={one('period')} />;
