@@ -51,7 +51,8 @@ export function useServerSync({
 }: ServerSyncParams) {
   /* A developer may call only the developer console routes; every other guard returns 401
      and fetchJson signs the person out on a 401, so the firm data sync stays off for them. */
-  const syncUser = user?.role === 'developer' ? null : user;
+  // A client partner (receivables) likewise reads only /api/receivables/partner/*.
+  const syncUser = user?.role === 'developer' || user?.role === 'partner' ? null : user;
 
   const engagementsQuery = useQuery({
     queryKey: ['engagements', user?.id],
