@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { requireAuth } from '@/auth/guards';
+import { listEngagements } from '@/db/repositories/engagements';
 import { BatchPage } from '@/views/labour-registers/BatchPage';
 import { LabourRegistersPage } from '@/views/labour-registers/LabourRegistersPage';
 import { loadBatchView } from '@/views/labour-registers/load-batch';
@@ -29,12 +30,20 @@ export default async function Page({
     return <BatchPage view={view} shellBase="/app/manager" />;
   }
 
+  /* Opening a batch needs a client as well as a state, and this screen is state-first, so the
+     clients this preparer can reach are listed here and chosen on the page. */
+  const guard = await requireAuth();
+  const engagements = guard.ok
+    ? (await listEngagements(guard.ctx)).map((e) => ({ id: e.id, name: e.companyName }))
+    : [];
+
   return (
     <LabourRegistersPage
       shellBase="/app/manager"
       stateCode={one('state')}
       period={one('period')}
       canPrepare={true}
+      engagements={engagements}
     />
   );
 }

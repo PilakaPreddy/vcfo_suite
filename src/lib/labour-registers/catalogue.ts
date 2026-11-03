@@ -11,7 +11,6 @@
  * therefore owes the central code registers AND its state's existing registers for the same
  * month. A generator that picked one stack would under-file.
  */
-import { CHECKLIST_HEADS, headById } from '@/data/labour-registers/checklist-heads';
 import { FORMS } from '@/data/labour-registers/forms';
 import { stateByCode } from '@/data/labour-registers/states';
 import { fieldByKey } from '@/data/labour-registers/fields';
@@ -79,50 +78,49 @@ export function formsByAct(forms: FormSpec[]): Array<{ act: string; forms: FormS
 }
 
 /**
- * The canonical dataset fields a set of forms needs from an upload, given the heads the
- * client's payroll checklist has ticked.
+ * The canonical dataset fields a set of forms must have from an upload before a register can
+ * be produced.
  *
- * This is what makes the checklist load-bearing rather than decorative: an unticked head
- * removes its columns from the demand, so a client who pays no night shift allowance is never
- * asked to map one, and no register goes out with an empty statutory column.
+ * Only the fields every payroll has. A pay head not every employer runs — a night shift
+ * allowance, a conveyance allowance, overtime — is marked `optional` on the dataset field and
+ * is asked for but never demanded, so a client who does not pay one is not held up over a
+ * column they will never fill. `optionalFields` returns those separately.
  */
-export function requiredFields(forms: FormSpec[], activeHeads: Iterable<string>): string[] {
-  const on = new Set(activeHeads);
+export function requiredFields(forms: FormSpec[]): string[] {
+  return inputFields(forms).filter((key) => !fieldByKey(key)?.optional);
+}
+
+/** The fields a form will take if the sheet has them, and print nil if it does not. */
+export function optionalFields(forms: FormSpec[]): string[] {
+  return inputFields(forms).filter((key) => fieldByKey(key)?.optional);
+}
+
+/** Every field these forms read from an uploaded sheet, required or not. */
+export function inputFields(forms: FormSpec[]): string[] {
   const out = new Set<string>();
   for (const form of forms) {
-    for (const col of form.columns) {
-      if (col.source !== 'input' && col.source !== 'checklist') continue;
-      /* A column may be gated two ways, and both have to be honoured. The form can say so
-         directly (`requiresHead`), and the dataset field can carry its own governing head —
-         a prescribed form names an overtime column outright, so the gate lives on the field
-         rather than on that column. Either one being off means the data is not demanded. */
-      const gate = col.requiresHead ?? fieldByKey(col.field)?.head;
-      if (gate && !on.has(gate)) continue;
-      out.add(col.field);
-    }
+    for (const col of form.columns) if (col.source === 'input') out.add(col.field);
   }
   return [...out];
 }
 
 /**
- * Columns that stay on the form but print nil, because the head that would fill them is off.
+ * Columns that stay on the form but print nil, because nothing was mapped to them.
  *
- * This is the difference between the two ways a column can be absent, and it matters
- * legally. A column the prescribed form carries is printed whatever the client pays, with a
- * nil in it — removing it would alter a statutory layout, and the research found that an
- * electronic register may change its layout but not its "integrity, serial number and column
- * contents". A column the catalogue itself marks `checklist` is one we add for the client's
- * own benefit, and that one simply does not appear.
+ * The column is never removed, and that matters legally: a prescribed form carries its column
+ * whatever the client pays, and the research found that an electronic register may change its
+ * layout but not its "integrity, serial number and column contents". So an unmapped optional
+ * column prints empty and is listed here, where a reviewer can see what went out blank and
+ * decide whether that is right.
  */
-export function nilColumns(form: FormSpec, activeHeads: Iterable<string>): Array<{ heading: string; head: string }> {
-  const on = new Set(activeHeads);
+export function nilColumns(
+  form: FormSpec,
+  mappedFields: Iterable<string>,
+): Array<{ heading: string; field: string }> {
+  const mapped = new Set(mappedFields);
   return form.columns
-    .filter((c) => {
-      if (c.source !== 'input') return false;
-      const gate = fieldByKey(c.field)?.head;
-      return Boolean(gate && !on.has(gate));
-    })
-    .map((c) => ({ heading: c.heading, head: headById(fieldByKey(c.field)!.head!)?.label ?? fieldByKey(c.field)!.head! }));
+    .filter((c) => c.source === 'input' && fieldByKey(c.field)?.optional && !mapped.has(c.field))
+    .map((c) => ({ heading: c.heading, field: c.field }));
 }
 
 /** The fields a set of forms fills from the client record rather than an upload. */
@@ -142,17 +140,6 @@ export function needsAttendanceGrid(forms: FormSpec[]): boolean {
 /** The forms that cannot be produced without the per-day block, for the "no sheet" dialog. */
 export function formsNeedingAttendance(forms: FormSpec[]): FormSpec[] {
   return forms.filter((f) => f.columns.some((c) => c.source === 'grid'));
-}
-
-/**
- * The columns of a form that a given checklist leaves out. Printed on the batch so a reviewer
- * can see what was omitted and why, rather than wondering where a column went.
- */
-export function omittedColumns(form: FormSpec, activeHeads: Iterable<string>): Array<{ heading: string; head: string }> {
-  const on = new Set(activeHeads);
-  return form.columns
-    .filter((c) => c.source === 'checklist' && c.requiresHead && !on.has(c.requiresHead))
-    .map((c) => ({ heading: c.heading, head: headById(c.requiresHead!)?.label ?? c.requiresHead! }));
 }
 
 /**
@@ -180,7 +167,3 @@ export function regimeSummary(state: StateSpec, period: Period): { hybrid: boole
   };
 }
 
-/** Every head id the catalogue knows, for validating a stored checklist. */
-export function knownHeadIds(): Set<string> {
-  return new Set(CHECKLIST_HEADS.map((h) => h.id));
-}

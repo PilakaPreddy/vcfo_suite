@@ -15,8 +15,6 @@ function input(over: Partial<ReadinessInput> = {}): ReadinessInput {
     unresolvedValues: 0,
     employees: 422,
     employeesShort: 0,
-    activeHeads: ['attendance-lop'],
-    headsAwaited: [],
     overtimeCoverageUnresolved: 0,
     ...over,
   };
@@ -72,15 +70,11 @@ describe('assessReadiness', () => {
   });
 
   it('blocks when overtime is on and a coverage decision is missing', () => {
-    const r = assessReadiness(input({ activeHeads: ['overtime'], overtimeCoverageUnresolved: 4 }));
+    const r = assessReadiness(input({ overtimeCoverageUnresolved: 4 }));
     expect(r.canClose).toBe(false);
     expect(r.lines.find((l) => l.kind === 'blocked')?.text).toContain('minimum wage coverage');
   });
 
-  it('ignores the coverage question when the client runs no overtime', () => {
-    const r = assessReadiness(input({ activeHeads: ['attendance-lop'], overtimeCoverageUnresolved: 4 }));
-    expect(r.canClose).toBe(true);
-  });
 
   it('reports short employees without blocking, because that is a judgement call', () => {
     const r = assessReadiness(input({ employeesShort: 2 }));
@@ -91,10 +85,20 @@ describe('assessReadiness', () => {
     expect(r.employeesComplete).toBe(420);
   });
 
-  it('names the checklist heads still awaited, without blocking on them', () => {
-    const r = assessReadiness(input({ headsAwaited: ['overtime', 'referral-bonus'] }));
+  it('names the optional columns that will print nil, without blocking on them', () => {
+    const r = assessReadiness(input({ optionalUnmapped: ['overtimeHours', 'nightShiftAllowance'] }));
     expect(r.canClose).toBe(true);
-    expect(r.lines.find((l) => l.text.includes('checklist heads'))?.text).toContain('Overtime');
+    const line = r.lines.find((l) => l.text.includes('print nil'));
+    expect(line?.text).toContain('Overtime hours');
+    expect(line?.kind).toBe('short');
+  });
+
+  it('blocks when overtime was worked and nobody decided the minimum wage coverage', () => {
+    /* Overtime at twice the ordinary rate applies only where a minimum wage is fixed, so an
+       undecided employee would put a figure in the register the firm cannot stand behind. */
+    const r = assessReadiness(input({ overtimeCoverageUnresolved: 4 }));
+    expect(r.canClose).toBe(false);
+    expect(r.lines.find((l) => l.kind === 'blocked')?.text).toContain('minimum wage coverage');
   });
 });
 

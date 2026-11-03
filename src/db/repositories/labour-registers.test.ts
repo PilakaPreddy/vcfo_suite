@@ -162,42 +162,9 @@ describe('writes are staff-only', () => {
     expect(calls.filter((c) => c.op === 'insert')).toHaveLength(0);
   });
 
-  it('rejects a checklist head the catalogue does not know', async () => {
-    allow();
-    await expect(
-      repo.setChecklistHead(ctx('manager'), { engagementId: OURS, headId: 'made-up-head' }),
-    ).rejects.toThrow('unknown checklist head');
-    expect(calls).toHaveLength(0);
-  });
 
-  it('refuses a tick for another firm\'s batch', async () => {
-    results = [[{ id: 'b1', engagementId: THEIRS }]];
-    deny();
-    expect(await repo.setTick(ctx('manager'), { batchId: 'b1', headId: 'overtime', state: 'received' })).toBeNull();
-    expect(calls.filter((c) => c.op === 'insert')).toHaveLength(0);
-  });
 });
 
-describe('the standing checklist', () => {
-  it('falls back to the catalogue defaults for a client with no rows yet', async () => {
-    allow();
-    results = [[]];
-    const heads = await repo.activeHeads(ctx('manager'), OURS);
-    expect(heads).toContain('attendance-lop');
-    expect(heads).toContain('overtime');
-  });
-
-  it('returns only the heads a client actually runs once they are set', async () => {
-    allow();
-    results = [[{ headId: 'overtime', active: true }, { headId: 'esi', active: false }]];
-    expect(await repo.activeHeads(ctx('manager'), OURS)).toEqual(['overtime']);
-  });
-
-  it('gives a client no heads at all', async () => {
-    deny();
-    expect(await repo.activeHeads(ctx('client'), THEIRS)).toEqual([]);
-  });
-});
 
 describe('attestation freezes a document', () => {
   it('is refused to a manager and an intern', async () => {

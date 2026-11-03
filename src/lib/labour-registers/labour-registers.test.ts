@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { describeGrid, detectAttendanceGrid, gridIndices } from './attendance-grid';
 import { draftKey, hashRows, mayReplaceInPlace, stalenessReason, type DocumentIdentity } from './cache-key';
-import { appliesDuring, formsFor, monthPeriod, needsAttendanceGrid, nilColumns, omittedColumns, requiredFields, retentionYears } from './catalogue';
+import { appliesDuring, formsFor, monthPeriod, needsAttendanceGrid, nilColumns, optionalFields, requiredFields, retentionYears } from './catalogue';
 import { computeOvertime, normalHoursFor, overtimeBasisNote, unresolvedCoverage } from './overtime';
 import { describeShapeDiff, diffShape } from './shape-diff';
 import { matchValues, unresolvedValues, valueLookup } from './value-map';
@@ -112,25 +112,22 @@ describe('catalogue', () => {
     expect(appliesDuring(codeForm, monthPeriod(2025, 9))).toBe(false);
   });
 
-  it('asks only for the columns the client\'s checklist turns on', () => {
+  it('demands only what every payroll has, and asks for the rest without demanding it', () => {
     const forms = formsFor('TG', september);
-    const withOvertime = requiredFields(forms, ['overtime', 'attendance-lop']);
-    const withoutOvertime = requiredFields(forms, ['attendance-lop']);
-    expect(withOvertime).toContain('overtimeHours');
-    expect(withoutOvertime).not.toContain('overtimeHours');
+    /* A night shift allowance is not run by every employer, so holding a close over its
+       column would block clients who will never fill it. */
+    expect(requiredFields(forms)).toContain('basic');
+    expect(requiredFields(forms)).not.toContain('nightShiftAllowance');
+    expect(optionalFields(forms)).toContain('nightShiftAllowance');
+    expect(optionalFields(forms)).toContain('overtimeHours');
   });
 
-  it('keeps a prescribed column on the form but prints it nil when its head is off', () => {
+  it('keeps a prescribed column on the form and prints it nil when nothing is mapped to it', () => {
     const form = formById('in-wages-iv')!;
-    expect(nilColumns(form, ['attendance-lop']).map((c) => c.heading)).toContain('Overtime hours worked');
-    expect(nilColumns(form, ['overtime']).map((c) => c.heading)).not.toContain('Overtime hours worked');
-  });
-
-  it('names the columns a checklist leaves out, so a reviewer sees what was omitted', () => {
-    const form = formById('in-wages-iv')!;
-    const omitted = omittedColumns(form, ['overtime']);
-    expect(omitted.map((o) => o.heading)).toContain('Employee state insurance');
-    expect(omitted.map((o) => o.heading)).not.toContain('Overtime wages');
+    /* The column is never removed: an electronic register may change its layout but not its
+       column contents, so an unfilled statutory column goes out blank, not missing. */
+    expect(nilColumns(form, ['basic']).map((c) => c.heading)).toContain('Overtime hours worked');
+    expect(nilColumns(form, ['overtimeHours']).map((c) => c.heading)).not.toContain('Overtime hours worked');
   });
 
   it('knows the month needs a daily attendance block', () => {
@@ -155,7 +152,6 @@ describe('cache key', () => {
     formId: 'tg-se-xxiii',
     period: '2026-09',
     inputsHash: 'abc',
-    activeHeads: ['overtime', 'attendance-lop'],
     templateVersion: 'v1',
     assumptions: { fullAttendanceAssumed: false },
     locale: 'en-IN',
@@ -163,8 +159,8 @@ describe('cache key', () => {
     ...over,
   });
 
-  it('is stable for the same inputs, whatever order the checklist was ticked in', () => {
-    expect(draftKey(identity())).toBe(draftKey(identity({ activeHeads: ['attendance-lop', 'overtime'] })));
+  it('is stable for the same inputs', () => {
+    expect(draftKey(identity())).toBe(draftKey(identity()));
   });
 
   it('changes when the data changes', () => {
@@ -200,7 +196,6 @@ describe('cache key', () => {
   it('names the reason a stored document is stale', () => {
     const stored = identity();
     expect(stalenessReason(draftKey(stored), stored, identity({ inputsHash: 'z' }))).toBe('the uploaded data changed');
-    expect(stalenessReason(draftKey(stored), stored, identity({ activeHeads: ['overtime'] }))).toBe('the payroll checklist changed');
     expect(stalenessReason(draftKey(stored), stored, identity({ templateVersion: 'v9' }))).toBe('the form template changed');
   });
 

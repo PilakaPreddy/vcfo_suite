@@ -52,8 +52,7 @@ and it is the single most load-bearing unread provision in the catalogue.
 employees whose minimum rate of wages is fixed under the Code. Most of a professional-services
 client's roll sits above any scheduled minimum, and the workbook this replaces applied 2× to
 everyone. `computeOvertime()` therefore refuses to produce a figure for an employee whose
-coverage is `unknown`, and `minimum-wage-coverage` is a payroll checklist head so the question
-is part of the monthly close. Do not default it.
+coverage is `unknown`, and an undecided employee blocks the close. Do not default it.
 
 **Retention is 3 years on the legacy rules and 5 under the codes**, not the 8 an earlier draft
 assumed — that number could not be sourced anywhere and may be contamination from section
@@ -66,21 +65,30 @@ amended in 2014 permits electronic registers provided a printout is produced to 
 demand. So the print bundle is a first-class output, not a convenience, and no labour rule found
 prescribes a digital signature class — make signing optional, not required.
 
-## The payroll checklist is load-bearing
+## Required, optional, and nil (the payroll checklist is gone — 2026-11-03)
 
-`labour_register_checklist` is the client's standing list of pay heads and activities. It is
-also what decides which columns the mapper demands. Two ways a column can be absent, and the
-difference is legal:
+There used to be a payroll checklist here: a client's standing list of the pay heads their
+payroll runs, which gated which columns the mapper demanded. It has been removed at the owner's
+instruction — it is a payroll concern, not a register one, and belongs in its own feature. The
+tables (`labour_register_checklist`, `labour_register_checklist_ticks`) are dropped by migration
+`0036`, and `ColumnSource` no longer has a `checklist` member.
 
-- A column the **prescribed form** carries always prints, with a nil in it when the head is off
-  (`nilColumns()`). Removing it would alter a statutory layout, and an electronic register may
-  change layout but not "integrity, serial number and column contents".
-- A column the **catalogue itself** marks `source: 'checklist'` simply does not appear
-  (`omittedColumns()`).
+What the gating does now, which is simpler and holds the same line:
 
-A field can be gated from either side — by `FormColumn.requiresHead` or by the field's own
-`FieldSpec.head` — and `requiredFields()` honours both. A prescribed form names an overtime
-column outright, so that gate lives on the field.
+- A field every payroll has — identity, days worked, basic, gross, deductions — is **required**.
+  `requiredFields(forms)` returns these, and an unmapped one blocks the close.
+- A field not every employer runs — a night shift allowance, a conveyance allowance, overtime —
+  carries `optional: true` on its `FieldSpec`. `optionalFields(forms)` returns these. They are
+  offered to the mapper but never demanded, so a client who pays no night shift allowance is
+  not held up over a column they will never fill.
+- An optional column with nothing mapped to it **still prints**, with a nil in it
+  (`nilColumns(form, mappedFields)`). Removing it would alter a statutory layout, and an
+  electronic register may change layout but not "integrity, serial number and column contents".
+  `assessReadiness` reports these as a short line so nothing goes out blank silently.
+
+So the distinction moved from "did somebody tick this head" to "is this field one every payroll
+has". That is the same judgement without a second thing to keep in sync, and it cannot go stale
+the way a standing checklist does.
 
 ## The monthly close is a lock, not a save
 
@@ -94,13 +102,13 @@ to tell them apart is to open the file.
 interesting part:
 
 - **Blocks:** no paysheet; no attendance where a form carries a day grid; a required column
-  nobody mapped; an attendance code nobody matched; and, where overtime is on, an employee
-  with no minimum wage coverage decision. Each would put a figure in a statutory register that
-  the firm cannot stand behind.
-- **Does not block:** employees missing a field, checklist heads still awaited, a month marked
-  fully present rather than uploaded. These are judgement calls — a client really may have two
-  people with no PAN on file — so they are reported, the preparer decides, and the decision is
-  on the record.
+  nobody mapped; an attendance code nobody matched; an employee with no minimum wage coverage
+  decision where overtime was worked. Each would put a figure in a statutory register that the
+  firm cannot stand behind.
+- **Does not block:** employees missing a field, optional columns that will print nil, a month
+  marked fully present rather than uploaded. These are judgement calls — a client really may
+  have two people with no PAN on file — so they are reported, the preparer decides, and the
+  decision is on the record.
 
 The readiness summary is stored on the batch verbatim at the moment of locking
 (`readiness_snapshot`). What somebody was told when they took responsibility is part of the
@@ -228,3 +236,29 @@ components, and a function cannot cross the server-to-client boundary, so a scre
 its `'use client'` throws on every request while every unit test still passes. Render through
 the real pipeline: `npm run e2e:smoke`, or a throwaway page under `app/` requested from a
 running `next dev` and screenshotted.
+
+
+## Opening a batch (2026-11-03)
+
+The picker is state-first: a preparer thinks "Telangana, September" before they think of a
+client. But a batch is one client, one state, one period, so the client is chosen on the same
+screen and `POST /api/labour-registers/open` puts the three together. `openBatch` is
+find-or-create, so pressing the button twice returns the same batch rather than a second one.
+
+Before that route existed the Open button was a link back to the same page, which is why
+pressing it appeared to do nothing.
+
+## The map's hit areas
+
+Every configured state is clickable on its own shape (an `onClick` on the `<g>`, which pushes
+the picker's own href). The small ones — Delhi, Chandigarh, Goa, Sikkim, Puducherry, the
+islands — also get a marker with a 44 px hit area over it, because their shapes are a few
+pixels across at page scale.
+
+**That overlay list must keep `pointer-events-none`.** It covers the whole map, and without it
+the list swallowed every click meant for a shape underneath, so clicking a large state did
+nothing. Only the links inside it take the pointer back (`pointer-events-auto`).
+
+The `<svg>` stays `aria-hidden` and its shapes are not focusable: a path is a poor focus target
+and announces nothing useful. The list of states the caller renders beside the map is the
+keyboard and screen-reader path, and both read the same rows.
