@@ -1,7 +1,7 @@
 import { inngest } from './client';
 import { systemUpsertFetchedRate } from '@/db/repositories/receivables';
 import { todayIst } from '@/lib/receivables/dates';
-import { fetchReferenceRate } from '@/lib/receivables/fx-rate-source';
+import { fetchReferenceRate, type FetchedRate } from '@/lib/receivables/fx-rate-source';
 import { PAUSED, skipWhenPaused, withRunNow } from '@/jobs/dev-controls';
 
 /**
@@ -24,7 +24,8 @@ export const receivablesFxRates = inngest.createFunction(
     const stored: Array<{ currency: string; rateDate: string; rate: number; source: string }> = [];
     const missing: string[] = [];
     for (const currency of RECEIVABLES_FX_CURRENCIES) {
-      const rate = await step.run(`fetch-${currency}`, () => fetchReferenceRate(currency, today));
+      // step.run hands back the JSON form of the result, which loses the required keys in the type; the value is the same object.
+      const rate = (await step.run(`fetch-${currency}`, () => fetchReferenceRate(currency, today))) as FetchedRate | null;
       if (!rate) {
         missing.push(currency);
         continue;
