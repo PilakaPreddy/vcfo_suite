@@ -46,7 +46,7 @@ const STATUS_FILTER = [
  * E-06: the default views of Team tasks. A view is a set of filters; the home card tiles open
  * them with `?view=overdue`, `?view=week` and `?view=waiting`.
  */
-export const TEAM_TASK_VIEWS: SavedView[] = [
+const TEAM_TASK_VIEWS: SavedView[] = [
   { key: 'all', label: 'All', filters: {} },
   { key: 'overdue', label: 'Overdue', filters: { status: 'Overdue' } },
   { key: 'week', label: 'This week', filters: { status: 'Due soon' } },
@@ -54,7 +54,7 @@ export const TEAM_TASK_VIEWS: SavedView[] = [
 ];
 
 /** The item key a row may be reminded about: a step or document request the client still owes. */
-export function teamRowRemindKey(row: Pick<TeamTaskRow, 'withClient' | 'itemId'>): string | null {
+function teamRowRemindKey(row: Pick<TeamTaskRow, 'withClient' | 'itemId'>): string | null {
   return row.withClient && row.itemId && /^(step|request):/.test(row.itemId) ? row.itemId : null;
 }
 

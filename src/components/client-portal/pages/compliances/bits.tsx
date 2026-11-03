@@ -109,7 +109,7 @@ export function AreaChip({ a, compact }: { a: AreaCode; compact?: boolean }) {
 
 /* ------------------------------------------------- rule 15 · ↗ and proof */
 
-export function PortalBtn({ f }: { f: Pick<PortalFiling, 'area' | 'name'>; dark?: boolean }) {
+function PortalBtn({ f }: { f: Pick<PortalFiling, 'area' | 'name'>; dark?: boolean }) {
   return (
     <span className="cp-tw inline-flex align-middle">
       <PortalLink f={f} />
@@ -147,7 +147,7 @@ export function ProofChip({ f, onOpen }: { f: PortalFiling; onOpen: (f: PortalFi
   );
 }
 
-export function NameWithLinks({ f }: { f: PortalFiling; dark?: boolean }) {
+function NameWithLinks({ f }: { f: PortalFiling; dark?: boolean }) {
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
       {f.name}

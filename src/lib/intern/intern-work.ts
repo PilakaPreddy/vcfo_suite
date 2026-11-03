@@ -182,7 +182,7 @@ export function parseIstNoon(ymd: string): Date {
   return new Date(`${ymd}T12:00:00+05:30`);
 }
 
-export function istWeekdayMon0(date: Date): number {
+function istWeekdayMon0(date: Date): number {
   const wd = sep(date.toLocaleDateString('en-US', { weekday: 'short', timeZone: IST }));
   const map: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
   return map[wd] ?? 0;
@@ -242,17 +242,17 @@ function formatIstDayMonth(ymd: string): string {
 export type WeekChipKind = 'filing' | 'step' | 'nudge' | 'done';
 
 // A nudge due is the one orange moment on the week strip: it is the thing that needs the lead.
-export const WEEK_CHIP_TONE: Record<WeekChipKind, InternChipTone> = {
+const WEEK_CHIP_TONE: Record<WeekChipKind, InternChipTone> = {
   filing: 'danger',
   step: 'primary',
   nudge: 'warning',
   done: 'success',
 };
 
-export const WEEK_CHIP_KIND_ORDER: WeekChipKind[] = ['filing', 'step', 'nudge', 'done'];
+const WEEK_CHIP_KIND_ORDER: WeekChipKind[] = ['filing', 'step', 'nudge', 'done'];
 
 /** Which legend bucket an item belongs in on the week strip / timeline. */
-export function internWeekMarkKind(item: InternWorkItem): WeekChipKind | null {
+function internWeekMarkKind(item: InternWorkItem): WeekChipKind | null {
   if (item.kind === 'done') return 'done';
   if (item.source === 'filing') return 'filing';
   if (
@@ -1223,7 +1223,7 @@ export function internTimelinePriority(
   return 'ok';
 }
 
-export const TIMELINE_PRIORITY_TONE: Record<InternTimelinePriority, InternChipTone> = {
+const TIMELINE_PRIORITY_TONE: Record<InternTimelinePriority, InternChipTone> = {
   overdue: 'danger',
   soon: 'warning',
   ok: 'primary',

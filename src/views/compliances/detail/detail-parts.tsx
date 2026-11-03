@@ -111,7 +111,7 @@ export function KV({ k, children, sub }: { k: string; children: ReactNode; sub?:
 }
 
 /** A value in a KV row: mono only for identifiers (R-28), faint for a blank. */
-export function KvValue({ value }: { value: string | null | undefined }) {
+function KvValue({ value }: { value: string | null | undefined }) {
   const v = value?.trim();
   if (!v) return <span className="text-ink-faint">—</span>;
   return <b className={cn('font-medium', isIdentifier(v) && 'font-mono text-[13.5px]')}>{v}</b>;

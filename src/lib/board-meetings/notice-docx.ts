@@ -113,7 +113,7 @@ function firstBodyRuns(text: string, meetingNo: string): Run[] {
   return runs.filter((r) => r.text);
 }
 
-export function noticeDocxParagraphs(doc: NoticeDoc): Block[] {
+function noticeDocxParagraphs(doc: NoticeDoc): Block[] {
   const out: Block[] = [];
   // Page 1: the notice.
   out.push({ text: doc.title, bold: true, center: true, after: 360 });
@@ -153,7 +153,7 @@ export interface DocxFrame {
 }
 
 /** The letterhead line and the company footer the notice carries on both pages. */
-export function noticeFrame(doc: NoticeDoc): DocxFrame {
+function noticeFrame(doc: NoticeDoc): DocxFrame {
   const [name, ...rest] = doc.footer;
   return {
     header: [{ text: name ?? '', bold: true, size: 28, ruleBelow: true, after: 0 }],

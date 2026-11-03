@@ -83,7 +83,7 @@ export function statusClass(st: DocStatus): StatusClass {
 /* Status tones (R-13): done green, in review blurple, replaced grey, missing amber. Soft fills
    with coloured text; no white text on a solid colour. */
 const OK_TONE: CSSProperties = { background: 'oklch(var(--positive-soft))', color: 'oklch(var(--positive))' };
-export const STATUS_STYLE: Record<DocStatus, CSSProperties> = {
+const STATUS_STYLE: Record<DocStatus, CSSProperties> = {
   Approved: OK_TONE,
   Final: OK_TONE,
   'In review': { background: 'oklch(var(--brand-soft))', color: 'oklch(var(--brand-text))' },
@@ -101,7 +101,7 @@ export const STATUS_TONE: Record<DocStatus, 'ok' | 'prog' | 'idle' | 'warn'> = {
 };
 
 /** Status glyphs (rule 18) on a soft square: [tone, fill path, stroke path]. The icon draws in currentColor. */
-export const GLYPH: Record<'done' | 'sbc' | 'you' | 'late' | 'now', [CSSProperties, string, string]> = {
+const GLYPH: Record<'done' | 'sbc' | 'you' | 'late' | 'now', [CSSProperties, string, string]> = {
   done: [OK_TONE, '', 'M6.5 12.5l3.8 3.8 7.2-8'],
   sbc: [{ background: 'oklch(var(--brand-soft))', color: 'oklch(var(--brand-text))' }, '', 'M5.5 16l4.5-4.5 3 3 5.5-6 M14.5 8.5h4v4'],
   you: [{ background: 'oklch(var(--warning-soft))', color: 'oklch(var(--warning))' }, '', 'M12 4.5a3.5 3.5 0 1 1 0 7a3.5 3.5 0 1 1 0-7Z M5 20a7 7 0 0 1 14 0'],
@@ -109,13 +109,13 @@ export const GLYPH: Record<'done' | 'sbc' | 'you' | 'late' | 'now', [CSSProperti
   now: [{ background: 'oklch(var(--info-soft))', color: 'oklch(var(--info))' }, '', 'M12 6.5v6l3.5 2'],
 };
 
-export function glyphKey(n: DocNode): keyof typeof GLYPH {
+function glyphKey(n: DocNode): keyof typeof GLYPH {
   if (n.status === 'In review') return 'sbc';
   if (n.status === 'Missing') return n.overdue ? 'late' : 'you';
   return 'done';
 }
 
-export function statusTip(n: DocNode, company: string): string {
+function statusTip(n: DocNode, company: string): string {
   const d = longDate(n.date);
   switch (n.status) {
     case 'Approved':
@@ -137,7 +137,7 @@ export function missingLabel(n: Pick<DocNode, 'overdue' | 'due'>): string {
   return n.due ? `Due ${dayMonth(n.due)}` : 'Requested';
 }
 
-export function missingStyle(n: Pick<DocNode, 'overdue'>): CSSProperties {
+function missingStyle(n: Pick<DocNode, 'overdue'>): CSSProperties {
   return n.overdue ? { background: 'oklch(var(--danger-soft))', color: 'oklch(var(--danger))' } : { background: 'oklch(var(--warning-soft))', color: 'oklch(var(--warning))' };
 }
 

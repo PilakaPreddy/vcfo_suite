@@ -58,12 +58,12 @@ export function SuperAttentionPanel({
 }
 
 /** Overdue and blocked rows are the urgent ones (prototype: Overdue and Stuck). */
-export function isUrgentAttention(summary: SuperEngagementSummary): boolean {
+function isUrgentAttention(summary: SuperEngagementSummary): boolean {
   return summary.stateKey === 'overdue' || summary.stuckReason === 'blocked';
 }
 
 /** "<step> · <manager>, <lead>", dropping the parts nobody holds. */
-export function attentionSubLine(summary: SuperEngagementSummary): string {
+function attentionSubLine(summary: SuperEngagementSummary): string {
   const step = summary.currentStep?.title ?? 'Every step is complete';
   const people = [summary.managerName, summary.leadName].filter(Boolean).join(', ');
   return people ? `${step} · ${people}` : step;

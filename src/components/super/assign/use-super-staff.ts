@@ -31,7 +31,7 @@ async function getJson<T>(url: string): Promise<T> {
   return body;
 }
 
-export const REPORTING_LINES_QUERY_KEY = ['admin-reporting-lines'] as const;
+const REPORTING_LINES_QUERY_KEY = ['admin-reporting-lines'] as const;
 
 export function useSuperStaff() {
   const people = useQuery({

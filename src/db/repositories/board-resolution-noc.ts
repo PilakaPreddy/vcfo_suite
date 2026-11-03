@@ -46,7 +46,7 @@ type EngRow = NonNullable<Awaited<ReturnType<typeof getEngagementById>>>;
 
 const STAFF_ROLES = new Set(['intern', 'manager', 'admin', 'super_admin']);
 
-export function isNocStaff(role: string): boolean {
+function isNocStaff(role: string): boolean {
   return STAFF_ROLES.has(role);
 }
 

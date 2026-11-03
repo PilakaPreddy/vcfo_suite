@@ -19,7 +19,7 @@ import { daysUntil, filingWord, type SixWord } from '@/views/compliances/spectru
  */
 
 /** "Due in the next 15 days" (owner decision for the Obligations rail). */
-export const SOON_DAYS = 15;
+const SOON_DAYS = 15;
 
 export interface ObligationClientRow {
   /** The instance id. */

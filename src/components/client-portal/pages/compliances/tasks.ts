@@ -104,7 +104,7 @@ export const taskHint = (t: Pick<ClientTask, 'startDate' | 'urgency'>) => `Start
 
 /** S-3: rows group by end-date week (weeks start on Monday): This week, Next week, Later, Done. */
 export type WeekGroup = 'This week' | 'Next week' | 'Later' | 'Done';
-export const WEEK_GROUPS: WeekGroup[] = ['This week', 'Next week', 'Later', 'Done'];
+const WEEK_GROUPS: WeekGroup[] = ['This week', 'Next week', 'Later', 'Done'];
 export function weekOf(t: Pick<ClientTask, 'stage' | 'endDate'>, today: string): WeekGroup {
   if (t.stage === 'completed') return 'Done';
   const d = new Date(`${today}T00:00:00Z`);
@@ -127,7 +127,7 @@ export function weekGroups(tasks: ClientTask[], today: string): Array<{ id: Week
 export type TaskRow = PortalFiling & { task: ClientTask };
 export type CalRow = PortalFiling | TaskRow;
 export const isTaskRow = (r: CalRow): r is TaskRow => 'task' in r && Boolean((r as TaskRow).task);
-export const TASK_ROW_PREFIX = 'task:';
+const TASK_ROW_PREFIX = 'task:';
 
 /**
  * A task as a register row: it shows on its end date (C-3), its window runs from the start

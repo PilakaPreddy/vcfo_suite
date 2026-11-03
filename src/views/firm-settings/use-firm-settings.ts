@@ -13,7 +13,7 @@ export interface FirmSettingsHistoryRow {
   summary: string;
 }
 
-export const FIRM_SETTINGS_QUERY_KEY = ['firm-settings'] as const;
+const FIRM_SETTINGS_QUERY_KEY = ['firm-settings'] as const;
 
 async function readJson<T>(res: Response): Promise<T> {
   const body = (await res.json().catch(() => ({}))) as T & { error?: string };

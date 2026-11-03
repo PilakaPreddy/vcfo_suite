@@ -89,7 +89,7 @@ export const AREA_FULL: Record<AreaCode, string> = {
   FEMA: 'FEMA · RBI & STPI',
 };
 
-export const ST: Record<CompStatus, { l: string; c: string; v: string }> = {
+const ST: Record<CompStatus, { l: string; c: string; v: string }> = {
   ok: { l: 'Filed', c: 'c-ok', v: '--ok' },
   due: { l: 'Due soon', c: 'c-due', v: '--due' },
   over: { l: 'Overdue', c: 'c-over', v: '--over' },

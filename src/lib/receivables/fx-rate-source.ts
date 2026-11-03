@@ -30,7 +30,7 @@ export type RateSourceOptions = {
   timeoutMs?: number;
 };
 
-export const DEFAULT_FRANKFURTER_URL = 'https://api.frankfurter.dev/v1';
+const DEFAULT_FRANKFURTER_URL = 'https://api.frankfurter.dev/v1';
 
 /** Rates outside this band are treated as a parsing mistake, not a market move. */
 const MIN_RATE = 0.0001;

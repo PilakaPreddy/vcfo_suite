@@ -15,7 +15,7 @@
  */
 
 /** The stored task status that means done. */
-export const TASK_DONE_STATUS = 'done';
+const TASK_DONE_STATUS = 'done';
 
 /**
  * The `completed_at` part of a task write. `previous` is the stored status before the write
@@ -39,7 +39,7 @@ export function taskCompletionPatch(
  * Stored document request statuses that close the request: fulfilled (uploaded), cancelled
  * (rejected or withdrawn), and approved, which is stored as-is after a fulfilled upload.
  */
-export const REQUEST_CLOSED_STATUSES: ReadonlySet<string> = new Set(['fulfilled', 'cancelled', 'approved']);
+const REQUEST_CLOSED_STATUSES: ReadonlySet<string> = new Set(['fulfilled', 'cancelled', 'approved']);
 
 /** The `closed_at` part of a document request write, on the same rules as `taskCompletionPatch`. */
 export function requestClosedPatch(

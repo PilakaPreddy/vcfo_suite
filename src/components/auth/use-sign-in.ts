@@ -43,7 +43,7 @@ export type SignInState = {
 
 type SignInAction = { type: 'patch'; patch: Partial<SignInState> } | { type: 'toggle_show_password' };
 
-export const initialSignInState: SignInState = {
+const initialSignInState: SignInState = {
   step: 'password',
   email: '',
   password: '',
@@ -56,7 +56,7 @@ export const initialSignInState: SignInState = {
   forgotLoading: false,
 };
 
-export function signInReducer(state: SignInState, action: SignInAction): SignInState {
+function signInReducer(state: SignInState, action: SignInAction): SignInState {
   switch (action.type) {
     case 'toggle_show_password':
       return { ...state, showPassword: !state.showPassword };

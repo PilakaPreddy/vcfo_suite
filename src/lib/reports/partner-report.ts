@@ -15,7 +15,7 @@ import {
 } from '@/components/super/insights/super-insights-model';
 
 /** How many months the page's month switch offers. */
-export const REPORT_MONTHS = 6;
+const REPORT_MONTHS = 6;
 
 /** The only report kind stored in `saved_reports.kind` for now. */
 export const PARTNER_REPORT_KIND = 'partner';
@@ -58,7 +58,7 @@ export function asReportSchedule(value: string | null | undefined): ReportSchedu
   return (REPORT_SCHEDULES as readonly string[]).includes(value ?? '') ? (value as ReportSchedule) : 'none';
 }
 
-export function isMonthKey(value: unknown): value is string {
+function isMonthKey(value: unknown): value is string {
   return typeof value === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
 }
 

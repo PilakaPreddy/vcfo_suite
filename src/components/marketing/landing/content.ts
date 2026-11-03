@@ -4,7 +4,7 @@
 
 /** The real routes behind the landing's links: the Auth.js sign-in page and the contact page (book a demo). */
 export const SIGN_IN_HREF = "/login";
-export const DEMO_HREF = "/contact";
+const DEMO_HREF = "/contact";
 
 export const SWAP_WORDS = ["compliance", "incorporation", "registration"];
 

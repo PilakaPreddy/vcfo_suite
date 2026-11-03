@@ -73,7 +73,7 @@ const DAY = 86_400_000;
 const MCA_REVIEW_STEP_IDS = ['pre-11', 'pre-12'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export function ymd(v?: string | null): string | undefined {
+function ymd(v?: string | null): string | undefined {
   if (!v) return undefined;
   const s = v.trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
@@ -81,7 +81,7 @@ export function ymd(v?: string | null): string | undefined {
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString().slice(0, 10);
 }
 
-export function addDays(iso: string, n: number): string {
+function addDays(iso: string, n: number): string {
   return new Date(Date.parse(`${iso}T00:00:00Z`) + n * DAY).toISOString().slice(0, 10);
 }
 

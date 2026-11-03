@@ -27,8 +27,8 @@ async function sendJson(url: string, method: 'PUT' | 'PATCH', payload: unknown):
   return body;
 }
 
-export const PRACTICE_METRICS_KEY = ['metrics', 'practice'] as const;
-export const PEOPLE_METRICS_KEY = ['metrics', 'people'] as const;
+const PRACTICE_METRICS_KEY = ['metrics', 'practice'] as const;
+const PEOPLE_METRICS_KEY = ['metrics', 'people'] as const;
 
 export function usePracticeMetrics(enabled = true) {
   return useQuery({

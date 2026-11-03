@@ -609,7 +609,7 @@ function safeName(name: string): string {
   return base.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'document';
 }
 
-export async function uploadRequestFile(
+async function uploadRequestFile(
   ctx: AuthContext,
   requestId: string,
   file: { name: string; type: string; size: number; bytes: Buffer },

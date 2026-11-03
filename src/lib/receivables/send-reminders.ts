@@ -21,7 +21,7 @@ import { hitFromRow, reminderDraft } from './reminder-rule';
  */
 export type SendOutcome = { sent: number; failed: number; viaOutlook: number; viaEmail: number };
 
-export function reminderMessage(r: DueReminder, site: string) {
+function reminderMessage(r: DueReminder, site: string) {
   const hit = hitFromRow(r.reminder);
   // The partner signs in and lands on this invoice's details (Phase 8).
   const liveUrl = partnerInvoiceUrl(site, r.reminder.invoiceId);

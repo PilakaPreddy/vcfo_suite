@@ -15,7 +15,7 @@ const TONE: Record<FilingStatus, StaffEventTone> = {
 };
 
 /** The calendar kind of a compliance calendar event (M6 G2 move rules). */
-export function complianceEventKind(source: 'filing' | 'task'): CalendarEventKind {
+function complianceEventKind(source: 'filing' | 'task'): CalendarEventKind {
   return source === 'filing' ? 'statutory' : 'planned';
 }
 

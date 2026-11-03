@@ -238,7 +238,7 @@ export function superEngagementHref(engagementId: string): string {
 }
 
 /** The list, filtered to what needs a human. */
-export const SUPER_ATTENTION_HREF = `${SUPER_PROJECTS_HREF}?filter=attention`;
+const SUPER_ATTENTION_HREF = `${SUPER_PROJECTS_HREF}?filter=attention`;
 
 /** Read-only inspection of the firm-side project shell. */
 export function superFirmViewHref(slugOrId: string): string {

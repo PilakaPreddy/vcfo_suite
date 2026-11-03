@@ -59,7 +59,7 @@ export async function recordSummarySend(
   });
 }
 
-export async function listSummarySends(ctx: AuthContext, sheetId: string) {
+async function listSummarySends(ctx: AuthContext, sheetId: string) {
   const sheet = await scopedSheet(ctx, sheetId);
   return db
     .select({ id: receivableEmailSends.id, subject: receivableEmailSends.subject, toList: receivableEmailSends.toList, ccList: receivableEmailSends.ccList, bccList: receivableEmailSends.bccList, sentAt: receivableEmailSends.sentAt })

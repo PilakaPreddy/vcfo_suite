@@ -125,7 +125,7 @@ function KindTabs({
   );
 }
 
-export function SurfacePicker({
+function SurfacePicker({
   value,
   solids,
   onChange,

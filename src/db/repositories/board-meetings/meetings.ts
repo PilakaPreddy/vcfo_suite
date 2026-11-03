@@ -1018,7 +1018,7 @@ export async function systemMarkHeld(today: string): Promise<number> {
   return rows.length;
 }
 
-export { BoardMeetingError };
+;
 
 /** Who to tell about a meeting: its lead, manager and admin (system; caller checked access). */
 export async function systemMeetingPeople(engagement: EngagementDbRow): Promise<{ lead: { id: string; name: string; email: string } | null; manager: { id: string; name: string; email: string } | null; admin: { id: string; name: string; email: string } | null }> {

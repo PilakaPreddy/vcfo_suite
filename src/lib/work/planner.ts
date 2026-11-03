@@ -13,8 +13,8 @@ const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 export const PLAN_DAY_START = 8;
 export const PLAN_DAY_END = 20;
 /** Shortest and longest block. */
-export const MIN_BLOCK_MINUTES = 15;
-export const MAX_BLOCK_HOURS = 12;
+const MIN_BLOCK_MINUTES = 15;
+const MAX_BLOCK_HOURS = 12;
 /** A day over this many planned hours is heavy (prototype WorkPlan). */
 export const HEAVY_DAY_HOURS = 6;
 
@@ -30,11 +30,11 @@ export interface PlannerBlock {
   endsAt: string;
 }
 
-export function isYmd(value: string): boolean {
+function isYmd(value: string): boolean {
   return YMD_RE.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
 }
 
-export function isHhmm(value: string): boolean {
+function isHhmm(value: string): boolean {
   return HHMM_RE.test(value);
 }
 

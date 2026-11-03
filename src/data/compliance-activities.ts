@@ -120,7 +120,7 @@ const ROWS: Row[] = [
 ];
 
 /** Statutory and Policy-based count as statutory; Non-statutory and Configurable as non-statutory. */
-export function groupOfKind(kind: ActivityKind): ActivityGroup {
+function groupOfKind(kind: ActivityKind): ActivityGroup {
   return kind === 'Statutory' || kind === 'Policy-based' ? 'statutory' : 'non-statutory';
 }
 

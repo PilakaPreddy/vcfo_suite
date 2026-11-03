@@ -4,7 +4,7 @@
  * argument. Dates are 'YYYY-MM-DD' strings in India time, compared as UTC midnights.
  */
 
-export const STAGES = [
+const STAGES = [
   'not-started',
   'ready',
   'in-progress',
@@ -45,11 +45,11 @@ const STAGE_WORD: Record<Stage, StatusWord> = {
   'not-applicable': 'Not started',
 };
 
-export const URGENCIES = ['Low', 'Medium', 'High', 'Critical'] as const;
+const URGENCIES = ['Low', 'Medium', 'High', 'Critical'] as const;
 export type Urgency = (typeof URGENCIES)[number];
 export const URGENCY_BARS: Record<Urgency, 1 | 2 | 3 | 4> = { Low: 1, Medium: 2, High: 3, Critical: 4 };
 
-export const VISIBILITIES = ['firm', 'client', 'both'] as const;
+const VISIBILITIES = ['firm', 'client', 'both'] as const;
 export type Visibility = (typeof VISIBILITIES)[number];
 
 export const REPEATS = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'yearly'] as const;
@@ -172,7 +172,7 @@ export function currentFyRange(today: string): { from: string; to: string } {
 
 /* ---------------------------------------------------------------- reminders (3.4) */
 
-export const REMINDER_KEYS = ['initial', 'due-soon', 'due-date', 'overdue', 'escalate-reviewer', 'escalate-admin'] as const;
+const REMINDER_KEYS = ['initial', 'due-soon', 'due-date', 'overdue', 'escalate-reviewer', 'escalate-admin'] as const;
 export type ReminderKey = (typeof REMINDER_KEYS)[number];
 
 export type ReminderAudience = 'owner' | 'owner-reviewer' | 'reviewer' | 'admin';

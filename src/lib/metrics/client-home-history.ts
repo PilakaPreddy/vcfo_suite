@@ -115,7 +115,7 @@ export function rewindChecklistState(state: Record<string, unknown> | null | und
 }
 
 /** Registrations granted: phase 4 steps that are done and not marked not needed. */
-export function registrationsDone(model: PortalIncorporationModel): number {
+function registrationsDone(model: PortalIncorporationModel): number {
   const phase = model.phases[3];
   if (!phase) return 0;
   return phase.steps.filter((s) => (s.slice?.status as string | undefined) !== 'not-applicable' && s.kind === 'done').length;

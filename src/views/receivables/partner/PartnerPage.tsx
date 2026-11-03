@@ -281,4 +281,3 @@ export function PartnerPage() {
   );
 }
 
-export default PartnerPage;

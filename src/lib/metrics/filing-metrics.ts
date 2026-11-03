@@ -29,7 +29,7 @@ export interface OnTimeStats {
 
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export function ymd(date: Date): string {
+function ymd(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 

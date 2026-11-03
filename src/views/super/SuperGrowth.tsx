@@ -53,7 +53,7 @@ import { useDemoRequests, useProspectMutations, useProspects } from '@/views/sup
  * "Book a demo" form (G-30) sit below with "Add as prospect". Per-manager capacity is still
  * left out. No money (R-37).
  */
-export const SUPER_GROWTH_HREF = '/app/super/growth';
+const SUPER_GROWTH_HREF = '/app/super/growth';
 
 type PipelineView = 'board' | 'list';
 

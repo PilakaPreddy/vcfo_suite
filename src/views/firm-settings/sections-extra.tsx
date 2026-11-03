@@ -48,7 +48,7 @@ import type { FirmIntegration } from '@/lib/firm-settings/integrations';
 type Save = (patch: FirmSettingsPatch) => void;
 
 /** R-40: a risky change asks first, in place, with Cancel and the action. */
-export function ConfirmRow({
+function ConfirmRow({
   text,
   label,
   busy,

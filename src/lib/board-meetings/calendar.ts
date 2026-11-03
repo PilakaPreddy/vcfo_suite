@@ -29,7 +29,7 @@ function stamp(d: Date): string {
   return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 }
 
-export function icsText(s: string): string {
+function icsText(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/([,;])/g, '\\$1');
 }
 

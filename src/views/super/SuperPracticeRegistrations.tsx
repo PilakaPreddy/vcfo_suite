@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
  * matrix of clients by registration, and the open registrations as work items. A step marked
  * not applicable reads "Not needed". Read-only.
  */
-export const SUPER_REGISTRATIONS_HREF = '/app/super/practice/registrations';
+const SUPER_REGISTRATIONS_HREF = '/app/super/practice/registrations';
 
 const CELL_LABEL: Record<SuperRegCell, string> = {
   done: 'Done',

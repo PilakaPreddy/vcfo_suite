@@ -241,11 +241,11 @@ export function deriveValue(field: string, e: DerivableEmployee, ctx: DeriveCont
 }
 
 /** Every derived column this module knows how to produce. */
-export function derivableFields(): string[] {
+function derivableFields(): string[] {
   return Object.keys(DERIVERS);
 }
 
 /** True when the catalogue declares a derived column that nothing here can produce. */
-export function underivedFields(fields: Iterable<string>): string[] {
+function underivedFields(fields: Iterable<string>): string[] {
   return [...fields].filter((f) => !DERIVERS[f] && fieldByKey(f) !== undefined);
 }

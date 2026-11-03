@@ -46,7 +46,7 @@ export function longPeriod(p: string): string {
 }
 
 /** Filed early or late as a chip; an open period shows "Due 20 Oct" (red when overdue). */
-export function TimingChip({ f, today }: { f: PortalFiling; today: string }) {
+function TimingChip({ f, today }: { f: PortalFiling; today: string }) {
   if (f.filedOn) {
     const early = daysBetween(f.filedOn, f.dueDate);
     if (early > 0) return <SChip tone="ok">{`${plural(early, 'day')} early`}</SChip>;
@@ -73,12 +73,12 @@ function inr(v: string): string {
   return `₹ ${n.toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
 }
 
-export function kb(n: number | null | undefined): string {
+function kb(n: number | null | undefined): string {
   if (n == null) return '';
   return n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB` : `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export function fileExt(name: string, mime: string | null): string {
+function fileExt(name: string, mime: string | null): string {
   const e = /\.([a-z0-9]{2,4})$/i.exec(name)?.[1]?.toUpperCase();
   if (e) return e;
   if (mime?.includes('pdf')) return 'PDF';
@@ -106,7 +106,7 @@ function FilingChips({ f, today }: { f: PortalFiling; today: string }) {
 }
 
 /** One proof file row: the type badge, name, size and date, Preview and Download. */
-export function ProofRow({ f, p, first, onPreview }: { f: PortalFiling; p: ProofMeta; first?: boolean; onPreview: () => void }) {
+function ProofRow({ f, p, first, onPreview }: { f: PortalFiling; p: ProofMeta; first?: boolean; onPreview: () => void }) {
   return (
     <li className={cn('flex items-center gap-3 border-t border-line-soft px-5 py-2.5 first:border-t-0', first && 'bg-surface-sunken')}>
       <FileBadge name={p.fileName} type={fileExt(p.fileName, p.mime) === 'PDF' ? 'PDF' : undefined} />

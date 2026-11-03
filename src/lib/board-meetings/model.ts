@@ -9,7 +9,7 @@
  *   next notice. A meeting is never closed by hand; it locks when the next notice is sent.
  */
 
-export const MEETING_KINDS = ['board', 'agm', 'egm'] as const;
+const MEETING_KINDS = ['board', 'agm', 'egm'] as const;
 export type MeetingKind = (typeof MEETING_KINDS)[number];
 
 export const MEETING_TYPES = ['first', 'quarterly', 'annual', 'special'] as const;
@@ -22,7 +22,7 @@ export type MeetingMode = (typeof MEETING_MODES)[number];
  * draft → pending_approval → approved (scheduled to send) → sent → held.
  * `cancelled` ends a meeting; `held` follows automatically once the meeting date passes.
  */
-export const MEETING_STATUSES = ['draft', 'pending_approval', 'approved', 'sent', 'held', 'cancelled'] as const;
+const MEETING_STATUSES = ['draft', 'pending_approval', 'approved', 'sent', 'held', 'cancelled'] as const;
 export type MeetingStatus = (typeof MEETING_STATUSES)[number];
 
 export const KIND_LABEL: Record<MeetingKind, string> = {
@@ -110,7 +110,7 @@ export function noticeEditable(status: MeetingStatus): boolean {
 }
 
 /** The six status words of the design system for a meeting row. */
-export function meetingWord(status: MeetingStatus, opts: { overdue?: boolean; dueSoon?: boolean } = {}): string {
+function meetingWord(status: MeetingStatus, opts: { overdue?: boolean; dueSoon?: boolean } = {}): string {
   if (status === 'cancelled') return 'Not started';
   if (opts.overdue) return 'Overdue';
   if (status === 'pending_approval') return 'Waiting';

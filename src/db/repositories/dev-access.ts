@@ -96,7 +96,7 @@ export async function countSignedInStaffForDev(ctx: AuthContext): Promise<number
 }
 
 /** The address domain of the seeded demo logins (`npm run db:seed`). */
-export const DEMO_LOGIN_DOMAIN = 'vcfo.local';
+const DEMO_LOGIN_DOMAIN = 'vcfo.local';
 
 /**
  * Seeded demo logins that can still sign in (active profiles on the demo domain), for the

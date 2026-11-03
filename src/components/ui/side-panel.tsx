@@ -59,7 +59,7 @@ export function SidePanel({ open, onOpenChange, title, eyebrow, sub, footer, chi
 }
 
 /** A titled block inside a SidePanel or Modal: 11.5px caps title, hairline under the block. */
-export function PanelSection({
+function PanelSection({
   title,
   children,
   className,

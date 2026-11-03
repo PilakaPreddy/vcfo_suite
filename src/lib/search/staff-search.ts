@@ -80,7 +80,7 @@ const FILING_WORD: Record<FilingStatus, string> = {
 };
 
 /** The six-word reading of one register row (same rule as the Filings view). */
-export function filingSixWord(row: Pick<FilingRow, 'filedOn' | 'dueDate' | 'rawStatus'>, now: Date): string {
+function filingSixWord(row: Pick<FilingRow, 'filedOn' | 'dueDate' | 'rawStatus'>, now: Date): string {
   const status = filingStatus(row, now);
   if ((status === 'upcoming' || status === 'due-soon') && row.rawStatus === 'in-progress') return 'In progress';
   return FILING_WORD[status];

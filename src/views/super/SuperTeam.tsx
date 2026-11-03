@@ -48,7 +48,7 @@ import { cn } from '@/lib/utils';
  * Capacity card bands each manager's load against the capacity an admin set. Assign client and
  * Assign task open the same dialogs as the Overview. People are managed on the admin People page.
  */
-export const SUPER_TEAM_HREF = '/app/super/team';
+const SUPER_TEAM_HREF = '/app/super/team';
 
 const PEOPLE_HREF = '/app/admin/people';
 

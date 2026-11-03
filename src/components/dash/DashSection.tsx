@@ -116,7 +116,7 @@ export function DashSection({
 }
 
 /** Small link in a card head: "Open ›" (13px, blurple). */
-export function HeadLink({ href, children }: { href: string; children: ReactNode }) {
+function HeadLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link
       href={href}
@@ -129,7 +129,7 @@ export function HeadLink({ href, children }: { href: string; children: ReactNode
 }
 
 /** Full-width list row with a hairline between rows (R-19); a link or button row fills on hover. */
-export function ListRow({
+function ListRow({
   children,
   className,
   href,

@@ -13,7 +13,7 @@ import type { SuperEngagementSummary, SuperStateKey } from '@/lib/super/super-ov
  * Gate state → chip tone. This is the tone the row chip uses, because
  * `stateKey` is what the gate actually says (see `SuperStateKey`).
  */
-export const STATE_TONE: Record<SuperStateKey, IconChipTone> = {
+const STATE_TONE: Record<SuperStateKey, IconChipTone> = {
   complete: 'success',
   overdue: 'danger',
   review: 'pink',
@@ -22,7 +22,7 @@ export const STATE_TONE: Record<SuperStateKey, IconChipTone> = {
 };
 
 /** Engagement health column → chip tone. */
-export const HEALTH_TONE: Record<string, IconChipTone> = {
+const HEALTH_TONE: Record<string, IconChipTone> = {
   'on-track': 'success',
   'at-risk': 'warning',
   overdue: 'danger',
@@ -35,7 +35,7 @@ export const HEALTH_LABEL: Record<string, string> = {
 };
 
 /** Filing status → chip tone, matching the compliance screens. */
-export const FILING_TONE: Record<string, IconChipTone> = {
+const FILING_TONE: Record<string, IconChipTone> = {
   filed: 'success',
   'in-progress': 'sky',
   upcoming: 'cyan',
@@ -50,13 +50,13 @@ export const FILING_BUCKET_COLOR: Record<string, ChartColor> = {
   quarter: CHART_STATUS.locked,
 };
 
-export function phaseFill(phaseId: string): ChartColor {
+function phaseFill(phaseId: string): ChartColor {
   return chartPhaseColor(phaseId);
 }
 
 const DATE_FMT: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short' };
 
-export function formatSuperDayMonth(iso: string | null | undefined): string {
+function formatSuperDayMonth(iso: string | null | undefined): string {
   if (!iso?.trim()) return '—';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return '—';

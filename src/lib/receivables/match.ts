@@ -43,7 +43,7 @@ type Inv = Pick<SheetInvoice, 'id' | 'clientName' | 'amountInr' | 'dueDate' | 's
 
 const LEGAL = new Set(['INC', 'LLC', 'LTD', 'LIMITED', 'PVT', 'PRIVATE', 'CORP', 'CORPORATION', 'CO', 'COMPANY', 'GMBH', 'PLC', 'LLP', 'THE', 'AND', 'OF', 'INDIA', 'SERVICES', 'SOLUTIONS', 'TECHNOLOGIES', 'TECHNOLOGY', 'SOFTWARE', 'GROUP', 'HOLDINGS']);
 
-export function nameTokens(name: string): string[] {
+function nameTokens(name: string): string[] {
   return name
     .toUpperCase()
     .replace(/[^A-Z0-9 ]+/g, ' ')
@@ -88,9 +88,9 @@ function amountFit(received: number, due: number): 'exact' | 'charges' | 'tds' |
 }
 
 /** Foreign credits: up to this many units short counts as bank charges. */
-export const FC_CHARGE_MAX = 50;
+const FC_CHARGE_MAX = 50;
 /** Foreign credits: or up to this share of the invoice, whichever is larger. */
-export const FC_CHARGE_SHARE = 0.02;
+const FC_CHARGE_SHARE = 0.02;
 const FC_EXACT = 0.01;
 
 function upper(c: string | null | undefined): string {

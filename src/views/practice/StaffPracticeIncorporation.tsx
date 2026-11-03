@@ -46,14 +46,14 @@ type WithKey = '' | 'client' | 'sbc' | 'manager';
 const WITH_WORD: Record<Exclude<WithKey, ''>, string> = { client: 'Client', sbc: 'SBC', manager: 'Manager' };
 
 /** "pre-7" → "Pre-7", "post-3" → "Post-3"; other ids have no short code. */
-export function stepCode(stepId: string | undefined): string | null {
+function stepCode(stepId: string | undefined): string | null {
   const m = /^(pre|post)-(\d+)$/i.exec(stepId ?? '');
   if (!m) return null;
   return `${m[1].toLowerCase() === 'pre' ? 'Pre' : 'Post'}-${m[2]}`;
 }
 
 /** A row is late when a step is overdue, the client is blocked, or the step's window has passed. */
-export function isLateRow(c: PracticeIncorporationClient, step: CurrentStepDays | undefined, today: string): boolean {
+function isLateRow(c: PracticeIncorporationClient, step: CurrentStepDays | undefined, today: string): boolean {
   return (
     c.summary.stateKey === 'overdue' ||
     c.summary.stuckReason === 'blocked' ||

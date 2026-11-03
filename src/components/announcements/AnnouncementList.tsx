@@ -61,7 +61,7 @@ export function AnnouncementKindChip({ kind }: { kind: string }) {
 }
 
 /** 44px date tile (prototype AttentionList `DateTile`); deadlines are tinted amber. */
-export function AnnouncementDateTile({ iso, warn }: { iso: string; warn?: boolean }) {
+function AnnouncementDateTile({ iso, warn }: { iso: string; warn?: boolean }) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
   return (

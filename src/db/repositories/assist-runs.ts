@@ -134,7 +134,7 @@ export async function requestAssistRun(
 }
 
 /** Decode a screenshot data URL; null when it is not one or is too large. */
-export function decodeShot(dataUrl: string): { bytes: Buffer; contentType: string; ext: string } | null {
+function decodeShot(dataUrl: string): { bytes: Buffer; contentType: string; ext: string } | null {
   const m = /^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(dataUrl);
   if (!m) return null;
   const bytes = Buffer.from(m[2]!, 'base64');

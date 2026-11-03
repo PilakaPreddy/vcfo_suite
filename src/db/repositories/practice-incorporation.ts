@@ -47,7 +47,7 @@ function isPracticeStaff(role: AuthContext['role']): boolean {
 }
 
 /** Where one engagement's incorporation detail opens for the caller's shell. */
-export function incorporationHrefFor(ctx: AuthContext, row: Pick<EngagementListRow, 'id' | 'slug'>): string {
+function incorporationHrefFor(ctx: AuthContext, row: Pick<EngagementListRow, 'id' | 'slug'>): string {
   const target = { id: appEngagementId(row.id), slug: row.slug ?? undefined };
   if (ctx.role === 'intern') return internEngagementPath(target);
   return adminProjectPath(target, ctx.role === 'manager' ? '/app/manager' : '/app/admin');

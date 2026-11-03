@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
  * client; once saved, the risk leaves the list because the next read no longer finds it.
  * A stuck client gets Open. The client name under each title links to the record.
  */
-export const SUPER_RISKS_HREF = '/app/super/risks';
+const SUPER_RISKS_HREF = '/app/super/risks';
 
 const KINDS: SuperRiskKind[] = ['step', 'filing', 'stuck', 'owner', 'lead'];
 

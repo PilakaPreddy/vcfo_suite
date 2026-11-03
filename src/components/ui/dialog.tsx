@@ -98,12 +98,12 @@ function DialogDescription({ ref, className, ...props }: React.ComponentPropsWit
 export {
   Dialog,
   DialogTrigger,
-  DialogPortal,
-  DialogOverlay,
-  DialogClose,
+  
+  
+  
   DialogContent,
   DialogHeader,
-  DialogEyebrow,
+  
   DialogFooter,
   DialogTitle,
   DialogDescription,

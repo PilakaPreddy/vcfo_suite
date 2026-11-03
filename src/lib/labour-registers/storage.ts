@@ -23,7 +23,7 @@ import type { UploadSlot } from './parse';
 const ROOT = 'labour-registers';
 
 /** Where one of a batch's four uploaded sheets lives. */
-export function uploadObjectKey(input: {
+function uploadObjectKey(input: {
   engagementId: string;
   batchId: string;
   slot: UploadSlot;
@@ -46,7 +46,7 @@ export function documentObjectKey(input: {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** "Sep-2026", or "Jul-2026 to Sep-2026" for a quarter. */
-export function periodStamp(period: Period): string {
+function periodStamp(period: Period): string {
   const from = new Date(`${period.from}T00:00:00Z`);
   const to = new Date(`${period.to}T00:00:00Z`);
   const stamp = (d: Date) => `${MONTHS[d.getUTCMonth()]}-${d.getUTCFullYear()}`;

@@ -1,11 +1,11 @@
-export { NoirCard } from './NoirCard';
+;
 export { Surface } from './Surface';
 export { GoldDivider } from './GoldDivider';
 export { StatusDot } from './StatusDot';
 export { AccentButton } from './AccentButton';
 export { Eyebrow } from './Eyebrow';
 export { Mono } from './Mono';
-export { GrainOverlay } from './Grain';
+;
 export { ProgressRing } from './ProgressRing';
 export { StepIndicator } from './StepIndicator';
 export { TrustBadge } from './TrustBadge';

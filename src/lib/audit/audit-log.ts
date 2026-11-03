@@ -57,7 +57,7 @@ export interface AuditEventRow {
 
 export type AuditResult = 'ok' | 'failed' | 'denied';
 
-export const AUDIT_RESULT_LABEL: Record<AuditResult, string> = {
+const AUDIT_RESULT_LABEL: Record<AuditResult, string> = {
   ok: 'Done',
   failed: 'Failed',
   denied: 'Denied',

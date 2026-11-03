@@ -17,7 +17,7 @@ import {
 
 export type ReminderSubjectKind = 'statutory' | 'task';
 
-export async function loadOverrides(kind: ReminderSubjectKind, subjectId: string): Promise<ReminderOverride[]> {
+async function loadOverrides(kind: ReminderSubjectKind, subjectId: string): Promise<ReminderOverride[]> {
   const rows = await db
     .select({ key: complianceReminderOverrides.reminderKey, offsetDays: complianceReminderOverrides.offsetDays, enabled: complianceReminderOverrides.enabled })
     .from(complianceReminderOverrides)
@@ -26,7 +26,7 @@ export async function loadOverrides(kind: ReminderSubjectKind, subjectId: string
 }
 
 /** Sends of one item, newest first; read = the bell row it created was read. */
-export async function loadSends(kind: ReminderSubjectKind, subjectId: string): Promise<ReminderSend[]> {
+async function loadSends(kind: ReminderSubjectKind, subjectId: string): Promise<ReminderSend[]> {
   const rows = await db
     .select({ key: complianceReminderLog.reminderKey, createdAt: complianceReminderLog.createdAt, status: notifications.status })
     .from(complianceReminderLog)

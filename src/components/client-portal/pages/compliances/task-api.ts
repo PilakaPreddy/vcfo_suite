@@ -15,7 +15,7 @@ import { COMP_KEY } from './api';
 import { useMemo } from 'react';
 import { normStage, taskAsRow, type CalRow, type ClientTask } from './tasks';
 
-export const TASK_KEY = [...COMP_KEY, 'tasks'] as const;
+const TASK_KEY = [...COMP_KEY, 'tasks'] as const;
 
 /**
  * The client task page: /app/client/compliances/obligations/tasks/<id>. A board meeting task
@@ -109,7 +109,7 @@ const day = (v: unknown): string | null => (s(v) ? String(v).slice(0, 10) : null
 const person = (v: unknown): string | null => (v && typeof v === 'object' ? s((v as Raw).name) : s(v));
 
 /** One task from the route, read loosely so a renamed optional field never breaks the page. */
-export function parseTask(r: Raw): ClientTask {
+function parseTask(r: Raw): ClientTask {
   const del = (r.deliverable ?? null) as Raw | null;
   return {
     id: String(r.id),

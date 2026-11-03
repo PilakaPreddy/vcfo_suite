@@ -9,13 +9,13 @@ export const DOC_STATUS_LABEL: Record<DocStatus, string> = {
 };
 
 /** Colour lives on chips and dots only, never on rows or page fill. Teal = ready, coral = needs inputs, slate = waiting. */
-export const DOC_STATUS_CHIP_TONE: Record<DocStatus, string> = {
+const DOC_STATUS_CHIP_TONE: Record<DocStatus, string> = {
   ready: 'bg-success-light text-success-text',
   'needs-inputs': 'bg-warning-light text-warning-text',
   'waiting-release': 'bg-muted text-muted-foreground',
 };
 
-export const DOC_STATUS_DOT_TONE: Record<DocStatus, string> = {
+const DOC_STATUS_DOT_TONE: Record<DocStatus, string> = {
   ready: 'bg-success',
   'needs-inputs': 'bg-warning',
   'waiting-release': 'bg-muted-foreground',

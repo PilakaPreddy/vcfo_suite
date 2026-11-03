@@ -29,7 +29,7 @@ const ALL_SEGMENTS = new Set(['super', 'admin', 'manager', 'intern', 'client', '
 const RECEIVABLES_EDITORS = new Set<string>(['super_admin', 'admin', 'manager']);
 
 /** The partner pages a signed-out visitor may open: the login page and the invite's set-password page. */
-export function isPublicReceivablesPath(path: string): boolean {
+function isPublicReceivablesPath(path: string): boolean {
   return (
     path === '/receivables/login' ||
     path === '/receivables/set-password' ||
@@ -37,7 +37,7 @@ export function isPublicReceivablesPath(path: string): boolean {
   );
 }
 
-export function isReceivablesManagerPath(path: string): boolean {
+function isReceivablesManagerPath(path: string): boolean {
   return path === '/receivables/manager' || path.startsWith('/receivables/manager/');
 }
 

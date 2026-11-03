@@ -29,7 +29,7 @@ function key(engagementId: string, itemId: string) {
   return ['step-field-states', engagementId, itemId] as const;
 }
 
-export function useStepFieldStates(engagementId: string | undefined, itemId: string, enabled = true) {
+function useStepFieldStates(engagementId: string | undefined, itemId: string, enabled = true) {
   return useQuery({
     queryKey: key(engagementId ?? '', itemId),
     enabled: Boolean(engagementId) && enabled,

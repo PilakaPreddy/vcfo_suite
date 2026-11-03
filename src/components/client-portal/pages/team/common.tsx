@@ -353,7 +353,7 @@ export function STag({ tone, children }: { tone?: ChipTone; children: string }) 
 }
 
 /** R-14: the owner chip (client amber, SBC blue), 104 px. */
-export function SOwner({ side, label }: { side: 'sbc' | 'client'; label: string }) {
+function SOwner({ side, label }: { side: 'sbc' | 'client'; label: string }) {
   return (
     <span className="cp-tw" style={{ display: 'inline-flex', flex: 'none' }}>
       <OwnerChip owner={side} label={label} />

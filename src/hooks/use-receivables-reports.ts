@@ -30,7 +30,7 @@ const ERROR_TEXT: Record<string, string> = {
   Forbidden: 'Your role cannot open receivables.',
 };
 
-export class ReportsApiError extends Error {
+class ReportsApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
@@ -53,7 +53,7 @@ const json = (method: string, body?: unknown): RequestInit => ({
   body: body === undefined ? undefined : JSON.stringify(body),
 });
 
-export const reportsKey = (sheetId: string) => ['receivables', 'reports', sheetId] as const;
+const reportsKey = (sheetId: string) => ['receivables', 'reports', sheetId] as const;
 const ratesKey = (sheetId: string) => ['receivables', 'fx-rates', sheetId] as const;
 const creditNotesKey = (invoiceId: string | null) => ['receivables', 'credit-notes', invoiceId] as const;
 
@@ -61,7 +61,7 @@ export function useReports(sheetId: string) {
   return useQuery({ queryKey: reportsKey(sheetId), queryFn: () => call<ReportsDto>(`/api/receivables/sheets/${sheetId}/reports`) });
 }
 
-export function useFxRates(sheetId: string, days = 30) {
+function useFxRates(sheetId: string, days = 30) {
   return useQuery({ queryKey: [...ratesKey(sheetId), days], queryFn: () => call<FxRatesDto>(`/api/receivables/sheets/${sheetId}/fx-rates?days=${days}`) });
 }
 
@@ -75,7 +75,7 @@ export function useFxRateOn(sheetId: string, date: string, enabled = true) {
   });
 }
 
-export function useCreditNotes(invoiceId: string | null) {
+function useCreditNotes(invoiceId: string | null) {
   return useQuery({
     queryKey: creditNotesKey(invoiceId),
     queryFn: async () => (await call<{ creditNotes: CreditNoteDto[] }>(`/api/receivables/invoices/${invoiceId}/credit-notes`)).creditNotes,

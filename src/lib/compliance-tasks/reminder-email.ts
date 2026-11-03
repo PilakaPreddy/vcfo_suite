@@ -18,12 +18,12 @@ export interface ReminderLine {
 }
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export function dayMonth(iso: string): string {
+function dayMonth(iso: string): string {
   const d = new Date(`${iso.slice(0, 10)}T00:00:00Z`);
   return `${d.getUTCDate()} ${MON[d.getUTCMonth()]}`;
 }
 
-export function reminderLineText(l: ReminderLine): string {
+function reminderLineText(l: ReminderLine): string {
   return `${l.label}: ${l.title} for ${l.companyName}, due ${dayMonth(l.dueDate)}`;
 }
 

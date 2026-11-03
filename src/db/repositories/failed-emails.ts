@@ -16,7 +16,7 @@ import { assertDeveloper } from './dev-scope';
  * admin only. The list masks addresses and scrubs the subject; bodies never leave the server.
  */
 
-export const FAILED_EMAIL_KEEP_DAYS = 30;
+const FAILED_EMAIL_KEEP_DAYS = 30;
 
 export interface FailedEmailInput {
   to: string[];

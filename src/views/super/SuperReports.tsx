@@ -53,7 +53,7 @@ import { useSavedReportMutations, useSavedReports } from '@/views/super/reports/
  * `saved-reports-send` emails due schedules with the PDF attached. The prototype's fee report
  * stays out (R-37: no money).
  */
-export const SUPER_REPORTS_HREF = '/app/super/reports';
+const SUPER_REPORTS_HREF = '/app/super/reports';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 

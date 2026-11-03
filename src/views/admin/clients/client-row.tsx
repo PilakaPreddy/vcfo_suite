@@ -69,14 +69,14 @@ export interface ClientRowFacts {
 }
 
 /** "Pre-8", "Post-3" from the step id; "Reg-n" for the registration phase. */
-export function stepCode(step: Pick<PortalStep, 'id' | 'phaseNo' | 'phaseId'>, indexInPhase: number): string {
+function stepCode(step: Pick<PortalStep, 'id' | 'phaseNo' | 'phaseId'>, indexInPhase: number): string {
   const m = /^(pre|post)-(\d+)$/i.exec(step.id);
   if (m) return `${m[1]!.toLowerCase() === 'pre' ? 'Pre' : 'Post'}-${m[2]}`;
   return step.phaseNo === 4 ? `Reg-${indexInPhase + 1}` : `Step ${indexInPhase + 1}`;
 }
 
 /** The earliest window end that is still ahead (or the latest one if all have passed). */
-export function nextScheduleDate(schedule: EngagementSchedule | null | undefined, todayIso: string): string | null {
+function nextScheduleDate(schedule: EngagementSchedule | null | undefined, todayIso: string): string | null {
   const ends = [schedule?.incorporation?.to, ...Object.values(schedule?.steps ?? {}).map((w) => w?.to)].filter(
     (d): d is string => Boolean(d),
   );
@@ -95,7 +95,7 @@ function addDays(iso: string, n: number): string {
 }
 
 /** Monday to Sunday of the week that holds `todayIso`, or of the week after it. */
-export function weekRange(todayIso: string, which: 'week' | 'next'): [string, string] {
+function weekRange(todayIso: string, which: 'week' | 'next'): [string, string] {
   const dow = (new Date(`${todayIso}T00:00:00Z`).getUTCDay() + 6) % 7;
   const mon = addDays(todayIso, -dow + (which === 'next' ? 7 : 0));
   return [mon, addDays(mon, 6)];
@@ -153,7 +153,7 @@ export function clientRowFacts(
 }
 
 const HOLDER_DOT: Record<ClientHolder, string> = { client: 'bg-warning-mid', sbc: 'bg-info-mid', mca: 'bg-identity-mid' };
-export const HOLDER_LABEL: Record<ClientHolder, string> = { client: 'Waiting on the client', sbc: 'SBC step', mca: 'With MCA' };
+const HOLDER_LABEL: Record<ClientHolder, string> = { client: 'Waiting on the client', sbc: 'SBC step', mca: 'With MCA' };
 
 /** 8px square before the step: amber for the client, blue for SBC, violet for MCA. */
 export function HolderSquare({ holder, className }: { holder: ClientHolder; className?: string }) {

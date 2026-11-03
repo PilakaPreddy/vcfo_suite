@@ -21,7 +21,7 @@ const day = z
   .optional()
   .or(z.literal('').transform(() => null));
 
-export const prospectFieldsSchema = z.object({
+const prospectFieldsSchema = z.object({
   name: z.string().trim().min(1, 'Enter a name').max(160),
   company: optionalText(200),
   email: z

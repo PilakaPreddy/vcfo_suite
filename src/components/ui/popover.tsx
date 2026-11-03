@@ -77,4 +77,4 @@ function PopoverCard({
   );
 }
 
-export { Popover, PopoverTrigger, PopoverAnchor, PopoverContent, PopoverCard };
+export { Popover, PopoverTrigger, PopoverAnchor, PopoverContent };

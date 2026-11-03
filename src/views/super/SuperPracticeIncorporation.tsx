@@ -40,7 +40,7 @@ import { cn } from '@/lib/utils';
  * step, who holds it, the manager and lead, and the next open filing date. All of it is read
  * from the engagement rows and the checklist gate through `/api/super/insights`. Read-only.
  */
-export const SUPER_INCORPORATION_HREF = '/app/super/practice/incorporation';
+const SUPER_INCORPORATION_HREF = '/app/super/practice/incorporation';
 
 const OWNER_WORD: Record<'client' | 'sbc' | 'manager', string> = {
   client: 'Client',

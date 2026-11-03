@@ -70,7 +70,7 @@ function errorText(e: unknown) {
   return e instanceof Error ? e.message : 'Something went wrong. Try again.';
 }
 
-export function PublishBar({ data, actions }: { data: ManagerSheetDto; actions: Actions }) {
+function PublishBar({ data, actions }: { data: ManagerSheetDto; actions: Actions }) {
   const [open, setOpen] = useState<'email' | 'share' | null>(null);
   const dirty = data.unpublishedChanges;
   const shown = data.latestVersion ? stamp(data.latestVersion.publishedAt) : null;

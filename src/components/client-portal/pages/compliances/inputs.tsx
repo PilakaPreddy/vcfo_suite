@@ -29,7 +29,7 @@ import { UploadDialog } from '../documents/UploadDialog';
 import { Empty, SCard } from './spectrum';
 import '../../css/documents-boards.css';
 
-export const DOC_TONE: Record<DocWord, ChipTone> = { Accepted: 'ok', 'To review': 'prog', Asked: 'warn', 'Sent back': 'bad' };
+const DOC_TONE: Record<DocWord, ChipTone> = { Accepted: 'ok', 'To review': 'prog', Asked: 'warn', 'Sent back': 'bad' };
 
 /** R-28: identifiers in mono. */
 const isIdentifier = (v: string) => /^[A-Z0-9][A-Z0-9/-]{7,}$/.test(v.trim()) && /\d/.test(v);

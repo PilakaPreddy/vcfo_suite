@@ -26,7 +26,7 @@ const FACE_TONES = [
 ] as const;
 
 /** The soft tone for a person's face, picked from the name so it stays the same everywhere. */
-export function faceTone(name: string): string {
+function faceTone(name: string): string {
   const idx = [...name].reduce((a, c) => a + c.charCodeAt(0), 0) % FACE_TONES.length;
   return FACE_TONES[idx]!;
 }

@@ -16,7 +16,7 @@
  */
 import type { StateSpec } from './types';
 
-export const STATES: StateSpec[] = [
+const STATES: StateSpec[] = [
   {
     code: 'TG',
     name: 'Telangana',
@@ -95,7 +95,7 @@ export function stateByCode(code: string): StateSpec | undefined {
 }
 
 /** The states we can generate registers for today, in name order. */
-export function configuredStates(): StateSpec[] {
+function configuredStates(): StateSpec[] {
   return STATES.filter((s) => s.configured).sort((a, b) => a.name.localeCompare(b.name));
 }
 

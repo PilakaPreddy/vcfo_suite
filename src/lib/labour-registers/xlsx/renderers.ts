@@ -16,19 +16,19 @@ import { writeRegisterWorkbook, type WorkbookMeta } from './scaffold';
 export type RegisterRenderer = (table: ProjectedTable, meta: WorkbookMeta) => Promise<Buffer>;
 
 /** One row per employee, earnings and deductions across the columns. */
-export const renderWages: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
+const renderWages: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
 
 /** An identity block then, usually, one column per day of the period. */
-export const renderMusterRoll: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
+const renderMusterRoll: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
 
 /** A muster roll and a wage register on one sheet. The widest form in the catalogue. */
-export const renderCombinedWages: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
+const renderCombinedWages: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
 
 /** Leave earned, availed and carried. */
-export const renderLeave: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
+const renderLeave: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
 
 /** Who is employed, with hours, shift and rest interval. */
-export const renderEmployment: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
+const renderEmployment: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
 
 const RENDERERS: Partial<Record<ProjectedTable['form']['archetype'], RegisterRenderer>> = {
   wages: renderWages,
@@ -45,5 +45,5 @@ export function renderForForm(table: ProjectedTable, meta: WorkbookMeta): Promis
   return renderer(table, meta);
 }
 
-export { isBuilt, ArchetypeNotBuilt };
+;
 export type { WorkbookMeta };

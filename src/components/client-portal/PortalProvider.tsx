@@ -84,7 +84,7 @@ export interface ToastOptions {
 }
 
 /** How long a toast stays (prototype useUndoToast, 5 s). Deferred actions with Undo wait this long. */
-export const TOAST_MS = 5000;
+const TOAST_MS = 5000;
 
 interface PortalContextValue {
   shell: ClientPortalShell | undefined;

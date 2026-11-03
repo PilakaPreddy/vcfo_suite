@@ -133,7 +133,7 @@ const AVATAR = [
   'bg-upcoming-soft text-upcoming',
 ];
 
-export function initials(name: string): string {
+function initials(name: string): string {
   return name
     .split(/\s+/)
     .filter(Boolean)
@@ -157,7 +157,7 @@ export function Avatar({ name, size = 24, className }: { name: string; size?: 24
 }
 
 /** R-44: a company is a 6px square. */
-export function CompanySquare({ name, size = 52 }: { name: string; size?: number }) {
+function CompanySquare({ name, size = 52 }: { name: string; size?: number }) {
   return (
     <span
       className="grid flex-none place-items-center rounded-md bg-brand-soft text-[18px] font-medium text-brand-text shadow-tile"
@@ -174,7 +174,7 @@ export function CompanySquare({ name, size = 52 }: { name: string; size?: number
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** "9 Oct" from yyyy-mm-dd. */
-export function fmtDay(iso?: string): string {
+function fmtDay(iso?: string): string {
   if (!iso) return '-';
   const [, m, d] = iso.slice(0, 10).split('-').map(Number);
   return `${d} ${MON[(m ?? 1) - 1]}`;
@@ -342,7 +342,7 @@ export function currentPhaseNo(model: PortalIncorporationModel): number {
 }
 
 /** ST5 phase track: one column per phase, flex sized by step count. */
-export function PhaseTrack({ model, current, className, onPhase }: { model: PortalIncorporationModel; current: number; className?: string; onPhase?: (no: number) => void }) {
+function PhaseTrack({ model, current, className, onPhase }: { model: PortalIncorporationModel; current: number; className?: string; onPhase?: (no: number) => void }) {
   return (
     <div className={cn('flex gap-2', className)} role="list" aria-label="Phases">
       {model.phases.map((p) => {

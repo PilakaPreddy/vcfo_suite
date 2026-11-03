@@ -131,7 +131,7 @@ export async function fetchConversationList(opts: {
   return json(res, 'Could not load your chats');
 }
 
-export async function deleteConversation(id: string): Promise<void> {
+async function deleteConversation(id: string): Promise<void> {
   await json(await fetch(`/api/ask/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' }), 'Could not delete the chat');
 }
 

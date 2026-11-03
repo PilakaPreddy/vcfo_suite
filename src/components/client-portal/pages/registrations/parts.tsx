@@ -53,7 +53,7 @@ export const REG_FILL: Record<RegStatus, string> = {
   'Not started': 'bg-upcoming-mid',
 };
 /** Chip tone per status word (R-13); "Not started" is grey, not the blue `toneFor` gives /started/. */
-export const REG_TONE: Record<RegStatus, ChipTone> = {
+const REG_TONE: Record<RegStatus, ChipTone> = {
   Done: 'ok',
   'In progress': 'prog',
   Waiting: 'teal',
@@ -77,7 +77,7 @@ export function RegChip({ r, className }: { r: Pick<RegItem, 'status' | 'notNeed
   );
 }
 
-export function RegOwner({ r }: { r: Pick<RegItem, 'owner'> }) {
+function RegOwner({ r }: { r: Pick<RegItem, 'owner'> }) {
   return <OwnerChip owner={r.owner} />;
 }
 
@@ -87,7 +87,7 @@ export function regDate(r: RegItem): string | undefined {
 }
 
 /** 44px tile of that date, tinted by state; an empty tile when the step has no date yet. */
-export function RegTile({ r, today }: { r: RegItem; today: string }) {
+function RegTile({ r, today }: { r: RegItem; today: string }) {
   const iso = regDate(r);
   if (!iso)
     return (

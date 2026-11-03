@@ -12,7 +12,7 @@ interface NoirCardProps extends HTMLAttributes<HTMLDivElement> {
   interactive?: boolean;
 }
 
-export function NoirCard({
+function NoirCard({
   ref,
   className,
   raised,

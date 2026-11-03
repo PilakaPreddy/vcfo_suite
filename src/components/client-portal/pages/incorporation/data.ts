@@ -24,25 +24,25 @@ import { fmt, type GlyphKind, type OwnKey } from './ui';
 
 export const PH = ['Name Application', 'Incorporation', 'Post-Incorporation', 'Registration'];
 export const PHL = ['SPICe+ Part A', 'SPICe+ Part B', 'Post-incorporation', 'Registration'];
-export const PH_TIP = [
+const PH_TIP = [
   'SPICe+ Part A · name approval with MCA',
   'SPICe+ Part B · the company is formed',
   'Post-incorporation · the first 180 days',
   'Registrations · tax, labour, trade and FEMA',
 ];
-export const phInfo = (s: string) => [
+const phInfo = (s: string) => [
   `Name approval with MCA (SPICe+ Part A): ${s}’s details, the board resolution, and the name application SBC files for ${s}.`,
   'SPICe+ Part B: capital, registered office, directors and subscribers, KYC and DSC, the filing, and the Certificate of Incorporation.',
   'What a new company must do in its first months: board meeting, bank account, share capital, share certificates and ROC filings.',
   'The registrations the company needs to operate, grouped as in VCFO Suite: General, Customs, Foreign Trade, Labour, Local Compliance, IP/Brand and FEMA.',
 ];
-export const phWhy = (s: string) => [
+const phWhy = (s: string) => [
   'Nothing else can start until MCA approves the company name.',
   `It ends with the Certificate of Incorporation: ${s} exists from that date.`,
   'Most of these have legal deadlines counted from the incorporation date (30 to 180 days).',
   'The company needs these to invoice, hire and trade; GST comes first.',
 ];
-export const PH_SRC = [
+const PH_SRC = [
   'Companies Act 2013 · SPICe+ Part A (RUN)',
   'Companies Act 2013 · SPICe+ Part B, AGILE-PRO-S',
   'Companies Act 2013 · INC-20A, ADT-1, SH-1',
@@ -54,7 +54,7 @@ export const PH_WAIT = [
   'Post-incorporation starts once the Certificate of Incorporation is issued.',
   'Registrations start after the Certificate of Incorporation. GST comes first.',
 ];
-export const INFO_WHY: Record<string, string> = {
+const INFO_WHY: Record<string, string> = {
   coi: 'It is the date your company legally exists; everything after it is counted from that day.',
   phases: 'It shows at a glance which phase is late, on time or not started.',
   docs: 'Missing or old documents are the most common reason MCA sends a filing back.',
@@ -78,11 +78,11 @@ export function kd(s: PortalStep): K {
   return s.kind === 'next' ? 'up' : s.kind;
 }
 /** Landing table kind (lkind). */
-export function lkind(s: PortalStep): LK {
+function lkind(s: PortalStep): LK {
   return s.kind;
 }
 /** Glyph: late steps (not done, past their window) show the red ×. */
-export function glyph(s: PortalStep, k: LK = kd(s)): GlyphKind {
+function glyph(s: PortalStep, k: LK = kd(s)): GlyphKind {
   if (s.late && k !== 'done') return 'late';
   return k === 'next' ? 'up' : k;
 }
@@ -117,7 +117,7 @@ export function tipTxt(s: PortalStep, k: LK = kd(s)): string {
   return parts.join(' · ');
 }
 
-export function railSub(s: PortalStep, short: string): string {
+function railSub(s: PortalStep, short: string): string {
   const k = kd(s);
   if (k === 'done') return s.doneOn ? `Done · ${fmt(s.doneOn)}` : 'Done';
   if (k === 'you') return `Waiting on ${short}${s.due ? ` · due ${fmt(s.due)}` : ''}`;
@@ -169,7 +169,7 @@ export function idx(tabs: Array<{ k: string }>, k: string): number {
   const i = tabs.findIndex((t) => t.k === k);
   return i < 0 ? 0 : i;
 }
-export function phKind(p: PortalPhase): GlyphKind {
+function phKind(p: PortalPhase): GlyphKind {
   return p.state === 'done' ? 'done' : p.state === 'up' ? 'up' : 'prog';
 }
 /** Latest done date in the phase (prototype `phEnd` for done phases). */

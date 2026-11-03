@@ -11,15 +11,15 @@ export function internToneBadge(tone: InternChipTone): string {
 }
 
 /** Solid fill with on-status text: for a STATE chip in a column. Soft (internToneBadge) is for owners and tags. */
-export function internToneSolid(tone: InternChipTone): string {
+function internToneSolid(tone: InternChipTone): string {
   return TONE_SOLID_BY_TONE[internIconTone(tone)] ?? TONE_BADGE[internIconTone(tone)];
 }
 
-export function internToneBg(tone: InternChipTone): string {
+function internToneBg(tone: InternChipTone): string {
   return TONE_BG[internIconTone(tone)];
 }
 
-export function internToneText(tone: InternChipTone): string {
+function internToneText(tone: InternChipTone): string {
   return TONE_TEXT[internIconTone(tone)];
 }
 

@@ -15,7 +15,7 @@ export interface LibraryCsvRow {
   notes: string;
 }
 
-export const LIBRARY_CSV_COLUMNS: Array<[keyof LibraryCsvRow, string]> = [
+const LIBRARY_CSV_COLUMNS: Array<[keyof LibraryCsvRow, string]> = [
   ['id', 'ID'],
   ['topic', 'Topic'],
   ['scenario', 'Scenario'],

@@ -66,7 +66,7 @@ function placeLine(raw: Pick<NoticeInput, 'mode' | 'venue'>): string {
 }
 
 /** The standard body paragraphs, before any edit. */
-export function standardBody(input: NoticeInput): string[] {
+function standardBody(input: NoticeInput): string[] {
   const body = [
     `Notice is hereby given that the Meeting of ${BODY_OF[input.kind]} of ${input.companyName} bearing Meeting No. ${input.meetingNo} will be held on ${noticeDate(input.meetingDate)} at ${timeLine(input)} ${placeLine(input)}, to transact the business set out in the Agenda enclosed herewith.`,
     'You are requested to make it convenient to attend the Meeting.',

@@ -61,7 +61,7 @@ const json = (method: string, body?: unknown): RequestInit => ({
   body: body === undefined ? undefined : JSON.stringify(body),
 });
 
-export const MEETINGS_KEY = ['board-meetings'] as const;
+const MEETINGS_KEY = ['board-meetings'] as const;
 
 export function useMeetings(engagementId?: string | null, enabled = true) {
   return useQuery({

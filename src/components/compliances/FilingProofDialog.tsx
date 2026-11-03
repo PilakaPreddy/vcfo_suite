@@ -24,12 +24,12 @@ export interface ProofFile {
   uploadedAt: string;
 }
 
-export function proofHref(instanceId: string, proofId: string): string {
+function proofHref(instanceId: string, proofId: string): string {
   return `/api/client/compliances/${encodeURIComponent(instanceId)}/proofs/${encodeURIComponent(proofId)}`;
 }
 
 /** Fetch the proof list of one filing (the editor shares the query key). */
-export function useFilingProofs(instanceId: string, enabled = true) {
+function useFilingProofs(instanceId: string, enabled = true) {
   return useQuery({
     queryKey: ['filing-proofs', instanceId],
     enabled,
@@ -42,7 +42,7 @@ export function useFilingProofs(instanceId: string, enabled = true) {
 }
 
 /** Start one browser download per file. The route redirects each one to its signed URL. */
-export function downloadProofs(instanceId: string, files: readonly ProofFile[]): void {
+function downloadProofs(instanceId: string, files: readonly ProofFile[]): void {
   files.forEach((f, i) => {
     window.setTimeout(() => {
       const a = document.createElement('a');

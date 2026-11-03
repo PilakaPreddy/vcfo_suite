@@ -42,7 +42,7 @@ export function assertEditorRole(ctx: AuthContext): void {
   if (!EDITORS.has(ctx.role)) throw notFound();
 }
 
-export function mayEditSheet(ctx: AuthContext, sheet: Pick<SheetRow, 'managerUserId'>): boolean {
+function mayEditSheet(ctx: AuthContext, sheet: Pick<SheetRow, 'managerUserId'>): boolean {
   return isFirmWideAdmin(ctx.role) || (sheet.managerUserId !== null && sheet.managerUserId === ctx.userId);
 }
 

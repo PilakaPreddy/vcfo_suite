@@ -54,7 +54,7 @@ const ERROR_TEXT: Record<string, string> = {
   tds: 'Enter the TDS in rupees, zero or more.',
 };
 
-export class ReceivablesApiError extends Error {
+class ReceivablesApiError extends Error {
   constructor(
     message: string,
     readonly status: number,

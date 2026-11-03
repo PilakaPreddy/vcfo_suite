@@ -18,7 +18,7 @@ export function addDaysIso(iso: string, n: number): string {
   return new Date(D(iso).getTime() + n * DAY).toISOString().slice(0, 10);
 }
 
-export function daysBetweenIso(fromIso: string, toIso: string): number {
+function daysBetweenIso(fromIso: string, toIso: string): number {
   return Math.round((D(toIso).getTime() - D(fromIso).getTime()) / DAY);
 }
 
@@ -27,10 +27,10 @@ export function todayIst(now: Date = new Date()): string {
   return new Date(now.getTime() + 330 * 60_000).toISOString().slice(0, 10);
 }
 
-export const PREPARE_DAYS = 10;
-export const NOTICE_DAYS = 7;
-export const MOM_DAYS = 30;
-export const GAP_DAYS = 120;
+const PREPARE_DAYS = 10;
+const NOTICE_DAYS = 7;
+const MOM_DAYS = 30;
+const GAP_DAYS = 120;
 
 export function prepareDate(meetingDate: string): string {
   return addDaysIso(meetingDate, -PREPARE_DAYS);
@@ -65,7 +65,7 @@ function parts(iso: string): { y: number; m: number; d: number; wd: number } {
   return { y: dt.getUTCFullYear(), m: dt.getUTCMonth(), d: dt.getUTCDate(), wd: dt.getUTCDay() };
 }
 
-export function ordinal(n: number): string {
+function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
   return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;

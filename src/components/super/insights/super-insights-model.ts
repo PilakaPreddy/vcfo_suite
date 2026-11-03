@@ -198,7 +198,7 @@ const MONTH_LONG = [
 ];
 
 /** YYYY-MM-DD in UTC. */
-export function ymdOf(date: Date): string {
+function ymdOf(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
