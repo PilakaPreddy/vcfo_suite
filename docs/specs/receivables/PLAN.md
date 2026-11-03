@@ -204,3 +204,26 @@ The owner replaced the public key link with a login for each client partner (3 N
 - Sheet FX columns (USD amount, booked rate, today's INR, change), Mark received with the USD
   received, a Reports tab (ageing, days to pay, cash forecast, FX gain or loss, TDS, FIRA),
   the partner's USD view, and the FX columns in the summary email and the Excel export.
+
+## Build plan: Phase 10 (shared views, forex desk, polish) — owner brief 4 Nov 2026
+
+The owner asked for design-system polish, shareable filtered links, more forex, and any other
+improvements, with every decision delegated. Decisions taken:
+
+- **Shared views.** The manager saves the sheet's current filters as a named link,
+  `/receivables/s/<token>`, showing the latest published version through `applyShareFilters`
+  (`src/lib/receivables/share-filters.ts`). Visibility: `public` (opens for anyone with the link,
+  `noindex`), `login` (any client-partner login on the sheet, plus its staff) or `restricted`
+  (only the chosen logins). The sheet's manager and firm-wide admins can always open a link.
+  A link can expire, be revoked, and allow or hide the Excel download; every opening is logged
+  (`receivable_share_views`) so the manager sees who looked. Migration `0040`.
+- **Forex desk.** Any currency, not only USD (EUR, GBP, AED, SGD and others), rates fetched for
+  every currency in use; a rate history chart; exposure by currency with a what-if (rupee moves
+  ±1 to ±3); forward contracts with hedge cover and utilisation on receipt; rate alerts emailed
+  to the manager when a level is crossed; the bank's spread on each receipt against the
+  reference rate. An FX tab holds it all.
+- **Manager sheet.** KPI strip (open, overdue, due in 7 days, collected this month, DSO),
+  search and filters kept in the URL, "Share this view", bulk actions, an invoice history
+  drawer, a preview of what an Update changes, and a layout that fits 1280 px and phones.
+- **Partner pages and other tabs** follow the Spectrum design system; a Monday digest email
+  for the manager; a statement of account per client; and an e2e spec.
