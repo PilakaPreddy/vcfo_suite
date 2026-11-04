@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, ArrowRight, CheckCheck, FileSpreadsheet, History, MapPin, Printer, TriangleAlert } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCheck, FileSpreadsheet, History, MapPin, Printer, ShieldQuestion, TriangleAlert } from 'lucide-react';
 
 import { regimeNote, stateByCode, statesForPicker } from '@/data/labour-registers/states';
 import {
@@ -193,6 +193,14 @@ export function LabourRegistersPage({
         title="Pick a state to open its registers"
         blurb="Forms differ by state; the inputs do not. Click a state on the map or choose it from the list beside it."
         stats={stats}
+        action={
+          canPrepare ? (
+            <Link href={`${shellBase}/labour-registers?verify=1`} className={lr.quiet}>
+              <ShieldQuestion className="size-4" strokeWidth={1.8} aria-hidden={true} />
+              What we have checked
+            </Link>
+          ) : undefined
+        }
       />
 
       {summary.hybrid && selected.configured ? (

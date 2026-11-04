@@ -8,6 +8,7 @@ import {
   labourRegisterColumnMaps,
   labourRegisterDocuments,
   labourRegisterUploads,
+  labourRegisterVerifications,
 } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
 import { isAdminOrManager, isFirmWideAdmin } from '@/lib/auth';
@@ -38,6 +39,7 @@ import type { UploadSlot } from '@/lib/labour-registers/parse';
 export type BatchRow = typeof labourRegisterBatches.$inferSelect;
 export type UploadRow = typeof labourRegisterUploads.$inferSelect;
 export type DocumentRow = typeof labourRegisterDocuments.$inferSelect;
+export type VerificationRow = typeof labourRegisterVerifications.$inferSelect;
 
 function assertStaff(ctx: AuthContext) {
   if (!isAdminOrManager(ctx.role) && ctx.role !== 'intern') {
@@ -526,4 +528,72 @@ export async function supersedeDocument(ctx: AuthContext, oldId: string, newId: 
   if (!batch) return;
   await db.update(labourRegisterDocuments).set({ status: 'superseded' }).where(eq(labourRegisterDocuments.id, oldId));
   await db.update(labourRegisterDocuments).set({ supersedesId: oldId }).where(eq(labourRegisterDocuments.id, newId));
+}
+
+/* ── Verification ─────────────────────────────────────────────────────────── */
+
+/**
+ * The firm's own verdicts on the catalogue's layouts.
+ *
+ * Readable by anyone who can see a batch, because the notice printed on a register is
+ * something a client is entitled to understand. Writable only by staff: deciding that a
+ * statutory layout has been checked is the firm's professional judgement, and a client
+ * recording it would be the firm's liability with none of its knowledge.
+ */
+export async function listVerifications(ctx: AuthContext): Promise<VerificationRow[]> {
+  void ctx;
+  return db.select().from(labourRegisterVerifications);
+}
+
+/** Record, or revise, what the firm has found about one form's layout. */
+export async function saveVerification(
+  ctx: AuthContext,
+  input: {
+    formId: string;
+    status: 'unverified' | 'disputed' | 'checked-against-sample' | 'gazette-verified';
+    against?: string;
+    disputedBecause?: string;
+    openItems?: string[];
+    evidenceKey?: string | null;
+    evidenceFileName?: string | null;
+    suppressed?: boolean;
+    suppressedReason?: string;
+  },
+): Promise<VerificationRow | null> {
+  assertStaff(ctx);
+
+  const values = {
+    formId: input.formId,
+    status: input.status,
+    against: input.against ?? '',
+    disputedBecause: input.disputedBecause ?? '',
+    openItems: input.openItems ?? [],
+    evidenceKey: input.evidenceKey ?? null,
+    evidenceFileName: input.evidenceFileName ?? null,
+    suppressed: input.suppressed ?? false,
+    suppressedReason: input.suppressedReason ?? '',
+    verifiedBy: ctx.userId,
+  };
+
+  const [row] = await db
+    .insert(labourRegisterVerifications)
+    .values(values)
+    .onConflictDoUpdate({
+      target: labourRegisterVerifications.formId,
+      set: { ...values, verifiedAt: new Date(), updatedAt: new Date() },
+    })
+    .returning();
+  return row ?? null;
+}
+
+/**
+ * Undo a verdict, so the catalogue's own claim stands again.
+ *
+ * Not a delete of history — there is none to lose here, since the row holds the current
+ * verdict rather than a log — but it is the only way back from a verdict entered in error,
+ * and without it a mistyped "gazette-verified" would be permanent.
+ */
+export async function clearVerification(ctx: AuthContext, formId: string): Promise<void> {
+  assertStaff(ctx);
+  await db.delete(labourRegisterVerifications).where(eq(labourRegisterVerifications.formId, formId));
 }

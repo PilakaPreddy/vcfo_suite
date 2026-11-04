@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
-import { findByCacheKey, recordDocument } from '@/db/repositories/labour-registers';
+import { findByCacheKey, listVerifications, recordDocument } from '@/db/repositories/labour-registers';
 import { draftKey, GENERATOR_REVISION, hashRows, type AssumptionSet, type DocumentIdentity } from '@/lib/labour-registers/cache-key';
 import { retentionYears } from '@/lib/labour-registers/catalogue';
 import { ProjectionError, projectForm, type ProjectedTable } from '@/lib/labour-registers/project';
@@ -12,6 +12,7 @@ import { documentFileName, documentObjectKey, periodLabel } from '@/lib/labour-r
 import { isBuilt } from '@/lib/labour-registers/xlsx/layouts';
 import { renderForForm } from '@/lib/labour-registers/xlsx/renderers';
 import { templateVersionFor } from '@/lib/labour-registers/xlsx/version';
+import { resolveVerification, verificationIndex } from '@/lib/labour-registers/verification';
 import { loadBatchDataset } from '@/views/labour-registers/load-dataset';
 import { EXTENSION_TO_MIME } from '@/lib/upload-limits';
 import { putObject } from '@/storage/s3';
@@ -75,14 +76,31 @@ export async function POST(request: Request) {
   const generatedAt = new Date().toISOString();
   const label = periodLabel(period);
 
+  /* The firm's own verdicts, read once for the whole batch. A form with no row keeps the
+     catalogue's claim, which is the common case and costs nothing. */
+  const verdicts = verificationIndex(await listVerifications(guard.ctx));
+
   const documents: Array<{ formId: string; documentId: string; fileName: string; built: boolean }> = [];
   const blocked: Array<{ formId: string; reason: string }> = [];
   const deferred: Array<{ formId: string; reason: string }> = [];
+  const suppressed: Array<{ formId: string; reason: string }> = [];
 
   for (const form of forms) {
     if (wanted && !wanted.has(form.id)) continue;
     if (!isBuilt(form.archetype)) {
       deferred.push({ formId: form.id, reason: `The ${form.archetype} archetype is not built yet.` });
+      continue;
+    }
+
+    /* The firm has decided this register is not one it owes. Reported rather than skipped
+       silently: a gap in an act's folder that nobody can account for is worse than a line
+       saying who decided it was not needed and why. */
+    const verdict = resolveVerification(form, verdicts);
+    if (verdict.suppressed) {
+      suppressed.push({
+        formId: form.id,
+        reason: verdict.suppressedReason || 'The firm has recorded that this register does not apply.',
+      });
       continue;
     }
 
@@ -110,7 +128,7 @@ export async function POST(request: Request) {
       formId: form.id,
       period: period.from.slice(0, 7) === period.to.slice(0, 7) ? period.from.slice(0, 7) : `${period.from}..${period.to}`,
       inputsHash: hashRows(rowObjects, fields),
-      templateVersion: templateVersionFor(form),
+      templateVersion: templateVersionFor(form, verdict.fromFirm ? verdict : undefined),
       assumptions,
       locale: batch.locale,
       timeZone: batch.timeZone,
@@ -129,6 +147,7 @@ export async function POST(request: Request) {
       generatedAt,
       generatorRevision: GENERATOR_REVISION,
       cacheKey,
+      verification: verdict.fromFirm ? verdict : undefined,
     });
 
     const objectKey = documentObjectKey({
@@ -160,6 +179,7 @@ export async function POST(request: Request) {
         nilColumns: table.nil,
         notes: table.notes,
         orphanRows: dataset.orphans.length,
+        verification: verdict,
       },
       retainUntil: String(new Date(period.to).getUTCFullYear() + retentionYears([form])),
     });
@@ -172,6 +192,7 @@ export async function POST(request: Request) {
     documents,
     blocked,
     deferred,
+    suppressed,
     builtCount: documents.filter((d) => d.built).length,
     fromStorage: documents.filter((d) => !d.built).length,
   });

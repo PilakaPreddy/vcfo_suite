@@ -6,6 +6,8 @@ import { listBatches } from '@/db/repositories/labour-registers';
 import { BatchPage } from '@/views/labour-registers/BatchPage';
 import { LabourRegistersPage } from '@/views/labour-registers/LabourRegistersPage';
 import { loadBatchView } from '@/views/labour-registers/load-batch';
+import { loadVerificationView } from '@/views/labour-registers/load-verification';
+import { VerificationPage } from '@/views/labour-registers/VerificationPage';
 import { loadMappingView } from '@/views/labour-registers/load-mapping';
 import { MappingPage } from '@/views/labour-registers/MappingPage';
 import { pageMetadata } from '@/lib/shell/page-metadata';
@@ -23,6 +25,14 @@ export default async function Page({
 }) {
   const params = await searchParams;
   const one = (key: string) => (typeof params[key] === 'string' ? (params[key] as string) : undefined);
+
+  /* `?verify=1` opens the layout-verification register. It belongs to no batch and no client:
+     whether a form matches what the rules prescribe is the same question for everybody. */
+  if (one('verify')) {
+    const guard = await requireAuth();
+    if (!guard.ok) notFound();
+    return <VerificationPage view={await loadVerificationView(guard.ctx)} shellBase="/app/admin" />;
+  }
 
   const batchId = one('batch');
   if (batchId) {

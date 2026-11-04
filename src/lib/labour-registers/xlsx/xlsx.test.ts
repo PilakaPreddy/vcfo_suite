@@ -247,6 +247,36 @@ describe('what every register says about itself', () => {
     expect(verificationNotice(disputed)).toContain('the rules text says otherwise');
   });
 
+  it('prints the firm\'s own verdict over the catalogue\'s, both ways', async () => {
+    /* The firm has checked Form IV against the gazette. The sheet must say so — the whole
+       point of the verification screen is that this line changes without a deploy. */
+    const { table } = roll('in-wages-iv');
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(
+      (await renderForForm(table, {
+        ...meta,
+        verification: { status: 'gazette-verified', on: '2026-11-04', against: 'the Central Rules of 8 May 2026' },
+      })) as unknown as Parameters<typeof wb.xlsx.load>[0],
+    );
+    const verified = JSON.stringify(wb.worksheets[0].getSheetValues());
+    expect(verified).toContain('verified against the gazette on 2026-11-04');
+    expect(verified).not.toContain('not verified against the gazette');
+
+    /* And the other direction: a form the catalogue is happy with, that the firm has since
+       found wrong, shouts. A verdict that could only make a sheet calmer would be no use. */
+    const sampled = roll('in-wages-ix');
+    const wb2 = new ExcelJS.Workbook();
+    await wb2.xlsx.load(
+      (await renderForForm(sampled.table, {
+        ...meta,
+        verification: { status: 'disputed', disputedBecause: 'The column order does not match the prescribed form.' },
+      })) as unknown as Parameters<typeof wb2.xlsx.load>[0],
+    );
+    const text = JSON.stringify(wb2.worksheets[0].getSheetValues());
+    expect(text).toContain('DISPUTED');
+    expect(text).toContain('The column order does not match the prescribed form.');
+  });
+
   it('carries the generator revision and the content address, so a printout is traceable', async () => {
     const { table } = roll('in-wages-iv');
     const text = await textOf(table);

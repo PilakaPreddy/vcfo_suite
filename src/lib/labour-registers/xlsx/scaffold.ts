@@ -29,6 +29,7 @@
  */
 import ExcelJS from 'exceljs';
 
+import type { FormVerification } from '@/data/labour-registers/types';
 import type { EstablishmentMaster } from '../dataset';
 import type { ProjectedColumn, ProjectedTable } from '../project';
 import { layoutFor, numberFormat, widthFor } from './layouts';
@@ -42,6 +43,13 @@ export interface WorkbookMeta {
   generatorRevision: string;
   /** The content address, so a printed sheet can be traced back to its evidence. */
   cacheKey: string;
+  /**
+   * The firm's own verdict on this layout, where it has recorded one.
+   *
+   * Left out, the catalogue's claim is printed. It is passed in rather than read here because
+   * reading it would mean a database call from the renderer, and the renderer is pure.
+   */
+  verification?: FormVerification;
 }
 
 /** A4, as exceljs numbers paper sizes. */
@@ -68,8 +76,8 @@ const BORDER: Partial<ExcelJS.Borders> = {
  * Written out rather than abbreviated: somebody reading the printed sheet months later has no
  * access to the catalogue, and "unverified" on its own does not say unverified against what.
  */
-export function verificationNotice(table: ProjectedTable): string {
-  const { status, on, against, open, disputedBecause } = table.form.verification;
+export function verificationNotice(table: ProjectedTable, override?: FormVerification): string {
+  const { status, on, against, open, disputedBecause } = override ?? table.form.verification;
   const openPart = open?.length ? ` Still open: ${open.join(', ')}.` : '';
 
   if (status === 'gazette-verified') {
@@ -89,8 +97,8 @@ export function verificationNotice(table: ProjectedTable): string {
 }
 
 /** True when the sheet must shout rather than murmur. */
-export function isDisputed(table: ProjectedTable): boolean {
-  return table.form.verification.status === 'disputed';
+export function isDisputed(table: ProjectedTable, override?: FormVerification): boolean {
+  return (override ?? table.form.verification).status === 'disputed';
 }
 
 /** A sheet name Excel will accept: 31 characters, none of []:*?/\\ */
@@ -147,8 +155,8 @@ export async function writeRegisterWorkbook(table: ProjectedTable, meta: Workboo
   titleRow(ws, width, `${form.rule} · ${form.act}`, { size: 9, color: { argb: MUTED } });
   titleRow(ws, width, `Period: ${meta.periodLabel}`, { size: 10 });
 
-  const disputed = isDisputed(table);
-  const notice = titleRow(ws, width, verificationNotice(table), {
+  const disputed = isDisputed(table, meta.verification);
+  const notice = titleRow(ws, width, verificationNotice(table, meta.verification), {
     size: disputed ? 11 : 9,
     bold: disputed,
     italic: !disputed,

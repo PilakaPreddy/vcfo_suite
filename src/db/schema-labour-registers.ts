@@ -201,3 +201,55 @@ export const labourRegisterDocuments = pgTable(
     oneDraftPerForm: uniqueIndex('labour_register_document_form_idx').on(t.batchId, t.formId, t.cacheKey, t.format),
   }),
 );
+
+/**
+ * A firm's own verification of a catalogue form.
+ *
+ * The catalogue ships with a `verification` block per form, written by whoever researched it.
+ * That block is a developer's claim, in a TypeScript file, changed only by a deploy. It is the
+ * wrong shape for the thing it holds: whether a statutory layout has been checked against the
+ * prescribed form is a professional judgement, made by a company secretary with the gazette
+ * open, and it should be recordable the moment they make it.
+ *
+ * So this table overrides the catalogue, per firm. A row here wins; no row means the
+ * catalogue's own claim stands. The notice printed at the head of every generated register
+ * reads from whichever applies, so verifying a form changes what the next sheet says about
+ * itself without touching the code.
+ *
+ * It is keyed on the form id alone rather than on an engagement, because a form's layout is a
+ * property of the law and not of a client. One firm, one answer.
+ */
+export const labourRegisterVerifications = pgTable(
+  'labour_register_verifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** The catalogue id of the form, never its number: a form number is not an identity. */
+    formId: text('form_id').notNull(),
+    /** unverified | disputed | checked-against-sample | gazette-verified. */
+    status: text('status').notNull(),
+    /** What it was checked against: a gazette page, a prescribed form PDF, a filed workbook. */
+    against: text('against').notNull().default(''),
+    /** Why the layout is contested, where it is. Printed on the sheet verbatim. */
+    disputedBecause: text('disputed_because').notNull().default(''),
+    /** What remains unresolved — signatory, seal, page initialling, column order. */
+    openItems: jsonb('open_items').notNull().default([]),
+    /** The evidence: a gazette extract or the prescribed form, in storage. */
+    evidenceKey: text('evidence_key'),
+    evidenceFileName: text('evidence_file_name'),
+    /**
+     * Whether this form may be generated at all.
+     *
+     * A disputed form still generates by default, carrying a loud notice — a missing statutory
+     * register is a failure nobody notices, where a flagged one is a draft somebody reviews.
+     * A firm that would rather withhold one sets this false and says why.
+     */
+    suppressed: boolean('suppressed').notNull().default(false),
+    suppressedReason: text('suppressed_reason').notNull().default(''),
+    verifiedBy: uuid('verified_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    oneVerdictPerForm: uniqueIndex('labour_register_verification_form_idx').on(t.formId),
+  }),
+);
