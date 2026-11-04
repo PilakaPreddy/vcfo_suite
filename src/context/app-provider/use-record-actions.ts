@@ -6,7 +6,6 @@ import {
   type Engagement,
   type TaskInstance,
   type DocRequest,
-  type Invite,
   seedTasksFor,
 } from '@/data/engagements';
 import { type AuthUser, initialsFromName, isAdminOrManager } from '@/lib/auth';
@@ -20,25 +19,18 @@ import type { ActivityFeed } from './use-activity-feed';
 type RecordActionsParams = {
   user: AuthUser | null;
   queryClient: QueryClient;
-  engagements: Engagement[];
-  invites: Invite[];
   requests: DocRequest[];
-  signInAsClient: AppContextValue['signInAsClient'];
-} & Pick<AppProviderStore, 'setClients' | 'setEngagements' | 'setTasks' | 'setInvites' | 'setRequests'> &
+} & Pick<AppProviderStore, 'setClients' | 'setEngagements' | 'setTasks' | 'setRequests'> &
   Pick<ActivityFeed, 'pushActivity'>;
 
-/** Projects, invites, tasks and document requests: optimistic local edits synced to the API. */
+/** Projects, tasks and document requests: optimistic local edits synced to the API. */
 export function useRecordActions({
   user,
   queryClient,
-  engagements,
-  invites,
   requests,
-  signInAsClient,
   setClients,
   setEngagements,
   setTasks,
-  setInvites,
   setRequests,
   pushActivity,
 }: RecordActionsParams) {
@@ -95,42 +87,6 @@ export function useRecordActions({
     }
     throw new Error('Project not found or could not be updated.');
   }, [setEngagements]);
-
-  const inviteClient = useCallback<AppContextValue['inviteClient']>(
-    (engagementId, email) => {
-      const token = `inv_${Math.random().toString(36).slice(2, 10)}`;
-      const inv: Invite = { token, engagementId, email, createdAt: new Date().toISOString() };
-      setInvites((p) => [...p, inv]);
-      void fetchJson<{ invite: Invite }>('/api/invites', {
-        method: 'POST',
-        body: JSON.stringify({ engagementId, email, token }),
-      })
-        .then((data) => {
-          setInvites((p) => p.map((i) => (i.token === token ? data.invite : i)));
-          void queryClient.invalidateQueries({ queryKey: ['invites', user?.id] });
-        })
-        .catch(() => {});
-      pushActivity({ actor: user?.name || 'Project Lead', verb: 'invited client', target: email, engagementId });
-      return inv;
-    },
-    [user?.name, user?.id, pushActivity, setInvites, queryClient],
-  );
-
-  const acceptInvite = useCallback<AppContextValue['acceptInvite']>(
-    (token, name) => {
-      const inv = invites.find((i) => i.token === token);
-      if (!inv) return null;
-      const eng = engagements.find((e) => e.id === inv.engagementId);
-      if (!eng) return null;
-      setInvites((p) => p.map((i) => (i.token === token ? { ...i, usedAt: new Date().toISOString() } : i)));
-      void fetchJson('/api/invites', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'accept', token }),
-      }).catch(() => {});
-      return signInAsClient(eng.clientId, name);
-    },
-    [invites, engagements, signInAsClient, setInvites],
-  );
 
   const updateTask = useCallback<AppContextValue['updateTask']>(
     (taskId, patch) => {
@@ -223,8 +179,6 @@ export function useRecordActions({
   return {
     createProjectWithClientFn,
     updateEngagementFn,
-    inviteClient,
-    acceptInvite,
     updateTask,
     uploadDoc,
     approveDoc,

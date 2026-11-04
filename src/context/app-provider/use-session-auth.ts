@@ -51,7 +51,6 @@ type SessionAuthParams = {
   | 'setClients'
   | 'setTasks'
   | 'setRequests'
-  | 'setInvites'
   | 'setActivity'
   | 'setDbChecklistState'
 > &
@@ -67,7 +66,6 @@ export function useSessionAuth({
   setClients,
   setTasks,
   setRequests,
-  setInvites,
   setActivity,
   setDbChecklistState,
   dismissedIdsRef,
@@ -153,7 +151,6 @@ export function useSessionAuth({
     setClients([]);
     setTasks([]);
     setRequests([]);
-    setInvites([]);
     setActivity([]);
     setDbChecklistState({});
   }, [
@@ -166,7 +163,6 @@ export function useSessionAuth({
     setClients,
     setTasks,
     setRequests,
-    setInvites,
     setActivity,
     setDbChecklistState,
   ]);
