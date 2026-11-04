@@ -222,7 +222,7 @@ export const bankCredits = pgTable(
       .references(() => receivableSheets.id, { onDelete: 'cascade' }),
     /** hsbc_api | alert_email | manual. */
     source: text('source').notNull(),
-    /** The bank's own transaction reference; with source, the de-duplication key. */
+    /** The bank's own transaction reference; the de-duplication key within a sheet, whatever the source. */
     externalRef: text('external_ref').notNull(),
     valueDate: date('value_date').notNull(),
     payer: text('payer').notNull(),
@@ -240,7 +240,7 @@ export const bankCredits = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
-    refIdx: uniqueIndex('bank_credits_sheet_ref_idx').on(t.sheetId, t.source, t.externalRef),
+    refIdx: uniqueIndex('bank_credits_sheet_ref_idx').on(t.sheetId, t.externalRef),
     statusIdx: index('bank_credits_sheet_status_idx').on(t.sheetId, t.status),
   }),
 );

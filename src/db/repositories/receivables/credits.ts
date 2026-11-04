@@ -22,13 +22,18 @@ async function scopedCredit(ctx: AuthContext, creditId: string): Promise<CreditR
   return c;
 }
 
+/** The database or an open transaction; `settle` runs inside the caller's transaction. */
+type Tx = Pick<typeof db, 'select' | 'update' | 'insert'>;
+
 /**
  * Marks the invoices a credit pays as received. One invoice takes the whole credit; several
- * invoices each take their own open amount. Only open invoices of the credit's own sheet.
+ * invoices each take their own open amount. Only open invoices of the credit's own sheet. Each
+ * update is conditional on the invoice still being open, so an invoice is received once even
+ * when two credits race for it; the loser throws and its transaction rolls back.
  */
-async function settle(sheetId: string, credit: CreditRow, invoiceIds: string[], actorId: string | null): Promise<void> {
+async function settle(tx: Tx, sheetId: string, credit: CreditRow, invoiceIds: string[], actorId: string | null): Promise<void> {
   if (!invoiceIds.length) return;
-  const rows = await db
+  const rows = await tx
     .select()
     .from(receivableInvoices)
     .where(and(eq(receivableInvoices.sheetId, sheetId), inArray(receivableInvoices.id, invoiceIds), eq(receivableInvoices.status, 'open'), isNull(receivableInvoices.deletedAt)));
@@ -36,28 +41,51 @@ async function settle(sheetId: string, credit: CreditRow, invoiceIds: string[], 
   const amount = num(credit.inrAmount) ?? 0;
   for (const r of rows) {
     const paid = rows.length === 1 ? amount : num(r.amountInr) ?? 0;
-    await db
+    const [done] = await tx
       .update(receivableInvoices)
       .set({ status: 'received', paidOn: String(credit.valueDate), paidAmount: money(paid), paidVia: 'bank', remindersPausedUntil: null, pauseReason: null, updatedAt: new Date() })
-      .where(eq(receivableInvoices.id, r.id));
-    await logChange({ sheetId, invoiceId: r.id, actorId, summary: `${invoiceLabel(r)} received (bank credit from ${credit.payer})`, field: 'status', before: 'open', after: 'received' });
+      .where(and(eq(receivableInvoices.id, r.id), eq(receivableInvoices.status, 'open')))
+      .returning({ id: receivableInvoices.id });
+    if (!done) throw invalid('invoice');
+    await logChange({ sheetId, invoiceId: r.id, actorId, summary: `${invoiceLabel(r)} received (bank credit from ${credit.payer})`, field: 'status', before: 'open', after: 'received' }, tx);
   }
 }
 
+/** Only a credit still waiting for a decision may be confirmed or ignored. */
+const UNDECIDED = ['to_confirm', 'unmatched'];
+
+/**
+ * Confirms a credit against invoices. The credit is claimed first with a conditional update, so
+ * a double click or two managers confirming at once settle it once; the second gets
+ * `already_decided`. The claim and the settle share one transaction, so a failure part-way
+ * leaves neither the credit nor any invoice changed.
+ */
 export async function confirmCredit(ctx: AuthContext, creditId: string, invoiceIds: string[]): Promise<CreditRow> {
   const c = await scopedCredit(ctx, creditId);
-  if (c.status !== 'to_confirm' && c.status !== 'unmatched') throw invalid('already_decided');
+  if (!UNDECIDED.includes(c.status)) throw invalid('already_decided');
   const ids = [...new Set(invoiceIds)].filter((id) => UUID.test(id));
   if (!ids.length) throw invalid('invoice');
-  await settle(c.sheetId, c, ids, ctx.userId);
-  const [row] = await db.update(bankCredits).set({ status: 'confirmed', matchInvoiceIds: ids, decidedBy: ctx.userId, decidedAt: new Date() }).where(eq(bankCredits.id, c.id)).returning();
-  return row;
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(bankCredits)
+      .set({ status: 'confirmed', matchInvoiceIds: ids, decidedBy: ctx.userId, decidedAt: new Date() })
+      .where(and(eq(bankCredits.id, c.id), inArray(bankCredits.status, UNDECIDED)))
+      .returning();
+    if (!row) throw invalid('already_decided');
+    await settle(tx, c.sheetId, row, ids, ctx.userId);
+    return row;
+  });
 }
 
 export async function ignoreCredit(ctx: AuthContext, creditId: string): Promise<CreditRow> {
   const c = await scopedCredit(ctx, creditId);
-  if (c.status !== 'to_confirm' && c.status !== 'unmatched') throw invalid('already_decided');
-  const [row] = await db.update(bankCredits).set({ status: 'ignored', decidedBy: ctx.userId, decidedAt: new Date() }).where(eq(bankCredits.id, c.id)).returning();
+  if (!UNDECIDED.includes(c.status)) throw invalid('already_decided');
+  const [row] = await db
+    .update(bankCredits)
+    .set({ status: 'ignored', decidedBy: ctx.userId, decidedAt: new Date() })
+    .where(and(eq(bankCredits.id, c.id), inArray(bankCredits.status, UNDECIDED)))
+    .returning();
+  if (!row) throw invalid('already_decided');
   return row;
 }
 
@@ -85,40 +113,44 @@ async function ingest(sheetId: string, credits: IncomingCredit[], actorId: strin
       out.duplicates++;
       continue;
     }
-    const [row] = await db
-      .insert(bankCredits)
-      .values({
-        sheetId,
-        source: c.source,
-        externalRef: ref,
-        valueDate: c.valueDate,
-        payer: c.payer.slice(0, 200),
-        currency: c.currency || 'INR',
-        fcAmount: c.fcAmount === null ? null : money(c.fcAmount),
-        inrAmount: money(c.inrAmount),
-        narration: (c.narration ?? '').slice(0, 500),
-        status: 'unmatched',
-      })
-      .onConflictDoNothing()
-      .returning();
-    if (!row) {
+    // One transaction per credit: the row, its auto-settle and its match status land together.
+    const result = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(bankCredits)
+        .values({
+          sheetId,
+          source: c.source,
+          externalRef: ref,
+          valueDate: c.valueDate,
+          payer: c.payer.slice(0, 200),
+          currency: c.currency || 'INR',
+          fcAmount: c.fcAmount === null ? null : money(c.fcAmount),
+          inrAmount: money(c.inrAmount),
+          narration: (c.narration ?? '').slice(0, 500),
+          status: 'unmatched',
+        })
+        .onConflictDoNothing()
+        .returning();
+      // The unique index is (sheet_id, external_ref): another source inserted it first.
+      if (!row) return 'duplicate' as const;
+      const open = await tx
+        .select()
+        .from(receivableInvoices)
+        .where(and(eq(receivableInvoices.sheetId, sheetId), eq(receivableInvoices.status, 'open'), isNull(receivableInvoices.deletedAt)));
+      const m = matchCredit(
+        { payer: c.payer, inrAmount: c.inrAmount, currency: c.currency, fcAmount: c.fcAmount },
+        open.map((r) => ({ ...toInvoice(r), currency: r.currency, fcAmount: num(r.fcAmount) })),
+      );
+      if (m.status === 'auto') await settle(tx, sheetId, row, m.invoiceIds, actorId);
+      await tx.update(bankCredits).set({ status: m.status, matchInvoiceIds: m.invoiceIds, matchNote: m.note }).where(eq(bankCredits.id, row.id));
+      return m.status === 'auto' ? ('auto' as const) : ('added' as const);
+    });
+    if (result === 'duplicate') {
       out.duplicates++;
       continue;
     }
     out.added++;
-    const open = await db
-      .select()
-      .from(receivableInvoices)
-      .where(and(eq(receivableInvoices.sheetId, sheetId), eq(receivableInvoices.status, 'open'), isNull(receivableInvoices.deletedAt)));
-    const m = matchCredit(
-      { payer: c.payer, inrAmount: c.inrAmount, currency: c.currency, fcAmount: c.fcAmount },
-      open.map((r) => ({ ...toInvoice(r), currency: r.currency, fcAmount: num(r.fcAmount) })),
-    );
-    if (m.status === 'auto') {
-      await settle(sheetId, row, m.invoiceIds, actorId);
-      out.auto++;
-    }
-    await db.update(bankCredits).set({ status: m.status, matchInvoiceIds: m.invoiceIds, matchNote: m.note }).where(eq(bankCredits.id, row.id));
+    if (result === 'auto') out.auto++;
   }
   return out;
 }
