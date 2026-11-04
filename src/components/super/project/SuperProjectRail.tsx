@@ -3,15 +3,11 @@
 import Link from 'next/link';
 import { DashSection } from '@/components/dash/DashSection';
 import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
-import { AreaPill, Chip, OwnerChip, type ChipTone } from '@/components/ui/spectrum-chip';
+import { Chip, OwnerChip, type ChipTone } from '@/components/ui/spectrum-chip';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PreIncorporationNotice } from '@/components/compliances/PreIncorporationNotice';
 import { formatSuperAgo } from '@/components/super/overview/super-overview-format';
-import { NameCell, PersonAvatar } from '@/components/super/parts/super-parts';
-import { todayKey } from '@/components/super/parts/super-text';
-import { plainDay } from '@/lib/date-format';
-import type { SuperEngagementDetail, SuperFiling, SuperJourneyStep } from '@/lib/super/super-overview';
-import { cn } from '@/lib/utils';
+import { PersonAvatar } from '@/components/super/parts/super-parts';
+import type { SuperEngagementDetail, SuperJourneyStep } from '@/lib/super/super-overview';
 
 /**
  * The client record's tab panels (prototype `ClientRecordScreen`): Registrations, Filings,
@@ -75,67 +71,6 @@ export function SuperRegistrationsPanel({ detail }: { detail: SuperEngagementDet
   return (
     <DashSection title="Registrations" meta={`${done} of ${needed} done${notNeeded ? ` · ${notNeeded} not needed` : ''}`} bodyClassName="px-2 pb-2 pt-1">
       <EFilingGrid caption="Registrations" columns={columns} rows={steps} rowKey={(step) => step.id} pageSize={25} minWidth={560} empty="None" />
-    </DashSection>
-  );
-}
-
-const FILING_TONE: Record<string, ChipTone> = {
-  filed: 'ok',
-  'in-progress': 'prog',
-  upcoming: 'idle',
-  overdue: 'bad',
-};
-
-const FILING_WORD: Record<string, string> = {
-  filed: 'Filed',
-  'in-progress': 'In progress',
-  upcoming: 'Not started',
-  overdue: 'Overdue',
-};
-
-/** Filings in the 90-day window either side of today. */
-export function SuperFilingsPanel({ detail }: { detail: SuperEngagementDetail }) {
-  const today = todayKey();
-  const columns: EFilingColumn<SuperFiling>[] = [
-    {
-      key: 'form',
-      header: 'Filing',
-      render: (f) => <NameCell title={f.title} sub={f.periodLabel} />,
-    },
-    { key: 'area', header: 'Area', width: '124px', render: (f) => <AreaPill area={f.authority} /> },
-    {
-      key: 'due',
-      header: 'Due',
-      width: '76px',
-      render: (f) => (
-        <span className={cn('tabular-nums', f.status !== 'filed' && f.dueDate < today && 'font-medium text-danger')}>
-          {plainDay(f.dueDate)}
-        </span>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      width: '120px',
-      render: (f) => (
-        <Chip fixed tone={FILING_TONE[f.status] ?? 'idle'}>
-          {FILING_WORD[f.status] ?? f.status}
-        </Chip>
-      ),
-    },
-  ];
-
-  return (
-    <DashSection title="Obligations" meta={detail.filings.length === 0 ? undefined : `${detail.filings.length} in window`} bodyClassName="px-2 pb-2 pt-3">
-      {/* Inspection only: the same per-engagement state the client sees, read off
-          `summary.incorporated` (which is `isIncorporated`). Nothing is mutated. */}
-      {!detail.summary.incorporated ? (
-        <PreIncorporationNotice
-          scope={{ audience: 'staff', companyName: detail.summary.companyName }}
-          className="mx-2 mb-2.5"
-        />
-      ) : null}
-      <EFilingGrid caption="Filings" columns={columns} rows={detail.filings} rowKey={(f) => f.id} minWidth={600} empty="No filings in the next 90 days" />
     </DashSection>
   );
 }

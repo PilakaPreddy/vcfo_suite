@@ -11,6 +11,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { todayIso } from '@/lib/client-portal/compliances';
 import { portalHref } from '../../routes';
+import { usePortalOptional } from '../../PortalProvider';
 import { COMP_KEY } from './api';
 import { useMemo } from 'react';
 import { normStage, taskAsRow, type CalRow, type ClientTask } from './tasks';
@@ -159,11 +160,14 @@ async function getJson(url: string, fail: string): Promise<Raw> {
 
 /** K-1: the tasks shared with the client. */
 export function useClientTasks(enabled = true) {
+  // Staff viewing one client's page read that engagement's client-visible tasks only.
+  const id = usePortalOptional()?.engagementId;
+  const qs = id ? `?engagementId=${encodeURIComponent(id)}&visibility=client,both` : '';
   return useQuery({
-    queryKey: TASK_KEY,
+    queryKey: id ? [...TASK_KEY, 'engagement', id] : TASK_KEY,
     enabled,
     queryFn: async (): Promise<ClientTask[]> => {
-      const data = await getJson('/api/compliances/tasks', 'Could not load the tasks');
+      const data = await getJson(`/api/compliances/tasks${qs}`, 'Could not load the tasks');
       // Not-applicable rows only come with includeNa=1; drop any that carry `hidden`.
       return arr(data.tasks, (x) => x)
         .filter((x) => !x.hidden)

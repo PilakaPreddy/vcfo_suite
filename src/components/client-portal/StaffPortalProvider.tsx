@@ -36,7 +36,8 @@ export function StaffPortalProvider({ engagementId, projectHref, children }: { e
       engagementId,
       shell,
       shellLoading: isLoading,
-      after: false,
+      // Staff see the engagement as it is: after incorporation once it has its certificate.
+      after: shell?.incorporated ?? false,
       setAfter: noop,
       theme: 'light',
       toggleTheme: noop,

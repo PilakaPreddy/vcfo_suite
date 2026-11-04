@@ -14,7 +14,7 @@ import {
   profiles,
 } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
-import { listScopedEngagementIds } from '@/db/repositories/engagements';
+import { assertEngagementAccess, listScopedEngagementIds } from '@/db/repositories/engagements';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { recordFilingEvent } from '@/db/repositories/filing-events';
 import { reminderIsDue } from '@/lib/notify/reminder-days';
@@ -81,10 +81,22 @@ export interface PortalFilingsQuery {
   fyStartYear?: number;
   /** Only these instance ids (single-filing reads: .ics, detail). */
   ids?: string[];
+  /**
+   * Staff viewing one client's page: only this engagement, if the caller may access it. A
+   * client always reads its own engagement, so the value is ignored for a client.
+   */
+  engagementId?: string;
+}
+
+/** The engagements a register read covers: the caller's scope, or the one engagement staff named. */
+async function filingsScope(ctx: AuthContext, engagementId?: string): Promise<string[]> {
+  if (!engagementId || ctx.role === 'client') return listScopedEngagementIds(ctx);
+  const access = await assertEngagementAccess(ctx, engagementId);
+  return access.ok ? [access.dbId] : [];
 }
 
 export async function getPortalFilings(ctx: AuthContext, query: PortalFilingsQuery = {}): Promise<PortalFiling[]> {
-  const scope = await listScopedEngagementIds(ctx);
+  const scope = await filingsScope(ctx, query.engagementId);
   if (scope.length === 0) return [];
   const conditions = [inArray(complianceInstances.engagementId, scope)];
   if (query.fyStartYear !== undefined) {

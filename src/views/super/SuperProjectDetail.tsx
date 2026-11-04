@@ -16,9 +16,9 @@ import { SuperProjectDocuments } from '@/components/super/project/SuperProjectDo
 import { SuperProjectTimeline } from '@/components/super/project/SuperProjectTimeline';
 import {
   SuperActivityPanel,
-  SuperFilingsPanel,
   SuperRegistrationsPanel,
 } from '@/components/super/project/SuperProjectRail';
+import { StaffClientFilings } from '@/components/client-portal/pages/compliances';
 import {
   ClientTile,
   SuperPageError,
@@ -269,7 +269,7 @@ export default function SuperProjectDetail() {
           </div>
         ) : null}
         {tab === 'registrations' ? <SuperRegistrationsPanel detail={detail} /> : null}
-        {tab === 'filings' ? <SuperFilingsPanel detail={detail} /> : null}
+        {tab === 'filings' ? <StaffClientFilings engagementId={summary.id} projectHref={`${SUPER_PROJECTS_HREF}/${id}`} /> : null}
         {tab === 'documents' ? <SuperProjectDocuments detail={detail} /> : null}
         {tab === 'escalations' ? <EscalationsPanel engagementId={summary.id} canResolve /> : null}
         {tab === 'notes' ? <EngagementNotesPanel engagementId={summary.id} /> : null}
