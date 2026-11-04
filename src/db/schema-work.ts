@@ -76,6 +76,7 @@ export const workSessions = pgTable(
   (t) => ({
     itemIdx: index('work_sessions_item_idx').on(t.itemKey),
     userIdx: index('work_sessions_user_idx').on(t.userId, t.startedAt),
+    engIdx: index('work_sessions_engagement_idx').on(t.engagementId),
   }),
 );
 
@@ -96,6 +97,7 @@ export const workChecklistItems = pgTable(
   },
   (t) => ({
     itemIdx: index('work_checklist_items_item_idx').on(t.itemKey),
+    engIdx: index('work_checklist_items_engagement_idx').on(t.engagementId),
   }),
 );
 
@@ -118,6 +120,7 @@ export const timeBlocks = pgTable(
   },
   (t) => ({
     userIdx: index('time_blocks_user_idx').on(t.userId, t.startsAt),
+    engIdx: index('time_blocks_engagement_idx').on(t.engagementId),
   }),
 );
 

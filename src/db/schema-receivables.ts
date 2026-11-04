@@ -132,6 +132,7 @@ export const receivableInvoices = pgTable(
   (t) => ({
     sheetStatusIdx: index('receivable_invoices_sheet_status_idx').on(t.sheetId, t.status),
     sheetDueIdx: index('receivable_invoices_sheet_due_idx').on(t.sheetId, t.dueDate),
+    partnerIdx: index('receivable_invoices_partner_idx').on(t.partnerId),
   }),
 );
 
