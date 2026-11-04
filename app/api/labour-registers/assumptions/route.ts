@@ -40,6 +40,8 @@ const bodySchema = z.object({
     doubleRateOvertime: z.boolean().optional(),
     wageRateBasis: z.enum(['monthly', 'daily']).optional(),
     dailyHours: z.number().min(1).max(24).optional(),
+    /* Whose rules this establishment is under. Decides which registers exist at all. */
+    sphere: z.enum(['state', 'central']).optional(),
     establishment: establishmentSchema.optional(),
   }),
 });

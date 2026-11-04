@@ -143,7 +143,7 @@ describe('from an uploaded workbook to a register', () => {
       totalDeductions: 'Total Deductions',
       netPay: 'Net Pay',
     };
-    const forms = formsFor('TG', period).filter((f) => isBuilt(f.archetype));
+    const forms = formsFor('TG', period, 'central').filter((f) => isBuilt(f.archetype));
     const dataset = buildDataset({
       period,
       slots: { paysheet: { sheet: parsed, mapping } },
@@ -180,7 +180,7 @@ describe('the act-wise archive', () => {
       daysWorked: 'Days Worked', basic: 'Basic Pay', grossEarnings: 'Gross Earnings',
       totalDeductions: 'Total Deductions', netPay: 'Net Pay',
     };
-    const forms = formsFor('TG', period).filter((f) => isBuilt(f.archetype));
+    const forms = formsFor('TG', period, 'central').filter((f) => isBuilt(f.archetype));
     const dataset = buildDataset({
       period, slots: { paysheet: { sheet: parsed, mapping } },
       assumptions: { fullAttendanceAssumed: true }, forms, master: ESTABLISHMENT,

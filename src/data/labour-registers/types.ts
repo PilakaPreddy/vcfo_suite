@@ -45,6 +45,23 @@ export type StateCode =
 export type Regime = 'state' | 'central-legacy' | 'central-code';
 
 /**
+ * Whose rules an establishment is actually under.
+ *
+ * This is the distinction the catalogue was missing, and it decides which forms apply at all
+ * rather than merely which are due. The Codes name an "appropriate government" per
+ * establishment: the Centre for railways, mines, oilfields, major ports, banking, insurance,
+ * telecommunications, civil aviation and central public sector undertakings — and the State
+ * for everything else, which is nearly every ordinary commercial establishment.
+ *
+ * The Central Rules bind only the first group. Producing a central-code register for a shop in
+ * Hyderabad is not a harmless extra: it is a sheet nobody asked for, with an authority line
+ * citing rules that do not govern the client, handed to an inspector who will ask why.
+ *
+ * `state` is the default everywhere, because that is what almost every client is.
+ */
+export type Sphere = 'state' | 'central';
+
+/**
  * The seven shapes every register in the catalogue reduces to. One renderer serves each, which
  * is why 41 forms across four states do not need 41 writers.
  *

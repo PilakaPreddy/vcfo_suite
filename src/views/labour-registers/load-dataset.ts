@@ -53,7 +53,8 @@ export async function loadBatchDataset(
   if (!batch) return null;
 
   const period: Period = { from: batch.periodFrom, to: batch.periodTo };
-  const forms = formsFor(batch.stateCode, period);
+  const assumptions = (batch.assumptions ?? { fullAttendanceAssumed: false }) as AssumptionSet;
+  const forms = formsFor(batch.stateCode, period, assumptions.sphere ?? 'state');
 
   const [uploads, ...maps] = await Promise.all([
     listUploads(ctx, batch.id),
@@ -90,7 +91,7 @@ export async function loadBatchDataset(
   const dataset = buildDataset({
     period,
     slots,
-    assumptions: (batch.assumptions ?? { fullAttendanceAssumed: false }) as AssumptionSet,
+    assumptions,
     forms,
     master: establishmentOf(batch, options.companyName ?? ''),
   });

@@ -58,6 +58,15 @@ export interface AssumptionSet {
   wageRateBasis?: 'monthly' | 'daily';
   /** Hours in a normal working day, where the client has said something other than eight. */
   dailyHours?: number;
+  /**
+   * Whose rules this establishment is under: the Centre (railways, mines, ports, banking,
+   * telecom, central PSUs) or the State (everything else).
+   *
+   * Keyed, because it decides which registers exist at all. Switching a client from state to
+   * central sphere does not change a figure on any existing sheet — it changes which sheets
+   * there are — so the registers already produced stay valid and the new ones build.
+   */
+  sphere?: 'state' | 'central';
 }
 
 export interface DocumentIdentity {

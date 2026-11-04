@@ -36,6 +36,8 @@ export interface BatchActions {
   reopen: (reason: string) => Promise<void>;
   /** State that the month was fully present, rather than uploading a sheet. */
   assumeAttendance: (weekOff: string) => Promise<void>;
+  /** Record whose rules this establishment is under. Changes which registers exist. */
+  setSphere: (sphere: 'state' | 'central') => Promise<void>;
   dismissOutcome: () => void;
 }
 
@@ -138,6 +140,22 @@ export function useBatchActions(batchId: string, companyName?: string): BatchAct
     [batchId, router],
   );
 
+  const setSphere = useCallback(
+    async (sphere: 'state' | 'central') => {
+      setError('');
+      setBusy('generating');
+      try {
+        await post('/api/labour-registers/assumptions', { batchId, assumptions: { sphere } });
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'That could not be recorded.');
+      } finally {
+        setBusy(null);
+      }
+    },
+    [batchId, router],
+  );
+
   return {
     busy,
     error,
@@ -146,6 +164,7 @@ export function useBatchActions(batchId: string, companyName?: string): BatchAct
     generate,
     reopen,
     assumeAttendance,
+    setSphere,
     dismissOutcome: () => setOutcome(null),
   };
 }

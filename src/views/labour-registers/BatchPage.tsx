@@ -6,6 +6,7 @@ import { AlertCircle, ArrowLeft, CalendarCheck, Download, Info, Lock, RotateCcw 
 
 import { ActDirectory, type DirectoryFolder } from '@/components/labour-registers/ActDirectory';
 import { AttendanceChoiceDialog } from '@/components/labour-registers/AttendanceChoiceDialog';
+import { SphereCard } from '@/components/labour-registers/SphereCard';
 import { ReopenDialog } from '@/components/labour-registers/ReopenDialog';
 import { useBatchActions } from '@/components/labour-registers/use-batch-actions';
 import { UploadCard, type SlotKey, type SlotState } from '@/components/labour-registers/UploadCard';
@@ -63,6 +64,10 @@ export interface BatchView {
   needsAttendance?: string[];
   /** True when the month has been stated fully present rather than uploaded. */
   attendanceAssumed?: boolean;
+  /** Whose rules this establishment is under. Decides which registers exist at all. */
+  sphere?: 'state' | 'central';
+  /** How many central forms the sphere choice adds or removes for this period. */
+  centralFormCount?: number;
 }
 
 const MONTHS = [

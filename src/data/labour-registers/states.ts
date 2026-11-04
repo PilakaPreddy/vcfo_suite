@@ -110,11 +110,27 @@ export function statesForPicker(): StateSpec[] {
  * rather than in a view, so the four screens that need it cannot drift apart.
  */
 export function regimeNote(state: StateSpec): string {
+  /*
+   * The split is substance against procedure, not two parallel stacks of equal weight.
+   *
+   * The Ministry's own FAQs invoke section 6 of the General Clauses Act 1897: the old rules
+   * stay in force until the state notifies new ones, "to the extent these are in line with the
+   * Codes". So the Codes' entitlements — the wage definition, the fifty per cent rule, leave,
+   * gratuity — apply everywhere from commencement, while registration, licences, registers,
+   * returns and forms keep running on the state's existing rules until it replaces them.
+   *
+   * For this product that is the cleaner statement: registers follow the state, entitlements
+   * follow the Code. Saying "both stacks apply" overstated it and implied a client in a
+   * draft-stage state owes two sets of registers, which is not what the transition does.
+   *
+   * The FAQ is persuasive, not binding: it says so itself, and the Code prevails on a
+   * conflict. The "to the extent in line with the Codes" clause is a live conflict rule with
+   * at least one known edge — the OSH Code's own ten-worker registration threshold does not
+   * automatically displace a state's existing registration procedure.
+   */
   if (state.codeRules === 'notified') {
-    return 'State rules under the four labour codes are notified, so the code registers apply.';
+    return 'This state has notified its own rules under the labour codes, so its registers are the ones the codes prescribe.';
   }
-  if (state.codeRules === 'draft') {
-    return 'State rules under the labour codes are still at draft stage, so both the central code registers and the existing state registers are produced for the same month.';
-  }
-  return 'No state rules under the labour codes have been notified, so both the central code registers and the existing state registers are produced for the same month.';
+  const stage = state.codeRules === 'draft' ? 'still at draft stage' : 'not been published';
+  return `This state's rules under the labour codes have ${stage}. Under section 6 of the General Clauses Act 1897 its existing rules continue to govern registers and returns, to the extent they are in line with the codes, while the codes' own entitlements apply from commencement.`;
 }

@@ -84,26 +84,28 @@ describe('detectAttendanceGrid', () => {
 describe('catalogue', () => {
   const september = monthPeriod(2026, 9);
 
-  it('produces both the state and the central stack while state rules are only draft', () => {
-    const forms = formsFor('TG', september);
+  it('produces both the state and the central stack for a central-sphere establishment', () => {
+    /* Only a central-sphere establishment — a railway, a mine, a bank — is under both. An
+       ordinary shop is not, which is what the sphere argument decides. */
+    const forms = formsFor('TG', september, 'central');
     expect(forms.some((f) => f.regime === 'state')).toBe(true);
     expect(forms.some((f) => f.regime === 'central-code')).toBe(true);
   });
 
   it('puts the state forms first, because that is what a state inspector asks for', () => {
-    const forms = formsFor('KA', september);
+    const forms = formsFor('KA', september, 'central');
     expect(forms[0].regime).toBe('state');
   });
 
   it('drops a form that another live form is deemed to satisfy', () => {
-    const forms = formsFor('TG', september).map((f) => f.id);
+    const forms = formsFor('TG', september, 'central').map((f) => f.id);
     expect(forms).toContain('in-wages-i');
     expect(forms).not.toContain('in-osh-xiii');
   });
 
   it('leaves out the Equal Remuneration register after the Act was repealed', () => {
-    expect(formsFor('TG', monthPeriod(2026, 9)).map((f) => f.id)).not.toContain('in-era-d');
-    expect(formsFor('TG', monthPeriod(2025, 9)).map((f) => f.id)).toContain('in-era-d');
+    expect(formsFor('TG', monthPeriod(2026, 9), 'central').map((f) => f.id)).not.toContain('in-era-d');
+    expect(formsFor('TG', monthPeriod(2025, 9), 'central').map((f) => f.id)).toContain('in-era-d');
   });
 
   it('keeps a form out of a period that ended before it commenced', () => {
@@ -113,7 +115,7 @@ describe('catalogue', () => {
   });
 
   it('demands only what every payroll has, and asks for the rest without demanding it', () => {
-    const forms = formsFor('TG', september);
+    const forms = formsFor('TG', september, 'central');
     /* A night shift allowance is not run by every employer, so holding a close over its
        column would block clients who will never fill it. */
     expect(requiredFields(forms)).toContain('basic');
@@ -131,12 +133,12 @@ describe('catalogue', () => {
   });
 
   it('knows the month needs a daily attendance block', () => {
-    expect(needsAttendanceGrid(formsFor('TG', september))).toBe(true);
+    expect(needsAttendanceGrid(formsFor('TG', september, 'central'))).toBe(true);
   });
 
   it('retains for five years once the code registers are in play, not three', () => {
-    expect(retentionYears(formsFor('TG', september))).toBe(5);
-    expect(retentionYears(formsFor('TG', monthPeriod(2025, 9)))).toBe(3);
+    expect(retentionYears(formsFor('TG', september, 'central'))).toBe(5);
+    expect(retentionYears(formsFor('TG', monthPeriod(2025, 9), 'central'))).toBe(3);
   });
 
   it('builds a month period that ends on the real last day', () => {

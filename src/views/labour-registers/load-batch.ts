@@ -18,7 +18,8 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
   if (!batch) return null;
 
   const period = { from: batch.periodFrom, to: batch.periodTo };
-  const forms = formsFor(batch.stateCode, period);
+  const assumptions = (batch.assumptions ?? {}) as { fullAttendanceAssumed?: boolean; sphere?: 'state' | 'central' };
+  const forms = formsFor(batch.stateCode, period, assumptions.sphere ?? 'state');
 
   const [provenance, uploads, documents, map] = await Promise.all([
     batchProvenance(ctx, batch.id),
@@ -45,8 +46,6 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
 
   const mapping = (map?.mapping ?? {}) as Record<string, string>;
   const mapped = new Set(Object.keys(mapping));
-  const assumptions = (batch.assumptions ?? {}) as { fullAttendanceAssumed?: boolean };
-
   const summary = assessReadiness({
     forms,
     uploads: bySlot,
@@ -106,6 +105,9 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
       },
       [],
     ),
+    sphere: assumptions.sphere ?? 'state',
+    /* What the choice costs or saves, so the card can say it rather than imply it. */
+    centralFormCount: formsFor(batch.stateCode, period, 'central').filter((f) => f.regime !== 'state').length,
     needsAttendance: formsNeedingAttendance(forms).map((f) => `Form ${f.formNumber}`),
     attendanceAssumed: Boolean(assumptions.fullAttendanceAssumed),
     readiness: summary,

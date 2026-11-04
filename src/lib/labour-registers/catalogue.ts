@@ -14,7 +14,7 @@
 import { FORMS } from '@/data/labour-registers/forms';
 import { stateByCode } from '@/data/labour-registers/states';
 import { fieldByKey } from '@/data/labour-registers/fields';
-import type { FormSpec, StateSpec } from '@/data/labour-registers/types';
+import type { FormSpec, Sphere, StateSpec } from '@/data/labour-registers/types';
 
 /** The period a batch covers, as a first and last day. */
 export interface Period {
@@ -46,13 +46,23 @@ export function appliesDuring(form: FormSpec, period: Period): boolean {
  * legacy central registers. A form that another form is deemed to satisfy is dropped, so rule
  * 72(3) of the OSH rules saves a near-duplicate sheet rather than producing one.
  */
-export function formsFor(stateCode: string, period: Period): FormSpec[] {
+export function formsFor(stateCode: string, period: Period, sphere: Sphere = 'state'): FormSpec[] {
   const state = stateByCode(stateCode);
   if (!state) return [];
 
-  const live = FORMS.filter((f) => appliesDuring(f, period)).filter(
-    (f) => f.jurisdiction === 'IN' || f.jurisdiction === state.code,
-  );
+  const live = FORMS.filter((f) => appliesDuring(f, period))
+    .filter((f) => f.jurisdiction === 'IN' || f.jurisdiction === state.code)
+    /*
+     * The central rules bind only where the Centre is the appropriate government — railways,
+     * mines, major ports, banking, insurance, telecom, central PSUs. An ordinary commercial
+     * establishment is in the state sphere and is not subject to them, so producing one of
+     * their registers for such a client is a sheet nobody asked for, citing rules that do not
+     * govern them.
+     *
+     * The state forms survive in both spheres: a central-sphere establishment still sits in a
+     * state, and its Shops and Establishments obligations do not vanish.
+     */
+    .filter((f) => sphere === 'central' || f.regime === 'state');
 
   /* Drop a form whose obligation another live form discharges. */
   const liveIds = new Set(live.map((f) => f.id));
