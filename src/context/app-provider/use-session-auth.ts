@@ -107,6 +107,9 @@ export function useSessionAuth({
       redirect: false,
     });
 
+    if (result?.code === 'rate_limited') {
+      return { error: 'Too many sign-in attempts. Wait fifteen minutes and try again.' };
+    }
     if (result?.error) {
       return { error: "We couldn't sign you in. Check your email and password and try again." };
     }

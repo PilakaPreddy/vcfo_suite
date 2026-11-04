@@ -1030,7 +1030,7 @@ export type SignInCandidate = {
  * Returns the person when the email and password match an active account that
  * may sign in, and null otherwise. It never says which part was wrong, and an
  * unknown email still runs one bcrypt comparison so the timing does not tell
- * either. Used by the Credentials `authorize` and by the code pre-check route.
+ * either. Used by the Credentials `authorize`.
  */
 export async function systemCheckSignInPassword(emailInput: string, password: string): Promise<SignInCandidate | null> {
   const email = String(emailInput ?? '').trim().toLowerCase();
@@ -1072,6 +1072,26 @@ export async function systemCheckSignInPassword(emailInput: string, password: st
     twoStepOn: Boolean(row.totpEnabledAt && row.totpSecretEnc),
     totpSecretEnc: row.totpSecretEnc,
   };
+}
+
+/**
+ * SYSTEM READER — sign-in (documented deviation; there is no session yet).
+ *
+ * The two-step secret of an active account with two-step on, looked up by email alone, and
+ * null for every other email. It takes no password on purpose: the code pre-check route and
+ * `authorize` ask for and check the code before the password, so no answer ever depends on
+ * whether a password was right (audit finding 2).
+ */
+export async function systemSignInTwoStep(emailInput: string): Promise<{ id: string; totpSecretEnc: string } | null> {
+  const email = String(emailInput ?? '').trim().toLowerCase();
+  if (!email) return null;
+  const [row] = await db
+    .select({ id: profiles.id, status: profiles.status, totpSecretEnc: profiles.totpSecretEnc, totpEnabledAt: profiles.totpEnabledAt })
+    .from(profiles)
+    .where(eq(profiles.email, email))
+    .limit(1);
+  if (!row || row.status !== 'active' || !row.totpEnabledAt || !row.totpSecretEnc) return null;
+  return { id: row.id, totpSecretEnc: row.totpSecretEnc };
 }
 
 export type TwoStepStatus = {
