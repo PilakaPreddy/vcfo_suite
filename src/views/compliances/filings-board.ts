@@ -1,5 +1,5 @@
 import { regOf, type Regulator } from '@/lib/ui/regulator';
-import { filingStatus, monthKeyOf, sortByDueDate, type FilingRow, type FilingStatus } from '@/lib/compliance/filings';
+import { filingStatus, monthKeyOf, sortByDueDate, todayIST, type FilingRow, type FilingStatus } from '@/lib/compliance/filings';
 import type { PortalFiling } from '@/lib/client-portal/compliances';
 import { filingMonths, type FilingRecord } from '@/lib/metrics/filing-metrics';
 import { daysUntil, filingWord, plainDate, worstStatus, type SixWord } from '@/views/compliances/spectrum-status';
@@ -30,7 +30,7 @@ export function isBoardTile(value: string | null | undefined): value is Exclude<
 const WEEK_DAYS = 7;
 
 export function matchesTile(row: FilingRow, tile: BoardTile, now: Date): boolean {
-  const thisMonth = monthKeyOf(row.dueDate) === monthKeyOf(now.toISOString());
+  const thisMonth = monthKeyOf(row.dueDate) === monthKeyOf(todayIST(now));
   switch (tile) {
     case '':
       return true;
@@ -169,7 +169,7 @@ export function tileSubs(rows: FilingRow[], now: Date): Record<Exclude<BoardTile
   const filed = month.filter((r) => matchesTile(r, 'filed', now)).length;
   const filings = new Set(month.map((r) => `${r.obligationId}|${r.dueDate.slice(0, 10)}`)).size;
   const clients = new Set(month.map((r) => r.engagementId)).size;
-  const weekEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + WEEK_DAYS));
+  const weekEnd = new Date(Date.parse(`${todayIST(now)}T00:00:00Z`) + WEEK_DAYS * 86_400_000);
   const late = sortByDueDate(rows.filter((r) => matchesTile(r, 'late', now)));
   const lateWords = late.slice(0, 3).map((r) => `${r.particular} · ${companyInitials(r.companyName)}`);
   return {

@@ -13,6 +13,7 @@
  */
 
 import type { StageAverage, StepTiming } from '@/lib/metrics/step-timing';
+import { todayIST } from '@/lib/compliance/filings';
 import {
   filingMonths,
   isOnTime,
@@ -247,7 +248,8 @@ export function buildPracticeMetrics(params: {
   now: Date;
 }): PracticeMetrics {
   const { clients, filings, timings, stageDays, registrationTypes, now } = params;
-  const today = ymd(now);
+  // The firm's day is the IST day, so "Due this week" does not shift at 05:30 IST.
+  const today = todayIST(now);
   const yearAgo = addDays(today, -365);
 
   /* Incorporation */

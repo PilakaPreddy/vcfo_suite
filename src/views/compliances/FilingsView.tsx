@@ -45,6 +45,7 @@ import {
   quarterForMonthKey,
   rowsInFinancialYear,
   sortByDueDate,
+  todayIST,
   type FilingRow,
 } from '@/lib/compliance/filings';
 import { cn } from '@/lib/utils';
@@ -206,7 +207,7 @@ export function FilingsView({
   // lands on the right sheet without needing both params.
   const fyStartYear =
     fyFromUrl ?? (periodParam ? financialYearForDate(new Date(`${periodParam}-01T00:00:00Z`)).startYear : currentFy.startYear);
-  const nowMonthKey = monthKeyOf(now.toISOString())!;
+  const nowMonthKey = monthKeyOf(todayIST(now))!;
   const anchorKey = periodParam ?? nowMonthKey;
 
   const query_ = useFilings({ fyStartYear });
