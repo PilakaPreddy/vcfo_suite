@@ -34,6 +34,7 @@ memory), and the tests need `npm run css:portal` first because the generated por
 ## Phase 2
 - Chosen candidate (owner, 2026-11-03 checkpoint): shared block of AnnouncementLivePopup.tsx + NotificationLivePopup.tsx.
 - [x] Popups consolidated into src/components/notifications/genie-popup.tsx (766 -> 667 lines), gate GREEN.
+- [x] Nine nested route error.tsx files now render src/components/shell/RouteErrorPanel.tsx (406 -> 86 lines plus a 60-line panel), gate GREEN.
 - Owner instruction (2026-11-04): run every remaining phase without waiting for approval. Error pages and docx previews follow as further low-risk consolidations; the Documents client/staff merge is out of scope for an unattended run.
 
 ## Coverage
