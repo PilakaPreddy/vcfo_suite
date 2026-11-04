@@ -40,6 +40,8 @@ const db: Record<string, unknown> = { select: op('select'), insert: op('insert')
 db.transaction = async (fn: (tx: unknown) => unknown) => fn(db);
 vi.mock('@/db/client', () => ({ db }));
 vi.mock('server-only', () => ({}));
+// `after` runs its callback once the current tick is done, as it would after the response.
+vi.mock('next/server', async (orig) => ({ ...(await orig<Record<string, unknown>>()), after: (fn: () => unknown) => void Promise.resolve().then(fn) }));
 
 const repo = await import('@/db/repositories/receivables');
 

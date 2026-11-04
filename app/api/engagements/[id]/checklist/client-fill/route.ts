@@ -1,3 +1,4 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/auth/guards';
@@ -7,7 +8,6 @@ import {
   decideClientFillRequest,
   requestClientFill,
 } from '@/db/repositories/engagements';
-import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -47,7 +47,7 @@ export async function POST(request: Request, context: RouteContext) {
         itemId,
         note,
       );
-      const email = await notifyEngagementEvent({
+      const email = await notifyEngagementEventSoon({
         engagementId: id,
         itemId,
         event: 'client_fill_requested',
@@ -70,7 +70,7 @@ export async function POST(request: Request, context: RouteContext) {
       decision,
       note,
     );
-    const email = await notifyEngagementEvent({
+    const email = await notifyEngagementEventSoon({
       engagementId: id,
       itemId,
       event: decision === 'approve' ? 'client_fill_approved' : 'client_fill_declined',

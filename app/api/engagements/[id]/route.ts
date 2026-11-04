@@ -1,3 +1,4 @@
+import { notifyTeamAssignmentSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth, requireAnyRole } from '@/auth/guards';
@@ -33,7 +34,6 @@ import {
 import { engagementDbId } from '@/lib/projects/legacy-engagement-ids';
 import { isFirmWideAdmin } from '@/lib/auth';
 import { emptyEmailDispatch } from '@/lib/email/email-dispatch';
-import { notifyTeamAssignment } from '@/lib/email/notify-team-assignment';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -174,7 +174,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         }).catch(() => undefined);
         const prev = await systemGetProfileParty(prevId);
         if (prev) {
-          const part = await notifyTeamAssignment({
+          const part = await notifyTeamAssignmentSoon({
             engagementAppId: engagement.id,
             engagementSlug: engagement.slug,
             companyName: engagement.companyName,
@@ -199,7 +199,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         if (nextId !== prevId) {
           const next = await systemGetProfileParty(nextId);
           if (next) {
-            const part = await notifyTeamAssignment({
+            const part = await notifyTeamAssignmentSoon({
               engagementAppId: engagement.id,
               engagementSlug: engagement.slug,
               companyName: engagement.companyName,

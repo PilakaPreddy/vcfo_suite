@@ -524,7 +524,7 @@ export function NoticeTab({ meeting }: { meeting: MeetingDto }) {
                     if (!(await save(true))) return;
                     try {
                       await actions.approve.mutateAsync();
-                      toastSaved('Approved · notice emailed', { kind: 'saved', sub: `Goes to ${invited.size} directors with the calendar invite` });
+                      toastSaved('Approved · sending the notice', { kind: 'saved', sub: `Goes to ${invited.size} directors with the calendar invite; the bell confirms when it is out` });
                     } catch (e) {
                       toastError(errorMessage(e, 'Could not approve'));
                     }

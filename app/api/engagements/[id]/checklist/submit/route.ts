@@ -1,3 +1,4 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/auth/guards';
@@ -7,7 +8,6 @@ import {
   submitChecklistItem,
   submitDirectFlowStep,
 } from '@/db/repositories/engagements';
-import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 import { isDirectFlowStep, MANAGER_APPROVAL_STEP_ID } from '@/lib/incorporation/pre-inc-direct-flow';
 import {
   BOARD_RESOLUTION_WITH_MANAGER,
@@ -64,7 +64,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (itemId === MANAGER_APPROVAL_STEP_ID && guard.ctx.role === 'intern') {
       try {
         const checklistState = await requestBoardResolutionApproval(guard.ctx, id);
-        const email = await notifyEngagementEvent({
+        const email = await notifyEngagementEventSoon({
           engagementId: id,
           itemId,
           event: 'lead_requested_review',
@@ -95,7 +95,7 @@ export async function POST(request: Request, context: RouteContext) {
       }
       // Every party hears a completed submit; a client's submit that stopped
       // on the NIC codes is the lead's news. Autosave never reaches here.
-      const email = await notifyEngagementEvent({
+      const email = await notifyEngagementEventSoon({
         engagementId: id,
         itemId,
         event: result.outcome === 'waiting_on_lead' ? 'step_waiting_on_lead' : 'step_submitted',
@@ -107,7 +107,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
 
     const checklistState = await submitChecklistItem(guard.ctx, id, itemId, responses);
-    const email = await notifyEngagementEvent({
+    const email = await notifyEngagementEventSoon({
       engagementId: id,
       itemId,
       event: 'client_submitted',

@@ -2,7 +2,6 @@ import { recordAuditEvent } from '@/db/repositories/audit-events';
 import {
   buildDocPackZip,
   docPackErrorResponse,
-  fileResponse,
   loadDocPack,
   ZIP_CONTENT_TYPE,
 } from '@/lib/api/doc-pack';
@@ -17,14 +16,21 @@ export async function GET(_request: Request, context: RouteContext) {
   const { ctx, inputs, summary } = loaded.load;
 
   try {
-    const zip = await buildDocPackZip(inputs, summary);
+    const zip = buildDocPackZip(inputs, summary);
     await recordAuditEvent(ctx, {
       engagementId: inputs.engagement.id,
       action: 'doc_pack.download_zip',
       summary: `Downloaded the pre-incorporation document pack (${zip.itemKeys.length} files)`,
       metadata: { itemKeys: zip.itemKeys, filename: zip.filename },
     });
-    return fileResponse(zip.buffer, zip.filename, ZIP_CONTENT_TYPE);
+    return new Response(zip.stream, {
+      status: 200,
+      headers: {
+        'Content-Type': ZIP_CONTENT_TYPE,
+        'Content-Disposition': `attachment; filename="${zip.filename}"`,
+        'Cache-Control': 'private, no-store, max-age=0, must-revalidate',
+      },
+    });
   } catch (err) {
     return docPackErrorResponse(err);
   }
