@@ -1,19 +1,13 @@
 'use client';
 
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { HexgridLoader } from '@/components/common/HexgridLoader';
 import {
-  attachFullDocumentEditing,
   applyMergeFieldHighlights,
-  extractPreviewDocumentContent,
   extractPreviewDocumentText,
-  getPreviewFormatSelectionState,
   getPreviewFormatState,
   scrollPreviewToMergeField,
   setActiveMergeFieldHighlight,
-  setPreviewParagraphAlignment,
-  togglePreviewBold,
   type PreviewFormatSelectionState,
   type PreviewTextAlignment,
 } from '@/lib/board-resolution/board-resolution-preview-editable';
@@ -28,6 +22,7 @@ import {
   type BoardResolutionDocPreviewMeta,
 } from '@/components/board-resolution/BoardResolutionDocPreviewPanels';
 import { BR_DOCX_PREVIEW_BODY_CLASSES } from '@/components/board-resolution/board-resolution-doc-preview-classes';
+import { useDocxPreview } from '@/components/board-resolution/use-docx-preview';
 
 export type BoardResolutionDocPreviewHandle = {
   getDocumentText: () => string;
@@ -119,234 +114,92 @@ function BoardResolutionDocPreviewInner({
   docMeta,
   fetchUrl,
 }: BoardResolutionDocPreviewProps & { ref?: Ref<BoardResolutionDocPreviewHandle>; fetchUrl: string }) {
-  const bodyRef = useRef<HTMLDivElement>(null);
-  const styleRef = useRef<HTMLDivElement>(null);
-  const onDocumentChangeRef = useRef(onDocumentChange);
   const onCorruptionAutoRepairRef = useRef(onCorruptionAutoRepair);
   const onPreviewErrorRef = useRef(onPreviewError);
   const onPreviewErrorClearRef = useRef(onPreviewErrorClear);
-  const onStatusChangeRef = useRef(onStatusChange);
   const mergeFieldsRef = useRef(mergeFields);
   const corruptionRepairAttemptedRef = useRef(false);
-  const [renderPhase, setRenderPhase] = useState<'loading' | 'ready'>('loading');
-  const [renderError, setRenderError] = useState<BoardResolutionPreviewError | null>(null);
   const [repairing, setRepairing] = useState(false);
 
-  onDocumentChangeRef.current = onDocumentChange;
   onCorruptionAutoRepairRef.current = onCorruptionAutoRepair;
   onPreviewErrorRef.current = onPreviewError;
   onPreviewErrorClearRef.current = onPreviewErrorClear;
-  onStatusChangeRef.current = onStatusChange;
   mergeFieldsRef.current = mergeFields;
 
   const url = fetchUrl;
 
-  const docQuery = useQuery({
-    queryKey: ['br-docx-preview', url, refreshKey],
-    queryFn: async ({ signal }) => {
-      const res = await fetch(url, {
-        credentials: 'include',
-        signal,
-        cache: 'no-store',
-      });
-
-      if (!res.ok) {
-        let detail = 'Could not load document preview.';
-        if (res.status === 404) detail = 'Word document has not been generated yet.';
-        else if (res.status === 403) detail = 'You do not have access to this document.';
-        throw Object.assign(new Error(detail), { httpStatus: res.status });
-      }
-
-      return res.blob();
-    },
-    enabled: Boolean(url),
-    retry: false,
-  });
-
-  const queryError = docQuery.isError
-    ? buildBoardResolutionPreviewError(
-        docQuery.error instanceof Error ? docQuery.error.message : 'Preview failed.',
-        {
-          httpStatus:
-            docQuery.error instanceof Error && 'httpStatus' in docQuery.error
-              ? (docQuery.error as Error & { httpStatus?: number }).httpStatus
-              : undefined,
-        },
-      )
-    : null;
-
-  const status: 'loading' | 'ready' | 'error' = docQuery.isFetching || (!docQuery.data && !docQuery.isError)
-    ? 'loading'
-    : queryError
-      ? 'error'
-      : renderPhase === 'ready'
-        ? 'ready'
-        : 'loading';
-
-  const previewError = queryError ?? renderError;
-
-  useLayoutEffect(() => {
-    onStatusChangeRef.current?.(status);
-  }, [status]);
-
-  useLayoutEffect(() => {
-    if (queryError) onPreviewErrorRef.current?.(queryError);
-  }, [queryError]);
-
-  useImperativeHandle(ref, () => ({
-    getDocumentText() {
-      const bodyEl = bodyRef.current;
-      if (!bodyEl) return '';
-      return extractPreviewDocumentText(bodyEl);
-    },
-    getDocumentContent() {
-      const bodyEl = bodyRef.current;
-      if (!bodyEl) return '';
-      return extractPreviewDocumentContent(bodyEl);
-    },
-    scrollToMergeField(fieldKey) {
-      const bodyEl = bodyRef.current;
-      if (!bodyEl) return;
-      scrollPreviewToMergeField(bodyEl, fieldKey);
-    },
-    toggleBold() {
-      const bodyEl = bodyRef.current;
-      if (!bodyEl) return false;
-      const applied = togglePreviewBold(bodyEl);
-      if (applied) {
-        onDocumentChangeRef.current?.(extractPreviewDocumentContent(bodyEl));
-      }
-      return applied;
-    },
-    setParagraphAlignment(alignment) {
-      const bodyEl = bodyRef.current;
-      if (!bodyEl) return false;
-      const applied = setPreviewParagraphAlignment(bodyEl, alignment);
-      if (applied) {
-        onDocumentChangeRef.current?.(extractPreviewDocumentContent(bodyEl));
-      }
-      return applied;
-    },
-    setAlignment(alignment) {
-      const bodyEl = bodyRef.current;
-      if (!bodyEl) return false;
-      const applied = setPreviewParagraphAlignment(bodyEl, alignment);
-      if (applied) {
-        onDocumentChangeRef.current?.(extractPreviewDocumentContent(bodyEl));
-      }
-      return applied;
-    },
-    getFormatSelectionState() {
-      const bodyEl = bodyRef.current;
-      if (!bodyEl) {
-        return {
-          inPreview: false,
-          hasTextSelection: false,
-          inParagraph: false,
-          paragraphAlignment: null,
-          boldActive: false,
-        };
-      }
-      return getPreviewFormatSelectionState(bodyEl);
-    },
-    getFormatState() {
-      const bodyEl = bodyRef.current;
-      if (!bodyEl) return { bold: false, alignment: 'left' as const };
-      const state = getPreviewFormatState(bodyEl);
-      return { bold: state.bold, alignment: state.alignment };
-    },
-    isReady() {
-      return status === 'ready';
-    },
-  }));
-
-  useEffect(() => {
-    const blob = docQuery.data;
-    const bodyEl = bodyRef.current;
-    const styleEl = styleRef.current;
-    if (!blob || !bodyEl || !styleEl) return;
-
-    let cancelled = false;
-    bodyEl.innerHTML = '';
-    styleEl.innerHTML = '';
-
-    void (async () => {
-      try {
-        // Loaded on demand so the step page bundle does not carry the renderer.
-        const { renderAsync } = await import('docx-preview');
-        if (cancelled) return;
-        await renderAsync(blob, bodyEl, styleEl, {
-          className: 'docx',
-          inWrapper: true,
-          breakPages: true,
-          renderHeaders: false,
-          renderFooters: false,
-        });
-
-        if (cancelled) return;
-
+  const { bodyRef, styleRef, status, queryError, previewError, baseHandle } =
+    useDocxPreview<BoardResolutionPreviewError>({
+      queryKeyPrefix: 'br-docx-preview',
+      url,
+      refreshKey,
+      editable,
+      renderHeadersAndFooters: false,
+      buildError: buildBoardResolutionPreviewError,
+      onDocumentChange,
+      onStatusChange,
+      onRendered: (bodyEl) => {
         if (mergeFieldsRef.current) {
           applyMergeFieldHighlights(bodyEl, mergeFieldsRef.current);
         }
-
-        setRenderPhase('ready');
-        setRenderError(null);
         onPreviewErrorClearRef.current?.();
-      } catch (err) {
-        if (cancelled) return;
-
-        const raw = err instanceof Error ? err.message : 'Preview failed.';
-        const built = buildBoardResolutionPreviewError(raw);
-
+      },
+      onRenderError: async (built, isCancelled) => {
         const repairHandler = onCorruptionAutoRepairRef.current;
         if (built.kind === 'corrupt_xml' && repairHandler && !corruptionRepairAttemptedRef.current) {
           corruptionRepairAttemptedRef.current = true;
           setRepairing(true);
           try {
             const repaired = await repairHandler();
-            if (repaired && !cancelled) return;
+            if (repaired && !isCancelled()) return true;
           } catch {
             // Fall through to error UI.
           } finally {
-            if (!cancelled) setRepairing(false);
+            if (!isCancelled()) setRepairing(false);
           }
         }
-
-        setRenderPhase('loading');
-        setRenderError(built);
         onPreviewErrorRef.current?.(built);
-      }
-    })();
+        return false;
+      },
+    });
 
-    return () => {
-      cancelled = true;
-      bodyEl.innerHTML = '';
-      styleEl.innerHTML = '';
-    };
-  }, [docQuery.data]);
+  useLayoutEffect(() => {
+    if (queryError) onPreviewErrorRef.current?.(queryError);
+  }, [queryError]);
+
+  useImperativeHandle(ref, () => ({
+    ...baseHandle,
+    getDocumentText() {
+      const bodyEl = bodyRef.current;
+      if (!bodyEl) return '';
+      return extractPreviewDocumentText(bodyEl);
+    },
+    scrollToMergeField(fieldKey) {
+      const bodyEl = bodyRef.current;
+      if (!bodyEl) return;
+      scrollPreviewToMergeField(bodyEl, fieldKey);
+    },
+    /** @deprecated Use setParagraphAlignment */
+    setAlignment: baseHandle.setParagraphAlignment,
+    getFormatState() {
+      const bodyEl = bodyRef.current;
+      if (!bodyEl) return { bold: false, alignment: 'left' as const };
+      const state = getPreviewFormatState(bodyEl);
+      return { bold: state.bold, alignment: state.alignment };
+    },
+  }));
 
   useEffect(() => {
     const bodyEl = bodyRef.current;
     if (status !== 'ready' || !bodyEl) return;
     setActiveMergeFieldHighlight(bodyEl, activeMergeFieldKey);
-  }, [status, activeMergeFieldKey]);
+  }, [bodyRef, status, activeMergeFieldKey]);
 
   useEffect(() => {
     const bodyEl = bodyRef.current;
     if (status !== 'ready' || !bodyEl || !mergeFields) return;
     applyMergeFieldHighlights(bodyEl, mergeFields);
-  }, [status, mergeFields]);
-
-  useEffect(() => {
-    const bodyEl = bodyRef.current;
-    if (status !== 'ready' || !editable || !bodyEl || !onDocumentChangeRef.current) return;
-
-    return attachFullDocumentEditing(bodyEl, {
-      onDocumentChange: (content) => {
-        onDocumentChangeRef.current?.(content);
-      },
-    });
-  }, [status, editable]);
+  }, [bodyRef, status, mergeFields]);
 
   return (
     <div
