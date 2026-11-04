@@ -38,6 +38,23 @@ memory), and the tests need `npm run css:portal` first because the generated por
 - [ ] Docx previews (BoardResolutionDocPreview / IncorporationDocxPreview) left apart on purpose: the imperative handles differ (board adds merge-field and formatting methods), so a merge needs a new shared hook for about 80 lines; not worth the risk unattended.
 - Owner instruction (2026-11-04): run every remaining phase without waiting for approval. Error pages and docx previews follow as further low-risk consolidations; the Documents client/staff merge is out of scope for an unattended run.
 
+## Phase 3
+- [x] src/components/ask/visuals/visual-text.ts -> src/lib/ask/visual-text.ts (5 importers), gate GREEN.
+- [x] src/components/super/insights/{super-insights-model,reassign-model}(.test).ts -> src/lib/super/ (24 importers), gate GREEN.
+- Left for later: helpers that lib imports from inside component files (stageDisplayLabel, regOf, plainDay) need a file split, not a move; app/api/engagements/[id]/route.ts:37 imports db directly and needs a repository call.
+
+## Phase 4
+- Not run. No coverage tool is installed (@vitest/coverage-v8), and the survey found only three tier A targets, each needing a characterization test first. The big targets (DocumentVaultPage 592 lines, EngagementStepDetail 572, useBoardResolutionEditorState 849, notify-engagement-event 550) have no test that imports them, so reshaping them unattended could change behaviour the gate cannot see. Next step: add @vitest/coverage-v8 and characterization tests, then reshape EngagementStepDetail first (hottest, churn 28).
+
+## Final metrics
+[metrics] files=2646
+[metrics] loc=299903
+[metrics] maxfn=592 at=src/views/vault/DocumentVaultPage.tsx:127 (approx)
+[metrics] fn_over_50=529 (approx)
+[metrics] maxnest=30 (approx)
+[metrics] loose_types=28
+[metrics] todo=22
+
 ## Coverage
 ### 1.5 duplication
 - reviewed: 18 (14 churn-checked pairs + 4 feature pairs) · skipped by class: route guards, schema columns, error pages, test fixtures
