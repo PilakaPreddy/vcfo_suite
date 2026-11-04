@@ -295,6 +295,27 @@
       "when": 1793817021210,
       "tag": "0041_receivables_send_status",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793817618336,
+      "tag": "0042_rate_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793817914370,
+      "tag": "0043_bank_credits_ref_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793819323847,
+      "tag": "0044_engagement_partner_indexes",
+      "breakpoints": true
     }
   ]
 }

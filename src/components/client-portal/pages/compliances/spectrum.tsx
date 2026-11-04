@@ -12,7 +12,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { Check, ChevronDown, ExternalLink, Plus, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AreaPill, Chip, regOf, type ChipTone, type Regulator } from '@/components/ui/spectrum-chip';
+import { AreaPill, Chip, type ChipTone } from '@/components/ui/spectrum-chip';
+import { regOf, type Regulator } from '@/lib/ui/regulator';
 import { CardHeadTile } from '@/components/common/CardHeadTile';
 import { AvatarStack } from '@/components/ui/avatar-stack';
 import { StepLink, StepMark } from '@/components/ui/step-track';

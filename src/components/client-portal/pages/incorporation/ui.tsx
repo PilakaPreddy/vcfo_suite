@@ -10,7 +10,6 @@
 import {
   createContext,
   useCallback,
-  useContext,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -19,80 +18,15 @@ import {
   type ReactNode,
 } from 'react';
 import { usePortal, type WhatsThisAnswer } from '../../PortalProvider';
-import { VisorHead } from '@/components/ask/Visor';
-import { IC, type IcName } from './icons';
 import '../../css/incorporation-pages.css';
 import '../../css/incorporation-landing.css';
 import '../../css/incorporation-extra.css';
 
 /* ---------------- icons & glyphs ---------------- */
 
-function Ic({ n, cls = 'ic', style }: { n: IcName; cls?: string; style?: CSSProperties }) {
-  return (
-    <svg
-      className={cls}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      style={style}
-      dangerouslySetInnerHTML={{ __html: IC[n] }}
-    />
-  );
-}
-
-function Sic({ n, w }: { n: IcName; w: number }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={w}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      dangerouslySetInnerHTML={{ __html: IC[n] }}
-    />
-  );
-}
-
 export type GlyphKind = 'done' | 'you' | 'prog' | 'with' | 'up' | 'late';
 
-const GLY: Record<GlyphKind, ReactNode> = {
-  done: <Sic n="check" w={3.6} />,
-  you: <Sic n="user-round" w={3} />,
-  prog: <Sic n="clock" w={2.8} />,
-  with: <Sic n="trending-up" w={3} />,
-  up: null,
-  late: <Sic n="x" w={3.4} />,
-};
-
-/** Status glyph, set A (rule 18). `tip` makes it role=img with the rule-17 tooltip. */
-function Si({ k, tip, cls, style }: { k: GlyphKind; tip?: string; cls?: string; style?: CSSProperties }) {
-  return tip ? (
-    <span className={`si ${k}${cls ? ` ${cls}` : ''}`} role="img" aria-label={tip} data-tt={tip} style={style}>
-      {GLY[k]}
-    </span>
-  ) : (
-    <span className={`si ${k}${cls ? ` ${cls}` : ''}`} aria-hidden="true" style={style}>
-      {GLY[k]}
-    </span>
-  );
-}
-
 export type OwnKey = 'You' | 'SBC' | 'MCA';
-
-function Own({ o, short }: { o: OwnKey; short: string }) {
-  const L = o === 'You' ? short : o;
-  return (
-    <span className={`own ${o}`} role="img" aria-label={`Owner · ${L}`} data-tt={o === 'You' ? `${short} owns this step` : `${L} owns this step`}>
-      {L}
-    </span>
-  );
-}
 
 const BOTI =
   '<rect x="15" y="2" width="2" height="5" rx="1" fill="#1e40af"/><circle cx="16" cy="3" r="2.2" fill="#2dd4bf"/><rect x="3" y="7" width="26" height="21" rx="9" fill="#2563eb"/><rect x="7" y="12" width="18" height="10" rx="5" fill="#0b1736"/><rect x="11" y="14.5" width="3" height="5" rx="1.5" fill="#7dd3fc"/><rect x="18" y="14.5" width="3" height="5" rx="1.5" fill="#7dd3fc"/>';
@@ -102,38 +36,6 @@ function Bmini({ style }: { style?: CSSProperties }) {
     <span className="bmini" aria-hidden="true" style={style}>
       <svg viewBox="0 0 32 32" aria-hidden="true" dangerouslySetInnerHTML={{ __html: BOTI }} />
     </span>
-  );
-}
-
-/** Rule 16 — the robot says it (prototype `botSay`). */
-function BotSay({
-  text,
-  btn,
-  onBtn,
-  aria,
-}: {
-  text: ReactNode;
-  btn?: string;
-  onBtn?: () => void;
-  aria?: string;
-}) {
-  return (
-    <div className="bot">
-      <span className="bav" aria-hidden="true">
-        <VisorHead />
-      </span>
-      <div className="bub">
-        {text}
-        {btn ? (
-          <>
-            <br />
-            <button type="button" className="btn" aria-label={aria ?? btn} onClick={onBtn}>
-              {btn}
-            </button>
-          </>
-        ) : null}
-      </div>
-    </div>
   );
 }
 
@@ -167,12 +69,6 @@ export function fmtL(s?: string): string {
   if (!s) return '—';
   const d = pd(s);
   return `${d.getUTCDate()} ${MONL[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
-}
-function fmtS(s?: string): string {
-  if (!s) return '—';
-  const d = pd(s);
-  const m = MON[d.getUTCMonth()];
-  return `${d.getUTCDate()} ${m} ${d.getUTCFullYear()}`;
 }
 export function wd(s: string): string {
   return DAY[pd(s).getUTCDay()]!;
@@ -210,38 +106,9 @@ interface IncFrameValue {
 
 const IncFrameCtx = createContext<IncFrameValue | null>(null);
 
-function useIncFrame(): IncFrameValue {
-  const v = useContext(IncFrameCtx);
-  if (!v) throw new Error('useIncFrame outside IncFrame');
-  return v;
-}
-
 const reduceMotion = () =>
   typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 export { reduceMotion };
-
-/** (i) button (`.ibtn`, rule 7) that opens the page pop-over. */
-function InfoBtn({ label, spec, style }: { label: string; spec: InfoSpec; style?: CSSProperties }) {
-  const { openInfo } = useIncFrame();
-  return (
-    <button
-      type="button"
-      className="ibtn"
-      aria-expanded="false"
-      aria-label={label}
-      data-tt={label}
-      data-notip=""
-      style={style}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        openInfo(e.currentTarget, spec);
-      }}
-    >
-      <Ic n="info" />
-    </button>
-  );
-}
 
 /**
  * The page root `.cp-incorporation` plus the board runtime: `#ip-tt`
@@ -431,30 +298,3 @@ function useSkeleton(pending: boolean): boolean {
   return on;
 }
 
-/** Count-up 0 → n over 650 ms, easeOutCubic (AN-01); returns the shown value. */
-function useCountUp(n: number | null, enabled: boolean): number | null {
-  const [v, setV] = useState<number | null>(enabled && n != null ? 0 : n);
-  const done = useRef(false);
-  useEffect(() => {
-    if (n == null) {
-      setV(null);
-      return;
-    }
-    if (!enabled || done.current || reduceMotion()) {
-      setV(n);
-      return;
-    }
-    done.current = true;
-    let raf = 0;
-    let t0 = 0;
-    const f = (ts: number) => {
-      if (!t0) t0 = ts;
-      const k = Math.min(1, (ts - t0) / 650);
-      setV(Math.round(n * (1 - Math.pow(1 - k, 3))));
-      if (k < 1) raf = requestAnimationFrame(f);
-    };
-    raf = requestAnimationFrame(f);
-    return () => cancelAnimationFrame(raf);
-  }, [n, enabled]);
-  return v;
-}

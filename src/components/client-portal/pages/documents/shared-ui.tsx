@@ -22,9 +22,9 @@ async function fetchClientDocuments(engagementId?: string): Promise<ClientDocume
   return ((await res.json()) as { documents: ClientDocumentsPayload }).documents;
 }
 
-/** A client's own documents; staff pass the engagement they are viewing. */
-export function useClientDocuments(engagementId?: string) {
-  return useQuery({ queryKey: [...DOCS_KEY, engagementId ?? 'own'], queryFn: () => fetchClientDocuments(engagementId), staleTime: 15_000, retry: (n, e) => (e as Error).message !== 'none' && n < 2 });
+/** A client's own documents; staff pass the engagement they are viewing (and `enabled` false until they have one). */
+export function useClientDocuments(engagementId?: string, enabled = true) {
+  return useQuery({ queryKey: [...DOCS_KEY, engagementId ?? 'own'], queryFn: () => fetchClientDocuments(engagementId), enabled, staleTime: 15_000, retry: (n, e) => (e as Error).message !== 'none' && n < 2 });
 }
 
 /** DECISIONS "Loading L1": skeleton shown after 150 ms, held at least 300 ms. */
@@ -97,9 +97,13 @@ export function useZipToast() {
       setToast({ name: zipName, total: Math.max(1, total), n: 0, done: false });
       try {
         const res = await fetch(`/api/client/documents/zip?folder=${encodeURIComponent(folder)}${engagementParam()}`, { signal: ac.signal });
-        if (!res.ok) throw new Error(res.status === 404 ? 'No files to download yet' : 'Could not prepare the ZIP');
+        if (!res.ok) {
+          const said = res.status === 400 ? ((await res.json().catch(() => null)) as { error?: string } | null)?.error : undefined;
+          throw new Error(said || (res.status === 404 ? 'No files to download yet' : 'Could not prepare the ZIP'));
+        }
         const files = Number(res.headers.get('X-Zip-Files') ?? total) || total;
-        const len = Number(res.headers.get('Content-Length') ?? 0);
+        // The archive is streamed without a length; the summed file sizes are close enough for progress.
+        const len = Number(res.headers.get('Content-Length') ?? res.headers.get('X-Zip-Bytes') ?? 0);
         const chunks: Uint8Array[] = [];
         let got = 0;
         const reader = res.body?.getReader();

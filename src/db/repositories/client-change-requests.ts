@@ -6,6 +6,7 @@ import { db } from '@/db/client';
 import { clientTimelineRequests, profiles, tasks } from '@/db/schema';
 import type { TimelinePhaseDates, TimelineRequestDto } from '@/lib/client/client-home';
 import type { AuthContext } from '@/auth/guards';
+import { isAdminOrManager } from '@/lib/auth';
 import { assertEngagementAccess } from '@/db/repositories/engagements';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { getActiveCatalogItems } from '@/data/checklist';
@@ -285,7 +286,7 @@ export async function decideTimelineRequest(
   decision: 'approve' | 'reject',
   note?: string,
 ): Promise<boolean> {
-  if (ctx.role !== 'manager' && ctx.role !== 'admin' && ctx.role !== 'super_admin') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Only a project manager or admin may decide timeline requests');
   }
   const [row] = await db.select().from(clientTimelineRequests).where(eq(clientTimelineRequests.id, requestId)).limit(1);

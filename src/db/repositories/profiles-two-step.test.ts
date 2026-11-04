@@ -202,6 +202,20 @@ describe('systemCheckSignInPassword', () => {
   });
 });
 
+describe('systemSignInTwoStep', () => {
+  it('answers from the email alone: the secret for an active two-step account, null otherwise', async () => {
+    results = [[{ id: ME, status: 'active', totpSecretEnc: 't1:x', totpEnabledAt: new Date() }]];
+    expect(await repo.systemSignInTwoStep(' ME@sbc.in ')).toEqual({ id: ME, totpSecretEnc: 't1:x' });
+    expect(params(calls[0])).toEqual(['me@sbc.in']);
+    results = [[{ id: ME, status: 'active', totpSecretEnc: 't1:x', totpEnabledAt: null }]];
+    expect(await repo.systemSignInTwoStep('me@sbc.in')).toBeNull();
+    results = [[{ id: ME, status: 'inactive', totpSecretEnc: 't1:x', totpEnabledAt: new Date() }]];
+    expect(await repo.systemSignInTwoStep('me@sbc.in')).toBeNull();
+    results = [[]];
+    expect(await repo.systemSignInTwoStep('nobody@sbc.in')).toBeNull();
+  });
+});
+
 describe('listStaffPeople two-step flag', () => {
   it('tells the firm admin whose two-step sign-in is on, so the reset shows only for them', async () => {
     results = [

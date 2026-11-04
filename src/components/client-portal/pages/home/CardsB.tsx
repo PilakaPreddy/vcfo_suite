@@ -10,7 +10,8 @@ import { ChevronLeft, ChevronRight, Copy, Download, ExternalLink, Eye, Paperclip
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { AreaPill, Chip, OwnerChip, regOf, type ChipTone, type Regulator } from '@/components/ui/spectrum-chip';
+import { AreaPill, Chip, OwnerChip, type ChipTone } from '@/components/ui/spectrum-chip';
+import { regOf, type Regulator } from '@/lib/ui/regulator';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { StepMark } from '@/components/ui/step-track';
 import { phaseHref, portalHref, stepHref } from '@/components/client-portal/routes';

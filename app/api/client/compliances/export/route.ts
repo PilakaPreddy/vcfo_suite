@@ -18,14 +18,14 @@ const CADENCE: Record<string, string[]> = {
   annual: ['annual', 'one-time'],
 };
 
-/** GET /api/client/compliances/export?fy=&cadence=&area=&status= — CSV of the Filings view. */
+/** GET /api/client/compliances/export?fy=&cadence=&area=&status=&engagement= — CSV of the Filings view (`engagement` for staff). */
 export async function GET(request: Request) {
   const guard = await requireAuth();
   if (guard.ok === false) return NextResponse.json({ error: guard.error }, { status: guard.status });
   const p = new URL(request.url).searchParams;
   const fy = parseFyParam(p.get('fy'));
   const today = todayIso();
-  let rows = await getPortalFilings(guard.ctx, { fyStartYear: fy ?? undefined });
+  let rows = await getPortalFilings(guard.ctx, { fyStartYear: fy ?? undefined, engagementId: p.get('engagement') ?? undefined });
   const cadence = p.get('cadence');
   if (cadence && CADENCE[cadence]) rows = rows.filter((r) => CADENCE[cadence]!.includes(r.frequency.toLowerCase()));
   const area = p.get('area') as AreaFilter | null;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PortalFiling } from '@/lib/client-portal/compliances';
-import { dueWithin, freqKey, groupObligations, slugOf, waitingOnClient } from './obligations';
+import { dueWithin, freqKey, groupObligations, waitingOnClient } from './obligations';
+import { slugOf } from '@/lib/client-portal/compliances';
 
 const TODAY = '2026-10-14';
 

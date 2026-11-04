@@ -32,9 +32,11 @@ import {
  *                         `ctx.userId`; no caller-supplied profile id exists.
  *   shell aggregate     — `getMyEngagement(ctx)` + `assertEngagementAccess`,
  *                         then recipients / requests restricted to that one
- *                         approved engagement id. Staff never reach this
- *                         (client role only); a client with no engagement gets
- *                         `null` (route → 404).
+ *                         approved engagement id; a client with no engagement
+ *                         gets `null` (route → 404). Staff name an engagement
+ *                         and get its shell only when it passes
+ *                         `assertEngagementAccess`, with no inbox, no client
+ *                         preferences and no team photos (those are client-only).
  */
 
 export class ClientPortalForbiddenError extends Error {}
@@ -115,11 +117,12 @@ function supportContact(): ClientPortalContact {
  * client, the team contacts in the sidebar, nav badges, the real COI state
  * and the client's own preferences.
  */
-export async function getClientPortalShell(ctx: AuthContext): Promise<ClientPortalShell | null> {
-  assertClient(ctx);
-  const mine = await getMyEngagement(ctx);
-  if (!mine) return null;
-  const access = await assertEngagementAccess(ctx, mine.id);
+export async function getClientPortalShell(ctx: AuthContext, engagementId?: string): Promise<ClientPortalShell | null> {
+  const isClient = ctx.role === 'client';
+  // A client always gets the own engagement; staff get the one they name, if they may access it.
+  const target = isClient ? (await getMyEngagement(ctx))?.id : engagementId;
+  if (!target) return null;
+  const access = await assertEngagementAccess(ctx, target);
   if (!access.ok) return null;
   const { row, dbId } = access;
 
@@ -135,8 +138,8 @@ export async function getClientPortalShell(ctx: AuthContext): Promise<ClientPort
 
   const [recipients, inbox, prefs, openRequests] = await Promise.all([
     resolveEngagementRecipients(dbId),
-    getNotificationInboxHead(ctx),
-    getPortalPrefs(ctx),
+    isClient ? getNotificationInboxHead(ctx) : { unreadCount: 0 },
+    isClient ? getPortalPrefs(ctx) : { ...CLIENT_PORTAL_DEFAULT_PREFS },
     db
       .select({ n: sql<number>`count(*)` })
       .from(documentRequests)
@@ -172,7 +175,8 @@ export async function getClientPortalShell(ctx: AuthContext): Promise<ClientPort
     email: s.email || undefined,
     phoneE164: phoneById.get(s.userId),
     whatsappE164: phoneById.get(s.userId),
-    avatarUrl: photoById.get(s.userId),
+    // The photo route serves clients only, so staff see initials.
+    avatarUrl: isClient ? photoById.get(s.userId) : undefined,
   }));
   team.push(supportContact());
 
@@ -188,12 +192,11 @@ export async function getClientPortalShell(ctx: AuthContext): Promise<ClientPort
     engagementId: appEngagementId(row.id),
     companyName: row.companyName,
     companyShort: shortCompany || row.companyName,
-    me: { name: meName, email: meRow?.email ?? ctx.email, initials: initialsOf(meName), roleLabel: `${shortCompany || row.companyName} · Client` },
+    me: { name: meName, email: meRow?.email ?? ctx.email, initials: initialsOf(meName), roleLabel: `${shortCompany || row.companyName} · ${isClient ? 'Client' : 'SBC'}` },
     team,
     incorporated,
     coiDate: row.incorporationDate?.trim() ? row.incorporationDate.trim().slice(0, 10) : null,
-    // The portal shell is for clients only (`assertClient`), so the viewer is always the client.
-    viewer: 'client',
+    viewer: isClient ? 'client' : 'staff',
     badges: {
       notifications: inbox.unreadCount,
       documents: Number(openRequests[0]?.n ?? 0),

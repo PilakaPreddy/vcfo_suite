@@ -70,13 +70,6 @@ export function splitPlaceholders(text: string): Array<{ text: string; blank: bo
     .map((x) => ({ text: x, blank: /^\[[^\]]+\]$/.test(x) }));
 }
 
-let keySeq = 0;
-/** A stable-enough unique key for a new agenda row. */
-function newAgendaKey(): string {
-  keySeq += 1;
-  return `a${Date.now().toString(36)}${keySeq.toString(36)}`;
-}
-
 export interface LibraryLike {
   id: string;
   wording: string;

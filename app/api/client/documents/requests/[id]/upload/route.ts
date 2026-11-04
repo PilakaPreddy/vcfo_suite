@@ -1,3 +1,4 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { rejectLargeBody } from '@/lib/api/body-limit';
 import { requireAuth } from '@/auth/guards';
@@ -8,7 +9,6 @@ import {
   uploadRequestFiles,
   UploadRejectedError,
 } from '@/db/repositories/client-documents';
-import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -53,7 +53,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (out.fileIds.length === 0) {
       return NextResponse.json({ error: out.rejected[0]?.error ?? 'Upload failed', rejected: out.rejected }, { status: 422 });
     }
-    const email = await notifyEngagementEvent({
+    const email = await notifyEngagementEventSoon({
       engagementId: out.engagementId,
       itemId: 'document-request',
       event: 'client_uploaded',

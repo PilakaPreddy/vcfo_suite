@@ -14,14 +14,15 @@ import { usePortal } from '../../PortalProvider';
 import { portalHref } from '../../routes';
 import {
   AREA_LABEL,
-  MON,
-  MONTHS,
   daysBetween,
   fmtDM,
   fmtDMY,
   focusNodes,
+  MON,
+  MONTHS,
   plural,
   portalFor,
+  slugOf,
   statusOf,
   type PortalFiling,
 } from '@/lib/client-portal/compliances';
@@ -33,7 +34,6 @@ import { toastSaved } from '@/components/ui/toast-saved';
 import { proofHref, useAddProof, useProofs, type ProofMeta } from './api';
 import { FocusTrack } from './bits';
 import { useComp } from './ctx';
-import { slugOf } from './obligations';
 import { CpModal, CpSidePanel, KeyValue, PanelSection } from './overlay';
 import { AreaTag, PortalLink, StatusChip } from './spectrum';
 

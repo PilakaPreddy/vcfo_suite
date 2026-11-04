@@ -18,7 +18,8 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { AreaPill, Chip, OwnerChip, Tag, type ChipTone, type Regulator } from '@/components/ui/spectrum-chip';
+import { AreaPill, Chip, Tag, type ChipTone } from '@/components/ui/spectrum-chip';
+import { type Regulator } from '@/lib/ui/regulator';
 
 /* ------------------------------------------------------------------ */
 /* icons (paths copied from the boards)                                 */
@@ -348,15 +349,6 @@ export function STag({ tone, children }: { tone?: ChipTone; children: string }) 
   return (
     <span className="cp-tw" style={{ display: 'inline-flex', flex: 'none' }}>
       <Tag tone={tone}>{children}</Tag>
-    </span>
-  );
-}
-
-/** R-14: the owner chip (client amber, SBC blue), 104 px. */
-function SOwner({ side, label }: { side: 'sbc' | 'client'; label: string }) {
-  return (
-    <span className="cp-tw" style={{ display: 'inline-flex', flex: 'none' }}>
-      <OwnerChip owner={side} label={label} />
     </span>
   );
 }

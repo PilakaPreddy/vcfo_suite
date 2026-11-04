@@ -17,8 +17,7 @@ import { assertDeveloper } from './dev-scope';
  */
 
 /** The keys the console knows. A new switch adds its key here. */
-const DEV_SETTING_KEYS = ['jobs.paused', 'connections.test_to'] as const;
-export type DevSettingKey = (typeof DEV_SETTING_KEYS)[number];
+export type DevSettingKey = 'jobs.paused' | 'connections.test_to';
 
 export interface DevSwitch {
   on: boolean;

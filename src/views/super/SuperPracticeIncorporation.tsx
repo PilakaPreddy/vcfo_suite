@@ -20,7 +20,8 @@ import {
   SuperPageHead,
   SuperPageSkeleton,
 } from '@/components/super/parts/super-parts';
-import { plainDay, shortCompany, todayKey } from '@/components/super/parts/super-text';
+import { shortCompany, todayKey } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import {
   superOwnerOf,
   superPhaseTrack,

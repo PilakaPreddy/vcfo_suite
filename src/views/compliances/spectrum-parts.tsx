@@ -176,19 +176,6 @@ export function StatusDonutCard({
   );
 }
 
-/** A stacked bar in status colours, sized by count. */
-function StatusBar({ counts, label }: { counts: Record<FilingStatus, number>; label: string }) {
-  return (
-    <span className="flex h-2 min-w-0 flex-1 gap-0.5 overflow-hidden rounded-bar bg-surface-sunken" title={label}>
-      {CHART_STATUSES.map((s) =>
-        counts[s] ? (
-          <i key={s} className={cn('block h-full', STATUS_FILL[s])} style={{ flex: counts[s] }} title={`${FILING_WORD[s]} · ${counts[s]}`} />
-        ) : null,
-      )}
-    </span>
-  );
-}
-
 export interface StripItem {
   key: string;
   label: string;

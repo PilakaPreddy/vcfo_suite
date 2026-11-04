@@ -18,18 +18,12 @@ import { usePortal, type DrillRow, type DrillTab, type WhatsThisAnswer } from '.
 import type { PortalStep, PortalPhase, PortalIncorporationModel } from '@/lib/client-portal/step-model';
 import type { ChipTone } from '@/components/ui/spectrum-chip';
 import type { ClientIncorporationExtras, ClientFileRequestDto } from '@/lib/client-portal/incorporation-types';
-import { fmt, type GlyphKind, type OwnKey } from './ui';
+import { fmt, type OwnKey } from './ui';
 
 /* ---------------- prototype constants (Northwind → the client's short name) ---------------- */
 
 export const PH = ['Name Application', 'Incorporation', 'Post-Incorporation', 'Registration'];
 export const PHL = ['SPICe+ Part A', 'SPICe+ Part B', 'Post-incorporation', 'Registration'];
-const PH_TIP = [
-  'SPICe+ Part A · name approval with MCA',
-  'SPICe+ Part B · the company is formed',
-  'Post-incorporation · the first 180 days',
-  'Registrations · tax, labour, trade and FEMA',
-];
 const phInfo = (s: string) => [
   `Name approval with MCA (SPICe+ Part A): ${s}’s details, the board resolution, and the name application SBC files for ${s}.`,
   'SPICe+ Part B: capital, registered office, directors and subscribers, KYC and DSC, the filing, and the Certificate of Incorporation.',
@@ -54,13 +48,6 @@ export const PH_WAIT = [
   'Post-incorporation starts once the Certificate of Incorporation is issued.',
   'Registrations start after the Certificate of Incorporation. GST comes first.',
 ];
-const INFO_WHY: Record<string, string> = {
-  coi: 'It is the date your company legally exists; everything after it is counted from that day.',
-  phases: 'It shows at a glance which phase is late, on time or not started.',
-  docs: 'Missing or old documents are the most common reason MCA sends a filing back.',
-  noc: 'Without it MCA rejects the registered office proof.',
-  timeline: 'It shows who did what and when, so nothing waits unnoticed.',
-};
 
 export type K = 'done' | 'you' | 'prog' | 'with' | 'up';
 export type LK = K | 'next';
@@ -76,15 +63,6 @@ const KTONE: Record<K, ChipTone> = { done: 'ok', you: 'teal', prog: 'prog', with
 /** KD: the real kind on the phase / step pages ("Next" is a landing-table label only). */
 export function kd(s: PortalStep): K {
   return s.kind === 'next' ? 'up' : s.kind;
-}
-/** Landing table kind (lkind). */
-function lkind(s: PortalStep): LK {
-  return s.kind;
-}
-/** Glyph: late steps (not done, past their window) show the red ×. */
-function glyph(s: PortalStep, k: LK = kd(s)): GlyphKind {
-  if (s.late && k !== 'done') return 'late';
-  return k === 'next' ? 'up' : k;
 }
 export function ownKey(s: PortalStep): OwnKey {
   return s.owner === 'client' ? 'You' : s.owner === 'mca' ? 'MCA' : 'SBC';
@@ -115,15 +93,6 @@ export function tipTxt(s: PortalStep, k: LK = kd(s)): string {
   } else if (s.due) parts.push(`due ${fmt(s.due)}`);
   if (s.late && k !== 'done') parts.push(`late by ${s.lateDays} day${s.lateDays === 1 ? '' : 's'}`);
   return parts.join(' · ');
-}
-
-function railSub(s: PortalStep, short: string): string {
-  const k = kd(s);
-  if (k === 'done') return s.doneOn ? `Done · ${fmt(s.doneOn)}` : 'Done';
-  if (k === 'you') return `Waiting on ${short}${s.due ? ` · due ${fmt(s.due)}` : ''}`;
-  if (k === 'prog') return `In progress${s.due ? ` · due ${fmt(s.due)}` : ''}`;
-  if (k === 'with') return `With ${short}’s project lead${s.since ? ` · since ${fmt(s.since)}` : ''}`;
-  return s.due ? `Opens later · due ${fmt(s.due)}` : 'Opens later';
 }
 
 export type { SubStep } from '@/lib/client-portal/step-progress';
@@ -168,9 +137,6 @@ export function tabsFor(list: PortalStep[], coi?: string): Array<DrillTab & { k:
 export function idx(tabs: Array<{ k: string }>, k: string): number {
   const i = tabs.findIndex((t) => t.k === k);
   return i < 0 ? 0 : i;
-}
-function phKind(p: PortalPhase): GlyphKind {
-  return p.state === 'done' ? 'done' : p.state === 'up' ? 'up' : 'prog';
 }
 /** Latest done date in the phase (prototype `phEnd` for done phases). */
 export function phDoneEnd(p: PortalPhase): string | undefined {

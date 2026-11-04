@@ -1,15 +1,12 @@
 import toast from 'react-hot-toast';
+import { getToastVariantStyle } from '@/lib/toast-style';
+import { infoToastIcon, warningToastIcon } from '@/components/ui/hot-toast';
 import {
-  getToastVariantStyle,
-  infoToastIcon,
-  warningToastIcon,
-} from '@/components/ui/hot-toast';
-import {
-  formatEmailRecipients,
+  emailDispatchNotice,
   emailDispatchToastId,
   type EmailDispatchResult,
+  type EmailDispatchToastMeta,
 } from '@/lib/email/email-dispatch';
-import type { NotificationKind } from '@/lib/checklist/checklist-notifications';
 
 const ERROR_DURATION_MS = 6000;
 const SUCCESS_DURATION_MS = 4500;
@@ -226,79 +223,10 @@ export function toastInfo(title: string, description?: string, options?: { id?: 
 export const EMAIL_DISPATCH_NOTIFICATIONS_EVENT = 'vcfo:notifications-refresh';
 export const COMPOSE_OUTGOING_EMAIL_EVENT = 'vcfo:compose-outgoing-email';
 
-export type EmailDispatchToastMeta = {
-  engagementId?: string;
-  companyName?: string;
-  itemId?: string;
-  href?: string;
-};
-
-function emailNotificationDraft(
-  email: EmailDispatchResult,
-  meta?: EmailDispatchToastMeta,
-): {
-  kind: NotificationKind;
-  title: string;
-  body: string;
-  engagementId: string;
-  companyName: string;
-  itemId?: string;
-  href: string;
-} | null {
-  if (email.attempted === 0) return null;
-
-  const subjects = [...new Set((email.subjects ?? []).map((s) => s.trim()).filter(Boolean))];
-  const subjectLine =
-    subjects.length === 0
-      ? null
-      : subjects.length === 1
-        ? subjects[0]
-        : `${subjects[0]} (+${subjects.length - 1} more)`;
-
-  if (email.sent.length > 0) {
-    return {
-      kind: 'email.sent',
-      title: subjectLine ?? 'Email sent',
-      body: subjectLine
-        ? `To ${formatEmailRecipients(email.sent)}`
-        : formatEmailRecipients(email.sent),
-      engagementId: meta?.engagementId ?? '',
-      companyName: meta?.companyName ?? '',
-      itemId: meta?.itemId,
-      href: meta?.href ?? '#',
-    };
-  }
-  if (email.skipped.length > 0) {
-    return {
-      kind: 'email.skipped',
-      title: subjectLine ?? 'Email not configured',
-      body: subjectLine
-        ? `Not sent to ${formatEmailRecipients(email.skipped)} — email provider not configured.`
-        : `Would send to ${formatEmailRecipients(email.skipped)}. Set EMAIL_PROVIDER and From (EMAIL_FROM / RESEND_FROM_EMAIL) — plus RESEND_API_KEY for Resend, or SES identity for SES.`,
-      engagementId: meta?.engagementId ?? '',
-      companyName: meta?.companyName ?? '',
-      itemId: meta?.itemId,
-      href: meta?.href ?? '#',
-    };
-  }
-  if (email.failed.length > 0) {
-    return {
-      kind: 'email.failed',
-      title: subjectLine ?? "Email didn't send",
-      body: subjectLine
-        ? `Failed for ${formatEmailRecipients(email.failed)}${email.error ? ` — ${email.error}` : ''}`
-        : `Could not deliver to ${formatEmailRecipients(email.failed)}${email.error ? ` — ${email.error}` : ''}`,
-      engagementId: meta?.engagementId ?? '',
-      companyName: meta?.companyName ?? '',
-      itemId: meta?.itemId,
-      href: meta?.href ?? '#',
-    };
-  }
-  return null;
-}
+export type { EmailDispatchToastMeta };
 
 function persistEmailDispatchNotification(
-  draft: NonNullable<ReturnType<typeof emailNotificationDraft>>,
+  draft: NonNullable<ReturnType<typeof emailDispatchNotice>>,
 ) {
   if (typeof window === 'undefined') return;
   void fetch('/api/notifications', {
@@ -330,7 +258,7 @@ export function toastEmailDispatch(
 
   if (!email || email.attempted === 0) return;
 
-  const draft = emailNotificationDraft(email, meta);
+  const draft = emailDispatchNotice(email, meta);
   if (!draft) return;
 
   const toastId = emailDispatchToastId(draft, meta);

@@ -1,4 +1,5 @@
 import { sep } from '@/lib/date-format';
+import { DUE_SOON_DAYS } from '@/lib/compliance/filings';
 import { ACT_SWATCH, type StatutoryAct } from '@/data/statutory-calendar-fy2627';
 
 const ACT_ORDER = Object.keys(ACT_SWATCH) as StatutoryAct[];
@@ -228,8 +229,6 @@ export function statutoryCellWash(acts: readonly StatutoryAct[]): string | null 
     master-calendar entry is a deadline, not a submission. */
 export type StatutoryStatus = 'overdue' | 'due-soon' | 'upcoming';
 
-/** Days from today inside which a deadline reads as "Due soon". */
-const DUE_SOON_DAYS = 7;
 
 const MS_PER_DAY = 86_400_000;
 

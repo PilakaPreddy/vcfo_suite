@@ -2,7 +2,7 @@
 
 import { ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { regOf, type Regulator } from '@/components/ui/spectrum-chip';
+import { regOf, type Regulator } from '@/lib/ui/regulator';
 import { companyInitials, shortCompany } from '@/components/super/parts/super-text';
 
 /**
@@ -47,11 +47,6 @@ function hashOf(s: string): number {
 /** The steady identity tone of one client, from its engagement id. */
 export function identityTone(id: string): IdentityTone {
   return TONES[hashOf(id) % TONES.length]!;
-}
-
-/** The soft fill and text classes of a client's identity tone, for tags and tiles. */
-function identityClass(id: string): string {
-  return TILE[identityTone(id)];
 }
 
 /** Initials tile in the client's identity colour (26 px in rows, 30 px in bands). */
@@ -107,12 +102,6 @@ const SWATCH: Record<Regulator, string> = {
   fema: 'bg-reg-fema',
   labour: 'bg-reg-labour',
 };
-
-/** The short word of an area ("IT", "GST", "PAY"), or the area itself when it has no regulator. */
-function areaShort(area: string): string {
-  const r = regOf(area);
-  return r ? SHORT[r] : area;
-}
 
 /** Short area tag for tight spots (prototype `AreaShort`): the R-43 swatch and the short word. */
 export function AreaShort({ area, className }: { area: string; className?: string }) {

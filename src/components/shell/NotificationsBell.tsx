@@ -6,7 +6,7 @@ import { m, useReducedMotion } from "framer-motion";
 import { Bell } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { getToastVariantStyle } from "@/components/ui/hot-toast";
+import { getToastVariantStyle } from "@/lib/toast-style";
 import { NotificationItem } from "@/components/notifications/NotificationItem";
 import {
   notificationDirection,

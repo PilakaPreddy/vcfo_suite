@@ -1,45 +1,11 @@
 import { sep } from '@/lib/date-format';
-import type { IconChipTone } from '@/components/common/IconChip';
-import { CHART_STATUS, chartPhaseColor, type ChartColor } from '@/components/charts';
-import type { SuperEngagementSummary, SuperStateKey } from '@/lib/super/super-overview';
-
-/**
- * Display mapping for the super admin surface. Every tone here resolves to a
- * canonical `IconChipTone`, so a status chip on this dashboard is the same
- * object as a status chip on the lead dashboard — never a parallel palette.
- */
-
-/**
- * Gate state → chip tone. This is the tone the row chip uses, because
- * `stateKey` is what the gate actually says (see `SuperStateKey`).
- */
-const STATE_TONE: Record<SuperStateKey, IconChipTone> = {
-  complete: 'success',
-  overdue: 'danger',
-  review: 'pink',
-  'with-client': 'violet',
-  'with-firm': 'primary',
-};
-
-/** Engagement health column → chip tone. */
-const HEALTH_TONE: Record<string, IconChipTone> = {
-  'on-track': 'success',
-  'at-risk': 'warning',
-  overdue: 'danger',
-};
+import { CHART_STATUS, type ChartColor } from '@/components/charts';
+import type { SuperEngagementSummary } from '@/lib/super/super-overview';
 
 export const HEALTH_LABEL: Record<string, string> = {
   'on-track': 'On track',
   'at-risk': 'At risk',
   overdue: 'Overdue',
-};
-
-/** Filing status → chip tone, matching the compliance screens. */
-const FILING_TONE: Record<string, IconChipTone> = {
-  filed: 'success',
-  'in-progress': 'sky',
-  upcoming: 'cyan',
-  overdue: 'danger',
 };
 
 /** Runway bucket → chart fill, from the shared status scale. */
@@ -49,10 +15,6 @@ export const FILING_BUCKET_COLOR: Record<string, ChartColor> = {
   month: CHART_STATUS.active,
   quarter: CHART_STATUS.locked,
 };
-
-function phaseFill(phaseId: string): ChartColor {
-  return chartPhaseColor(phaseId);
-}
 
 const DATE_FMT: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short' };
 

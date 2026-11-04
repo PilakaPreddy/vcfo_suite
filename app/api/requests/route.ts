@@ -1,10 +1,10 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import {
   createDocumentRequest,
   listDocumentRequests,
 } from '@/db/repositories/document-requests';
-import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 
 /** GET /api/requests */
 export async function GET() {
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       message: body.message,
       dueAt: body.dueAt,
     });
-    const email = await notifyEngagementEvent({
+    const email = await notifyEngagementEventSoon({
       engagementId: body.engagementId,
       itemId: body.taskId?.trim() || 'document-request',
       event: 'request_created',

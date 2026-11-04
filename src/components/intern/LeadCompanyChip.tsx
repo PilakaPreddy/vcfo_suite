@@ -1,6 +1,6 @@
 'use client';
 
-import { CHIP_CLASS, TONE_BADGE } from '@/components/common/IconChip';
+import { TONE_BADGE } from '@/components/common/IconChip';
 import { initialsFromName } from '@/lib/auth';
 import { cn } from '@/lib/utils';
 
@@ -30,14 +30,3 @@ export function LeadCompanyChip({
   );
 }
 
-function LeadCompanyPill({ name }: { name: string; engagementId?: string }) {
-  const short = name.split(/\s+/)[0] ?? name;
-  return (
-    <span
-      className={cn(CHIP_CLASS, 'max-w-full truncate', TONE_BADGE.neutral)}
-      title={name}
-    >
-      {short}
-    </span>
-  );
-}

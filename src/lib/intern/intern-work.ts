@@ -249,8 +249,6 @@ const WEEK_CHIP_TONE: Record<WeekChipKind, InternChipTone> = {
   done: 'success',
 };
 
-const WEEK_CHIP_KIND_ORDER: WeekChipKind[] = ['filing', 'step', 'nudge', 'done'];
-
 /** Which legend bucket an item belongs in on the week strip / timeline. */
 function internWeekMarkKind(item: InternWorkItem): WeekChipKind | null {
   if (item.kind === 'done') return 'done';
@@ -1222,13 +1220,6 @@ export function internTimelinePriority(
   if (days <= 3) return 'soon';
   return 'ok';
 }
-
-const TIMELINE_PRIORITY_TONE: Record<InternTimelinePriority, InternChipTone> = {
-  overdue: 'danger',
-  soon: 'warning',
-  ok: 'primary',
-  done: 'success',
-};
 
 interface InternTimelineGanttRow {
   item: InternWorkItem;

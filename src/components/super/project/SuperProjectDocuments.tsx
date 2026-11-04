@@ -5,7 +5,7 @@ import { DashSection } from '@/components/dash/DashSection';
 import { DashDataTable, type DashColumn } from '@/components/dash/DashDataTable';
 import { FileBadge } from '@/components/ui/file-badge';
 import { Chip } from '@/components/ui/spectrum-chip';
-import { plainDay } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import type { SuperDocument, SuperEngagementDetail } from '@/lib/super/super-overview';
 
 /**

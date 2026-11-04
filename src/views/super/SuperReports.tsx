@@ -14,7 +14,7 @@ import {
   SuperPageHead,
   SuperPageSkeleton,
 } from '@/components/super/parts/super-parts';
-import { plainDay } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import { buildRisks, type SuperTeamManager } from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import { useSuperStaff } from '@/components/super/assign/use-super-staff';

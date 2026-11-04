@@ -1,3 +1,4 @@
+import { notifyTeamAssignmentsSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { requireAuth, requireAdminOrManager } from '@/auth/guards';
 import {
@@ -13,7 +14,6 @@ import { parseJsonBody } from '@/lib/api/parse-body';
 import { createProjectBodySchema } from '@/lib/api/schemas';
 import { emptyEmailDispatch, pushEmailSubject } from '@/lib/email/email-dispatch';
 import { fetchEngagementProgressCcEmails } from '@/lib/email/fetch-engagement-progress-cc';
-import { notifyTeamAssignments } from '@/lib/email/notify-team-assignment';
 import { resolvePortalUrl, sendWelcomeEmail } from '@/lib/email/welcome-email';
 import { queueWhatsAppSend } from '@/lib/notify/send-whatsapp';
 import { firstNameOf } from '@/lib/notify/templates';
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
       })),
     ];
 
-    const team = await notifyTeamAssignments({
+    const team = await notifyTeamAssignmentsSoon({
       engagementAppId: created.engagement.id,
       engagementSlug: created.engagement.slug,
       companyName: created.engagement.companyName,

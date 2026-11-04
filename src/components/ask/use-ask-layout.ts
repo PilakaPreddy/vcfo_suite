@@ -22,10 +22,6 @@ export const ASK_PANEL_SIZES: Record<AskPanelSize, { label: string; width: numbe
   side: { label: 'Side panel', width: 440, height: null },
 };
 
-/** The default size: Small. */
-const ASK_PANEL_WIDTH = ASK_PANEL_SIZES.small.width;
-const ASK_PANEL_HEIGHT = ASK_PANEL_SIZES.small.height!;
-
 function modeFor(width: number): AskLayoutMode {
   return width >= 640 ? 'float' : 'sheet';
 }

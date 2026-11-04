@@ -1,3 +1,4 @@
+import { notifyTeamAssignmentsSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/auth/guards';
@@ -20,11 +21,7 @@ import {
 import { listManagerOptions, listStaffContactsByIds } from '@/db/repositories/profiles';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { engagementDbId } from '@/lib/projects/legacy-engagement-ids';
-import {
-  notifyTeamAssignments,
-  type TeamAssignmentParty,
-  type TeamRoleLabel,
-} from '@/lib/email/notify-team-assignment';
+import type { TeamAssignmentParty, TeamRoleLabel } from '@/lib/email/notify-team-assignment';
 
 /**
  * POST /api/super/assign — "Assign client" and "Reassign" on the super admin surface (G-20).
@@ -120,7 +117,7 @@ export async function POST(request: Request) {
 
     const email =
       assigned.length + removed.length > 0
-        ? await notifyTeamAssignments({
+        ? await notifyTeamAssignmentsSoon({
             engagementAppId: app.id,
             engagementSlug: app.slug,
             companyName: before.companyName,

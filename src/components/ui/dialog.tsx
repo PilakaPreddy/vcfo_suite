@@ -27,8 +27,6 @@ const DialogTrigger = DialogPrimitive.Trigger;
 
 const DialogPortal = DialogPrimitive.Portal;
 
-const DialogClose = DialogPrimitive.Close;
-
 function DialogOverlay({ ref, className, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay> & { ref?: React.Ref<React.ElementRef<typeof DialogPrimitive.Overlay>> }) {
   return <DialogPrimitive.Overlay ref={ref} className={cn(DIALOG_OVERLAY, className)} {...props} />;
 }

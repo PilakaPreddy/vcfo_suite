@@ -5,7 +5,7 @@ import { EFilingGrid, GRID_SUB, type EFilingColumn } from '@/components/dash/EFi
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/spectrum-chip';
 import { SkeletonRows } from '@/components/ui/empty-state';
-import { plainDay } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import type { DemoRequest } from '@/lib/growth/demo-request';
 import { cn } from '@/lib/utils';
 

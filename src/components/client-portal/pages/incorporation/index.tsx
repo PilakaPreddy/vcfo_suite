@@ -3,23 +3,21 @@
 /**
  * Incorporation area entry points for the app/app/client/** page files.
  * Inside the client portal (a signed-in client) they render the v7 pages;
- * anywhere else (a super admin on the staff AppShell) the existing views.
+ * anywhere else (a super admin on the staff AppShell) they send the person to
+ * the staff projects list, where each project's record is the staff side of
+ * the same incorporation.
  */
 import { Suspense, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { getActiveCatalogItems } from '@/data/checklist';
 import { clientIncorporationStepPath } from '@/lib/projects/project-step-path';
 import { usePortalOptional } from '../../PortalProvider';
+import { StaffProjectsRedirect } from '../../StaffPortalProvider';
 import { phaseHref } from '../../routes';
 import IncorporationLanding from './Landing';
 import PhasePage from './PhasePage';
 import StepPage from './StepPage';
 import BoardPage from './BoardPage';
-
-const LegacyIncorporation = dynamic(() => import('@/views/client/Incorporation'), { ssr: false });
-const LegacyStep = dynamic(() => import('@/views/engagement/EngagementStepDetailClient'), { ssr: false });
-const LegacyBoard = dynamic(() => import('@/views/client/BoardResolutionView'), { ssr: false });
 
 const PHASE_KEYS: Record<string, number> = {
   'pre-inc-phase-1': 1,
@@ -56,12 +54,13 @@ function DeepLinks() {
 
 export function IncorporationRoute() {
   const portal = usePortalOptional();
+  if (!portal) return <StaffProjectsRedirect />;
   return (
     <>
       <Suspense fallback={null}>
         <DeepLinks />
       </Suspense>
-      {portal ? <IncorporationLanding /> : <LegacyIncorporation />}
+      <IncorporationLanding />
     </>
   );
 }
@@ -71,22 +70,18 @@ export function PhaseRoute() {
   const params = useParams<{ n: string }>();
   const raw = String(params?.n ?? '1');
   const n = PHASE_KEYS[raw] ?? Number.parseInt(raw, 10);
-  const router = useRouter();
-  useEffect(() => {
-    if (!portal) router.replace(`/app/client/incorporation`);
-  }, [portal, router]);
-  if (!portal) return null;
+  if (!portal) return <StaffProjectsRedirect />;
   return <PhasePage phaseNo={n >= 1 && n <= 4 ? n : 1} />;
 }
 
 export function StepRoute() {
   const portal = usePortalOptional();
   const params = useParams<{ stepId: string }>();
-  if (!portal) return <LegacyStep />;
+  if (!portal) return <StaffProjectsRedirect />;
   return <StepPage stepParam={String(params?.stepId ?? '')} />;
 }
 
 export function BoardRoute() {
   const portal = usePortalOptional();
-  return portal ? <BoardPage /> : <LegacyBoard />;
+  return portal ? <BoardPage /> : <StaffProjectsRedirect />;
 }

@@ -25,7 +25,7 @@ import {
   type PortalFiling,
   type TrackNode,
 } from '@/lib/client-portal/compliances';
-import { AreaTag, PortalLink, StatusChip } from './spectrum';
+import { AreaTag, StatusChip } from './spectrum';
 
 /* ---------------------------------------------------------------- icons */
 
@@ -109,14 +109,6 @@ export function AreaChip({ a, compact }: { a: AreaCode; compact?: boolean }) {
 
 /* ------------------------------------------------- rule 15 · ↗ and proof */
 
-function PortalBtn({ f }: { f: Pick<PortalFiling, 'area' | 'name'>; dark?: boolean }) {
-  return (
-    <span className="cp-tw inline-flex align-middle">
-      <PortalLink f={f} />
-    </span>
-  );
-}
-
 export function ProofChip({ f, onOpen }: { f: PortalFiling; onOpen: (f: PortalFiling) => void }) {
   if (!f.filedOn) return null;
   if (f.proofCount === 0)
@@ -143,15 +135,6 @@ export function ProofChip({ f, onOpen }: { f: PortalFiling; onOpen: (f: PortalFi
         <Paperclip size={12} strokeWidth={1.8} aria-hidden />
         Proof
       </button>
-    </span>
-  );
-}
-
-function NameWithLinks({ f }: { f: PortalFiling; dark?: boolean }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-      {f.name}
-      <PortalBtn f={f} />
     </span>
   );
 }

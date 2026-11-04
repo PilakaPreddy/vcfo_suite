@@ -40,7 +40,6 @@ export interface AssistRunDto {
   finishedAt: string | null;
 }
 
-const ASSIST_RUN_STATES: readonly AssistRunState[] = ['requested', 'running', 'paused', 'done', 'failed', 'stopped'];
 export const FINISHED: ReadonlySet<AssistRunState> = new Set(['done', 'failed', 'stopped']);
 
 /** True when the VCFO Assist link is turned on (`VCFO_ASSIST_ENABLED=on`). Server only. */

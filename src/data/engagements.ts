@@ -154,14 +154,6 @@ export interface DocRequest {
   message?: string;
 }
 
-export interface Invite {
-  token: string;
-  engagementId: string;
-  email: string;
-  createdAt: string;
-  usedAt?: string;
-}
-
 export interface ActivityEvent {
   id: string;
   engagementId?: string;

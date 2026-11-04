@@ -9,7 +9,6 @@ import {
   Engagement,
   TaskInstance,
   DocRequest,
-  Invite,
   ActivityEvent,
 } from '@/data/engagements';
 import { AuthUser, Role } from '@/lib/auth';
@@ -89,7 +88,6 @@ export interface AppContextValue {
   engagements: Engagement[];
   tasks: TaskInstance[];
   requests: DocRequest[];
-  invites: Invite[];
   activity: ActivityEvent[];
   notifications: AppNotification[];
   unreadNotificationCount: number;
@@ -103,7 +101,6 @@ export interface AppContextValue {
 
   createProjectWithClient: (input: CreateProjectInput) => Promise<CreateProjectResult>;
   updateEngagement: (id: string, patch: UpdateEngagementInput) => Promise<Engagement | null>;
-  inviteClient: (engagementId: string, email: string) => Invite;
   internOptions: InternOption[];
   internsLoading: boolean;
   engagementsLoading: boolean;
@@ -114,7 +111,6 @@ export interface AppContextValue {
    * which made "no engagement" look true before anything had been fetched.
    */
   engagementsSettled: boolean;
-  acceptInvite: (token: string, name: string) => AuthUser | null;
   updateTask: (taskId: string, patch: Partial<TaskInstance>) => void;
   uploadDoc: (requestId: string, fileName: string) => void;
   approveDoc: (requestId: string) => void;

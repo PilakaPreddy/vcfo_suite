@@ -1,3 +1,4 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAnyRole, type AuthContext } from '@/auth/guards';
@@ -11,7 +12,6 @@ import {
   setNocCheck,
   setNocNotarySteps,
 } from '@/db/repositories/board-resolution-noc';
-import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 import { NOC_TEMPLATES } from '@/lib/noc/templates';
 import { parseNocVariant } from '@/lib/noc/state';
 
@@ -90,7 +90,7 @@ export async function POST(request: Request, context: RouteContext) {
         const noc = await sendBackNoc(ctx, id, data.reason);
         await audit(ctx, id, 'board_resolution.sent_back', 'Sent the signed board resolution back', { reason: data.reason });
         // The client is told why. A mail failure never fails the send back that committed.
-        const email = await notifyEngagementEvent({
+        const email = await notifyEngagementEventSoon({
           engagementId: id,
           itemId: 'pre-3',
           event: 'review_rejected',

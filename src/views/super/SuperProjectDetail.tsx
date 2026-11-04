@@ -16,10 +16,9 @@ import { SuperProjectDocuments } from '@/components/super/project/SuperProjectDo
 import { SuperProjectTimeline } from '@/components/super/project/SuperProjectTimeline';
 import {
   SuperActivityPanel,
-  SuperFilingsPanel,
   SuperRegistrationsPanel,
-  SuperTeamPanel,
 } from '@/components/super/project/SuperProjectRail';
+import { StaffClientFilings } from '@/components/client-portal/pages/compliances';
 import {
   ClientTile,
   SuperPageError,
@@ -30,6 +29,7 @@ import { AssignTaskDialog } from '@/components/super/assign/AssignTaskDialog';
 import { useSuperStaff } from '@/components/super/assign/use-super-staff';
 import { EscalationsPanel } from '@/components/super/escalations/EscalationsPanel';
 import { EngagementNotesPanel } from '@/components/notes/EngagementNotesPanel';
+import { StaffClientTeam } from '@/components/client-portal/pages/team';
 import { RaiseEscalationButton } from '@/components/super/escalations/RaiseEscalationButton';
 import { useSuperOverview, useSuperProject } from '@/hooks/use-super-overview';
 import { cn } from '@/lib/utils';
@@ -269,11 +269,11 @@ export default function SuperProjectDetail() {
           </div>
         ) : null}
         {tab === 'registrations' ? <SuperRegistrationsPanel detail={detail} /> : null}
-        {tab === 'filings' ? <SuperFilingsPanel detail={detail} /> : null}
+        {tab === 'filings' ? <StaffClientFilings engagementId={summary.id} projectHref={`${SUPER_PROJECTS_HREF}/${id}`} /> : null}
         {tab === 'documents' ? <SuperProjectDocuments detail={detail} /> : null}
         {tab === 'escalations' ? <EscalationsPanel engagementId={summary.id} canResolve /> : null}
         {tab === 'notes' ? <EngagementNotesPanel engagementId={summary.id} /> : null}
-        {tab === 'team' ? <SuperTeamPanel detail={detail} /> : null}
+        {tab === 'team' ? <StaffClientTeam engagementId={summary.id} projectHref={`${SUPER_PROJECTS_HREF}/${id}`} /> : null}
         {tab === 'activity' ? <SuperActivityPanel detail={detail} /> : null}
       </div>
 

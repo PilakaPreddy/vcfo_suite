@@ -94,11 +94,6 @@ export function stateByCode(code: string): StateSpec | undefined {
   return BY_CODE.get(code as StateSpec['code']);
 }
 
-/** The states we can generate registers for today, in name order. */
-function configuredStates(): StateSpec[] {
-  return STATES.filter((s) => s.configured).sort((a, b) => a.name.localeCompare(b.name));
-}
-
 /** Every state, configured first and then the rest, each group in name order. */
 export function statesForPicker(): StateSpec[] {
   const by = (a: StateSpec, b: StateSpec) => a.name.localeCompare(b.name);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
-import { stageDisplayLabel } from '@/components/admin/create-project-form-utils';
+import { stageDisplayLabel } from '@/lib/projects/stage';
 import { usePathname, useSearchParams, type useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { PageTransition } from '@/components/shell/PageTransition';

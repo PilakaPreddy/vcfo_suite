@@ -7,12 +7,11 @@ import { resolveVaultFiles, type ResolvedVaultFile, type VaultFileRef } from '@/
 import { createUniqueNamer, zipArchiveName, zipEntryPath } from '@/lib/zip/entry-names';
 import { createZipStream, type ZipEntrySource } from '@/lib/zip/zip-writer';
 import { listObjects } from '@/storage/s3';
-import { contentDisposition, openObjectStream } from '../_lib/object-response';
+import { contentDisposition, openObjectStream, ZIP_MAX_BYTES, ZIP_MAX_FILES } from '../_lib/object-response';
 import { recordStreamExport } from '@/lib/exports/record-export';
 
-/** The vault caps one archive at 500 files or 1 GB. */
-const MAX_FILES = 500;
-const MAX_BYTES = 1024 * 1024 * 1024;
+const MAX_FILES = ZIP_MAX_FILES;
+const MAX_BYTES = ZIP_MAX_BYTES;
 
 const folder = z.string().trim().max(300).optional();
 const itemSchema = z.union([

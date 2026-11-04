@@ -1,6 +1,6 @@
 /** Props, option types and shared field classes for the create / edit project form view. */
 import type { QuestionnaireAnswers } from '@/data/compliance-questionnaire';
-import type { Stage } from '@/components/admin/create-project-form-utils';
+import type { Stage } from '@/lib/projects/stage';
 import type {
   CompanyType,
   EntityLegalForm,

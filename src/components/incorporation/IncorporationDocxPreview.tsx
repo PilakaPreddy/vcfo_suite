@@ -1,18 +1,8 @@
 'use client';
 
-import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { renderAsync } from 'docx-preview';
+import { useImperativeHandle, useState, type Ref } from 'react';
 import { HexgridLoader } from '@/components/common/HexgridLoader';
-import {
-  attachFullDocumentEditing,
-  extractPreviewDocumentContent,
-  getPreviewFormatSelectionState,
-  setPreviewParagraphAlignment,
-  togglePreviewBold,
-  type PreviewFormatSelectionState,
-  type PreviewTextAlignment,
-} from '@/lib/board-resolution/board-resolution-preview-editable';
+import { useDocxPreview, type DocxPreviewBaseHandle } from '@/components/board-resolution/use-docx-preview';
 import {
   buildIncorpDocPreviewError,
   type IncorpDocPreviewError,
@@ -21,13 +11,7 @@ import { cn } from '@/lib/utils';
 import { IncorporationPreviewErrorPanel } from '@/components/incorporation/IncorporationPreviewErrorPanel';
 import { INCORP_DOCX_PREVIEW_BODY_CLASSES } from '@/components/incorporation/incorporation-doc-preview-classes';
 
-export type IncorporationDocxPreviewHandle = {
-  getDocumentContent: () => string;
-  toggleBold: () => boolean;
-  setParagraphAlignment: (alignment: PreviewTextAlignment) => boolean;
-  getFormatSelectionState: () => PreviewFormatSelectionState;
-  isReady: () => boolean;
-};
+export type IncorporationDocxPreviewHandle = DocxPreviewBaseHandle;
 
 export type IncorporationDocxPreviewProps = {
   downloadUrl: string;
@@ -58,100 +42,21 @@ function IncorporationDocxPreviewInner({
   onStatusChange,
   onRecoverCorruptFile,
 }: IncorporationDocxPreviewProps & { ref?: Ref<IncorporationDocxPreviewHandle> }) {
-  const bodyRef = useRef<HTMLDivElement>(null);
-  const styleRef = useRef<HTMLDivElement>(null);
-  const onDocumentChangeRef = useRef(onDocumentChange);
-  const onStatusChangeRef = useRef(onStatusChange);
-  const [renderPhase, setRenderPhase] = useState<'loading' | 'ready'>('loading');
-  const [renderError, setRenderError] = useState<IncorpDocPreviewError | null>(null);
   const [recovering, setRecovering] = useState(false);
 
-  onDocumentChangeRef.current = onDocumentChange;
-  onStatusChangeRef.current = onStatusChange;
+  const { bodyRef, styleRef, status, previewError, baseHandle, setRenderPhase, setRenderError } =
+    useDocxPreview<IncorpDocPreviewError>({
+      queryKeyPrefix: 'incorp-docx-preview',
+      url: downloadUrl,
+      refreshKey,
+      editable,
+      renderHeadersAndFooters: true,
+      buildError: buildIncorpDocPreviewError,
+      onDocumentChange,
+      onStatusChange,
+    });
 
-  const docQuery = useQuery({
-    queryKey: ['incorp-docx-preview', downloadUrl, refreshKey],
-    queryFn: async ({ signal }) => {
-      const res = await fetch(downloadUrl, {
-        credentials: 'include',
-        signal,
-        cache: 'no-store',
-      });
-      if (!res.ok) {
-        let detail = 'Could not load document preview.';
-        if (res.status === 404) detail = 'Word document has not been generated yet.';
-        else if (res.status === 403) detail = 'You do not have access to this document.';
-        throw Object.assign(new Error(detail), { httpStatus: res.status });
-      }
-      return res.blob();
-    },
-    enabled: Boolean(downloadUrl),
-    retry: false,
-  });
-
-  const queryError = docQuery.isError
-    ? buildIncorpDocPreviewError(
-        docQuery.error instanceof Error ? docQuery.error.message : 'Preview failed.',
-        {
-          httpStatus:
-            docQuery.error instanceof Error && 'httpStatus' in docQuery.error
-              ? (docQuery.error as Error & { httpStatus?: number }).httpStatus
-              : undefined,
-        },
-      )
-    : null;
-
-  const status: 'loading' | 'ready' | 'error' =
-    docQuery.isFetching || (!docQuery.data && !docQuery.isError)
-      ? 'loading'
-      : queryError
-        ? 'error'
-        : renderPhase === 'ready'
-          ? 'ready'
-          : 'loading';
-
-  const previewError = queryError ?? renderError;
-
-  useLayoutEffect(() => {
-    onStatusChangeRef.current?.(status);
-  }, [status]);
-
-  useImperativeHandle(ref, () => ({
-    getDocumentContent() {
-      const bodyEl = bodyRef.current;
-      return bodyEl ? extractPreviewDocumentContent(bodyEl) : '';
-    },
-    toggleBold() {
-      const bodyEl = bodyRef.current;
-      if (!bodyEl) return false;
-      const applied = togglePreviewBold(bodyEl);
-      if (applied) onDocumentChangeRef.current?.(extractPreviewDocumentContent(bodyEl));
-      return applied;
-    },
-    setParagraphAlignment(alignment) {
-      const bodyEl = bodyRef.current;
-      if (!bodyEl) return false;
-      const applied = setPreviewParagraphAlignment(bodyEl, alignment);
-      if (applied) onDocumentChangeRef.current?.(extractPreviewDocumentContent(bodyEl));
-      return applied;
-    },
-    getFormatSelectionState() {
-      const bodyEl = bodyRef.current;
-      if (!bodyEl) {
-        return {
-          inPreview: false,
-          hasTextSelection: false,
-          inParagraph: false,
-          paragraphAlignment: null,
-          boldActive: false,
-        };
-      }
-      return getPreviewFormatSelectionState(bodyEl);
-    },
-    isReady() {
-      return status === 'ready';
-    },
-  }));
+  useImperativeHandle(ref, () => baseHandle);
 
   const handleRecover = async () => {
     if (!onRecoverCorruptFile) return;
@@ -164,50 +69,6 @@ function IncorporationDocxPreviewInner({
       setRecovering(false);
     }
   };
-
-  useEffect(() => {
-    const blob = docQuery.data;
-    const bodyEl = bodyRef.current;
-    const styleEl = styleRef.current;
-    if (!blob || !bodyEl || !styleEl) return;
-
-    let cancelled = false;
-    bodyEl.innerHTML = '';
-    styleEl.innerHTML = '';
-
-    void (async () => {
-      try {
-        await renderAsync(blob, bodyEl, styleEl, {
-          className: 'docx',
-          inWrapper: true,
-          breakPages: true,
-          renderHeaders: true,
-          renderFooters: true,
-        });
-        if (!cancelled) setRenderPhase('ready');
-      } catch (err) {
-        if (cancelled) return;
-        setRenderPhase('loading');
-        setRenderError(
-          buildIncorpDocPreviewError(err instanceof Error ? err.message : 'Preview failed.'),
-        );
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      bodyEl.innerHTML = '';
-      styleEl.innerHTML = '';
-    };
-  }, [docQuery.data]);
-
-  useEffect(() => {
-    const bodyEl = bodyRef.current;
-    if (status !== 'ready' || !editable || !bodyEl || !onDocumentChangeRef.current) return;
-    return attachFullDocumentEditing(bodyEl, {
-      onDocumentChange: (content) => onDocumentChangeRef.current?.(content),
-    });
-  }, [status, editable]);
 
   return (
     <div

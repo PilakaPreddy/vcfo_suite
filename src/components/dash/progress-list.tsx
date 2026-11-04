@@ -24,11 +24,6 @@ export interface ProgressItem {
   href?: string;
 }
 
-/** Bar tone for a load share: red above 95 %, amber above 80 %, blurple below. */
-function loadTone(pct: number): ProgressTone {
-  return pct > 95 ? 'bad' : pct > 80 ? 'warn' : 'accent';
-}
-
 export function ProgressList({ items, empty = 'Nothing to show', className }: { items: ProgressItem[]; empty?: string; className?: string }) {
   if (items.length === 0) return <EmptyState title={empty} className="m-4" />;
   return (

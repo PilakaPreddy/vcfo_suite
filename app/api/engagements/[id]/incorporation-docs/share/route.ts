@@ -1,3 +1,4 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -26,7 +27,6 @@ import {
   patchChecklistItem,
   toAppEngagement,
 } from '@/db/repositories/engagements';
-import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 import { emptyEmailDispatch } from '@/lib/email/email-dispatch';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -111,7 +111,7 @@ export async function POST(request: Request, context: RouteContext) {
       metadata: { rowKeys, bulk: true },
     });
 
-    const email = await notifyEngagementEvent({
+    const email = await notifyEngagementEventSoon({
       engagementId: engagement.id,
       itemId: 'pre-7',
       event: 'docs_shared',
@@ -171,7 +171,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   // Only email when this is the first share of a new draft (avoid spam on re-share).
   const email = !existing.includes(rowKey)
-    ? await notifyEngagementEvent({
+    ? await notifyEngagementEventSoon({
         engagementId: engagement.id,
         itemId: 'pre-7',
         event: 'docs_shared',

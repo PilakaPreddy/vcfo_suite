@@ -159,8 +159,11 @@ export async function toAppEngagementsWithLeads(
   return rows.map((row) => toAppEngagement(row, null, leadMap.get(row.id)));
 }
 
+/** Any uuid-shaped id (the seeded demo ids are not RFC 4122, so `isUuid` is too strict here). */
+const UUID_SHAPE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * Unscoped existence + role check. Distinguishes notFound vs forbidden so
+ * Unscoped existence + role check. `appOrDbId` is an app id, a DB uuid or an engagement slug. Distinguishes notFound vs forbidden so
  * API routes can return the same status codes as the old RLS-backed helpers.
  */
 export async function assertEngagementAccess(
@@ -171,8 +174,12 @@ export async function assertEngagementAccess(
   | { ok: false; dbId: string; notFound: true }
   | { ok: false; dbId: string; forbidden: true }
 > {
-  const dbId = engagementDbId(appOrDbId);
-  const [row] = await db.select().from(engagements).where(eq(engagements.id, dbId)).limit(1);
+  const appOrDb = engagementDbId(appOrDbId);
+  // Staff project URLs carry the slug; a value that is not a uuid would make Postgres throw.
+  const [row] = UUID_SHAPE.test(appOrDb)
+    ? await db.select().from(engagements).where(eq(engagements.id, appOrDb)).limit(1)
+    : await db.select().from(engagements).where(eq(engagements.slug, appOrDbId)).limit(1);
+  const dbId = row?.id ?? appOrDb;
   if (!row || row.deletedAt) return { ok: false, dbId, notFound: true };
 
   if (isFirmWideAdmin(ctx.role)) return { ok: true, dbId, row };

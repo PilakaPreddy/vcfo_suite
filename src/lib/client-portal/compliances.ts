@@ -4,10 +4,11 @@
  * repository uses it to shape rows, the pages use it to derive every count.
  *
  * Status keys follow the prototype: ok = filed · due = due soon · over =
- * overdue · up = upcoming. The portal's due-soon threshold is the prototype's
- * 7 days (QUESTIONS.md · compliances); staff views keep `filings.ts` (14 days).
+ * overdue · up = upcoming. The due-soon window and IST "today" come from
+ * `src/lib/compliance/filings.ts`, so client and staff screens agree.
  */
 import { complianceGroupForAuthority } from '@/lib/client/client-overview';
+import { DUE_SOON_DAYS, todayIST } from '@/lib/compliance/filings';
 import {
   EPFO,
   ESIC,
@@ -20,8 +21,6 @@ import {
   TGCT,
   TRACES,
 } from '@/lib/notifications/announcement-portals';
-
-const PORTAL_DUE_SOON_DAYS = 7;
 
 export type CompStatus = 'ok' | 'due' | 'over' | 'up';
 export type AreaCode = 'MCA' | 'GST' | 'IT' | 'PAY' | 'FEMA';
@@ -97,7 +96,7 @@ const ST: Record<CompStatus, { l: string; c: string; v: string }> = {
 };
 export const ST_TIP: Record<CompStatus, string> = {
   ok: 'Filed',
-  due: `Due within ${PORTAL_DUE_SOON_DAYS} days`,
+  due: `Due within ${DUE_SOON_DAYS} days`,
   over: 'Late · past the due date',
   up: 'Upcoming',
 };
@@ -111,10 +110,8 @@ export const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', '
 const WD_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const WD_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-/** Today in India (yyyy-mm-dd) — the firm works on IST dates. */
-export function todayIso(now: Date = new Date()): string {
-  return new Date(now.getTime() + 330 * 60_000).toISOString().slice(0, 10);
-}
+/** Today in India (yyyy-mm-dd); the one helper lives in `filings.ts`. */
+export const todayIso = todayIST;
 export function D(iso: string): Date {
   return new Date(`${iso.slice(0, 10)}T00:00:00Z`);
 }
@@ -191,7 +188,7 @@ export function statusOf(f: Pick<PortalFiling, 'filedOn' | 'dueDate'>, today: st
   if (f.filedOn) return 'ok';
   const d = daysBetween(today, f.dueDate);
   if (d < 0) return 'over';
-  if (d <= PORTAL_DUE_SOON_DAYS) return 'due';
+  if (d <= DUE_SOON_DAYS) return 'due';
   return 'up';
 }
 export function worstStatus(rows: Pick<PortalFiling, 'filedOn' | 'dueDate'>[], today: string): CompStatus {
@@ -494,4 +491,16 @@ export function filingsIcs(rows: PortalFiling[], stamp: Date = new Date()): stri
     ].join('\r\n');
   });
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//VCFO Suite//Compliances//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', ...ev, 'END:VCALENDAR'].join('\r\n') + '\r\n';
+}
+
+/** The URL segment of a filing or obligation name: lowercase words joined by hyphens, at most 80 characters. */
+export function slugOf(text: string): string {
+  return (
+    text
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'filing'
+  );
 }

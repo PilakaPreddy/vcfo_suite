@@ -10,7 +10,7 @@
  * grid. `in-mw-muster` is a muster roll with none. The scaffold asks the projected table.
  */
 import type { ProjectedTable } from '../project';
-import { isBuilt, ArchetypeNotBuilt } from './layouts';
+import { ArchetypeNotBuilt } from './layouts';
 import { writeRegisterWorkbook, type WorkbookMeta } from './scaffold';
 
 export type RegisterRenderer = (table: ProjectedTable, meta: WorkbookMeta) => Promise<Buffer>;

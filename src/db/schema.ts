@@ -782,6 +782,10 @@ export const documentRequests = pgTable('document_requests', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * The demo-era client invites. Nothing reads or writes this table since audit 2026-11-04 finding 5
+ * removed the flow (client logins use `client_invites` from the Team page); a later migration may drop it.
+ */
 export const invites = pgTable('invites', {
   id: uuid('id').primaryKey().defaultRandom(),
   token: text('token').notNull().unique(),

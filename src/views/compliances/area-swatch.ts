@@ -1,4 +1,4 @@
-import { regOf } from '@/components/ui/spectrum-chip';
+import { regOf } from '@/lib/ui/regulator';
 
 /** R-43 regulator swatch class for an area word; grey when the area has no regulator colour. */
 const SWATCH: Record<NonNullable<ReturnType<typeof regOf>>, string> = {

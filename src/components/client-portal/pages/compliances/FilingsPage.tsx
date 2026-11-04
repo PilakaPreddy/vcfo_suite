@@ -50,7 +50,7 @@ import {
   type CompStatus,
   type PortalFiling,
 } from '@/lib/client-portal/compliances';
-import { fetchProofs, proofHref, useCompFilings, useDownload } from './api';
+import { fetchProofs, proofHref, useCompFilings, useDownload, useEngagementParam } from './api';
 import { usePageTips } from './bits';
 import { CompProvider, useComp } from './ctx';
 import { MonthChart } from './MonthChart';
@@ -126,7 +126,8 @@ export function CompliancesFilings() {
 }
 
 function FilingsBody({ st, tableRef }: { st: ReturnType<typeof useFilingsState>; tableRef: React.RefObject<HTMLDivElement | null> }) {
-  const { after, go, toast, openChat } = usePortal();
+  const { after, go, toast, openChat, engagementId } = usePortal();
+  const eng = useEngagementParam();
   const { today, openProof, openDrill } = useComp();
   const download = useDownload();
   const root = useRef<HTMLDivElement>(null);
@@ -166,7 +167,7 @@ function FilingsBody({ st, tableRef }: { st: ReturnType<typeof useFilingsState>;
     queryKey: ['client-compliances', 'one', st.filing],
     enabled: missing,
     queryFn: async () => {
-      const res = await fetch(`/api/client/compliances?id=${encodeURIComponent(st.filing!)}`, { cache: 'no-store' });
+      const res = await fetch(`/api/client/compliances?id=${encodeURIComponent(st.filing!)}${eng}`, { cache: 'no-store' });
       if (!res.ok) return null;
       return ((await res.json()) as { rows: PortalFiling[] }).rows[0] ?? null;
     },
@@ -184,7 +185,7 @@ function FilingsBody({ st, tableRef }: { st: ReturnType<typeof useFilingsState>;
   }, [missing, lookup.isLoading, lookup.data, lookup.isFetched, fy, set, toast]);
   const onDrill = (title: string, list: PortalFiling[]) => openDrill({ kind: 'status', k: 'all', title, rows: list });
 
-  const exportHref = `/api/client/compliances/export?fy=${fy}&cadence=${cadence}&area=${area}&status=${status}`;
+  const exportHref = `/api/client/compliances/export?fy=${fy}&cadence=${cadence}&area=${area}&status=${status}${eng}`;
   const canPrev = !fullYear && months.indexOf(start) > 0;
   const canNext = !fullYear && months.indexOf(end) < 11;
   const calHref = `${portalHref('compliances')}${fullYear ? '' : `?date=${end}`}`;
@@ -204,7 +205,7 @@ function FilingsBody({ st, tableRef }: { st: ReturnType<typeof useFilingsState>;
   const statusWord = status === 'all' ? '' : WORD[status].toLowerCase();
 
   // C-363: the VCFO Assist state per filing, from the stored runs of the client's engagement.
-  const assist = useAssistRuns({ kind: 'filing', enabled: after });
+  const assist = useAssistRuns({ engagementId, kind: 'filing', enabled: after });
   const assistBy = useMemo(() => latestBySubject(assist.data?.runs ?? []), [assist.data]);
   const assistSetUp = assist.data?.setUp ?? true;
 

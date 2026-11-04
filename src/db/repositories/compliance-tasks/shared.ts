@@ -39,10 +39,6 @@ export class ComplianceTaskError extends Error {
 export const notFound = () => new ComplianceTaskError(404, 'not_found');
 export const forbidden = () => new ComplianceTaskError(403, 'forbidden');
 
-function isStaffRole(role: string): boolean {
-  return STAFF.has(role);
-}
-
 /** Admin, super admin and manager: create, edit and review. */
 export function canManage(role: string): boolean {
   return isAdminOrManager(role);

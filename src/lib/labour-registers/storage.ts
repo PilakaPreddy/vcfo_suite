@@ -18,19 +18,8 @@
  */
 import type { FormSpec } from '@/data/labour-registers/types';
 import type { Period } from './catalogue';
-import type { UploadSlot } from './parse';
 
 const ROOT = 'labour-registers';
-
-/** Where one of a batch's four uploaded sheets lives. */
-function uploadObjectKey(input: {
-  engagementId: string;
-  batchId: string;
-  slot: UploadSlot;
-  sha256: string;
-}): string {
-  return `${ROOT}/${input.engagementId}/${input.batchId}/${input.slot}-${input.sha256.slice(0, 12)}`;
-}
 
 /** Where a produced register lives. The cache key is in the path, so nothing is overwritten. */
 export function documentObjectKey(input: {

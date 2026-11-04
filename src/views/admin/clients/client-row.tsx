@@ -8,6 +8,7 @@ import { deriveStuckReason, type StuckReason } from '@/lib/projects/project-stuc
 import type { EngagementSchedule } from '@/lib/projects/schedule-windows';
 import { sep } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
+import { todayIST } from '@/lib/compliance/filings';
 
 /**
  * CLIENT ROW FACTS for the staff Clients lists (lead Clients, manager Projects, admin Work ›
@@ -114,7 +115,7 @@ export function clientRowFacts(
   state: Record<string, ChecklistItemStateSlice>,
   now: Date = new Date(),
 ): ClientRowFacts {
-  const todayIso = now.toISOString().slice(0, 10);
+  const todayIso = todayIST(now);
   const progress = internCompanyPhaseProgress(e, state, now);
   const done = progress.phases.reduce((n, p) => n + p.done, 0);
   const total = progress.phases.reduce((n, p) => n + p.total, 0);

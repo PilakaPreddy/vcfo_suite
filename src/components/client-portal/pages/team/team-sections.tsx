@@ -12,7 +12,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApp } from '@/context/AppContext';
-import { usePortal } from '../../PortalProvider';
+import { usePortal, usePortalOptional } from '../../PortalProvider';
 import type { ClientPortalContact } from '@/lib/client-portal/types';
 import type { ClientTeamView } from '@/db/repositories/client-team';
 import {
@@ -67,13 +67,20 @@ type Row = {
   inviteId?: string;
 };
 
-/** The client's people and invites (`/api/client/team`), shared by the Team page and Settings. */
+/**
+ * The client's people and invites (`/api/client/team`), shared by the Team page and Settings.
+ * Staff viewing one engagement (`StaffPortalProvider`) read that engagement's team.
+ */
 export function useClientTeam() {
-  return useQuery({ queryKey: TEAM_KEY, queryFn: () => api<ClientTeamView>('/api/client/team') });
+  const viewing = usePortalOptional()?.engagementId;
+  return useQuery({
+    queryKey: viewing ? [...TEAM_KEY, viewing] : TEAM_KEY,
+    queryFn: () => api<ClientTeamView>(viewing ? `/api/client/team?engagement=${encodeURIComponent(viewing)}` : '/api/client/team'),
+  });
 }
 
 export function TeamSection() {
-  const { shell, toast, openChat } = usePortal();
+  const { shell, toast, openChat, engagementId: staffView } = usePortal();
   const qc = useQueryClient();
   const q = useClientTeam();
   const sk = useSkeleton(q.isLoading);
@@ -195,15 +202,18 @@ export function TeamSection() {
             label="Filter people"
             grid={false}
           />
-          <button
-            type="button"
-            className="btn btn-n btn-sm"
-            data-tip={isPrimary ? undefined : 'Only the Primary contact can invite'}
-            aria-disabled={!isPrimary}
-            onClick={openInvite}
-          >
-            Invite
-          </button>
+          {/* Inviting is the client's; staff add people from the project's own screens. */}
+          {staffView ? null : (
+            <button
+              type="button"
+              className="btn btn-n btn-sm"
+              data-tip={isPrimary ? undefined : 'Only the Primary contact can invite'}
+              aria-disabled={!isPrimary}
+              onClick={openInvite}
+            >
+              Invite
+            </button>
+          )}
         </CardHead>
         {q.isLoading ? (
           sk ? (

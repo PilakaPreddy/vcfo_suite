@@ -1,5 +1,5 @@
 import type { StaffCalEvent, StaffEventTone } from '@/components/work/calendar/StaffCalendar';
-import { regOf } from '@/components/ui/spectrum-chip';
+import { regOf } from '@/lib/ui/regulator';
 import { filingStatus, type FilingRow, type FilingStatus } from '@/lib/compliance/filings';
 import { addDaysYmd } from '@/lib/work/planner';
 import type { CalendarEventKind } from '@/lib/work/calendar-moves';

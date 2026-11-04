@@ -131,10 +131,6 @@ export async function fetchConversationList(opts: {
   return json(res, 'Could not load your chats');
 }
 
-async function deleteConversation(id: string): Promise<void> {
-  await json(await fetch(`/api/ask/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' }), 'Could not delete the chat');
-}
-
 /**
  * POST /api/ask/topics/[slug]: the same answer as fetchTopicAnswer, and the server saves the
  * question and the answer into the conversation. `conversationId` is null when the save failed.

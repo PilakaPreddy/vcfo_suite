@@ -216,6 +216,24 @@ describe('scopeFor via listEngagements / getEngagementById', () => {
 });
 
 describe('assertEngagementAccess', () => {
+  it('resolves a slug (staff project URLs) to its row and still checks the role', async () => {
+    selectRows = [row({ managerId: 'user-other' })];
+    const asAdmin = await repo.assertEngagementAccess(ctx('super_admin'), 'acme');
+    expect(asAdmin).toMatchObject({ ok: true, dbId: ENG });
+    expect(lastWhere().sql).toContain('"slug"');
+    expect(lastWhere().params).toContain('acme');
+
+    listManagerMemberEngagementIds.mockResolvedValue([]);
+    await expect(repo.assertEngagementAccess(ctx('manager'), 'acme')).resolves.toMatchObject({ ok: false, forbidden: true });
+  });
+
+  it('looks an id up by id, never by slug', async () => {
+    selectRows = [row()];
+    await repo.assertEngagementAccess(ctx('admin'), ENG);
+    expect(lastWhere().sql).toContain('"id"');
+    expect(lastWhere().sql).not.toContain('"slug"');
+  });
+
   it('missing or soft-deleted is notFound — even for a firm admin', async () => {
     selectRows = [];
     await expect(repo.assertEngagementAccess(ctx('admin'), ENG)).resolves.toMatchObject({

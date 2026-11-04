@@ -9,15 +9,26 @@ import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { todayIso, type PortalFiling } from '@/lib/client-portal/compliances';
 import type { ViewerDoc } from '../documents/DocViewer';
+import { usePortalOptional } from '../../PortalProvider';
 
 export const COMP_KEY = ['client-compliances'] as const;
 
+/**
+ * The engagement staff are viewing through `StaffPortalProvider`, as `&engagement=<id>`; empty
+ * for a client (whose own engagement the server always uses) and for staff pages outside it.
+ */
+export function useEngagementParam(): string {
+  const id = usePortalOptional()?.engagementId;
+  return id ? `&engagement=${encodeURIComponent(id)}` : '';
+}
+
 export function useCompFilings(fy: number, enabled = true) {
+  const eng = useEngagementParam();
   return useQuery({
-    queryKey: [...COMP_KEY, fy],
+    queryKey: eng ? [...COMP_KEY, fy, eng] : [...COMP_KEY, fy],
     enabled,
     queryFn: async (): Promise<{ rows: PortalFiling[]; today: string }> => {
-      const res = await fetch(`/api/client/compliances?fy=${fy}`, { cache: 'no-store' });
+      const res = await fetch(`/api/client/compliances?fy=${fy}${eng}`, { cache: 'no-store' });
       const data = (await res.json().catch(() => ({}))) as { rows?: PortalFiling[]; today?: string; error?: string };
       if (!res.ok) throw new Error(data.error ?? 'Could not load the register');
       return { rows: data.rows ?? [], today: data.today ?? todayIso() };
