@@ -10,7 +10,7 @@ import { TimelineRequestsPanel } from '@/components/incorporation/TimelineReques
 import { WorkItemsPanel } from '@/components/incorporation/WorkItemsPanel';
 import { Chip, type ChipTone } from '@/components/ui/spectrum-chip';
 import { RecordStat, RecordStats, RecordTile } from '@/components/incorporation/RecordHead';
-import { STAGE_LABEL, type Stage } from '@/components/admin/create-project-form-utils';
+import { STAGE_LABEL, type Stage } from '@/lib/projects/stage';
 import { DocPackPhasePill } from '@/components/doc-pack/DocPackPhasePill';
 import { useDocPack } from '@/hooks/use-doc-pack';
 import { docPackPagePath } from '@/lib/doc-pack/paths';

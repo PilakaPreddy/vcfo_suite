@@ -1,4 +1,4 @@
-import { regOf, type Regulator } from '@/components/ui/spectrum-chip';
+import { regOf, type Regulator } from '@/lib/ui/regulator';
 import { filingStatus, monthKeyOf, sortByDueDate, type FilingRow, type FilingStatus } from '@/lib/compliance/filings';
 import type { PortalFiling } from '@/lib/client-portal/compliances';
 import { filingMonths, type FilingRecord } from '@/lib/metrics/filing-metrics';

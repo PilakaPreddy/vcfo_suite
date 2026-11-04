@@ -6,7 +6,7 @@ import { DashSection } from '@/components/dash/DashSection';
 import { EFilingGrid, GRID_SUB, type EFilingColumn } from '@/components/dash/EFilingGrid';
 import { Button } from '@/components/ui/button';
 import { SkeletonRows } from '@/components/ui/empty-state';
-import { plainDay } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import { SuperFilterChips } from '@/components/super/parts/super-parts';
 import { monthKeyLabel, REPORT_SCHEDULE_LABEL, type SavedReport } from '@/lib/reports/partner-report';
 import { cn } from '@/lib/utils';

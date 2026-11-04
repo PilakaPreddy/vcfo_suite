@@ -1,5 +1,5 @@
 import { filingStatus, type FilingRow, type FilingStatus } from '@/lib/compliance/filings';
-import { regOf, type Regulator } from '@/components/ui/spectrum-chip';
+import { regOf, type Regulator } from '@/lib/ui/regulator';
 
 /**
  * STAFF SEARCH (Ctrl K, prototype Palette Q3) — pure logic shared by the palette and

@@ -8,7 +8,7 @@
  * page (`slugOf`), so a hit opens the record the page shows.
  */
 import { filingStatus, type FilingRow, type FilingStatus } from '@/lib/compliance/filings';
-import { regOf, type Regulator } from '@/components/ui/spectrum-chip';
+import { regOf, type Regulator } from '@/lib/ui/regulator';
 import { slugOf } from '@/components/client-portal/pages/compliances/obligations';
 
 export type SearchGroup = 'Pages' | 'Steps' | 'Filings' | 'Obligations' | 'Registrations' | 'Documents';

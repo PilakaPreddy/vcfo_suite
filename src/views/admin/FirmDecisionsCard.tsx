@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { ProjectActionsMenu } from '@/components/admin/ProjectActionsMenu';
 import { CompanyTile } from '@/components/staff/today/today-parts';
 import type { Engagement } from '@/data/engagements';
-import { stageDisplayLabel } from '@/components/admin/create-project-form-utils';
+import { stageDisplayLabel } from '@/lib/projects/stage';
 import { pendingApprovalKind, usePendingApprovals } from '@/hooks/use-pending-approvals';
 import { checklistItemLabel } from '@/lib/audit/audit-log';
 import { adminProjectStepPath } from '@/lib/projects/project-step-path';

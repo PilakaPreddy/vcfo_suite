@@ -39,7 +39,7 @@ import { ChevronRight } from 'lucide-react';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { StepMark } from '@/components/ui/step-track';
 import { Chip, type ChipTone } from '@/components/ui/spectrum-chip';
-import { STAGE_LABEL, type Stage } from '@/components/admin/create-project-form-utils';
+import { STAGE_LABEL, type Stage } from '@/lib/projects/stage';
 import { RecordPhaseTrack } from '@/components/incorporation/RecordPhaseTrack';
 import { RecordStat, RecordStats, RecordTile } from '@/components/incorporation/RecordHead';
 import { stepMarkForStatus } from '@/components/incorporation/step-mark-for-gate';

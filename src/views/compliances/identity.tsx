@@ -2,7 +2,7 @@
 
 import { ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { regOf, type Regulator } from '@/components/ui/spectrum-chip';
+import { regOf, type Regulator } from '@/lib/ui/regulator';
 import { companyInitials, shortCompany } from '@/components/super/parts/super-text';
 
 /**

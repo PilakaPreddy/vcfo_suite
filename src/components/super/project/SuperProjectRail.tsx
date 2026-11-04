@@ -8,7 +8,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { PreIncorporationNotice } from '@/components/compliances/PreIncorporationNotice';
 import { formatSuperAgo } from '@/components/super/overview/super-overview-format';
 import { NameCell, PersonAvatar } from '@/components/super/parts/super-parts';
-import { plainDay, todayKey } from '@/components/super/parts/super-text';
+import { todayKey } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import type { SuperEngagementDetail, SuperFiling, SuperJourneyStep } from '@/lib/super/super-overview';
 import { cn } from '@/lib/utils';
 

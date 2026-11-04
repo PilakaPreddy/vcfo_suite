@@ -3,7 +3,8 @@
 import { sep } from '@/lib/date-format';
 import type { ReactNode } from 'react';
 import { ExternalLink } from 'lucide-react';
-import { AreaPill, Chip, Tag, type Regulator } from '@/components/ui/spectrum-chip';
+import { AreaPill, Chip, Tag } from '@/components/ui/spectrum-chip';
+import { type Regulator } from '@/lib/ui/regulator';
 import {
   ANNOUNCEMENT_KIND_LABEL,
   ANNOUNCEMENT_KINDS,

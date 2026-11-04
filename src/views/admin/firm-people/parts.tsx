@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { CardHeadTile } from '@/components/common/CardHeadTile';
 import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
 import { Chip, type ChipTone } from '@/components/ui/spectrum-chip';
-import { STAGE_LABEL, type Stage } from '@/components/admin/create-project-form-utils';
+import { STAGE_LABEL, type Stage } from '@/lib/projects/stage';
 import { initialsFromName } from '@/lib/auth';
 import { adminProjectPath, type StaffPathBase } from '@/lib/projects/project-step-path';
 import { cn } from '@/lib/utils';

@@ -18,7 +18,8 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { AreaPill, Chip, OwnerChip, Tag, type ChipTone, type Regulator } from '@/components/ui/spectrum-chip';
+import { AreaPill, Chip, OwnerChip, Tag, type ChipTone } from '@/components/ui/spectrum-chip';
+import { type Regulator } from '@/lib/ui/regulator';
 
 /* ------------------------------------------------------------------ */
 /* icons (paths copied from the boards)                                 */

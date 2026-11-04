@@ -32,7 +32,7 @@ import { isIncorporated } from '@/lib/compliance/incorporation-state';
 import { deriveStuckReason, STUCK_LABEL, type StuckReason } from '@/lib/projects/project-stuck';
 import type { EngagementSchedule } from '@/lib/projects/schedule-windows';
 import { phaseKeyFromId, type PhaseColorKey } from '@/lib/shell/phase-colors';
-import { stageDisplayLabel, type Stage } from '@/components/admin/create-project-form-utils';
+import { stageDisplayLabel, type Stage } from '@/lib/projects/stage';
 import { isAwaitingManagerDecision } from '@/lib/incorporation/pre-inc-direct-flow';
 
 export type SuperOverviewState = Record<string, ChecklistItemStateSlice | undefined>;

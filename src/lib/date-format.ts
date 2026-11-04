@@ -11,3 +11,14 @@ export function sep(s: string): string {
 export function time24(d: Date, timeZone = 'Asia/Kolkata'): string {
   return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone });
 }
+
+const DAY_MONTH: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', timeZone: 'UTC' };
+
+/** R-29: a plain date, "14 Oct". Accepts YYYY-MM-DD or an ISO timestamp. */
+export function plainDay(value: string | null | undefined): string {
+  const v = value?.trim();
+  if (!v) return '–';
+  const date = new Date(/^\d{4}-\d{2}-\d{2}$/.test(v) ? `${v}T00:00:00Z` : v);
+  if (Number.isNaN(date.getTime())) return '–';
+  return sep(date.toLocaleDateString('en-GB', DAY_MONTH));
+}

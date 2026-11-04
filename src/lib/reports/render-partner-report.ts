@@ -7,7 +7,7 @@ import { renderToBuffer } from '@react-pdf/renderer';
 import type { AuthContext } from '@/auth/guards';
 import { getSuperFirmInsights } from '@/db/repositories/super-overview';
 import { firmDisplayName } from '@/lib/shell/brand';
-import { plainDay } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import {
   buildPartnerReport,
   partnerReportFilename,
