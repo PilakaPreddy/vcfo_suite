@@ -1,22 +1,26 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, type ReactNode } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DashBarChart, type ChartRow } from '@/components/charts';
 import { Button } from '@/components/ui/button';
 import { EmptyState, SkeletonRows } from '@/components/ui/empty-state';
 import { Input } from '@/components/ui/input';
 import { Chip } from '@/components/ui/spectrum-chip';
 import { toastError, toastSuccess } from '@/lib/toast-errors';
+import { fcLabel } from '@/lib/receivables/currencies';
 import { sheetDate } from '@/lib/receivables/dates';
 import type { FiraDto, ReportsDto, TdsRowDto } from '@/lib/receivables/reports-wire';
 import { useReports, useReportsActions } from '@/hooks/use-receivables-reports';
 import { inr, parseInr } from '../format';
+import { StatementCard } from './StatementCard';
 
 /**
  * The Reports tab (Phase 9, docs/specs/receivables/PLAN.md): what the live invoices say about
- * the sheet. Ageing by days past due, how late each client pays, the cash expected by week, FX
- * (today's USD rate with the manager's override, open invoices at today's rate and the gain or
- * loss on receipts), TDS certificates, and FIRAs awaited from the bank. Everything here reads
+ * the sheet. Ageing by days past due, how late each client pays, the cash expected by week, a
+ * pointer to the FX tab (Phase 10 moved rates, exposure and the gain or loss on receipts there),
+ * TDS certificates, and FIRAs awaited from the bank. Everything here reads
  * the draft, so it needs no Update; a dispute or FIRA change never shows on the client page.
  */
 
@@ -31,21 +35,6 @@ function errorText(e: unknown) {
 
 function invoiceName(r: { clientName: string | null; invoiceNo: string | null }) {
   return `${r.clientName ?? 'Foreign receipt'}${r.invoiceNo ? ` ${r.invoiceNo}` : ''}`;
-}
-
-/** "+₹12,400" or "−₹3,100", green for a gain and red for a loss. */
-function Signed({ n }: { n: number | null }) {
-  if (n === null) return <span className="text-ink-faint">—</span>;
-  const tone = n > 0 ? 'text-positive' : n < 0 ? 'text-danger' : 'text-ink-muted';
-  return <span className={tone}>{`${n > 0 ? '+' : n < 0 ? '−' : ''}₹${inr(Math.abs(n))}`}</span>;
-}
-
-function fc(n: number | null, currency = 'USD') {
-  return n === null ? '—' : `${currency} ${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n)}`;
-}
-
-function rateText(n: number | null) {
-  return n === null ? '—' : n.toFixed(4);
 }
 
 function Section({ title, aside, children }: { title: string; aside?: ReactNode; children: ReactNode }) {
@@ -216,165 +205,20 @@ function Forecast({ data, sheetId }: { data: ReportsDto; sheetId: string }) {
   );
 }
 
-function RateCard({ data, sheetId }: { data: ReportsDto; sheetId: string }) {
-  const act = useReportsActions(sheetId);
-  const rate = data.fx.rate;
-  const [day, setDay] = useState(data.today);
-  const [value, setValue] = useState('');
-  const [note, setNote] = useState('');
-  const n = Number(value);
-  const ok = Number.isFinite(n) && n > 0 && Boolean(day) && day <= data.today;
-  const save = () =>
-    act.setRate.mutate(
-      { currency: 'USD', rateDate: day, rate: n, note: note.trim() || null },
-      {
-        onSuccess: () => {
-          toastSuccess('Rate saved', `USD ${n.toFixed(4)} is used for ${sheetDate(day)}.`);
-          setValue('');
-          setNote('');
-        },
-        onError: (e) => toastError('Not saved', errorText(e)),
-      },
-    );
-  return (
-    <div className="mb-3 flex flex-wrap items-start justify-between gap-4 rounded-md border border-line bg-surface-raised p-4">
-      <div>
-        <div className="text-[12px] uppercase tracking-[.04em] text-ink-muted">USD to INR</div>
-        {rate ? (
-          <>
-            <div className="font-mono text-[22px] font-semibold tabular-nums">₹{rate.rate.toFixed(4)}</div>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-muted">
-              <span>{sheetDate(rate.rateDate)}</span>
-              <Chip raw tone={rate.source === 'manual' ? 'warn' : rate.source === 'fbil' ? 'ok' : 'idle'}>
-                {rate.source === 'manual' ? 'Set by hand' : rate.source === 'fbil' ? 'FBIL reference' : 'ECB (fallback)'}
-              </Chip>
-              {rate.rateDate !== data.today ? <span>Today&apos;s rate is not in yet.</span> : null}
-            </div>
-          </>
-        ) : (
-          <p className="mt-1 text-[13px] text-ink-muted">No rate yet. The rate is fetched at 14:30 IST on weekdays; set one by hand meanwhile.</p>
-        )}
-      </div>
-      <form
-        className="flex flex-wrap items-end gap-2"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (ok) save();
-        }}
-      >
-        <label htmlFor="rcv-fx-day" className="grid gap-1 text-[12px] text-ink-muted">
-          Day
-          <Input id="rcv-fx-day" type="date" value={day} max={data.today} onChange={(e) => setDay(e.target.value)} className="h-8 w-[150px]" />
-        </label>
-        <label htmlFor="rcv-fx-rate" className="grid gap-1 text-[12px] text-ink-muted">
-          INR per USD
-          <Input id="rcv-fx-rate" inputMode="decimal" placeholder="84.1250" value={value} onChange={(e) => setValue(e.target.value)} className="h-8 w-[110px]" />
-        </label>
-        <label htmlFor="rcv-fx-note" className="grid gap-1 text-[12px] text-ink-muted">
-          Note
-          <Input id="rcv-fx-note" placeholder="e.g. HSBC rate" maxLength={200} value={note} onChange={(e) => setNote(e.target.value)} className="h-8 w-[160px]" />
-        </label>
-        <Button size="sm" type="submit" disabled={!ok || act.setRate.isPending}>
-          Override rate
-        </Button>
-      </form>
-    </div>
-  );
-}
-
-function Fx({ data, sheetId }: { data: ReportsDto; sheetId: string }) {
-  const { open, realised, openTotals, realisedTotals } = data.fx;
+/** The FX section moved to the FX tab in Phase 10; this line points there. */
+function FxLink() {
+  const params = useSearchParams();
+  const q = new URLSearchParams(params.toString());
+  q.set('tab', 'fx');
   return (
     <Section title="Foreign exchange">
-      <RateCard data={data} sheetId={sheetId} />
-      <h3 className="mb-1.5 text-[12px] font-semibold uppercase tracking-[.04em] text-ink-muted">Open USD invoices at today&apos;s rate</h3>
-      {open.length === 0 ? (
-        <EmptyState title="No open foreign invoices" className="mb-3" />
-      ) : (
-        <div className="mb-3">
-          <Table
-            minWidth={760}
-            head={
-              <>
-                <th className={TH}>Client · invoice</th>
-                <th className={TH}>Due</th>
-                <th className={`${TH} text-right`}>Amount</th>
-                <th className={`${TH} text-right`}>Booked rate</th>
-                <th className={`${TH} text-right`}>Booked INR</th>
-                <th className={`${TH} text-right`}>INR today</th>
-                <th className={`${TH} text-right`}>Change</th>
-              </>
-            }
-          >
-            {open.map((r) => (
-              <tr key={r.id}>
-                <td className={TD}>{invoiceName(r)}</td>
-                <td className={`${TD} whitespace-nowrap`}>{sheetDate(r.dueDate)}</td>
-                <td className={NUM}>{fc(r.fcAmount, r.currency)}</td>
-                <td className={NUM}>{rateText(r.bookedRate)}</td>
-                <td className={NUM}>{inr(r.bookedInr)}</td>
-                <td className={NUM}>{r.inrToday === null ? '—' : inr(r.inrToday)}</td>
-                <td className={NUM}>
-                  <Signed n={r.changeInr} />
-                  {r.changePct !== null ? <span className="ml-1 text-[11.5px] text-ink-faint">{`${r.changePct > 0 ? '+' : ''}${r.changePct}%`}</span> : null}
-                </td>
-              </tr>
-            ))}
-            <tr className="font-semibold">
-              <td className={TD} colSpan={4}>
-                Unrealised
-              </td>
-              <td className={NUM}>{inr(openTotals.bookedInr)}</td>
-              <td className={NUM}>{inr(openTotals.inrToday)}</td>
-              <td className={NUM}>
-                <Signed n={openTotals.changeInr} />
-              </td>
-            </tr>
-          </Table>
-        </div>
-      )}
-      <h3 className="mb-1.5 text-[12px] font-semibold uppercase tracking-[.04em] text-ink-muted">Received USD invoices</h3>
-      {realised.length === 0 ? (
-        <EmptyState title="No foreign receipts yet" />
-      ) : (
-        <Table
-          minWidth={820}
-          head={
-            <>
-              <th className={TH}>Client · invoice</th>
-              <th className={TH}>Received</th>
-              <th className={`${TH} text-right`}>Invoiced</th>
-              <th className={`${TH} text-right`}>Arrived</th>
-              <th className={`${TH} text-right`}>INR credited</th>
-              <th className={`${TH} text-right`}>Booked / effective rate</th>
-              <th className={`${TH} text-right`}>Bank charges</th>
-              <th className={`${TH} text-right`}>Realised</th>
-            </>
-          }
-        >
-          {realised.map((r) => (
-            <tr key={r.id}>
-              <td className={TD}>{invoiceName(r)}</td>
-              <td className={`${TD} whitespace-nowrap`}>{r.paidOn ? sheetDate(r.paidOn) : '—'}</td>
-              <td className={NUM}>{fc(r.fcAmount, r.currency)}</td>
-              <td className={NUM}>{fc(r.receivedFc, r.currency)}</td>
-              <td className={NUM}>{r.receivedInr === null ? '—' : inr(r.receivedInr)}</td>
-              <td className={NUM}>{`${rateText(r.bookedRate)} / ${rateText(r.effectiveRate)}`}</td>
-              <td className={NUM}>{r.bankChargesFc === null ? '—' : `${fc(r.bankChargesFc, r.currency)} · ₹${inr(r.bankChargesInr)}`}</td>
-              <td className={NUM}>{r.realisedInr === null ? <span className="text-[12px] text-ink-faint">USD received not recorded</span> : <Signed n={r.realisedInr} />}</td>
-            </tr>
-          ))}
-          <tr className="font-semibold">
-            <td className={TD} colSpan={6}>
-              Realised
-            </td>
-            <td className={NUM}>₹{inr(realisedTotals.bankChargesInr)}</td>
-            <td className={NUM}>
-              <Signed n={realisedTotals.realisedInr} />
-            </td>
-          </tr>
-        </Table>
-      )}
+      <p className="rounded-md border border-line bg-surface-raised px-3 py-2.5 text-[13px] text-ink-muted">
+        Rates, exposure, forward contracts, the what-if, bank spreads and rate alerts are on the{' '}
+        <Link href={`/receivables/manager?${q.toString()}`} scroll={false} className="font-medium text-brand-text underline-offset-4 hover:underline">
+          FX tab
+        </Link>
+        .
+      </p>
     </Section>
   );
 }
@@ -449,7 +293,7 @@ function FiraRow({ f, sheetId, today }: { f: FiraDto; sheetId: string; today: st
   return (
     <tr>
       <td className={TD}>{invoiceName(f)}</td>
-      <td className={NUM}>{fc(f.fcAmount, f.currency)}</td>
+      <td className={NUM}>{fcLabel(f.fcAmount, f.currency)}</td>
       <td className={NUM}>{f.inrAmount === null ? '—' : inr(f.inrAmount)}</td>
       <td className={TD}>
         {f.status === 'received' ? (
@@ -513,10 +357,11 @@ export function ReportsTab({ sheetId }: { sheetId: string }) {
   if (!data) return null;
   return (
     <>
+      <StatementCard sheetId={sheetId} />
       <Ageing data={data} />
       <DaysToPay data={data} />
       <Forecast data={data} sheetId={sheetId} />
-      <Fx data={data} sheetId={sheetId} />
+      <FxLink />
       <Tds data={data} sheetId={sheetId} />
       <Fira data={data} sheetId={sheetId} />
     </>

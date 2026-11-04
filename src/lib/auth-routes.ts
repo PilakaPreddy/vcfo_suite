@@ -24,6 +24,9 @@ export function roleHomePath(role: Role): string {
 /** The receivables manager area, which lives outside /app. */
 const RECEIVABLES_MANAGER_NEXT = /^\/receivables\/manager(\/[A-Za-z0-9/_-]*)?$/;
 
+/** A shared receivables view, `/receivables/s/<token>` (Phase 10); staff and partners may both open one. */
+const RECEIVABLES_SHARE_NEXT = /^\/receivables\/s\/[A-Za-z0-9_-]{16,64}$/;
+
 /**
  * The client partner pages: `/receivables` and its sub-pages, with an optional plain query such as
  * the `?invoice=<id>` of a reminder email. The manager area and the partner login page are not
@@ -34,7 +37,8 @@ const RECEIVABLES_PARTNER_NEXT =
 
 /**
  * Where to go after sign-in when the login page was opened with `?next=`. Staff are sent back to
- * the receivables manager area (it lives outside /app, so the role home would lose it). A client
+ * the receivables manager area or a shared view (both live outside /app, so the role home would
+ * lose them). A client
  * partner is sent back to the partner page they asked for and otherwise lands on `/receivables`,
  * never on /app. Anything else, including other sites and `//host` tricks, falls back to the
  * role home.
@@ -43,7 +47,7 @@ export function postLoginPath(role: Role, next: string | null | undefined): stri
   if (role === 'partner') {
     return next && RECEIVABLES_PARTNER_NEXT.test(next) ? next : roleHomePath(role);
   }
-  if (next && RECEIVABLES_MANAGER_NEXT.test(next)) return next;
+  if (next && (RECEIVABLES_MANAGER_NEXT.test(next) || RECEIVABLES_SHARE_NEXT.test(next))) return next;
   return roleHomePath(role);
 }
 

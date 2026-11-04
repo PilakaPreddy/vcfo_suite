@@ -20,6 +20,7 @@
 import { boolean, date, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import * as base from './schema';
 import type { ReminderRules, SnapshotRow, EmailRecipient } from '@/lib/receivables/model';
+import type { ShareFilters } from '@/lib/receivables/share-filters';
 
 export const receivableSheets = pgTable(
   'receivable_sheets',
@@ -370,5 +371,114 @@ export const receivableFiras = pgTable(
   (t) => ({
     sheetIdx: index('receivable_firas_sheet_status_idx').on(t.sheetId, t.status),
     invoiceIdx: index('receivable_firas_invoice_idx').on(t.invoiceId),
+  }),
+);
+
+/**
+ * Phase 10: a saved, filtered view of the published sheet behind its own link
+ * (`/receivables/s/<token>`). `public` opens for anyone with the link; `login` needs any
+ * client-partner login on this sheet (or the sheet's staff); `restricted` needs one of the
+ * `allowed_emails` logins. The sheet's manager and the firm-wide admins can always open it.
+ * The view always shows the latest published version, never a draft.
+ */
+export const receivableShareLinks = pgTable(
+  'receivable_share_links',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sheetId: uuid('sheet_id')
+      .notNull()
+      .references(() => receivableSheets.id, { onDelete: 'cascade' }),
+    /** The random, URL-safe part of the link. */
+    token: text('token').notNull(),
+    name: text('name').notNull(),
+    filters: jsonb('filters').$type<ShareFilters>().notNull(),
+    /** public | login | restricted. */
+    visibility: text('visibility').notNull(),
+    /** Lower-cased emails allowed when visibility is `restricted`. */
+    allowedEmails: jsonb('allowed_emails').$type<string[]>().notNull().default([]),
+    /** Whether the Excel download is offered on the shared view. */
+    allowDownload: boolean('allow_download').notNull().default(true),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    viewCount: integer('view_count').notNull().default(0),
+    lastViewedAt: timestamp('last_viewed_at', { withTimezone: true }),
+    createdBy: uuid('created_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    tokenIdx: uniqueIndex('receivable_share_links_token_idx').on(t.token),
+    sheetIdx: index('receivable_share_links_sheet_idx').on(t.sheetId),
+  }),
+);
+
+/** Phase 10: one row per opening of a share link, so the manager sees who looked and when. */
+export const receivableShareViews = pgTable(
+  'receivable_share_views',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    linkId: uuid('link_id')
+      .notNull()
+      .references(() => receivableShareLinks.id, { onDelete: 'cascade' }),
+    /** Null for an anonymous view of a public link. */
+    viewerId: uuid('viewer_id').references(() => base.profiles.id, { onDelete: 'set null' }),
+    viewerEmail: text('viewer_email'),
+    viewedAt: timestamp('viewed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    linkIdx: index('receivable_share_views_link_idx').on(t.linkId, t.viewedAt),
+  }),
+);
+
+/**
+ * Phase 10: forward contracts booked with the bank to fix the rupee value of future foreign
+ * receipts. `utilised_fc` grows as receipts are settled against the contract.
+ */
+export const receivableFxForwards = pgTable(
+  'receivable_fx_forwards',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sheetId: uuid('sheet_id')
+      .notNull()
+      .references(() => receivableSheets.id, { onDelete: 'cascade' }),
+    currency: text('currency').notNull().default('USD'),
+    bank: text('bank').notNull().default(''),
+    contractNo: text('contract_no'),
+    amountFc: numeric('amount_fc', { precision: 14, scale: 2 }).notNull(),
+    forwardRate: numeric('forward_rate', { precision: 12, scale: 6 }).notNull(),
+    bookedOn: date('booked_on').notNull(),
+    maturityOn: date('maturity_on').notNull(),
+    utilisedFc: numeric('utilised_fc', { precision: 14, scale: 2 }).notNull().default('0'),
+    /** open | closed | cancelled. */
+    status: text('status').notNull().default('open'),
+    note: text('note').notNull().default(''),
+    createdBy: uuid('created_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    sheetIdx: index('receivable_fx_forwards_sheet_idx').on(t.sheetId, t.status),
+  }),
+);
+
+/** Phase 10: tell the manager when a currency's reference rate crosses a level. */
+export const receivableFxAlerts = pgTable(
+  'receivable_fx_alerts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sheetId: uuid('sheet_id')
+      .notNull()
+      .references(() => receivableSheets.id, { onDelete: 'cascade' }),
+    currency: text('currency').notNull().default('USD'),
+    /** above | below. */
+    direction: text('direction').notNull(),
+    threshold: numeric('threshold', { precision: 12, scale: 6 }).notNull(),
+    active: boolean('active').notNull().default(true),
+    lastTriggeredOn: date('last_triggered_on'),
+    createdBy: uuid('created_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    sheetIdx: index('receivable_fx_alerts_sheet_idx').on(t.sheetId, t.active),
   }),
 );

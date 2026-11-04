@@ -31,7 +31,7 @@ function PopoverContent({ ref, className, align = "center", sideOffset = 4, ...p
  * 14px title bar and a footer, each with a hairline; the body scrolls at 60 % of the screen
  * height. The trigger is the child element.
  */
-function PopoverCard({
+export function PopoverCard({
   trigger,
   title,
   children,

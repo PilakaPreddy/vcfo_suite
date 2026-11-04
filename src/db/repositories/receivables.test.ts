@@ -173,7 +173,7 @@ describe('the sheet’s manager', () => {
     results = [[sheetRow()]];
     await expect(repo.addInvoice(me, SHEET, { invoiceMonth: '2026-10-01', clientName: 'Vena', dueDate: '2026-11-30', amountInr: 1, currency: 'USD', fcAmount: 12000, fxRate: 83 })).rejects.toMatchObject({ code: 'invoice_date' });
     results = [[sheetRow()]];
-    await expect(repo.addInvoice(me, SHEET, { invoiceMonth: '2026-10-01', clientName: 'Vena', dueDate: '2026-11-30', amountInr: 1, currency: 'EUR' })).rejects.toMatchObject({ code: 'currency' });
+    await expect(repo.addInvoice(me, SHEET, { invoiceMonth: '2026-10-01', clientName: 'Vena', dueDate: '2026-11-30', amountInr: 1, currency: 'BTC' })).rejects.toMatchObject({ code: 'currency' });
     expect(writes()).toHaveLength(0);
   });
 

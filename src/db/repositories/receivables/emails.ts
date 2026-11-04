@@ -90,7 +90,7 @@ export async function getSummarySendStatus(ctx: AuthContext, sheetId: string, se
   return { status: row.status as SummarySendStatus, error: row.error };
 }
 
-async function listSummarySends(ctx: AuthContext, sheetId: string) {
+export async function listSummarySends(ctx: AuthContext, sheetId: string) {
   const sheet = await scopedSheet(ctx, sheetId);
   return db
     .select({ id: receivableEmailSends.id, subject: receivableEmailSends.subject, toList: receivableEmailSends.toList, ccList: receivableEmailSends.ccList, bccList: receivableEmailSends.bccList, sentAt: receivableEmailSends.sentAt })

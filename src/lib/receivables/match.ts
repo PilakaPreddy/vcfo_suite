@@ -13,9 +13,9 @@ import type { SheetInvoice } from './model';
  *               amount alone points at a single invoice. The manager confirms.
  *   unmatched   nothing credible. The manager picks an invoice or marks it "not a receipt".
  *
- * A foreign credit (currency USD with its foreign amount) is first matched on the foreign amount
+ * A foreign credit (any currency with its foreign amount) is first matched on the foreign amount
  * against open invoices raised in the same currency: equal to the cent is a sure match, and up
- * to the bank-charge tolerance short (the larger of USD 50 and 2%) asks to confirm. The INR rules
+ * to the bank-charge tolerance short (the larger of 50 units and 2%) asks to confirm. The INR rules
  * above still run after that, so a foreign credit can also match on the rupees credited.
  */
 

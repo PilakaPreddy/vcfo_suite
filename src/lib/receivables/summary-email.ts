@@ -1,4 +1,5 @@
 import { escapeHtml } from '@/lib/email/email-layout';
+import { foreignAmountHeader } from './currencies';
 import { daysLeft, monthBlockTitle, monthLong, monthShort, sheetDate } from './dates';
 import type { SnapshotRow } from './model';
 import { foreignAmountOf, isForeignRow, isOpen, monthsOf, receivedThisWeek, sumInr } from './summary';
@@ -10,8 +11,8 @@ import { foreignAmountOf, isForeignRow, isOpen, monthsOf, receivedThisWeek, sumI
  * with "Received", a month total of what is still open, and the total receivables. Built from a
  * published version only, so the email never shows draft edits. Inline styles, for Outlook.
  *
- * Phase 9: when any row is in a foreign currency, each table gains Currency and USD Amount
- * columns before the INR. With every row in INR the email is exactly the format above.
+ * Phase 9: when any row is in a foreign currency, each table gains Currency and foreign amount
+ * columns ("USD Amount", or "Foreign Amount" when currencies are mixed) before the INR. With every row in INR the email is exactly the format above.
  */
 
 const inr = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
@@ -59,7 +60,7 @@ export function summaryEmailHtml(input: SummaryEmailInput): string {
   };
   const blank = `<td style="${CELL}"></td>`;
   const heads = foreign
-    ? ['Client', 'Due Date', 'Currency', 'USD Amount', 'Invoice Amount INR', 'No of Days Over Due', 'Remarks']
+    ? ['Client', 'Due Date', 'Currency', foreignAmountHeader(rows.filter(isForeignRow).map((r) => r.currency)), 'Invoice Amount INR', 'No of Days Over Due', 'Remarks']
     : ['Client', 'Due Date', 'Invoice Amount INR', 'No of Days Over Due', 'Remarks'];
   const tables = monthsOf(rows)
     .map((m) => {

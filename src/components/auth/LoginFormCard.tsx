@@ -56,6 +56,8 @@ export interface LoginFormCardProps {
   subtitle?: string;
   /** Replaces the default foot (forgot password and Book a demo), for example on the partner login. */
   foot?: React.ReactNode;
+  /** The email field's label. Defaults to "Work email"; the partner login says "Email". */
+  emailLabel?: string;
 }
 
 /** Plain words for the `?error=microsoft_*` codes the Auth.js `signIn` callback sends back. */
@@ -141,6 +143,7 @@ export function LoginFormCard({
   title = 'Sign in to your workspace',
   subtitle = 'Use the account your firm created for you.',
   foot,
+  emailLabel = 'Work email',
 }: LoginFormCardProps) {
   const codeDigits = code.replace(/[\s-]/g, '');
   const footLink =
@@ -233,7 +236,7 @@ export function LoginFormCard({
           <form onSubmit={onSubmit} className="grid gap-3.5" aria-labelledby="sign-in-title">
             <div className="grid gap-1.5">
               <Label htmlFor="email" className="text-[13px] font-medium text-ink-2">
-                Work email
+                {emailLabel}
               </Label>
               <Input
                 id="email"

@@ -24,6 +24,8 @@ export type ManagerSheetDto = {
   publicUrl: string;
   /** Phase 9: the USD rate in force today (or the latest within ten days); null before the first fetch. */
   usdRate: RateInForceDto | null;
+  /** Phase 10: today's rate in force of each foreign currency on the draft (USD always), keyed by code. */
+  fxRates?: Record<string, RateInForceDto | null>;
 };
 
 /** Phase 8: a client partner's login, as the Partners tab shows it. */

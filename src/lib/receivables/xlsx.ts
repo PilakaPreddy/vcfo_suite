@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { foreignAmountHeader } from './currencies';
 import { daysLeft, monthBlockTitle, monthShort } from './dates';
 import type { SnapshotRow } from './model';
 import { foreignAmountOf, isForeignRow, isOpen, monthsOf, receivedThisWeek, sumInr } from './summary';
@@ -9,8 +10,9 @@ import { foreignAmountOf, isForeignRow, isOpen, monthsOf, receivedThisWeek, sumI
  * Remarks and totals), plus a flat "Invoices" sheet with one row per invoice for filtering.
  * Used for the email attachment and the Download Excel buttons.
  *
- * Phase 9: when any row is in a foreign currency, the Summary blocks gain Currency and USD Amount
- * columns before the INR, and the Invoices sheet gains Currency, USD amount and Booked rate after
+ * Phase 9: when any row is in a foreign currency, the Summary blocks gain Currency and the foreign
+ * amount ("USD Amount", or "Foreign Amount" when currencies are mixed) before the INR, and the
+ * Invoices sheet gains Currency, the foreign amount and Booked rate after
  * Amount INR. With every row in INR both sheets keep exactly the layout above.
  */
 
@@ -28,6 +30,8 @@ export async function receivablesWorkbook(rows: SnapshotRow[], today: string): P
   wb.creator = 'VCFO Suite';
   const ws = wb.addWorksheet('Summary');
   const foreign = rows.some(isForeignRow);
+  // Phase 10: the amount column names the currency when there is one, else reads "Foreign".
+  const fcCodes = rows.filter(isForeignRow).map((r) => r.currency);
   const width = foreign ? 7 : 5;
   /** The 1-based column of the INR amount on the Summary sheet. */
   const inrCol = foreign ? 5 : 3;
@@ -36,7 +40,7 @@ export async function receivablesWorkbook(rows: SnapshotRow[], today: string): P
     : [{ width: 24 }, { width: 14 }, { width: 20 }, { width: 20 }, { width: 14 }];
 
   const boxRow = (r: ExcelJS.Row) => r.eachCell({ includeEmpty: true }, (c) => (c.border = BOX));
-  /** The Currency and USD Amount cells of a row, only when the workbook has a foreign row. */
+  /** The Currency and foreign amount cells of a row, only when the workbook has a foreign row. */
   const fxCells = (r: SnapshotRow): ExcelJS.CellValue[] => (foreign ? [isForeignRow(r) ? (r.currency ?? '').toUpperCase() : 'INR', foreignAmountOf(r) ?? ''] : []);
   const pad = foreign ? ['', ''] : [];
 
@@ -48,7 +52,7 @@ export async function receivablesWorkbook(rows: SnapshotRow[], today: string): P
     title.getCell(1).fill = BLACK;
     title.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     title.getCell(1).alignment = { horizontal: 'center' };
-    const head = ws.addRow(['Client', 'Due Date', ...(foreign ? ['Currency', 'USD Amount'] : []), 'Invoice Amount INR', 'No of Days Over Due', 'Remarks']);
+    const head = ws.addRow(['Client', 'Due Date', ...(foreign ? ['Currency', foreignAmountHeader(fcCodes)] : []), 'Invoice Amount INR', 'No of Days Over Due', 'Remarks']);
     head.font = { bold: true };
     boxRow(head);
     for (const r of list) {
@@ -79,7 +83,7 @@ export async function receivablesWorkbook(rows: SnapshotRow[], today: string): P
     { header: 'Client partner', width: 22 },
     { header: 'Due date', width: 12 },
     { header: 'Amount INR', width: 16 },
-    ...(foreign ? [{ header: 'Currency', width: 10 }, { header: 'USD amount', width: 14 }, { header: 'Booked rate', width: 12 }] : []),
+    ...(foreign ? [{ header: 'Currency', width: 10 }, { header: foreignAmountHeader(fcCodes, 'amount'), width: 14 }, { header: 'Booked rate', width: 12 }] : []),
     { header: 'Days overdue', width: 13 },
     { header: 'Status', width: 11 },
     { header: 'Paid on', width: 12 },

@@ -14,3 +14,4 @@ export {
 } from '@/components/charts/chart-theme';
 export { ChartLegend } from '@/components/charts/ChartLegend';
 export { DashBarChart, type ChartRow, type ChartSeries } from '@/components/charts/DashBarChart';
+export { DashLineChart, DashSparkline } from '@/components/charts/DashLineChart';

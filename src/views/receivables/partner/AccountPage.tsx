@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
+import { DashSection } from '@/components/dash/DashSection';
 import { Button } from '@/components/ui/button';
+import { EmptyState, SkeletonRows } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -22,13 +24,9 @@ function errorText(e: unknown) {
   return e instanceof Error ? e.message : 'Something went wrong. Try again.';
 }
 
+/** A section card (the shared DashSection), so the account page matches the invoices page. */
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-md border border-line bg-surface-raised px-4 py-4 sm:px-5">
-      <h2 className="mb-3 text-[14px] font-semibold">{title}</h2>
-      {children}
-    </section>
-  );
+  return <DashSection title={title}>{children}</DashSection>;
 }
 
 function PasswordCard() {
@@ -97,23 +95,27 @@ export function AccountPage() {
 
   return (
     <div className="min-h-screen bg-surface text-ink">
-      <div className="mx-auto max-w-[880px] px-4 pb-12">
+      <div className="mx-auto max-w-[1180px] px-4 pb-12">
         <PartnerHeader clientOrgName={data?.clientOrgName} partnerName={data?.partner.name} current="account" />
-        <h1 className="mb-4 text-[20px] font-medium">My account</h1>
+        <h1 className="mb-4 text-[22px] font-medium leading-7 tracking-[-0.01em]">My account</h1>
 
         {home.isPending ? (
-          <p className="py-10 text-center text-[13px] text-ink-muted">Loading your account…</p>
+          <SkeletonRows rows={3} />
         ) : home.isError || !data ? (
-          <div className="rounded-md border border-line bg-surface-raised px-4 py-8 text-center text-[13px]">
-            <p role="alert" className="text-ink-2">
-              {home.error instanceof Error ? home.error.message : 'Your account did not load.'}
-            </p>
-            <Button size="sm" variant="secondary" className="mt-3" onClick={() => void home.refetch()}>
-              Try again
-            </Button>
-          </div>
+          <EmptyState
+            title={
+              <span role="alert" className="text-ink-2">
+                {home.error instanceof Error ? home.error.message : 'Your account did not load.'}
+              </span>
+            }
+            action={
+              <Button size="sm" variant="secondary" onClick={() => void home.refetch()}>
+                Try again
+              </Button>
+            }
+          />
         ) : (
-          <div className="grid gap-4">
+          <div className="grid max-w-[880px] gap-4">
             <Card title="Your details">
               <dl className="grid gap-3 text-[13px] sm:grid-cols-2">
                 <div>
