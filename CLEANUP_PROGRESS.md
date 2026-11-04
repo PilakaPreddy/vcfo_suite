@@ -31,12 +31,15 @@ memory), and the tests need `npm run css:portal` first because the generated por
 ## Decisions
 - Production-only orphans (27 files used only by their own tests or fixtures) are not deleted in this run; the owner decides: src/components/dash/phase-rows.tsx, src/components/dash/stage-track.tsx, src/components/dash/week-strip.tsx, src/components/incorporation/PhaseCelebration.tsx, src/components/ui/chevron.tsx, src/db/repositories/dev-test-db.ts, src/db/repositories/work-test-stub.ts, src/lib/audit/audit-event-access.ts, src/views/announcements/AnnouncementDetailDialog.tsx, src/views/client/Overview.tsx, src/components/client/overview/ClientActivityFeed.tsx, src/components/client/overview/ClientBallInCourt.tsx, src/components/client/overview/ClientCard.tsx, src/components/client/overview/ClientCompanySnapshot.tsx, src/components/client/overview/ClientComplianceRunway.tsx, src/components/client/overview/ClientDeliverables.tsx, src/components/client/overview/ClientEntityCard.tsx, src/components/client/overview/ClientJourneyTrack.tsx, src/components/client/overview/ClientMilestoneCelebration.tsx, src/components/client/overview/ClientNextAction.tsx, src/components/client/overview/ClientOverviewHero.tsx, src/components/client/overview/ClientOverviewSkeleton.tsx, src/components/client/overview/ClientPhaseBars.tsx, src/components/client/overview/ClientTeamCard.tsx, src/components/client/overview/client-overview-format.ts, src/lib/assist-profile/__tests__/fixtures.ts, src/lib/doc-pack/__tests__/fixtures.ts
 - Unlisted dependency `playwright` in scripts/build-incorp-docs-er-pdf.mjs left alone (owner script; @playwright/test is installed).
+## Phase 2
+- Chosen candidate (owner, 2026-11-03 checkpoint): shared block of AnnouncementLivePopup.tsx + NotificationLivePopup.tsx.
+- Owner instruction (2026-11-04): run every remaining phase without waiting for approval. Error pages and docx previews follow as further low-risk consolidations; the Documents client/staff merge is out of scope for an unattended run.
+
 ## Coverage
 ### 1.5 duplication
 - reviewed: 18 (14 churn-checked pairs + 4 feature pairs) · skipped by class: route guards, schema columns, error pages, test fixtures
 - coverage_rate: below 100% by pair; gap accepted and recorded here
 
 ## Pending for the human
-- Phase 2 checkpoint: choose the first consolidation candidate
 - Phase 1.4 audit not run
 - 27 production-only orphans (see Decisions)
