@@ -25,7 +25,7 @@ import {
   updateEngagement,
 } from '@/db/repositories/engagements';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
-import { listManagerOptions } from '@/db/repositories/profiles';
+import { listManagerOptions, systemGetProfileParty } from '@/db/repositories/profiles';
 import {
   ensureEngagementManager,
   removeEngagementManager,
@@ -34,9 +34,6 @@ import { engagementDbId } from '@/lib/projects/legacy-engagement-ids';
 import { isFirmWideAdmin } from '@/lib/auth';
 import { emptyEmailDispatch } from '@/lib/email/email-dispatch';
 import { notifyTeamAssignment } from '@/lib/email/notify-team-assignment';
-import { db } from '@/db/client';
-import { profiles } from '@/db/schema';
-import { eq } from 'drizzle-orm';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -77,21 +74,6 @@ const patchBodySchema = z.object({
     .record(z.string(), z.union([z.boolean(), z.number(), z.string()]))
     .optional(),
 });
-
-async function profileParty(id: string | null | undefined) {
-  if (!id) return null;
-  const [row] = await db
-    .select({ id: profiles.id, email: profiles.email, name: profiles.name })
-    .from(profiles)
-    .where(eq(profiles.id, id))
-    .limit(1);
-  if (!row?.email?.trim()) return null;
-  return {
-    userId: row.id,
-    email: row.email.trim(),
-    name: row.name?.trim() || row.email.trim(),
-  };
-}
 
 export async function GET(_request: Request, context: RouteContext) {
   const guard = await requireAuth();
@@ -190,7 +172,7 @@ export async function PATCH(request: Request, context: RouteContext) {
           engagementDbId: row.id,
           managerId: prevId,
         }).catch(() => undefined);
-        const prev = await profileParty(prevId);
+        const prev = await systemGetProfileParty(prevId);
         if (prev) {
           const part = await notifyTeamAssignment({
             engagementAppId: engagement.id,
@@ -215,7 +197,7 @@ export async function PATCH(request: Request, context: RouteContext) {
           invitedBy: guard.ctx.userId,
         });
         if (nextId !== prevId) {
-          const next = await profileParty(nextId);
+          const next = await systemGetProfileParty(nextId);
           if (next) {
             const part = await notifyTeamAssignment({
               engagementAppId: engagement.id,

@@ -956,6 +956,24 @@ export async function systemMarkWhatsAppStatus(
 }
 
 /**
+ * SYSTEM READER — the name and email of a person for a team assignment email.
+ *
+ * Called by `PATCH /api/engagements/[id]` after its own guard has admitted an admin changing
+ * the project manager; it reads only the id, email and name of the old or new manager it was
+ * given. Null when the id is empty or the person has no email.
+ */
+export async function systemGetProfileParty(id: string | null | undefined): Promise<{ userId: string; email: string; name: string } | null> {
+  if (!id) return null;
+  const [row] = await db
+    .select({ id: profiles.id, email: profiles.email, name: profiles.name })
+    .from(profiles)
+    .where(eq(profiles.id, id))
+    .limit(1);
+  if (!row?.email?.trim()) return null;
+  return { userId: row.id, email: row.email.trim(), name: row.name?.trim() || row.email.trim() };
+}
+
+/**
  * SYSTEM READER — background WhatsApp job (documented deviation).
  *
  * The Inngest job runs after the request that queued it has already returned,
