@@ -213,6 +213,18 @@ async function documentsFor(ctx: AuthContext, mine: DocumentsEngagement): Promis
 
   const nodes: DocNode[] = [];
   const usedPaths = new Set<string>();
+  // Staff reads carry each file's index row, so the Vault can review, delete and name the uploader.
+  const staff = ctx.role !== 'client';
+  const indexRowOf = (d: (typeof indexed)[number]): DocNode['indexRow'] =>
+    staff
+      ? { id: d.id, uploadedBy: d.uploadedBy, reviewStatus: d.reviewStatus, reviewNote: d.reviewNote, reviewedAt: d.reviewedAt, replacedAt: d.replacedAt }
+      : undefined;
+  const indexByPath = new Map(
+    indexed.flatMap((d) => {
+      const { bucket, path } = indexedKey(d.objectKey);
+      return bucket === MILESTONE_DOCUMENTS_BUCKET ? [[path, d] as const] : [];
+    }),
+  );
 
   /* ---- earlier uploads per milestone field (S3 listing) ---- */
   const versionsByField = new Map<string, Array<{ path: string; size: number | null }>>();
@@ -231,7 +243,8 @@ async function documentsFor(ctx: AuthContext, mine: DocumentsEngagement): Promis
   /* ---- checklist uploads ---- */
   for (const item of checklist) {
     const slice = state[item.id];
-    if (!slice || !isStepReleasedTo('client', slice)) continue;
+    // A client sees a step's files once the step is released to them; staff see every step.
+    if (!slice || (ctx.role === 'client' && !isStepReleasedTo('client', slice))) continue;
     const responses = extractItemResponses(item, slice);
     const fields = getClientResponseFields(item);
     const fieldById = new Map(fields.map((f) => [f.id, f]));
@@ -266,6 +279,7 @@ async function documentsFor(ctx: AuthContext, mine: DocumentsEngagement): Promis
         ...(/Signed(Url)?$/.test(fieldId) ? { signed: true } : {}),
         portal: portalForField(fieldId),
         source: 'milestone',
+        indexRow: indexByPath.has(path) ? indexRowOf(indexByPath.get(path)!) : undefined,
       });
       // earlier uploads of the same field → Replaced versions (v1, v2…)
       const older = (versionsByField.get(fieldId) ?? [])
@@ -289,6 +303,7 @@ async function documentsFor(ctx: AuthContext, mine: DocumentsEngagement): Promis
           stepId: item.id,
           categoryId: categoryFor(item.id, label),
           source: 'milestone',
+          indexRow: indexByPath.has(v.path) ? indexRowOf(indexByPath.get(v.path)!) : undefined,
         });
       });
     };
@@ -329,8 +344,8 @@ async function documentsFor(ctx: AuthContext, mine: DocumentsEngagement): Promis
         fileName: d.fileName,
         contentType: d.contentType ?? contentTypeForName(d.fileName),
         sizeBytes: d.sizeBytes,
-        status: fromClient ? 'Approved' : 'Final',
-        replaced: false,
+        status: d.replacedAt ? 'Replaced' : fromClient ? 'Approved' : 'Final',
+        replaced: Boolean(d.replacedAt),
         from: fromClient ? company : up?.name ? `SBC · ${up.name}` : 'SBC',
         fromSbc: !fromClient,
         date: d.createdAt,
@@ -338,6 +353,7 @@ async function documentsFor(ctx: AuthContext, mine: DocumentsEngagement): Promis
         categoryId: categoryFor(stepFor(d.stepId, label), `${label} ${d.category ?? ''}`),
         stale: isStaleProof(label, d.createdAt, now),
         source: 'index',
+        indexRow: indexRowOf(d),
       });
     }
   }

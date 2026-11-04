@@ -6,6 +6,7 @@ import { errorMessage, toastError, toastInfo } from '@/lib/toast-errors';
 import { toastSaved } from '@/components/ui/toast-saved';
 import { toastUndo } from '@/components/ui/undo-toast';
 import type { VaultRef } from '@/views/vault/vault-files';
+import { DOCS_KEY } from '@/components/client-portal/pages/documents/shared-ui';
 
 /*
  * Vault actions (G-26): ZIP download, review, and delete with Undo (P-596). The ZIP is checked
@@ -28,6 +29,14 @@ function submitZipForm(payload: { name: string; items: ZipItem[] }) {
   document.body.appendChild(form);
   form.submit();
   form.remove();
+}
+
+/** The firm-wide index rows (the filter) and the per-client documents read (the tree). */
+function refreshDocuments(queryClient: ReturnType<typeof useQueryClient>) {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['documents', 'vault'] }),
+    queryClient.invalidateQueries({ queryKey: DOCS_KEY }),
+  ]);
 }
 
 export function useVaultActions() {
@@ -79,7 +88,7 @@ export function useVaultActions() {
         });
         const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
         if (!res.ok || json.ok === false) throw new Error(json.error);
-        await queryClient.invalidateQueries({ queryKey: ['documents', 'vault'] });
+        await refreshDocuments(queryClient);
         // A1 toast with the status tile (R-13).
         toastSaved(status === 'approved' ? 'Approved' : status === 'changes' ? 'Sent back' : 'Marked in review');
         return true;
@@ -92,7 +101,7 @@ export function useVaultActions() {
   );
 
   const refreshIndex = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: ['documents', 'vault'] }),
+    () => refreshDocuments(queryClient),
     [queryClient],
   );
 
@@ -103,7 +112,7 @@ export function useVaultActions() {
         const res = await fetch(`/api/documents/${encodeURIComponent(documentId)}/restore`, { method: 'POST' });
         const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
         if (!res.ok || json.ok === false) throw new Error(json.error);
-        await queryClient.invalidateQueries({ queryKey: ['documents', 'vault'] });
+        await refreshDocuments(queryClient);
         toastSaved(`Restored ${fileName}`);
       } catch (err) {
         toastError(`${fileName} wasn't restored`, errorMessage(err));
@@ -135,7 +144,7 @@ export function useVaultActions() {
         toastError(`${fileName} wasn't deleted`, why);
         return false;
       }
-      await queryClient.invalidateQueries({ queryKey: ['documents', 'vault'] });
+      await refreshDocuments(queryClient);
       toastUndo(`Deleted ${fileName}`, () => void restore(documentId, fileName));
       return true;
     },

@@ -18,10 +18,10 @@ import {
 import {
   collectIndexedVaultDocuments,
   collectVaultDocuments,
-  filterVaultEntityGroups,
   groupVaultDocuments,
   mergeVaultDocuments,
   scopeVaultDocumentsToEngagements,
+  vaultDocumentsFromPayload,
   vaultSearchHits,
 } from '@/lib/documents/vault-documents';
 import { internVisibleDocuments } from '@/lib/documents/document-access';
@@ -49,12 +49,12 @@ import {
   entityDocs as allEntityDocs,
   canDeleteDoc,
   childFolderIds,
+  factsFor,
   fileUrl,
   folderDocs,
   fromLabel,
   indexMaps,
   isReplacedDoc,
-  indexRowFor,
   refFor,
   reviewProgress,
   viewerIdFrom,
@@ -65,15 +65,17 @@ import {
 import { useVaultActions } from '@/views/vault/use-vault-actions';
 import { VaultUploadDialog } from '@/views/vault/VaultUploadDialog';
 import { StaffClientDocuments } from '@/components/client-portal/pages/documents/StaffClientDocuments';
+import { useClientDocuments } from '@/components/client-portal/pages/documents/shared-ui';
 import { useVaultRequests, VaultRequestsSection } from '@/views/vault/VaultRequestsSection';
 import type { VaultDocument } from '@/lib/documents/vault-documents';
 
 /*
  * Staff Vault (K-39): the client Documents explorer look with the client dropdown first. One
  * card holds the toolbar (client, filter, Status toggle, By step / By category), the tree on the
- * left and the preview pane on the right. No page title (R-09): the explorer card is first. The
- * data is the same as before: checklist uploads merged with the indexed documents, scoped to the
- * engagements the signed-in person can see.
+ * left and the preview pane on the right. No page title (R-09): the explorer card is first. Both
+ * tabs read the picked client's files from one server read (`/api/client/documents?engagement=`),
+ * so Manage and Client view list the same files. Only the filter, which searches every client the
+ * person can see, still builds its list in the browser from checklist uploads and `/api/documents`.
  *
  * The page renders from the vault route's layout, so `<vault>/view/<id>` opens the document
  * viewer over the same explorer without loading it again (prototype DocViewerScreen).
@@ -186,9 +188,11 @@ function DocumentVaultPageContent() {
 
   const engagementIds = useMemo(() => engagements.map((e) => e.id), [engagements]);
   const indexedQuery = useIndexedDocuments(Boolean(user) && !engagementsLoading);
+  const isSearching = q.trim().length > 0;
 
+  // The filter reads every client's checklist uploads, so it loads them when the person filters.
   useEffect(() => {
-    if (engagementsLoading || engagementIds.length === 0) return;
+    if (!isSearching || engagementsLoading || engagementIds.length === 0) return;
     let cancelled = false;
     setChecklistRefreshing(true);
     void Promise.all(engagementIds.map((id) => refreshEngagementChecklist(id))).finally(() => {
@@ -197,14 +201,27 @@ function DocumentVaultPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [engagementIds, engagementsLoading, refreshEngagementChecklist]);
+  }, [isSearching, engagementIds, engagementsLoading, refreshEngagementChecklist]);
 
-  // The index rows carry the review state and the content type; a checklist upload a staff member
-  // made has one too, matched by its object key.
+  // A filter hit's index row carries its review state and content type, matched by id or object
+  // key; a file from the server read carries its own.
   const index = useMemo(() => indexMaps((indexedQuery.data ?? []) as VaultIndexRow[]), [indexedQuery.data]);
-  const indexFor = (doc: VaultDocument) => indexRowFor(doc, index.byKey, index.byId);
+  const indexFor = (doc: VaultDocument) => factsFor(doc, index.byKey, index.byId);
 
-  const scopedDocs = useMemo(() => {
+  // The picked client: the one a link or the dropdown named, else the first the person can see.
+  const selectedEntityId =
+    (activeEntityId && engagements.some((e) => e.id === activeEntityId) ? activeEntityId : null) ??
+    engagements[0]?.id ??
+    null;
+  const selectedEngagement = engagements.find((e) => e.id === selectedEntityId) ?? null;
+  const docsQuery = useClientDocuments(selectedEntityId ?? undefined, Boolean(selectedEntityId));
+  const serverDocs = useMemo(
+    () => (docsQuery.data && selectedEntityId ? vaultDocumentsFromPayload(docsQuery.data, selectedEntityId) : []),
+    [docsQuery.data, selectedEntityId],
+  );
+
+  const searchDocs = useMemo(() => {
+    if (!isSearching) return [];
     const milestoneDocs = collectVaultDocuments(engagements, getStateForEngagement);
     const indexedDocs = collectIndexedVaultDocuments(indexedQuery.data ?? [], engagements);
     const merged = scopeVaultDocumentsToEngagements(
@@ -215,50 +232,43 @@ function DocumentVaultPageContent() {
       return internVisibleDocuments(user.internId, merged, engagements);
     }
     return merged;
-  }, [engagements, getStateForEngagement, indexedQuery.data, user?.internId, user?.role]);
+  }, [isSearching, engagements, getStateForEngagement, indexedQuery.data, user?.internId, user?.role]);
 
   /** Replaced files (P-575) stay out of the tree, the counts and the ZIPs until the toggle is on. */
+  const shownDocs = isSearching ? searchDocs : serverDocs;
   const replacedCount = useMemo(
-    () => scopedDocs.filter((d) => isReplacedDoc(d, indexRowFor(d, index.byKey, index.byId))).length,
-    [scopedDocs, index],
+    () => shownDocs.filter((d) => isReplacedDoc(d, factsFor(d, index.byKey, index.byId))).length,
+    [shownDocs, index],
   );
-  const allDocs = useMemo(
+  const notReplaced = useCallback(
+    (docs: VaultDocument[]) =>
+      showReplaced ? docs : docs.filter((d) => !isReplacedDoc(d, factsFor(d, index.byKey, index.byId))),
+    [index, showReplaced],
+  );
+
+  const selectedEntity = useMemo(
     () =>
-      showReplaced ? scopedDocs : scopedDocs.filter((d) => !isReplacedDoc(d, indexRowFor(d, index.byKey, index.byId))),
-    [scopedDocs, index, showReplaced],
+      selectedEngagement
+        ? groupVaultDocuments(notReplaced(serverDocs), [selectedEngagement], { includeEmpty: true })[0] ?? null
+        : null,
+    [notReplaced, serverDocs, selectedEngagement],
   );
 
-  const entityGroups = useMemo(
-    () => groupVaultDocuments(allDocs, engagements, { includeEmpty: true }),
-    [allDocs, engagements],
-  );
+  const searchHits = useMemo(() => vaultSearchHits(notReplaced(searchDocs), q), [notReplaced, searchDocs, q]);
+  const searchClientCount = new Set(searchHits.map((h) => h.doc.engagementId)).size;
 
-  const filteredGroups = useMemo(
-    () => filterVaultEntityGroups(entityGroups, q),
-    [entityGroups, q],
-  );
-
-  const searchHits = useMemo(() => vaultSearchHits(allDocs, q), [allDocs, q]);
-  const isSearching = q.trim().length > 0;
-
-  // The viewer and a copied folder link name their client; the picked client wins after that.
-  const viewedDoc = viewId ? scopedDocs.find((d) => d.id === viewId) ?? null : null;
-  const linkedEntityId = viewedDoc?.engagementId ?? urlClient;
+  // The viewer and a copied folder link name their client; the picked client wins after that. A
+  // link by document id alone finds its client from the index rows.
+  const sameFile = (d: VaultDocument) => d.id === viewId || d.documentId === viewId || d.node?.indexRow?.id === viewId;
+  const viewedDoc = viewId ? searchDocs.find(sameFile) ?? serverDocs.find(sameFile) ?? null : null;
+  const linkedIndexRow = viewId && !viewedDoc && !urlClient ? indexedQuery.data?.find((r) => r.id === viewId) : undefined;
+  const linkedEntityId = viewedDoc?.engagementId ?? urlClient ?? linkedIndexRow?.engagementId;
   useEffect(() => {
     if (linkedEntityId) setActiveEntityId(linkedEntityId);
   }, [linkedEntityId]);
   useEffect(() => {
     if (viewedDoc) setSelectedDocId(viewedDoc.id);
   }, [viewedDoc]);
-
-  // The dropdown lists every client; the filter narrows the files, not the client list.
-  const selectedEntityId =
-    (activeEntityId && entityGroups.some((g) => g.engagementId === activeEntityId)
-      ? activeEntityId
-      : null) ??
-    entityGroups[0]?.engagementId ??
-    null;
-  const selectedEntity = entityGroups.find((g) => g.engagementId === selectedEntityId) ?? null;
 
   const treeRows = useMemo(
     () => (selectedEntity ? buildVaultTree(selectedEntity, view, closed) : []),
@@ -324,8 +334,15 @@ function DocumentVaultPageContent() {
     });
   }
 
-  const openViewer = useCallback((docId: string) => router.push(viewerPath(vaultPath, docId)), [router, vaultPath]);
-  const closeViewer = useCallback(() => router.push(vaultPath), [router, vaultPath]);
+  // Viewer links carry the filter or the client, so a reload or a copied link finds the same file.
+  const linkQuery = isSearching
+    ? `?q=${encodeURIComponent(q.trim())}`
+    : selectedEntityId
+      ? `?client=${encodeURIComponent(selectedEntityId)}`
+      : '';
+  const fileLink = (docId: string) => `${viewerPath(vaultPath, docId)}${linkQuery}`;
+  const openViewer = (docId: string) => router.push(fileLink(docId));
+  const closeViewer = () => router.push(`${vaultPath}${linkQuery}`);
 
   function downloadDoc(doc: VaultDocument) {
     const ref = refFor(doc, indexFor(doc)?.id);
@@ -340,7 +357,7 @@ function DocumentVaultPageContent() {
     return [
       { label: 'Download', onSelect: () => downloadDoc(doc) },
       { label: 'Open in viewer', onSelect: () => openViewer(doc.id) },
-      { label: 'Copy link', hint: 'C', separatorBefore: true, onSelect: () => copyLink(viewerPath(vaultPath, doc.id)) },
+      { label: 'Copy link', hint: 'C', separatorBefore: true, onSelect: () => copyLink(fileLink(doc.id)) },
       // D1/M1: danger sits last, after a rule. Only indexed files no step holds (P-596).
       ...(canDeleteDoc(doc, indexFor(doc), user)
         ? [{ label: 'Delete', danger: true, separatorBefore: true, onSelect: () => setDeleting(doc) }]
@@ -377,7 +394,7 @@ function DocumentVaultPageContent() {
     if (isPhone()) openViewer(doc.id);
   }
 
-  if (engagementsLoading || checklistRefreshing) {
+  if (engagementsLoading) {
     return <VaultPageSkeleton path={vaultPath} />;
   }
 
@@ -385,7 +402,9 @@ function DocumentVaultPageContent() {
   const clientWords = isIntern ? 'clients' : 'entities';
 
   let treeBody: ReactNode;
-  if (isSearching) {
+  if (isSearching ? checklistRefreshing : docsQuery.isPending && Boolean(selectedEntityId)) {
+    treeBody = <SkeletonRows rows={7} className="p-3" />;
+  } else if (isSearching) {
     treeBody =
       searchHits.length === 0 ? (
         <div className="p-3">
@@ -506,7 +525,7 @@ function DocumentVaultPageContent() {
         path={vaultPath}
       />
 
-      {entityGroups.length === 0 && !isSearching ? (
+      {engagements.length === 0 && !isSearching ? (
         <EmptyState
           title={isIntern ? 'No clients assigned yet' : 'No submitted documents yet'}
           action={
@@ -533,9 +552,9 @@ function DocumentVaultPageContent() {
                 <span className="truncate">{selectedEntity?.companyName ?? (isIntern ? 'Client' : 'Entity')}</span>
               </SelectTrigger>
               <SelectContent>
-                {entityGroups.map((entity) => (
-                  <SelectItem key={entity.engagementId} value={entity.engagementId}>
-                    {entity.companyName} · {entity.docCount}
+                {engagements.map((engagement) => (
+                  <SelectItem key={engagement.id} value={engagement.id}>
+                    {engagement.companyName}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -566,7 +585,7 @@ function DocumentVaultPageContent() {
                     className="h-full min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-faint"
                   />
                   <span className="flex-none text-[12.5px] tabular-nums text-ink-muted">
-                    {isSearching ? `${searchHits.length}/${allDocs.length}` : selectedEntity?.docCount ?? 0}
+                    {isSearching ? `${searchHits.length}/${notReplaced(searchDocs).length}` : selectedEntity?.docCount ?? 0}
                   </span>
                 </label>
 
@@ -669,10 +688,10 @@ function DocumentVaultPageContent() {
           ) : (
             <>
               {/* The filter searches every client, so the line names how many files and clients match. */}
-              {isSearching && filteredGroups.length > 0 ? (
+              {isSearching && searchClientCount > 0 ? (
                 <p className="border-b border-line-soft px-4 py-2 text-[12.5px] text-ink-muted">
                   {searchHits.length} {searchHits.length === 1 ? 'file' : 'files'} in{' '}
-                  {filteredGroups.length} {filteredGroups.length === 1 ? clientWord : clientWords}
+                  {searchClientCount} {searchClientCount === 1 ? clientWord : clientWords}
                 </p>
               ) : null}
 
@@ -689,7 +708,7 @@ function DocumentVaultPageContent() {
                     if ((e.target as HTMLElement).closest('input, textarea, [role="menu"]')) return;
                     if (!selectedDoc) return;
                     e.preventDefault();
-                    copyLink(viewerPath(vaultPath, selectedDoc.id));
+                    copyLink(fileLink(selectedDoc.id));
                   }}
                 >
                   {treeBody}
@@ -710,8 +729,8 @@ function DocumentVaultPageContent() {
                           : null
                       }
                       onReview={reviewRef ? (status, note) => actions.review(reviewRef, status, note) : undefined}
-                      viewerHref={viewerPath(vaultPath, selectedDoc.id)}
-                      from={fromLabel(selectedIndex, selectedDoc.companyName)}
+                      viewerHref={fileLink(selectedDoc.id)}
+                      from={selectedDoc.node?.from ?? fromLabel(selectedIndex, selectedDoc.companyName)}
                       replaced={isReplacedDoc(selectedDoc, selectedIndex)}
                     />
                   ) : (
@@ -759,7 +778,7 @@ function DocumentVaultPageContent() {
         onConfirm={async () => {
           const doc = deleting;
           const row = doc ? indexFor(doc) : null;
-          if (!doc || !row) return;
+          if (!doc || !row?.id) return;
           const ok = await actions.remove(row.id, doc.fileName);
           if (ok && selectedDocId === doc.id) setSelectedDocId(null);
         }}
