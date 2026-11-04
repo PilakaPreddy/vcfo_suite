@@ -27,7 +27,7 @@ const { AskShellMount } = await import('@/components/ask/AskShellMount');
 const { AskLauncher } = await import('@/components/ask/AskLauncher');
 const { isAskShortcut } = await import('@/lib/ask/shortcut');
 const { VisualRenderer } = await import('@/components/ask/visuals/VisualRenderer');
-const { visualText } = await import('@/components/ask/visuals/visual-text');
+const { visualText } = await import('@/lib/ask/visual-text');
 
 function wrap(children: ReactNode) {
   const client = new QueryClient();

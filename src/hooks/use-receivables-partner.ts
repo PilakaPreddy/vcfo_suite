@@ -22,7 +22,7 @@ const ERROR_TEXT: Record<string, string> = {
   Forbidden: 'Your login cannot open this page.',
 };
 
-export class PartnerApiError extends Error {
+class PartnerApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
@@ -47,7 +47,7 @@ const json = (method: string, body?: unknown): RequestInit => ({
 
 export const PARTNER_EXPORT_HREF = '/api/receivables/partner/export';
 
-export const partnerHomeKey = ['receivables', 'partner', 'me'] as const;
+const partnerHomeKey = ['receivables', 'partner', 'me'] as const;
 const invoiceKey = (id: string | null) => ['receivables', 'partner', 'invoice', id] as const;
 
 /** The partner's own invoices of the latest published version, and their account. */

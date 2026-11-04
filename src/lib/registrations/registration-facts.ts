@@ -24,7 +24,7 @@ import { REG_ROWS } from '@/lib/client-portal/credentials';
 export const RENEWAL_FIELDS = ['issuedOn', 'expiresOn', 'renewEveryMonths'] as const;
 
 /** Days before expiry when a registration reads "Due soon" (owner rule for G-05). */
-export const RENEW_SOON_DAYS = 30;
+const RENEW_SOON_DAYS = 30;
 
 interface StepSource {
   /** Step answer fields that hold the number, first match wins. */

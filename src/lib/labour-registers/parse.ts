@@ -178,7 +178,7 @@ export async function parseWorkbook(
 }
 
 /** The sheet names in a workbook, so a preparer can pick when detection is not obvious. */
-export async function listSheets(
+async function listSheets(
   input: WorkbookInput,
   format: SheetFormat = 'xlsx',
 ): Promise<Array<{ name: string; rowCount: number }>> {

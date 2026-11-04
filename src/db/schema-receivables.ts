@@ -259,6 +259,10 @@ export const receivableEmailSends = pgTable(
     subject: text('subject').notNull(),
     /** outlook | email. */
     channel: text('channel').notNull(),
+    /** sending | sent | failed. The send finishes after the response, so the row is written first. */
+    status: text('status').notNull().default('sent'),
+    /** Why a failed send failed, in a few words for the manager. */
+    error: text('error'),
     sentBy: uuid('sent_by').references(() => base.profiles.id, { onDelete: 'set null' }),
     sentAt: timestamp('sent_at', { withTimezone: true }).notNull().defaultNow(),
   },

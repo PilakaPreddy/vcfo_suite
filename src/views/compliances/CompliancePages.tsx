@@ -63,7 +63,7 @@ const LEAD_HOME = '/app/intern/today';
  * R-51: the lead always has Compliances in the sidebar. With no incorporated client yet the
  * pages say so instead of sending the lead to Today.
  */
-export function NoIncorporatedClients() {
+function NoIncorporatedClients() {
   return <EmptyState title="No incorporated clients yet" />;
 }
 

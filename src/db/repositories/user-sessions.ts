@@ -27,7 +27,7 @@ import { isUuid } from '@/lib/slug';
 /** Matches the Auth.js session lifetime (30 days); older rows are expired tokens, not devices. */
 export const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 /** `last_seen_at` is written at most this often per device and per person. */
-export const LAST_SEEN_THROTTLE_MS = 5 * 60 * 1000;
+const LAST_SEEN_THROTTLE_MS = 5 * 60 * 1000;
 
 export type UserSessionRow = {
   id: string;

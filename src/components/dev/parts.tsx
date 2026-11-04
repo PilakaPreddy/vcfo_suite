@@ -253,7 +253,7 @@ const TILE_TONE: Record<AttentionTint, string> = {
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** 44px date tile tinted by urgency; the full date is the tooltip. */
-export function DateTile({ date, tint = 'idle' }: { date: Date; tint?: AttentionTint }) {
+function DateTile({ date, tint = 'idle' }: { date: Date; tint?: AttentionTint }) {
   return (
     <span
       title={`${date.getDate()} ${MON[date.getMonth()]} ${date.getFullYear()}`}
@@ -450,7 +450,7 @@ export function ChangeConfirm({
 }
 
 /** Plain words for a refused console write. */
-export function actionError(code: string, status: number): string {
+function actionError(code: string, status: number): string {
   switch (code) {
     case 'not_set_up':
       return 'This service is not set up';

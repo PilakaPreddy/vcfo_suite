@@ -38,7 +38,7 @@ export function decodeAuditCursor(raw: string | null | undefined): DevAuditCurso
  * The short before and after values an event stored in its metadata (the console's own
  * write actions store them), scrubbed and cut to 120 characters. Other metadata stays out.
  */
-export function beforeAfter(meta: unknown): { before: string | null; after: string | null } {
+function beforeAfter(meta: unknown): { before: string | null; after: string | null } {
   const m = (meta && typeof meta === 'object' ? meta : {}) as Record<string, unknown>;
   const pick = (v: unknown) => (typeof v === 'string' || typeof v === 'number' ? scrubText(String(v)).slice(0, 120) : null);
   return { before: pick(m.before), after: pick(m.after) };

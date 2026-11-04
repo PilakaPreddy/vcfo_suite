@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { SuperInsights, SuperMonth } from '@/components/super/insights/super-insights-model';
+import type { SuperInsights, SuperMonth } from '@/lib/super/super-insights-model';
 import {
   buildPartnerReport,
   monthKeyLabel,

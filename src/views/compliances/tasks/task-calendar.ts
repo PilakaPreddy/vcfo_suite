@@ -27,12 +27,12 @@ export function fyRange(fyStartYear: number): { from: string; to: string } {
 export const taskStatus = (t: TaskRowDto, now: Date): FilingStatus => taskCal({ stage: t.stage, endDate: t.dueDate }, now);
 
 /** The status word of a done task on Filings reads Done; otherwise the server's word. */
-export const taskWordOf = (t: TaskRowDto): SixWord => t.word;
+const taskWordOf = (t: TaskRowDto): SixWord => t.word;
 
 /** C-3 hover text: "Starts 12 Oct · High". */
 export const taskHintOf = (t: TaskRowDto, now: Date) => `Starts ${plainDate(t.startDate, now)} · ${t.urgency}`;
 
-export const TASK_ROW_PREFIX = 'task:';
+const TASK_ROW_PREFIX = 'task:';
 
 /**
  * A task as a read-only timeline row: its bar runs from the start date to the end date. The

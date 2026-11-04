@@ -12,12 +12,13 @@ import { recordExport } from '@/lib/exports/record-export';
 export async function GET(request: Request) {
   const guard = await requireAuth();
   if (guard.ok === false) return NextResponse.json({ error: guard.error }, { status: guard.status });
-  const folder = new URL(request.url).searchParams.get('folder')?.trim() || 'all';
+  const params = new URL(request.url).searchParams;
+  const folder = params.get('folder')?.trim() || 'all';
   if (!/^(all|phase:[\w-]+|step:[\w-]+|cat:c[1-5])$/.test(folder)) {
     return NextResponse.json({ error: 'invalid_folder' }, { status: 400 });
   }
   try {
-    const zip = await buildClientDocumentsZip(guard.ctx, folder);
+    const zip = await buildClientDocumentsZip(guard.ctx, folder, params.get('engagement') ?? undefined);
     if (!zip) return NextResponse.json({ error: 'not_found' }, { status: 404 });
     if (zip.count === 0) return NextResponse.json({ error: 'empty' }, { status: 404 });
     await recordExport(guard.ctx, { kind: 'client_vault_zip', format: 'zip', fileName: zip.filename, body: zip.buffer });

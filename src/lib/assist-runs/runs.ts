@@ -40,7 +40,7 @@ export interface AssistRunDto {
   finishedAt: string | null;
 }
 
-export const ASSIST_RUN_STATES: readonly AssistRunState[] = ['requested', 'running', 'paused', 'done', 'failed', 'stopped'];
+const ASSIST_RUN_STATES: readonly AssistRunState[] = ['requested', 'running', 'paused', 'done', 'failed', 'stopped'];
 export const FINISHED: ReadonlySet<AssistRunState> = new Set(['done', 'failed', 'stopped']);
 
 /** True when the VCFO Assist link is turned on (`VCFO_ASSIST_ENABLED=on`). Server only. */
@@ -73,7 +73,7 @@ export function assistWord(run: Pick<AssistRunDto, 'state'> | null | undefined, 
  * The five steps shown before the extension reports its own (prototype AssistCard). The
  * person signs in and submits; the extension fills and checks (the extension's human boundary).
  */
-export function defaultAssistSteps(portal: string, form: string | null): AssistStep[] {
+function defaultAssistSteps(portal: string, form: string | null): AssistStep[] {
   return [
     `Sign in to the ${/\bportal\b|TRACES|FIRMS|FLAIR/i.test(portal) ? portal : `${portal} portal`}`,
     form ? `Open ${form}` : 'Open the form',
@@ -118,7 +118,7 @@ const SHOT = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
 /** Largest screenshot one step may carry, decoded (1.5 MB). */
 export const MAX_SHOT_BYTES = 1_500_000;
 
-export const ingestStepSchema = z.object({
+const ingestStepSchema = z.object({
   title: z.string().trim().min(1).max(160),
   state: z.enum(['done', 'run', 'wait']),
   at: z.string().datetime({ offset: true }).optional(),

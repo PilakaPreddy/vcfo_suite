@@ -19,7 +19,7 @@ import {
   registrationCounts,
   type SuperInsightClient,
   type SuperInsightFiling,
-} from '@/components/super/insights/super-insights-model';
+} from '@/lib/super/super-insights-model';
 
 const NOW = new Date('2026-10-20T09:00:00.000Z');
 

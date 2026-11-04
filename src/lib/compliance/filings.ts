@@ -13,7 +13,7 @@
 
 export type FilingsCadence = 'monthly' | 'quarterly' | 'annual';
 
-export function isFilingsCadence(value: string | null | undefined): value is FilingsCadence {
+function isFilingsCadence(value: string | null | undefined): value is FilingsCadence {
   return value === 'monthly' || value === 'quarterly' || value === 'annual';
 }
 
@@ -155,7 +155,7 @@ export function filingStatus(row: Pick<FilingRow, 'filedOn' | 'dueDate'>, now = 
   return 'upcoming';
 }
 
-export const FILING_STATUS_LABEL: Record<FilingStatus, string> = {
+const FILING_STATUS_LABEL: Record<FilingStatus, string> = {
   filed: 'Filed',
   overdue: 'Overdue',
   'due-soon': 'Due soon',
@@ -163,7 +163,7 @@ export const FILING_STATUS_LABEL: Record<FilingStatus, string> = {
 };
 
 /** Canonical `TONE_BADGE` tones — no new pill variant for this feature. */
-export const FILING_STATUS_TONE: Record<FilingStatus, 'success' | 'danger' | 'warning' | 'neutral'> = {
+const FILING_STATUS_TONE: Record<FilingStatus, 'success' | 'danger' | 'warning' | 'neutral'> = {
   filed: 'success',
   overdue: 'danger',
   'due-soon': 'warning',

@@ -66,7 +66,7 @@ export function indexStepEvents(events: StepHistoryEvent[]): Map<string, StepHis
  * The review state of one step at the end of the period: `undefined` when it cannot be known
  * (the step changed after the moment and nothing recorded says what it was before).
  */
-export function reviewAsOf(
+function reviewAsOf(
   step: ReviewStepNow,
   events: StepHistoryEvent[] | undefined,
   period: TrendPeriod,

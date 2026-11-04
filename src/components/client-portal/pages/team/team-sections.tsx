@@ -42,7 +42,7 @@ import {
 import '../../css/team-00-contract.css';
 import '../../css/team-team.css';
 
-export const TEAM_KEY = ['client-portal', 'team'] as const;
+const TEAM_KEY = ['client-portal', 'team'] as const;
 
 /** "2 Sep 2026" for the Since column. */
 function fullDate(iso: string): string {

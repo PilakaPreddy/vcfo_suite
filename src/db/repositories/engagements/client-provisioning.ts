@@ -90,7 +90,7 @@ export interface CreateProjectWithClientResult {
   clientUserId: string;
 }
 
-export async function uniqueEngagementSlug(companyName: string): Promise<string> {
+async function uniqueEngagementSlug(companyName: string): Promise<string> {
   const { slugifyCompanyName } = await import('@/lib/slug');
   const base = slugifyCompanyName(companyName);
   let candidate = base;

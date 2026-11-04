@@ -8,7 +8,7 @@ import { NameCell, PersonAvatar } from '@/components/super/parts/super-parts';
 import type { SuperStaff } from '@/components/super/assign/use-super-staff';
 import { useEscalations } from '@/components/super/escalations/use-escalations';
 import { type SuperEngagementSummary } from '@/lib/super/super-overview';
-import { medianResponse, type SuperTeamAdmin } from '@/components/super/insights/super-insights-model';
+import { medianResponse, type SuperTeamAdmin } from '@/lib/super/super-insights-model';
 import { cn } from '@/lib/utils';
 
 /**

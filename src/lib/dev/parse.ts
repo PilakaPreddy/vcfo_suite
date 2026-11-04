@@ -72,7 +72,7 @@ export function requestIdOf(message: string): string {
 // ---------- Costs ----------
 
 /** The overview group for a Cost Explorer service name. */
-export function costGroupOf(service: string): CostGroup['group'] {
+function costGroupOf(service: string): CostGroup['group'] {
   const s = service.toLowerCase();
   if (/bedrock|claude|anthropic/.test(s)) return 'AI';
   if (/app runner|apprunner/.test(s)) return 'App Runner';

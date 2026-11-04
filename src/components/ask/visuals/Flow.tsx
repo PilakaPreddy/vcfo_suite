@@ -1,6 +1,6 @@
 import { Check } from 'lucide-react';
 import type { Visual } from '@/data/ask/schema';
-import { flowText } from './visual-text';
+import { flowText } from '@/lib/ask/visual-text';
 import { cn } from '@/lib/utils';
 
 type FlowVisual = Extract<Visual, { type: 'flow' }>;

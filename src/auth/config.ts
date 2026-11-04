@@ -293,7 +293,7 @@ const authConfig = {
  * S-650: Microsoft Entra ID, only when its env vars are set. It links to an existing profile
  * by email and never creates one (see `signIn` and `jwt` above, and `src/auth/microsoft.ts`).
  */
-export const { handlers, auth, signIn, signOut } = NextAuth(
+export const { handlers, auth } = NextAuth(
   async (): Promise<NextAuthConfig> => ({
     ...authConfig,
     providers: [credentialsProvider, ...(await microsoftProviders())],

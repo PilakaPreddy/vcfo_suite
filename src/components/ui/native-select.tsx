@@ -34,7 +34,7 @@ export function FilterSelect({ options, className, size = 'sm', ...rest }: Filte
 }
 
 /** The same filter on a navy bar: 28px, white text on white 8 % with a white 18 % edge. */
-export function SelectOnNavy({ options, className, ...rest }: Omit<FilterSelectProps, 'size'>) {
+function SelectOnNavy({ options, className, ...rest }: Omit<FilterSelectProps, 'size'>) {
   return (
     <span className={cn('relative inline-flex', className)}>
       <select

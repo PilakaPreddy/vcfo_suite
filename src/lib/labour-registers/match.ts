@@ -235,6 +235,6 @@ export function rememberable(matches: FieldMatch[]): Record<string, string> {
 }
 
 /** Every canonical field key, for callers that want to match an entire sheet. */
-export function allFieldKeys(): string[] {
+function allFieldKeys(): string[] {
   return FIELDS.map((f) => f.key);
 }

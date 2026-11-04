@@ -7,7 +7,7 @@ import type { PracticeIncorporationClient } from '@/lib/practice/practice-incorp
  * The read behind the staff Incorporation page (R-51). It goes through
  * `/api/practice/incorporation`, which runs the repository under the caller's `AuthContext`.
  */
-export const PRACTICE_INCORPORATION_QUERY_KEY = ['practice', 'incorporation'] as const;
+const PRACTICE_INCORPORATION_QUERY_KEY = ['practice', 'incorporation'] as const;
 
 async function fetchPracticeIncorporation(): Promise<PracticeIncorporationClient[]> {
   const res = await fetch('/api/practice/incorporation');

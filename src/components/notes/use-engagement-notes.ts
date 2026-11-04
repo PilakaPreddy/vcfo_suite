@@ -8,7 +8,7 @@ import type { EngagementNote } from '@/lib/notes/types';
  * `GET/POST /api/engagements/<id>/notes`, `PATCH/DELETE /api/engagements/<id>/notes/<noteId>`.
  */
 
-export const notesKey = (engagementId: string) => ['engagement-notes', engagementId] as const;
+const notesKey = (engagementId: string) => ['engagement-notes', engagementId] as const;
 
 async function send<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { cache: 'no-store', ...init, headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) } });

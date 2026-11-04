@@ -21,7 +21,7 @@ export const NOC_STAGE_KEYS = {
 export const UPLOADED_KEY = 'uploaded';
 
 /** D1: a foreign parent's resolution is notarised and apostilled. Indian parents skip both (D4). */
-export function needsNotary(variant: NocVariant | null | undefined): boolean {
+function needsNotary(variant: NocVariant | null | undefined): boolean {
   return variant === 'foreign-parent';
 }
 

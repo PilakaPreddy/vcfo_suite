@@ -22,7 +22,7 @@ export interface DemoRequest {
 }
 
 /** The honeypot field. People never see it; a bot that fills it gets a quiet 200. */
-export const DEMO_HONEYPOT_FIELD = 'website';
+const DEMO_HONEYPOT_FIELD = 'website';
 
 export const demoRequestSchema = z.object({
   name: z.string().trim().min(1, 'Enter your name').max(120),

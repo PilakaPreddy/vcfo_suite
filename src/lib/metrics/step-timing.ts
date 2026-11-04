@@ -59,7 +59,7 @@ export interface StepTiming {
 const NOT_STARTED = 'not-started';
 
 /** A status that closes a step. "Not needed" closes it without any work being timed. */
-export function isFinishedStatus(status: string | null | undefined): boolean {
+function isFinishedStatus(status: string | null | undefined): boolean {
   return status === 'completed' || status === 'not-applicable';
 }
 
@@ -120,12 +120,12 @@ export function diffStepChanges(
 }
 
 /** A recorded event that changed only the review state, not the status. */
-export function isReviewOnlyEvent(event: Pick<StepEvent, 'fromStatus' | 'toStatus'>): boolean {
+function isReviewOnlyEvent(event: Pick<StepEvent, 'fromStatus' | 'toStatus'>): boolean {
   return (event.fromStatus ?? NOT_STARTED) === event.toStatus;
 }
 
 /** Whole days between two instants (floored, never negative). */
-export function wholeDays(fromIso: string, to: Date | string): number {
+function wholeDays(fromIso: string, to: Date | string): number {
   const end = typeof to === 'string' ? Date.parse(to) : to.getTime();
   const start = Date.parse(fromIso);
   if (!Number.isFinite(start) || !Number.isFinite(end)) return 0;

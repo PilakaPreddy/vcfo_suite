@@ -375,7 +375,7 @@ export async function needUploadTarget(
   return { dbId: access.dbId, title: req.title, stepId: req.stepId ?? undefined };
 }
 
-export async function recordNeedUpload(
+async function recordNeedUpload(
   ctx: AuthContext,
   requestId: string,
   file: { objectKey: string; fileName: string; contentType: string | null; sizeBytes: number },

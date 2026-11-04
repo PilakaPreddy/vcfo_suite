@@ -25,7 +25,7 @@ export interface ProgressItem {
 }
 
 /** Bar tone for a load share: red above 95 %, amber above 80 %, blurple below. */
-export function loadTone(pct: number): ProgressTone {
+function loadTone(pct: number): ProgressTone {
   return pct > 95 ? 'bad' : pct > 80 ? 'warn' : 'accent';
 }
 

@@ -17,7 +17,7 @@ import { HOME_QUERY_KEY } from './useHome';
 import type { DocItem } from './derive';
 import { docUrl } from './derive';
 
-export { InfoPopover };
+;
 
 /** Duo-tone board icon: [duo path, main path] exactly as the boards draw them. */
 function Duo({ d, duo = '', size = 14, sw = 1.7, style }: { d: string; duo?: string; size?: number; sw?: number; style?: CSSProperties }) {
@@ -29,7 +29,7 @@ function Duo({ d, duo = '', size = 14, sw = 1.7, style }: { d: string; duo?: str
   );
 }
 
-export const IC = {
+const IC = {
   download: { duo: 'M4.5 15h15v3.5A1.5 1.5 0 0 1 18 20H6a1.5 1.5 0 0 1-1.5-1.5Z', d: 'M4.5 15v3.5A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5V15 M12 4.5V15 M7.8 10.8 12 15l4.2-4.2' },
   upload: { duo: 'M4.5 15h15v3.5A1.5 1.5 0 0 1 18 20H6a1.5 1.5 0 0 1-1.5-1.5Z', d: 'M4.5 15v3.5A1.5 1.5 0 0 0 6 20h12a1.5 1.5 0 0 0 1.5-1.5V15 M12 15V4.5 M7.8 8.7 12 4.5l4.2 4.2' },
   arrow: { duo: '', d: 'M5 12h14 M13 6l6 6-6 6' },
@@ -49,14 +49,14 @@ export const IC = {
   undo: { duo: '', d: 'M9 14 4 9l5-5 M4 9h10.5a5.5 5.5 0 0 1 0 11H11' },
 } as const;
 
-export function Ico({ n, size = 14, sw = 1.7, style }: { n: keyof typeof IC; size?: number; sw?: number; style?: CSSProperties }) {
+function Ico({ n, size = 14, sw = 1.7, style }: { n: keyof typeof IC; size?: number; sw?: number; style?: CSSProperties }) {
   return <Duo d={IC[n].d} duo={IC[n].duo} size={size} sw={sw} style={style} />;
 }
 
 /** Card header row (inline style verbatim from every v7c board). */
 /* Card head (K-06, rules R-15 and R-16): 52px, a hairline under it, a 28px tile
    that comes from the title and a 14.5px/600 title. */
-export function CardHead({ title, info, askAbout, right }: { title: string; info?: ReactNode; askAbout?: string; right?: ReactNode }) {
+function CardHead({ title, info, askAbout, right }: { title: string; info?: ReactNode; askAbout?: string; right?: ReactNode }) {
   return (
     <div style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'center', gap: 10, minHeight: 52, boxSizing: 'border-box', padding: '8px 16px', borderBottom: '1px solid var(--hair)' }}>
       <CardHeadTile title={title} />
@@ -69,7 +69,7 @@ export function CardHead({ title, info, askAbout, right }: { title: string; info
 }
 
 /** Tabs (`.seg`, K-09): small inline buttons; the picked tab is navy. No sliding pill. */
-export function Seg({
+function Seg({
   tabs,
   value,
   onChange,
@@ -107,7 +107,7 @@ export function Seg({
 }
 
 /** `.tipw` hover/focus tooltip part that opens a drill on click / Enter. */
-export function Tip({
+function Tip({
   tip,
   onOpen,
   style,
@@ -152,7 +152,7 @@ export function Tip({
 
 /* Owner chip (K-05, rule R-14): 96px soft chip with a dot. The client is amber,
    SBC is blue and the MCA is violet. */
-export function ownerChipStyle(owner: 'client' | 'sbc' | 'firm' | 'mca'): CSSProperties {
+function ownerChipStyle(owner: 'client' | 'sbc' | 'firm' | 'mca'): CSSProperties {
   const tone =
     owner === 'client'
       ? { background: 'var(--you-light)', color: 'var(--you-text)', '--dot': 'var(--due-mid)' }

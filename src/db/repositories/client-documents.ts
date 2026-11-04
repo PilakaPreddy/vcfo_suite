@@ -77,6 +77,13 @@ import { bucketKey, deleteObject, getObjectBuffer, listObjects, putObject, type 
  * is resolved against the same rules, never trusted). Uploads go only to the
  * caller's own PENDING requests; Undo only removes the caller's own upload,
  * within 10 minutes.
+ *
+ * One read is shared with staff: `getClientDocuments(ctx, engagementId)` gives
+ * a staff member the same document tree for an engagement that passes
+ * `assertEngagementAccess` (firm-wide admins, the engagement's manager or its
+ * assigned lead), so the Vault can render the client's own Documents page.
+ * Staff see what their role allows (unreleased steps, unshared index rows);
+ * every write above stays client-only.
  */
 
 export class ClientDocumentsForbiddenError extends Error {}
@@ -164,8 +171,20 @@ function noteFromDetail(detail: string | null): string | undefined {
 /* Aggregate: every document source for the client's engagement        */
 /* ------------------------------------------------------------------ */
 
-export async function getClientDocuments(ctx: AuthContext): Promise<ClientDocumentsPayload | null> {
-  const mine = await myEngagement(ctx);
+/** The engagement to read: a client's own, or for staff the one they named and may access. */
+async function documentsEngagement(
+  ctx: AuthContext,
+  engagementId?: string,
+): Promise<{ dbId: string; row: EngagementDbRow } | null> {
+  if (ctx.role === 'client') return myEngagement(ctx);
+  if (!engagementId) return null;
+  const access = await assertEngagementAccess(ctx, engagementId);
+  if (!access.ok) return null;
+  return { dbId: access.dbId, row: access.row };
+}
+
+export async function getClientDocuments(ctx: AuthContext, engagementId?: string): Promise<ClientDocumentsPayload | null> {
+  const mine = await documentsEngagement(ctx, engagementId);
   if (!mine) return null;
   const { dbId, row } = mine;
   const company = shortCompany(row.companyName);
@@ -472,8 +491,12 @@ export interface ResolvedClientFile {
   contentType: string;
 }
 
-async function resolveClientDocumentFile(ctx: AuthContext, ref: string): Promise<ResolvedClientFile | null> {
-  const mine = await myEngagement(ctx);
+async function resolveClientDocumentFile(
+  ctx: AuthContext,
+  ref: string,
+  engagementId?: string,
+): Promise<ResolvedClientFile | null> {
+  const mine = await documentsEngagement(ctx, engagementId);
   if (!mine) return null;
   const { dbId, row } = mine;
   const ct = (name: string) => contentTypeForName(name) ?? 'application/octet-stream';
@@ -486,8 +509,8 @@ async function resolveClientDocumentFile(ctx: AuthContext, ref: string): Promise
       .slice(1, -1)
       .map((seg) => checklistItemForFieldId(seg.split('.')[0] ?? seg))
       .find(Boolean);
-    // a path whose field names no step is not shown to clients
-    if (!item || !isStepReleasedTo('client', checklistStateFromRow(row)[item.id])) return null;
+    // a path whose field names no step is not shown; a client also waits for the step's release
+    if (!item || (ctx.role === 'client' && !isStepReleasedTo('client', checklistStateFromRow(row)[item.id]))) return null;
     const name = fileNameFromStoragePath(path);
     return { key: bucketKey(MILESTONE_DOCUMENTS_BUCKET, path), fileName: name, contentType: ct(name) };
   }
@@ -522,8 +545,9 @@ async function resolveClientDocumentFile(ctx: AuthContext, ref: string): Promise
 export async function readClientDocumentFile(
   ctx: AuthContext,
   ref: string,
+  engagementId?: string,
 ): Promise<(ResolvedClientFile & { bytes: Buffer }) | null> {
-  const file = await resolveClientDocumentFile(ctx, ref);
+  const file = await resolveClientDocumentFile(ctx, ref, engagementId);
   if (!file) return null;
   const bytes = await getObjectBuffer(file.key);
   if (!bytes) return null;
@@ -537,8 +561,9 @@ export async function readClientDocumentFile(
 export async function buildClientDocumentsZip(
   ctx: AuthContext,
   folder: string,
+  engagementId?: string,
 ): Promise<{ buffer: Buffer; filename: string; count: number; missing: number } | null> {
-  const payload = await getClientDocuments(ctx);
+  const payload = await getClientDocuments(ctx, engagementId);
   if (!payload) return null;
   const steps = stepNumbers();
   const byCategory = folder.startsWith('cat:');
@@ -567,7 +592,7 @@ export async function buildClientDocumentsZip(
   let count = 0;
   let missing = 0;
   for (const nd of pick) {
-    const file = await resolveClientDocumentFile(ctx, nd.ref!);
+    const file = await resolveClientDocumentFile(ctx, nd.ref!, engagementId);
     const bytes = file ? await getObjectBuffer(file.key).catch(() => null) : null;
     if (!file || !bytes) {
       missing += 1;
@@ -609,7 +634,7 @@ function safeName(name: string): string {
   return base.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'document';
 }
 
-export async function uploadRequestFile(
+async function uploadRequestFile(
   ctx: AuthContext,
   requestId: string,
   file: { name: string; type: string; size: number; bytes: Buffer },

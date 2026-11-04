@@ -212,7 +212,7 @@ export function currentPhaseIndex(client: Pick<MetricClient, 'phases'>): number 
 }
 
 /** Current step days for every client with a current step. */
-export function currentStepDays(
+function currentStepDays(
   clients: MetricClient[],
   timings: Map<string, Record<string, StepTiming>>,
 ): Record<string, CurrentStepDays> {
@@ -230,7 +230,7 @@ export function currentStepDays(
   return out;
 }
 
-export function withSlowestCompany(stages: StageAverage[], clients: MetricClient[]): StageRow[] {
+function withSlowestCompany(stages: StageAverage[], clients: MetricClient[]): StageRow[] {
   const names = new Map(clients.map((c) => [c.id, c.companyName]));
   return stages.map((stage) => ({
     ...stage,
@@ -356,7 +356,7 @@ export function buildPracticeMetrics(params: {
 }
 
 /** Days in step for every opened step that has not finished. */
-export function openStepDays(timings: Map<string, Record<string, StepTiming>>): Record<string, Record<string, number>> {
+function openStepDays(timings: Map<string, Record<string, StepTiming>>): Record<string, Record<string, number>> {
   const out: Record<string, Record<string, number>> = {};
   for (const [engagementId, steps] of timings) {
     for (const [stepId, timing] of Object.entries(steps)) {

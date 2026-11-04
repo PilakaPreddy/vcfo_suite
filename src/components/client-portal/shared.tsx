@@ -80,7 +80,7 @@ export function InfoPopover({
   );
 }
 
-export function BotSays({
+function BotSays({
   children,
   size = 48,
   action = 'Ask VCFO why',

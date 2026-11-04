@@ -10,7 +10,7 @@ import type { StatusCode } from '@/data/checklist';
 export type BoardColumn = 'action' | 'progress' | 'waiting' | 'done';
 
 /** The task status each column stands for. */
-export const COLUMN_STATUS: Record<BoardColumn, StatusCode> = {
+const COLUMN_STATUS: Record<BoardColumn, StatusCode> = {
   action: 'not-started',
   progress: 'in-progress',
   waiting: 'awaiting-client',

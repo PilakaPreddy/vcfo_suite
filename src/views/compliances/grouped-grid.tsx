@@ -44,7 +44,7 @@ export interface GridGroup<T> {
  * `meta` in a non-shrinking slot, which overflows on a phone once a head
  * carries a picker, switches and buttons, so the grids use this head instead.
  */
-export function GridHead({ title, count, right }: { title: string; count?: number; right?: ReactNode }) {
+function GridHead({ title, count, right }: { title: string; count?: number; right?: ReactNode }) {
   return (
     <header className="flex min-h-[52px] flex-wrap items-center gap-2.5 border-b border-line-soft px-4 py-2">
       <CardHeadTile title={title} />

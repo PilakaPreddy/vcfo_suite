@@ -50,7 +50,7 @@ export function identityTone(id: string): IdentityTone {
 }
 
 /** The soft fill and text classes of a client's identity tone, for tags and tiles. */
-export function identityClass(id: string): string {
+function identityClass(id: string): string {
   return TILE[identityTone(id)];
 }
 
@@ -109,7 +109,7 @@ const SWATCH: Record<Regulator, string> = {
 };
 
 /** The short word of an area ("IT", "GST", "PAY"), or the area itself when it has no regulator. */
-export function areaShort(area: string): string {
+function areaShort(area: string): string {
   const r = regOf(area);
   return r ? SHORT[r] : area;
 }
@@ -142,7 +142,7 @@ const PORTAL: Record<Regulator, [string, string]> = {
 };
 
 /** The government portal of an area, or undefined when the area has no regulator. */
-export function portalOf(area: string): { name: string; url: string } | undefined {
+function portalOf(area: string): { name: string; url: string } | undefined {
   const r = regOf(area);
   return r ? { name: PORTAL[r][0], url: PORTAL[r][1] } : undefined;
 }

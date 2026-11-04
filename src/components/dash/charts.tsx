@@ -36,7 +36,7 @@ export const SEGMENT_FILL: Record<SegmentTone, string> = {
 };
 
 /** Stroke colour per tone, for SVG marks. */
-export const SEGMENT_STROKE: Record<SegmentTone, string> = {
+const SEGMENT_STROKE: Record<SegmentTone, string> = {
   accent: 'oklch(var(--brand))',
   ok: 'oklch(var(--positive-mid))',
   warn: 'oklch(var(--warning-mid))',
@@ -107,7 +107,7 @@ export function DonutRing({
 }
 
 /** R-25 (C1): donut in status colours, the total in the centre, the legend beside it. */
-export function Donut({
+function Donut({
   segments,
   total,
   unit,
@@ -150,7 +150,7 @@ export function Donut({
 }
 
 /** R-25 (C2): a split as one stacked bar with a legend under it. */
-export function StackedBar({
+function StackedBar({
   segments,
   total,
   title,
@@ -191,7 +191,7 @@ export function StackedBar({
 }
 
 /** Vertical legend: 8px swatch, the label, the value right-aligned, 13px ink-2. */
-export function Legend({
+function Legend({
   segments,
   format = (n) => String(n),
   onSegment,

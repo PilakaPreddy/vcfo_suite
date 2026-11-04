@@ -4,8 +4,8 @@
  * capped there, and the firm caps one message at 10 MB in all.
  */
 
-export const ATTACHMENT_MAX_BYTES = 3 * 1024 * 1024;
-export const ATTACHMENTS_TOTAL_MAX_BYTES = 10 * 1024 * 1024;
+const ATTACHMENT_MAX_BYTES = 3 * 1024 * 1024;
+const ATTACHMENTS_TOTAL_MAX_BYTES = 10 * 1024 * 1024;
 export const ATTACHMENTS_MAX_COUNT = 20;
 
 /** Add the signature under a plain-text body, after one blank line. */

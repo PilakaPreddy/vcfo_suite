@@ -20,14 +20,14 @@ import { waitingOnClient } from '@/views/compliances/obligation-groups';
 /** The four KPI tiles over the list (C-06). '' means no tile is picked. */
 export type BoardTile = '' | 'month' | 'filed' | 'week' | 'late';
 
-export const BOARD_TILES: readonly Exclude<BoardTile, ''>[] = ['month', 'filed', 'week', 'late'];
+const BOARD_TILES: readonly Exclude<BoardTile, ''>[] = ['month', 'filed', 'week', 'late'];
 
 export function isBoardTile(value: string | null | undefined): value is Exclude<BoardTile, ''> {
   return BOARD_TILES.includes(value as Exclude<BoardTile, ''>);
 }
 
 /** "Due in 7 days" counts unfiled rows due today or in the next seven days. */
-export const WEEK_DAYS = 7;
+const WEEK_DAYS = 7;
 
 export function matchesTile(row: FilingRow, tile: BoardTile, now: Date): boolean {
   const thisMonth = monthKeyOf(row.dueDate) === monthKeyOf(now.toISOString());

@@ -26,7 +26,7 @@ import { KPI_KEYS, type KpiKey } from '@/lib/metrics/analytics-kpis';
 export type KpiValues = Partial<Record<KpiKey, number>>;
 
 /** The one scope a caller may read, or null when the role reads none. */
-export function kpiScopeFor(ctx: AuthContext): string | null {
+function kpiScopeFor(ctx: AuthContext): string | null {
   if (isFirmWideAdmin(ctx.role)) return 'firm';
   if (ctx.role === 'manager' || ctx.role === 'intern') return ctx.userId;
   return null;

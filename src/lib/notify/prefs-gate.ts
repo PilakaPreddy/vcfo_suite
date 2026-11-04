@@ -27,7 +27,7 @@ export type WhatsAppGatePrefs = {
  * The preference category each event falls under. Null, or an event missing
  * from this map, means it cannot be switched off. Add new events here.
  */
-export const WHATSAPP_EVENT_CATEGORY: Partial<Record<NotifyEvent, 'docs' | 'steps' | 'deadlines' | null>> = {
+const WHATSAPP_EVENT_CATEGORY: Partial<Record<NotifyEvent, 'docs' | 'steps' | 'deadlines' | null>> = {
   welcome: null,
   // A staff reminder about an item the client owes ("Deadlines and reminders").
   client_reminder: 'deadlines',

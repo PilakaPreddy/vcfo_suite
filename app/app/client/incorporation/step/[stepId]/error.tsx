@@ -1,9 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { RouteErrorPanel } from '@/components/shell/RouteErrorPanel';
 
 export default function InternStepError({
   error,
@@ -12,37 +9,14 @@ export default function InternStepError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const router = useRouter();
-
-  useEffect(() => {
-    console.error('[intern/engagements/[id]/step/[stepId]] render error:', error.message, error.digest, error.stack);
-  }, [error]);
-
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center px-4">
-      <AlertTriangle className="h-10 w-10 text-warning" aria-hidden />
-      <div className="space-y-2 max-w-sm">
-        <p className="text-base font-semibold text-ink">
-          Couldn&apos;t load this step
-        </p>
-        <p className="text-sm text-ink-muted">
-          A temporary error occurred. Try reloading or go back to the engagement.
-        </p>
-        {error.digest && (
-          <p className="font-mono text-[11px] text-ink-muted">
-            Error ID: {error.digest}
-          </p>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-3 justify-center">
-        <Button type="button" variant="outline" size="sm" onClick={reset} className="gap-2">
-          <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-          Try again
-        </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={() => router.back()}>
-          Go back
-        </Button>
-      </div>
-    </div>
+    <RouteErrorPanel
+      error={error}
+      reset={reset}
+      logTag="intern/engagements/[id]/step/[stepId]"
+      title="Couldn't load this step"
+      body="A temporary error occurred. Try reloading or go back to the engagement."
+      backLabel="Go back"
+    />
   );
 }

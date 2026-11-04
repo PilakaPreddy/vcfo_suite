@@ -39,7 +39,7 @@ export function soleCompany(engagements: readonly Engagement[]): Engagement | nu
 
 export type FilingStatusFilter = 'all' | FilingStatus;
 
-export const FILING_STATUS_FILTERS: readonly FilingStatusFilter[] = [
+const FILING_STATUS_FILTERS: readonly FilingStatusFilter[] = [
   'all',
   'due-soon',
   'upcoming',

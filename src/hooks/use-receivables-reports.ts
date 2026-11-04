@@ -30,7 +30,7 @@ const ERROR_TEXT: Record<string, string> = {
   Forbidden: 'Your role cannot open receivables.',
 };
 
-export class ReportsApiError extends Error {
+class ReportsApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
@@ -61,7 +61,7 @@ export function useReports(sheetId: string) {
   return useQuery({ queryKey: reportsKey(sheetId), queryFn: () => call<ReportsDto>(`/api/receivables/sheets/${sheetId}/reports`) });
 }
 
-export function useFxRates(sheetId: string, days = 30) {
+function useFxRates(sheetId: string, days = 30) {
   return useQuery({ queryKey: [...ratesKey(sheetId), days], queryFn: () => call<FxRatesDto>(`/api/receivables/sheets/${sheetId}/fx-rates?days=${days}`) });
 }
 
@@ -76,7 +76,7 @@ export function useFxRateOn(sheetId: string, date: string, enabled = true, curre
   });
 }
 
-export function useCreditNotes(invoiceId: string | null) {
+function useCreditNotes(invoiceId: string | null) {
   return useQuery({
     queryKey: creditNotesKey(invoiceId),
     queryFn: async () => (await call<{ creditNotes: CreditNoteDto[] }>(`/api/receivables/invoices/${invoiceId}/credit-notes`)).creditNotes,

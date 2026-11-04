@@ -124,7 +124,7 @@ export function readServiceConfig(env: Env = process.env): ServiceConfig[] {
 }
 
 /** Secrets the app needs in every environment, whatever services are switched on. */
-export const ALWAYS_NEEDED_SECRETS = ['AUTH_SECRET', 'CREDENTIALS_ENCRYPTION_KEY'] as const;
+const ALWAYS_NEEDED_SECRETS = ['AUTH_SECRET', 'CREDENTIALS_ENCRYPTION_KEY'] as const;
 
 /**
  * Secret names to fix, for the overview tile "Secrets to fix": the secrets every environment

@@ -71,7 +71,7 @@ export function previewKind(fileName: string, contentType?: string | null): 'pdf
 }
 
 /** The folder a file sits in inside the archive: phase, then step. */
-export function zipFolderFor(doc: VaultDocument): string {
+function zipFolderFor(doc: VaultDocument): string {
   return [doc.bucket, doc.milestoneTitle].filter(Boolean).join('/');
 }
 

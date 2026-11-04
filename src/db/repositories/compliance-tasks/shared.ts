@@ -39,7 +39,7 @@ export class ComplianceTaskError extends Error {
 export const notFound = () => new ComplianceTaskError(404, 'not_found');
 export const forbidden = () => new ComplianceTaskError(403, 'forbidden');
 
-export function isStaffRole(role: string): boolean {
+function isStaffRole(role: string): boolean {
   return STAFF.has(role);
 }
 
@@ -48,7 +48,7 @@ export function canManage(role: string): boolean {
   return isAdminOrManager(role);
 }
 
-export function clientMaySee(visibility: string): boolean {
+function clientMaySee(visibility: string): boolean {
   return visibility === 'client' || visibility === 'both';
 }
 
@@ -132,7 +132,7 @@ export async function isActiveStaff(profileId: string): Promise<boolean> {
 }
 
 /** The portal segment of a role, for bell links. */
-export function portalOf(role: string): string {
+function portalOf(role: string): string {
   if (role === 'super_admin') return 'super';
   if (role === 'intern') return 'intern';
   if (role === 'manager') return 'manager';

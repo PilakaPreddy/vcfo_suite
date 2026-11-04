@@ -70,7 +70,7 @@ function visibleTo(ctx: AuthContext) {
 }
 
 /** Trim, lowercase and de-duplicate the addresses; refuse a bad one. */
-export function normaliseMembers(members: MailGroupMemberDto[]): MailGroupMemberDto[] {
+function normaliseMembers(members: MailGroupMemberDto[]): MailGroupMemberDto[] {
   const seen = new Set<string>();
   const out: MailGroupMemberDto[] = [];
   for (const m of members) {

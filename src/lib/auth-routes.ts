@@ -113,7 +113,7 @@ export function roleProfilePath(role: Role): string {
  * Lets shell chrome resolve role-scoped links from the URL rather than from the
  * app context, so a component can be rendered (and tested) outside a provider.
  */
-export function roleFromAppPathname(pathname: string): Role | null {
+function roleFromAppPathname(pathname: string): Role | null {
   switch (pathname.split('/').filter(Boolean)[1]) {
     case 'super':
       return 'super_admin';

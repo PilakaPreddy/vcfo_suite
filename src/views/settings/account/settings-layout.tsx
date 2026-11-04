@@ -39,7 +39,7 @@ export function ProfileCard({
 }
 
 /** Kept for older callers: a plain section heading. */
-export function SectionHead({ title, action }: { title: string; description?: string; action?: ReactNode }) {
+function SectionHead({ title, action }: { title: string; description?: string; action?: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <h2 className="text-[15px] font-medium text-ink">{title}</h2>

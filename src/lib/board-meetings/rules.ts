@@ -72,7 +72,7 @@ export function splitPlaceholders(text: string): Array<{ text: string; blank: bo
 
 let keySeq = 0;
 /** A stable-enough unique key for a new agenda row. */
-export function newAgendaKey(): string {
+function newAgendaKey(): string {
   keySeq += 1;
   return `a${Date.now().toString(36)}${keySeq.toString(36)}`;
 }

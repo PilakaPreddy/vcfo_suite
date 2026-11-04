@@ -71,13 +71,13 @@ export const ROTATION_SECRETS: RotationSecretDef[] = [
 ];
 
 /** A row shows amber this many days before it is due. */
-export const DUE_SOON_DAYS = 14;
+const DUE_SOON_DAYS = 14;
 
 export function secretIdFor(def: RotationSecretDef, env: Env = process.env): string | null {
   return env[def.idEnv]?.trim() || def.defaultId;
 }
 
-export function cadenceLabel(def: RotationSecretDef): string {
+function cadenceLabel(def: RotationSecretDef): string {
   if (def.everyMonths) return `Every ${def.everyMonths} months`;
   return `Every ${def.everyDays ?? 0} days`;
 }

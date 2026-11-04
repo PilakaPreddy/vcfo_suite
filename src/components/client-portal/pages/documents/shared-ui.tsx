@@ -10,19 +10,21 @@ import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import type { ClientDocumentsPayload, DocNode } from '@/lib/client-portal/documents';
 import type { ViewerDoc } from './DocViewer';
-import { fileUrl } from './model';
+import { engagementParam, fileUrl } from './model';
 import { triggerDownload } from './file-types';
 
 export const DOCS_KEY = ['client-portal', 'documents'] as const;
 
-async function fetchClientDocuments(): Promise<ClientDocumentsPayload> {
-  const res = await fetch('/api/client/documents', { cache: 'no-store' });
+async function fetchClientDocuments(engagementId?: string): Promise<ClientDocumentsPayload> {
+  const qs = engagementId ? `?engagement=${encodeURIComponent(engagementId)}` : '';
+  const res = await fetch(`/api/client/documents${qs}`, { cache: 'no-store' });
   if (!res.ok) throw new Error(res.status === 404 ? 'none' : `documents ${res.status}`);
   return ((await res.json()) as { documents: ClientDocumentsPayload }).documents;
 }
 
-export function useClientDocuments() {
-  return useQuery({ queryKey: DOCS_KEY, queryFn: fetchClientDocuments, staleTime: 15_000, retry: (n, e) => (e as Error).message !== 'none' && n < 2 });
+/** A client's own documents; staff pass the engagement they are viewing. */
+export function useClientDocuments(engagementId?: string) {
+  return useQuery({ queryKey: [...DOCS_KEY, engagementId ?? 'own'], queryFn: () => fetchClientDocuments(engagementId), staleTime: 15_000, retry: (n, e) => (e as Error).message !== 'none' && n < 2 });
 }
 
 /** DECISIONS "Loading L1": skeleton shown after 150 ms, held at least 300 ms. */
@@ -94,7 +96,7 @@ export function useZipToast() {
       const zipName = `${name}.zip`;
       setToast({ name: zipName, total: Math.max(1, total), n: 0, done: false });
       try {
-        const res = await fetch(`/api/client/documents/zip?folder=${encodeURIComponent(folder)}`, { signal: ac.signal });
+        const res = await fetch(`/api/client/documents/zip?folder=${encodeURIComponent(folder)}${engagementParam()}`, { signal: ac.signal });
         if (!res.ok) throw new Error(res.status === 404 ? 'No files to download yet' : 'Could not prepare the ZIP');
         const files = Number(res.headers.get('X-Zip-Files') ?? total) || total;
         const len = Number(res.headers.get('Content-Length') ?? 0);

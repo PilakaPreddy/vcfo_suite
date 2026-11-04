@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 /* The strength bar under a new password (prototype profile-settings PasswordForm). It only
    shows how strong the password is; the server's rule (8 or more characters) decides. */
 
-export const PASSWORD_CHECKS: Array<{ label: string; test: (v: string) => boolean }> = [
+const PASSWORD_CHECKS: Array<{ label: string; test: (v: string) => boolean }> = [
   { label: '8+ characters', test: (v) => v.length >= 8 },
   { label: 'Number', test: (v) => /\d/.test(v) },
   { label: 'Symbol', test: (v) => /[^A-Za-z0-9]/.test(v) },
@@ -14,7 +14,7 @@ export const PASSWORD_CHECKS: Array<{ label: string; test: (v: string) => boolea
 const STRENGTH = ['Too weak', 'Weak', 'Fair', 'Good', 'Strong'];
 
 /** How many of the four checks the password passes (0 to 4). */
-export function passwordScore(value: string): number {
+function passwordScore(value: string): number {
   return PASSWORD_CHECKS.filter((c) => c.test(value)).length;
 }
 

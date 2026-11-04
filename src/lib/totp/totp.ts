@@ -13,10 +13,10 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
  * `secret-box.ts`; this file only ever sees the base32 text.
  */
 
-export const TOTP_STEP_SECONDS = 30;
-export const TOTP_DIGITS = 6;
+const TOTP_STEP_SECONDS = 30;
+const TOTP_DIGITS = 6;
 /** How many steps either side of now a code may come from. */
-export const TOTP_WINDOW = 1;
+const TOTP_WINDOW = 1;
 
 const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 
@@ -84,7 +84,7 @@ export function hotp(key: Buffer, counter: number, opts: HotpOptions = {}): stri
 }
 
 /** The TOTP step counter for a moment in time. */
-export function totpCounter(atMs: number, stepSeconds = TOTP_STEP_SECONDS): number {
+function totpCounter(atMs: number, stepSeconds = TOTP_STEP_SECONDS): number {
   return Math.floor(atMs / 1000 / stepSeconds);
 }
 
@@ -94,7 +94,7 @@ export function totpAt(key: Buffer, atMs: number, opts: HotpOptions & { stepSeco
 }
 
 /** Keeps the digits of what a person typed ("123 456" and "123-456" both work). */
-export function normalizeTotpCode(input: string): string {
+function normalizeTotpCode(input: string): string {
   return String(input ?? '').replace(/[\s-]/g, '');
 }
 

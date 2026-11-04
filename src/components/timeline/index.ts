@@ -2,9 +2,9 @@
 export { GanttTimeline } from './GanttTimeline';
 export { RecordTimelineCard } from './RecordTimelineCard';
 export {
-  axisFraction,
+  
   buildRecordTimeline,
-  shortDate,
+  
   type BarKind,
   type RecordTimeline,
   type RecordTimelineInput,

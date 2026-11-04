@@ -47,7 +47,7 @@ export function Island({ className, inline, children }: { className?: string; in
  * row that is not yet in its due-soon window is Not started.
  */
 export const WORD: Record<CompStatus, string> = { ok: 'Done', due: 'Due soon', over: 'Overdue', up: 'Not started' };
-export const TONE: Record<CompStatus, ChipTone> = { ok: 'ok', due: 'warn', over: 'bad', up: 'idle' };
+const TONE: Record<CompStatus, ChipTone> = { ok: 'ok', due: 'warn', over: 'bad', up: 'idle' };
 /** Solid marks for bars, legend squares and dots (R-25: status colours only in charts). */
 export const FILL: Record<CompStatus, string> = { ok: 'bg-positive-mid', due: 'bg-warning-mid', over: 'bg-danger-mid', up: 'bg-upcoming-mid' };
 /** SVG stroke colours for the donut, from the same tokens. */

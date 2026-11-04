@@ -182,10 +182,16 @@ function toastMessage(title: string, description?: string): string {
   return `${title} — ${description}`;
 }
 
-export function toastError(title: string, description?: string) {
+export function toastError(title: string, description?: string, options?: { id?: string }) {
   toast.error(toastMessage(title, description), {
     duration: ERROR_DURATION_MS,
+    ...(options?.id ? { id: options.id } : {}),
   });
+}
+
+/** A spinner toast that stays until a later toast with the same id replaces it. */
+export function toastLoading(title: string, description: string | undefined, options: { id: string }) {
+  toast.loading(toastMessage(title, description), { id: options.id });
 }
 
 export function toastSuccess(
@@ -208,11 +214,12 @@ function toastWarning(title: string, description?: string, options?: { id?: stri
   });
 }
 
-export function toastInfo(title: string, description?: string) {
+export function toastInfo(title: string, description?: string, options?: { id?: string }) {
   toast(toastMessage(title, description), {
     duration: SUCCESS_DURATION_MS,
     icon: infoToastIcon(),
     style: getToastVariantStyle('info'),
+    ...(options?.id ? { id: options.id } : {}),
   });
 }
 

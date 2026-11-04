@@ -82,7 +82,7 @@ export function digestWeek(now: Date): DigestWeek {
 }
 
 /** The IST calendar day of an ISO timestamp, or `null` when it does not parse. */
-export function istDayOf(at: string | null | undefined): string | null {
+function istDayOf(at: string | null | undefined): string | null {
   if (!at) return null;
   const ms = Date.parse(at);
   if (Number.isNaN(ms)) return null;
@@ -135,7 +135,7 @@ export interface ClientDigestInput {
 }
 
 /** How far ahead a client's digest looks for filings. */
-export const CLIENT_DUE_DAYS = 14;
+const CLIENT_DUE_DAYS = 14;
 
 export const CLIENT_PATHS = {
   home: '/app/client',

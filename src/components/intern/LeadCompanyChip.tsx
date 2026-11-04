@@ -30,7 +30,7 @@ export function LeadCompanyChip({
   );
 }
 
-export function LeadCompanyPill({ name }: { name: string; engagementId?: string }) {
+function LeadCompanyPill({ name }: { name: string; engagementId?: string }) {
   const short = name.split(/\s+/)[0] ?? name;
   return (
     <span

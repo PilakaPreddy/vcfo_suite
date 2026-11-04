@@ -20,7 +20,7 @@ export interface StepFieldState {
 }
 
 /** Whole days between an ISO time and now, never negative. */
-export function daysSince(iso: string | null | undefined, now: Date = new Date()): number | null {
+function daysSince(iso: string | null | undefined, now: Date = new Date()): number | null {
   if (!iso) return null;
   const t = Date.parse(iso);
   if (Number.isNaN(t)) return null;

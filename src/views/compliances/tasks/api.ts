@@ -253,8 +253,8 @@ const json = (method: string, body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 });
 
-export const TASKS_KEY = ['compliance-tasks'] as const;
-export const STAT_KEY = ['compliance-statutory'] as const;
+const TASKS_KEY = ['compliance-tasks'] as const;
+const STAT_KEY = ['compliance-statutory'] as const;
 
 /* ------------------------------------------------------------------ activities */
 
@@ -300,7 +300,7 @@ export interface TaskQuery {
   includeNa?: boolean;
 }
 
-export function taskQueryString(q: TaskQuery): string {
+function taskQueryString(q: TaskQuery): string {
   const p = new URLSearchParams();
   if (q.engagementId) p.set('engagementId', q.engagementId);
   if (q.from) p.set('from', q.from);

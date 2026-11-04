@@ -102,10 +102,10 @@ export function addSavedView(
 
 /* ------------------------------------------------------------------ density */
 
-export const densityKey = (scope: string) => `vcfo.density.${scope}`;
+const densityKey = (scope: string) => `vcfo.density.${scope}`;
 
 /** The person's own default density (Profile > Appearance). A table without its own choice uses it. */
-export const PERSON_DENSITY_KEY = 'vcfo.density';
+const PERSON_DENSITY_KEY = 'vcfo.density';
 
 export function readPersonDensity(): Density {
   return readRaw(PERSON_DENSITY_KEY) === 'compact' ? 'compact' : 'comfortable';
@@ -124,7 +124,7 @@ export function readDensity(scope: string): Density {
 /* ---------------------------------------------------------------- text size */
 
 export type TextSize = 'small' | 'default' | 'large';
-export const TEXT_SIZE_KEY = 'vcfo.text-size';
+const TEXT_SIZE_KEY = 'vcfo.text-size';
 
 export function readTextSize(): TextSize {
   const v = readRaw(TEXT_SIZE_KEY);

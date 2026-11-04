@@ -27,7 +27,7 @@ import {
   SUPER_STUCK_DAYS,
   type SuperInsightClient,
   type SuperRegCell,
-} from '@/components/super/insights/super-insights-model';
+} from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import { usePracticeMetrics } from '@/components/metrics/use-metrics';
 import { cn } from '@/lib/utils';
@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
  * matrix of clients by registration, and the open registrations as work items. A step marked
  * not applicable reads "Not needed". Read-only.
  */
-export const SUPER_REGISTRATIONS_HREF = '/app/super/practice/registrations';
+const SUPER_REGISTRATIONS_HREF = '/app/super/practice/registrations';
 
 const CELL_LABEL: Record<SuperRegCell, string> = {
   done: 'Done',

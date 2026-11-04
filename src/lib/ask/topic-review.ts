@@ -4,7 +4,7 @@ import { FIELD_HELP, type FieldHelp } from '@/data/ask/field-help';
 import { GLOSSARY } from '@/data/ask/glossary';
 import type { Suggestion, Topic } from '@/data/ask/schema';
 import { SUGGESTIONS } from '@/data/ask/suggestions';
-import { visualText } from '@/components/ask/visuals/visual-text';
+import { visualText } from '@/lib/ask/visual-text';
 import { COMPLIANCE_OBLIGATIONS } from '@/lib/compliance/obligations-seed';
 
 /**

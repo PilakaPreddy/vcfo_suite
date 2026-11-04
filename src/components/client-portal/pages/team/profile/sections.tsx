@@ -43,7 +43,7 @@ export const LABEL: Record<SecKey, string> = {
 };
 
 /** One form row: label with a hint on the left, the control on the right (464 px column). */
-export function FormRow({ k, hint, children }: { k: string; hint?: string; children: ReactNode }) {
+function FormRow({ k, hint, children }: { k: string; hint?: string; children: ReactNode }) {
   return (
     <div className="grid gap-2 border-t border-line-soft px-4 py-2.5 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,464px)] sm:items-center md:px-5">
       <span className="min-w-0">

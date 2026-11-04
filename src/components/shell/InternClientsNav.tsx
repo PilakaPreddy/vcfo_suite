@@ -288,7 +288,7 @@ function InternClientsPanel({
   );
 }
 
-export function InternClientsNav({
+function InternClientsNav({
   expanded,
   pathname,
   layoutIdPrefix,

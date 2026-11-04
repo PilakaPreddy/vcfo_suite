@@ -42,7 +42,7 @@ const VIS = {
   both: { Icon: Users, word: 'Both', tip: 'Visible to the firm and the client' },
 } as const;
 
-export function VisibilityTag({ visibility, className }: { visibility: string; className?: string }) {
+function VisibilityTag({ visibility, className }: { visibility: string; className?: string }) {
   const v = VIS[visibility as keyof typeof VIS] ?? VIS.both;
   return (
     <span className={cn('inline-flex items-center gap-1.5 text-[13px] text-ink-2', className)} title={v.tip}>
@@ -53,7 +53,7 @@ export function VisibilityTag({ visibility, className }: { visibility: string; c
 }
 
 /** C-3: the hollow 8px square a task carries on the calendar, in ink-2. */
-export function TaskSquare({ className }: { className?: string }) {
+function TaskSquare({ className }: { className?: string }) {
   return <i aria-hidden className={cn('inline-block h-2 w-2 flex-none rounded-[2px] border-1.5 border-ink-2 bg-transparent', className)} />;
 }
 

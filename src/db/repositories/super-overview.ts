@@ -58,7 +58,7 @@ import {
   type SuperInsightFiling,
   type SuperInsights,
   type SuperRegCell,
-} from '@/components/super/insights/super-insights-model';
+} from '@/lib/super/super-insights-model';
 
 /**
  * SUPER ADMIN OVERVIEW REPOSITORY.

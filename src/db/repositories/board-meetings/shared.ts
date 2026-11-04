@@ -28,7 +28,7 @@ import type { MeetingStatus } from '@/lib/board-meetings/model';
 
 export type MeetingRow = typeof boardMeetings.$inferSelect;
 
-export const STAFF = new Set(['super_admin', 'admin', 'manager', 'intern']);
+const STAFF = new Set(['super_admin', 'admin', 'manager', 'intern']);
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class BoardMeetingError extends Error {
@@ -168,7 +168,7 @@ export async function firmAdmins(): Promise<PersonLite[]> {
   return rows.map((r) => ({ id: r.id, name: r.name?.trim() || r.email.split('@')[0] || 'Admin', email: r.email, role: r.role }));
 }
 
-export function portalOf(role: string): string {
+function portalOf(role: string): string {
   if (role === 'super_admin') return 'super';
   if (role === 'intern') return 'intern';
   if (role === 'manager') return 'manager';

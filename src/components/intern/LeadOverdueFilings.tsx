@@ -20,7 +20,7 @@ const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct
  * carries a small navy action (rule R-20).
  */
 /** Overdue, or open and due within the next 15 days. Shared with the practice strip. */
-export function isOverdueOrDueSoon(f: ComplianceFiling, now: Date): boolean {
+function isOverdueOrDueSoon(f: ComplianceFiling, now: Date): boolean {
   if (f.status === 'overdue') return true;
   if (f.status !== 'upcoming' && f.status !== 'in-progress') return false;
   const due = Date.parse(f.nextDue);

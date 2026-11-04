@@ -52,7 +52,7 @@ function publish(field: 'pan' | 'tan', value: string, expiresAt?: string) {
  * Masks a revealed PAN or TAN at once (the hide button on the Home IDs card). The reveal
  * holds no server grant: the value lives only in this store, so clearing it is enough.
  */
-export function hideRevealedIdentifier(field: 'pan' | 'tan'): void {
+function hideRevealedIdentifier(field: 'pan' | 'tan'): void {
   if (!revealed[field]) return;
   if (timers[field]) clearTimeout(timers[field]);
   delete timers[field];
@@ -66,7 +66,7 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l);
 }
 /** When the open reveal of `field` closes (ms timestamp), else null; drives the countdown. */
-export function useRevealedUntil(field: 'pan' | 'tan'): number | null {
+function useRevealedUntil(field: 'pan' | 'tan'): number | null {
   return useSyncExternalStore(
     subscribe,
     () => revealed[field]?.until ?? null,

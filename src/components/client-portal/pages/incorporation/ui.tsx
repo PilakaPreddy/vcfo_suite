@@ -27,7 +27,7 @@ import '../../css/incorporation-extra.css';
 
 /* ---------------- icons & glyphs ---------------- */
 
-export function Ic({ n, cls = 'ic', style }: { n: IcName; cls?: string; style?: CSSProperties }) {
+function Ic({ n, cls = 'ic', style }: { n: IcName; cls?: string; style?: CSSProperties }) {
   return (
     <svg
       className={cls}
@@ -71,7 +71,7 @@ const GLY: Record<GlyphKind, ReactNode> = {
 };
 
 /** Status glyph, set A (rule 18). `tip` makes it role=img with the rule-17 tooltip. */
-export function Si({ k, tip, cls, style }: { k: GlyphKind; tip?: string; cls?: string; style?: CSSProperties }) {
+function Si({ k, tip, cls, style }: { k: GlyphKind; tip?: string; cls?: string; style?: CSSProperties }) {
   return tip ? (
     <span className={`si ${k}${cls ? ` ${cls}` : ''}`} role="img" aria-label={tip} data-tt={tip} style={style}>
       {GLY[k]}
@@ -85,7 +85,7 @@ export function Si({ k, tip, cls, style }: { k: GlyphKind; tip?: string; cls?: s
 
 export type OwnKey = 'You' | 'SBC' | 'MCA';
 
-export function Own({ o, short }: { o: OwnKey; short: string }) {
+function Own({ o, short }: { o: OwnKey; short: string }) {
   const L = o === 'You' ? short : o;
   return (
     <span className={`own ${o}`} role="img" aria-label={`Owner · ${L}`} data-tt={o === 'You' ? `${short} owns this step` : `${L} owns this step`}>
@@ -97,7 +97,7 @@ export function Own({ o, short }: { o: OwnKey; short: string }) {
 const BOTI =
   '<rect x="15" y="2" width="2" height="5" rx="1" fill="#1e40af"/><circle cx="16" cy="3" r="2.2" fill="#2dd4bf"/><rect x="3" y="7" width="26" height="21" rx="9" fill="#2563eb"/><rect x="7" y="12" width="18" height="10" rx="5" fill="#0b1736"/><rect x="11" y="14.5" width="3" height="5" rx="1.5" fill="#7dd3fc"/><rect x="18" y="14.5" width="3" height="5" rx="1.5" fill="#7dd3fc"/>';
 
-export function Bmini({ style }: { style?: CSSProperties }) {
+function Bmini({ style }: { style?: CSSProperties }) {
   return (
     <span className="bmini" aria-hidden="true" style={style}>
       <svg viewBox="0 0 32 32" aria-hidden="true" dangerouslySetInnerHTML={{ __html: BOTI }} />
@@ -106,7 +106,7 @@ export function Bmini({ style }: { style?: CSSProperties }) {
 }
 
 /** Rule 16 — the robot says it (prototype `botSay`). */
-export function BotSay({
+function BotSay({
   text,
   btn,
   onBtn,
@@ -168,7 +168,7 @@ export function fmtL(s?: string): string {
   const d = pd(s);
   return `${d.getUTCDate()} ${MONL[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
-export function fmtS(s?: string): string {
+function fmtS(s?: string): string {
   if (!s) return '—';
   const d = pd(s);
   const m = MON[d.getUTCMonth()];
@@ -221,7 +221,7 @@ const reduceMotion = () =>
 export { reduceMotion };
 
 /** (i) button (`.ibtn`, rule 7) that opens the page pop-over. */
-export function InfoBtn({ label, spec, style }: { label: string; spec: InfoSpec; style?: CSSProperties }) {
+function InfoBtn({ label, spec, style }: { label: string; spec: InfoSpec; style?: CSSProperties }) {
   const { openInfo } = useIncFrame();
   return (
     <button
@@ -432,7 +432,7 @@ function useSkeleton(pending: boolean): boolean {
 }
 
 /** Count-up 0 → n over 650 ms, easeOutCubic (AN-01); returns the shown value. */
-export function useCountUp(n: number | null, enabled: boolean): number | null {
+function useCountUp(n: number | null, enabled: boolean): number | null {
   const [v, setV] = useState<number | null>(enabled && n != null ? 0 : n);
   const done = useRef(false);
   useEffect(() => {

@@ -70,7 +70,7 @@ export function cascadeEdit(parts: EditPhase[], index: number, field: 'from' | '
   return out;
 }
 
-export function TimelineEditor({
+function TimelineEditor({
   open,
   onOpenChange,
   phases,
@@ -249,7 +249,7 @@ export function TimelineEditor({
 }
 
 /** Save the parts from manager mode (POST /api/engagements/:id/timeline). Throws the server's words. */
-export async function saveTimelineParts(engagementId: string, parts: EditPhase[]): Promise<void> {
+async function saveTimelineParts(engagementId: string, parts: EditPhase[]): Promise<void> {
   const res = await fetch(`/api/engagements/${encodeURIComponent(engagementId)}/timeline`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
