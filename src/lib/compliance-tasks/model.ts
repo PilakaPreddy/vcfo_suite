@@ -45,12 +45,10 @@ const STAGE_WORD: Record<Stage, StatusWord> = {
   'not-applicable': 'Not started',
 };
 
-const URGENCIES = ['Low', 'Medium', 'High', 'Critical'] as const;
-export type Urgency = (typeof URGENCIES)[number];
+export type Urgency = 'Low' | 'Medium' | 'High' | 'Critical';
 export const URGENCY_BARS: Record<Urgency, 1 | 2 | 3 | 4> = { Low: 1, Medium: 2, High: 3, Critical: 4 };
 
-const VISIBILITIES = ['firm', 'client', 'both'] as const;
-export type Visibility = (typeof VISIBILITIES)[number];
+export type Visibility = 'firm' | 'client' | 'both';
 
 export const REPEATS = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'yearly'] as const;
 export type Repeats = (typeof REPEATS)[number];

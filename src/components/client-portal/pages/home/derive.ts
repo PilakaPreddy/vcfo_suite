@@ -19,7 +19,6 @@ export type Tone = 'ok' | 'due' | 'over' | 'prog' | 'up';
 /* ------------------------------------------------------------------ dates */
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function ymd(v?: string | null): string | undefined {
   if (!v) return undefined;
@@ -44,17 +43,6 @@ export function dLong(iso?: string): string {
   const p = parts(iso);
   return `${p.d} ${MON[p.m]} ${p.y}`;
 }
-/** ["09", "Oct"] (sentence case, K-12) */
-function dayMon(iso: string): [string, string] {
-  const p = parts(iso);
-  return [String(p.d).padStart(2, '0'), MON[p.m]!];
-}
-/** "Tue 6 Oct 2026" (sentence case, K-12) */
-function dHeader(iso: string): string {
-  const p = parts(iso);
-  const dow = new Date(Date.UTC(p.y, p.m, p.d)).getUTCDay();
-  return `${DOW[dow]} ${p.d} ${MON[p.m]} ${p.y}`;
-}
 export function days(a: string, b: string): number {
   return Math.round((Date.parse(`${b.slice(0, 10)}T00:00:00Z`) - Date.parse(`${a.slice(0, 10)}T00:00:00Z`)) / 86_400_000);
 }
@@ -72,26 +60,8 @@ function rel(today: string, iso: string): string {
   if (n === 0) return 'Today';
   return `Due ${dShort(iso)}`;
 }
-function chipTone(today: string, iso?: string): Tone {
-  if (!iso) return 'up';
-  const n = days(today, iso);
-  if (n < 0) return 'over';
-  if (n <= 7) return 'due';
-  return 'prog';
-}
 
 export const chipBg = (t: Tone) => `var(--${t}-chip)`;
-/* Status chips are soft (K-04, rule R-13): the tone's light ground, its text-safe
-   colour and a 6px dot in the tone's mid colour (drawn by .chip[style*="--dot"]).
-   The name stays so callers do not change; nothing is solid now. */
-const CHIP_DOT: Partial<Record<Tone, string>> = { ok: 'var(--ok-mid)', due: 'var(--due-mid)', over: 'var(--over-mid)' };
-function solid(t: Tone): React.CSSProperties {
-  return {
-    background: `var(--${t}-light)`,
-    color: `var(--${t}-text, var(--${t}))`,
-    ['--dot' as string]: CHIP_DOT[t] ?? `var(--${t})`,
-  } as React.CSSProperties;
-}
 
 /* -------------------------------------------------------------- steps */
 
@@ -107,10 +77,6 @@ const STEP_STATUS: Record<string, [string, Tone]> = {
 function stepStatus(s: PortalStep): [string, Tone] {
   if (s.late && s.kind !== 'done') return ['Overdue', 'over'];
   return STEP_STATUS[s.kind] ?? ['Upcoming', 'up'];
-}
-
-function stepOwnerLabel(s: PortalStep, company: string): string {
-  return s.owner === 'client' ? company : 'SBC';
 }
 
 function stepTimelineText(s: PortalStep): string {
@@ -230,13 +196,6 @@ export function buildNeeds(model: PortalIncorporationModel, home: ClientHome | u
     out.push({ key: `step:${s.id}`, title, sub: s.title, kind, due: s.due, stepId: s.id, stepN: s.n, href: stepHref(s.id), area: needArea(s, undefined), note: kind === 'correct' ? slice?.rejectionNote?.trim() || undefined : undefined });
   }
   return out;
-}
-
-function needChip(today: string, due: string | undefined, after: boolean): { label: string; tone: Tone } | null {
-  if (!due) return null;
-  const n = days(today, due);
-  if (n < 0) return { label: `Overdue ${-n}d`, tone: 'over' };
-  return { label: after ? rel(today, due) : dShort(due), tone: n <= 7 ? 'due' : 'prog' };
 }
 
 const NEED_TABS: [NeedKind, string][] = [
@@ -782,14 +741,6 @@ export function docGroup(today: string, iso?: string): 'This week' | 'Last week'
   if (age < 14) return 'Last week';
   return 'Earlier';
 }
-
-const FT_STYLE: Record<string, React.CSSProperties> = {
-  JPG: { background: 'var(--teal-light)', color: 'var(--teal-chip)' },
-  PNG: { background: 'var(--teal-light)', color: 'var(--teal-chip)' },
-  PDF: { background: 'var(--over-light)', color: 'var(--over-text)' },
-  DOCX: { background: 'var(--prog-light)', color: 'var(--prog-text)' },
-};
-const FT_PHONE: Record<string, string> = { PDF: 'var(--over)', JPG: 'oklch(47% .09 195)', PNG: 'oklch(47% .09 195)', DOCX: 'oklch(51% .17 252)' };
 
 export async function docUrl(d: DocItem): Promise<string> {
   const res = await fetch(

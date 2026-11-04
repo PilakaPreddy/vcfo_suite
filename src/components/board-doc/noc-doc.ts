@@ -36,11 +36,6 @@ const NOC_FIELD_SOURCES: Record<keyof BoardResolutionMergeFields, string> = {
   SIGNATORY_DIN: 'Filled by hand on the printed copy',
 };
 
-/** Short labels for the version compare list. */
-const NOC_FIELD_LABELS: Record<string, string> = Object.fromEntries(
-  Object.entries(NOC_FIELD_SOURCES).map(([k, v]) => [k, v.replace(/^Pre-1 · /, '')]),
-);
-
 /** The merge values of the draft. Each director is its own value; placeholders come back missing. */
 export function nocMergeValues(fields: BoardResolutionMergeFields | null | undefined): MergeValue[] {
   if (!fields) return [];

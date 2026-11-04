@@ -48,7 +48,6 @@ import { buildNotice, type NoticeDoc } from '@/lib/board-meetings/notice';
 import { directorsOfEngagement, systemSeedDirectors, toDirectorDto, type DirectorDto, type DirectorRow } from './directors';
 import { systemLibraryMap } from './library';
 import {
-  BoardMeetingError,
   canApprove,
   companyInfoOf,
   conflict,

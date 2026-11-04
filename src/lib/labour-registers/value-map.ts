@@ -59,12 +59,6 @@ function allowedValues(field: string): string[] | null {
   return spec?.values ?? null;
 }
 
-/** A short explanation of a canonical value, for the chooser's secondary line. */
-function describeValue(field: string, value: string): string {
-  if (field === 'attendanceGrid') return ATTENDANCE_CODES[value as keyof typeof ATTENDANCE_CODES] ?? value;
-  return value;
-}
-
 /**
  * Score one source value against one canonical value. Exact and alias hits are taken; a prefix
  * or containment match is offered as a suggestion; anything else is left alone.

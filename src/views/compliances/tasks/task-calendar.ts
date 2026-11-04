@@ -1,6 +1,5 @@
 import type { FilingRow, FilingStatus } from '@/lib/compliance/filings';
 import { financialYearMonths } from '@/lib/compliance/filings';
-import type { SixWord } from '@/views/compliances/spectrum-status';
 import { plainDate } from '@/views/compliances/spectrum-status';
 import type { TaskRowDto } from '@/views/compliances/tasks/api';
 import { taskCal } from '@/views/compliances/tasks/task-model';
@@ -25,9 +24,6 @@ export function fyRange(fyStartYear: number): { from: string; to: string } {
 
 /** The four calendar statuses of a task, by the rule of a filing: done, late, within 7 days, later. */
 export const taskStatus = (t: TaskRowDto, now: Date): FilingStatus => taskCal({ stage: t.stage, endDate: t.dueDate }, now);
-
-/** The status word of a done task on Filings reads Done; otherwise the server's word. */
-const taskWordOf = (t: TaskRowDto): SixWord => t.word;
 
 /** C-3 hover text: "Starts 12 Oct · High". */
 export const taskHintOf = (t: TaskRowDto, now: Date) => `Starts ${plainDate(t.startDate, now)} · ${t.urgency}`;

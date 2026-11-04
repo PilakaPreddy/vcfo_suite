@@ -156,19 +156,6 @@ export function Avatar({ name, size = 24, className }: { name: string; size?: 24
   );
 }
 
-/** R-44: a company is a 6px square. */
-function CompanySquare({ name, size = 52 }: { name: string; size?: number }) {
-  return (
-    <span
-      className="grid flex-none place-items-center rounded-md bg-brand-soft text-[18px] font-medium text-brand-text shadow-tile"
-      style={{ width: size, height: size }}
-      aria-hidden
-    >
-      {initials(name) || '·'}
-    </span>
-  );
-}
-
 /* --------------------------------------------------------------- dates */
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

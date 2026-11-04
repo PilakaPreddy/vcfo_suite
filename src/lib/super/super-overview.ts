@@ -237,9 +237,6 @@ export function superEngagementHref(engagementId: string): string {
   return `${SUPER_PROJECTS_HREF}/${engagementId}`;
 }
 
-/** The list, filtered to what needs a human. */
-const SUPER_ATTENTION_HREF = `${SUPER_PROJECTS_HREF}?filter=attention`;
-
 /** Read-only inspection of the firm-side project shell. */
 export function superFirmViewHref(slugOrId: string): string {
   return `/app/admin/projects/${slugOrId}`;

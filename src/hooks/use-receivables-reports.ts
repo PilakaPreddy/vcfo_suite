@@ -61,10 +61,6 @@ export function useReports(sheetId: string) {
   return useQuery({ queryKey: reportsKey(sheetId), queryFn: () => call<ReportsDto>(`/api/receivables/sheets/${sheetId}/reports`) });
 }
 
-function useFxRates(sheetId: string, days = 30) {
-  return useQuery({ queryKey: [...ratesKey(sheetId), days], queryFn: () => call<FxRatesDto>(`/api/receivables/sheets/${sheetId}/fx-rates?days=${days}`) });
-}
-
 /** The rate of `currency` in force on `date` (the booked-rate default of a foreign invoice); fetched only when enabled. */
 export function useFxRateOn(sheetId: string, date: string, enabled = true, currency = 'USD') {
   return useQuery({
@@ -73,14 +69,6 @@ export function useFxRateOn(sheetId: string, date: string, enabled = true, curre
       (await call<FxRatesDto>(`/api/receivables/sheets/${sheetId}/fx-rates?days=1&date=${encodeURIComponent(date)}&currency=${encodeURIComponent(currency)}`)).onDate ?? null,
     enabled: enabled && /^\d{4}-\d{2}-\d{2}$/.test(date),
     staleTime: 5 * 60_000,
-  });
-}
-
-function useCreditNotes(invoiceId: string | null) {
-  return useQuery({
-    queryKey: creditNotesKey(invoiceId),
-    queryFn: async () => (await call<{ creditNotes: CreditNoteDto[] }>(`/api/receivables/invoices/${invoiceId}/credit-notes`)).creditNotes,
-    enabled: Boolean(invoiceId),
   });
 }
 

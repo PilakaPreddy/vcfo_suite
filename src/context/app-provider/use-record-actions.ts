@@ -3,7 +3,6 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { Client } from '@/data/client';
 import type { AppContextValue } from '@/context/AppContext';
 import {
-  type Engagement,
   type TaskInstance,
   type DocRequest,
   seedTasksFor,

@@ -33,21 +33,3 @@ export function FilterSelect({ options, className, size = 'sm', ...rest }: Filte
   );
 }
 
-/** The same filter on a navy bar: 28px, white text on white 8 % with a white 18 % edge. */
-function SelectOnNavy({ options, className, ...rest }: Omit<FilterSelectProps, 'size'>) {
-  return (
-    <span className={cn('relative inline-flex', className)}>
-      <select
-        className="h-7 appearance-none rounded-md border border-white/[.18] bg-white/[.08] pl-2.5 pr-7 text-[12.5px] font-semibold text-white outline-none focus-visible:ring-4 focus-visible:ring-white/25 [&>option]:text-ink"
-        {...rest}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown size={14} strokeWidth={1.6} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-white/70" aria-hidden />
-    </span>
-  );
-}

@@ -40,7 +40,6 @@ import {
   financialYearMonths,
   financialYearQuarters,
   monthKeyOf,
-  monthLabelOf,
   parseFyParam,
   parseMonthParam,
   quarterForMonthKey,
@@ -89,7 +88,7 @@ import { INTERNAL_AREA, fyRange, taskAsFilingRow, taskIdOfRow } from '@/views/co
 import { statHref, taskHref } from '@/views/compliances/tasks/task-list';
 import { showStat, showTasks, type CatFilter } from '@/views/compliances/tasks/task-model';
 import { GroupedGrid, HeadCard, KeyHint, useListKeys, type GridColumn, type GridGroup } from '@/views/compliances/grouped-grid';
-import { ClientTile, PortalLink } from '@/views/compliances/identity';
+import { ClientTile } from '@/views/compliances/identity';
 import {
   BOARD_STATUS_OPTIONS,
   REGULATORS,

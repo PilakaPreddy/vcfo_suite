@@ -654,17 +654,6 @@ function safeName(name: string): string {
   return base.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'document';
 }
 
-async function uploadRequestFile(
-  ctx: AuthContext,
-  requestId: string,
-  file: { name: string; type: string; size: number; bytes: Buffer },
-): Promise<{ fileId: string; requestLabel: string; engagementId: string; requestId: string } | null> {
-  const out = await uploadRequestFiles(ctx, requestId, [file]);
-  if (!out) return null;
-  if (!out.fileIds.length) throw new UploadRejectedError(out.rejected[0]?.error ?? 'Upload failed');
-  return { fileId: out.fileIds[0]!, requestLabel: out.requestLabel, engagementId: out.engagementId, requestId };
-}
-
 /** Most files one request upload may carry (G-09). */
 export const MAX_FILES_PER_REQUEST_UPLOAD = 10;
 

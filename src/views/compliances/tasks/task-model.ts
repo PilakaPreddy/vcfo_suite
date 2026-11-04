@@ -1,4 +1,4 @@
-import { daysUntil, plainDate, type SixWord } from '@/views/compliances/spectrum-status';
+import { daysUntil, type SixWord } from '@/views/compliances/spectrum-status';
 
 /**
  * VIEW MODEL of the statutory and non-statutory split on the staff screens
@@ -62,14 +62,6 @@ const STAGE_WORD: Record<WorkflowStage, SixWord> = {
   'not-applicable': 'Not started',
 };
 
-function isStage(v: unknown): v is WorkflowStage {
-  return typeof v === 'string' && v in STAGE_LABEL;
-}
-
-function stageLabel(stage: string): string {
-  return isStage(stage) ? STAGE_LABEL[stage] : stage;
-}
-
 /** The chip word (3.3): Overdue and Due soon come from the date; the rest from the stage. */
 export function stageWord(stage: WorkflowStage, dueIso: string, notifyDays: number, now: Date): SixWord {
   if (stage === 'completed') return 'Done';
@@ -131,12 +123,6 @@ export function taskMatches(t: TaskLike, f: StripKey, now: Date): boolean {
   return true;
 }
 
-/** "Not applicable" hides a task unless the viewer asks for it (3.3). */
-const visibleTask = (t: Pick<TaskLike, 'stage'>, showNotApplicable = false) => showNotApplicable || t.stage !== 'not-applicable';
-
-/** C-3 hover text: "Starts 12 Oct · High". */
-const taskHint = (t: Pick<TaskLike, 'startDate' | 'urgency'>, now: Date) => `Starts ${plainDate(t.startDate, now)} · ${t.urgency}`;
-
 /** The four calendar statuses of a task, by the rule of a staff filing: done, late, within 7 days, later. */
 export type TaskCal = 'filed' | 'due-soon' | 'overdue' | 'upcoming';
 export function taskCal(t: Pick<TaskLike, 'stage' | 'endDate'>, now: Date): TaskCal {
@@ -184,4 +170,3 @@ export function addDays(iso: string, n: number): string {
   return new Date(Date.UTC(y!, m! - 1, d! + n)).toISOString().slice(0, 10);
 }
 
-const todayIso = (now: Date) => now.toISOString().slice(0, 10);

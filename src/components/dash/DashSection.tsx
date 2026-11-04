@@ -128,38 +128,6 @@ function HeadLink({ href, children }: { href: string; children: ReactNode }) {
   );
 }
 
-/** Full-width list row with a hairline between rows (R-19); a link or button row fills on hover. */
-function ListRow({
-  children,
-  className,
-  href,
-  onClick,
-}: {
-  children: ReactNode;
-  className?: string;
-  href?: string;
-  onClick?: () => void;
-}) {
-  const base = cn(
-    'flex items-center gap-3 border-t border-line-soft px-4 py-3 text-[14px] first:border-t-0 md:px-5',
-    (href || onClick) && 'transition-colors hover:bg-hover',
-    className,
-  );
-  if (href)
-    return (
-      <Link href={href} className={base}>
-        {children}
-      </Link>
-    );
-  if (onClick)
-    return (
-      <button type="button" onClick={onClick} className={cn(base, 'w-full text-left')}>
-        {children}
-      </button>
-    );
-  return <div className={base}>{children}</div>;
-}
-
 /**
  * Donut for small distributions (R-25 C1). The ring is 12px thick at 84px (scaled for other
  * sizes) with a 2° gap between parts; the total sits in the centre at 22px with the unit word

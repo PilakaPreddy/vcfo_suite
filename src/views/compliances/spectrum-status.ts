@@ -5,7 +5,6 @@ import {
   type FilingRow,
   type FilingStatus,
 } from '@/lib/compliance/filings';
-import type { FilingStatusFilter } from '@/views/compliances/compliance-scope';
 
 /**
  * SPECTRUM STATUS WORDS for the staff compliance screens (rule R-13).
@@ -34,17 +33,6 @@ export const FILING_WORD: Record<FilingStatus, SixWord> = {
   overdue: 'Overdue',
   'due-soon': 'Due soon',
   upcoming: 'Not started',
-};
-
-/** The status filter options in the order the prototype shows them. */
-const STATUS_FILTER_ORDER: readonly FilingStatusFilter[] = ['all', 'overdue', 'due-soon', 'upcoming', 'filed'];
-
-const STATUS_FILTER_LABEL: Record<FilingStatusFilter, string> = {
-  all: 'All',
-  overdue: 'Overdue',
-  'due-soon': 'Due soon',
-  upcoming: 'Not started',
-  filed: 'Done',
 };
 
 /** The four register statuses in chart order (R-25: charts use status colours only). */
