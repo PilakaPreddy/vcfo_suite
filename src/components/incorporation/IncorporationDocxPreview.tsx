@@ -2,7 +2,6 @@
 
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { renderAsync } from 'docx-preview';
 import { HexgridLoader } from '@/components/common/HexgridLoader';
 import {
   attachFullDocumentEditing,
@@ -177,6 +176,9 @@ function IncorporationDocxPreviewInner({
 
     void (async () => {
       try {
+        // Loaded on demand so the step page bundle does not carry the renderer.
+        const { renderAsync } = await import('docx-preview');
+        if (cancelled) return;
         await renderAsync(blob, bodyEl, styleEl, {
           className: 'docx',
           inWrapper: true,
