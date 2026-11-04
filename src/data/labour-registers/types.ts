@@ -100,7 +100,22 @@ export interface FormColumn {
  * mistakes an unverified layout for a filed one.
  */
 export interface FormVerification {
-  status: 'unverified' | 'checked-against-sample' | 'gazette-verified';
+  /**
+   * How far this layout has been checked.
+   *
+   * `disputed` is the one that is not simply a degree of confidence: it means a source we
+   * trust says our layout is *wrong*, not merely unconfirmed. Telangana Form V is the example
+   * — our catalogue calls it a muster roll and the rules text appears to call it a register of
+   * eating houses, lodging houses and cafés.
+   *
+   * A disputed form still generates. A missing statutory register is a compliance failure
+   * nobody notices; a register carrying a loud notice is a draft somebody reviews. The
+   * generator prints that notice at the head of the sheet, above the table, where it cannot be
+   * missed.
+   */
+  status: 'unverified' | 'disputed' | 'checked-against-sample' | 'gazette-verified';
+  /** What the dispute is, where there is one. Printed on the sheet verbatim. */
+  disputedBecause?: string;
   /** ISO date the check was made, when one was. */
   on?: string;
   /** What it was checked against: a filed client workbook, a gazette reference, a form PDF. */

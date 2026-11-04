@@ -6,11 +6,14 @@
  *
  * **A produced register is content-addressed in its key, not just in its row.** The cache key
  * is part of the path, so a rebuild under a new key writes a new object rather than
- * overwriting the old one. That matters because an attested document may never be replaced —
- * rule 72 of the OSH (Central) Rules forbids destroying a register after its retention period
- * unless it has been properly transferred, and a correction is issued as a new document that
- * supersedes the old one. Keying the path removes the possibility of an overwrite by accident
- * as well as by intent.
+ * overwriting the old one. That matters because an attested document may never be replaced: a
+ * correction is issued as a new document that supersedes the old one, and keying the path
+ * removes the possibility of an overwrite by accident as well as by intent.
+ *
+ * The stronger claim this comment used to make — that rule 72 forbids destroying a register
+ * after its retention period unless it has been properly transferred — could not be
+ * corroborated in a November 2026 research pass. The behaviour stands as a conservative
+ * default; it is no longer offered as a citation.
  *
  * The keys are raw rather than going through `bucketKey`. `labourRegisterUploads.objectKey` is
  * already documented as a raw S3 key and `StorageBucket` has no member for this feature; adding

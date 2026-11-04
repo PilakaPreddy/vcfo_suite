@@ -109,7 +109,9 @@ export function inputFields(forms: FormSpec[]): string[] {
  *
  * The column is never removed, and that matters legally: a prescribed form carries its column
  * whatever the client pays, and the research found that an electronic register may change its
- * layout but not its "integrity, serial number and column contents". So an unmapped optional
+ * layout but not its integrity, serial numbering or column contents. (That principle is ours;
+ * a November 2026 research pass could not source the phrasing to any rule, so it is applied as
+ * a design rule rather than quoted as law.) So an unmapped optional
  * column prints empty and is listed here, where a reviewer can see what went out blank and
  * decide whether that is right.
  */
@@ -147,7 +149,10 @@ export function formsNeedingAttendance(forms: FormSpec[]): FormSpec[] {
  * at three years (rule 26A of the Minimum Wages Central Rules, rule 80 of the Contract Labour
  * Central Rules) and the codes at five, and found no support for the eight years an earlier
  * draft of this feature assumed. Rule 72 of the OSH rules also forbids destroying a register
- * after the period unless it has been properly transferred, so nothing is ever hard-deleted —
+ * after its retention period. That reading of rule 72 could not be corroborated in a November
+ * 2026 research pass, so the product keeps the behaviour — nothing is ever hard-deleted — as a
+ * conservative default rather than as a cited obligation.
+ *
  * this number drives a review prompt, not a delete job.
  */
 export function retentionYears(forms: FormSpec[]): number {

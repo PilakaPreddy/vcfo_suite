@@ -27,7 +27,8 @@
  *  - Once `attested_at` is set the row is frozen. A correction is a NEW row whose
  *    `supersedes_id` points at the old one; the old file is never replaced and never deleted.
  *    Rule 72 of the OSH (Central) Rules forbids destroying a register after its retention
- *    period unless it has been properly transferred, so there is no delete path at all.
+ *    period. That reading could not be corroborated in November 2026, so the absence of a
+ *    delete path stands as a conservative default rather than a cited requirement.
  */
 import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import * as base from './schema';

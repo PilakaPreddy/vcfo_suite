@@ -50,6 +50,8 @@ const A4 = 9;
 const INK = 'FF1F2733';
 const MUTED = 'FF4A5462';
 const WARNING = 'FF9A4D00';
+const DANGER = 'FFC0182F';
+const DANGER_FILL = 'FFFFE6E9';
 const HEAD_FILL = 'FFEEF1F5';
 const LINE = 'FFD6DBE3';
 
@@ -67,7 +69,7 @@ const BORDER: Partial<ExcelJS.Borders> = {
  * access to the catalogue, and "unverified" on its own does not say unverified against what.
  */
 export function verificationNotice(table: ProjectedTable): string {
-  const { status, on, against, open } = table.form.verification;
+  const { status, on, against, open, disputedBecause } = table.form.verification;
   const openPart = open?.length ? ` Still open: ${open.join(', ')}.` : '';
 
   if (status === 'gazette-verified') {
@@ -76,7 +78,19 @@ export function verificationNotice(table: ProjectedTable): string {
   if (status === 'checked-against-sample') {
     return `Layout checked against ${against ?? 'a filed sample'}${on ? ` on ${on}` : ''}, not against the gazette.${openPart}`;
   }
+  if (status === 'disputed') {
+    /* Not a degree of confidence: a source we trust says this layout is wrong. The register is
+       still produced — a missing statutory register is a failure nobody notices, where a
+       flagged one is a draft somebody reviews — but it says so in the loudest terms the sheet
+       has. */
+    return `DISPUTED — DO NOT FILE WITHOUT CHECKING. ${disputedBecause ?? 'This layout is contradicted by a source we consider reliable.'}${openPart}`;
+  }
   return `Layout not verified against the gazette or the prescribed form.${openPart}`;
+}
+
+/** True when the sheet must shout rather than murmur. */
+export function isDisputed(table: ProjectedTable): boolean {
+  return table.form.verification.status === 'disputed';
 }
 
 /** A sheet name Excel will accept: 31 characters, none of []:*?/\\ */
@@ -133,12 +147,25 @@ export async function writeRegisterWorkbook(table: ProjectedTable, meta: Workboo
   titleRow(ws, width, `${form.rule} · ${form.act}`, { size: 9, color: { argb: MUTED } });
   titleRow(ws, width, `Period: ${meta.periodLabel}`, { size: 10 });
 
+  const disputed = isDisputed(table);
   const notice = titleRow(ws, width, verificationNotice(table), {
-    size: 9,
-    italic: true,
-    color: { argb: WARNING },
+    size: disputed ? 11 : 9,
+    bold: disputed,
+    italic: !disputed,
+    color: { argb: disputed ? DANGER : WARNING },
   });
-  notice.height = 26;
+  notice.height = disputed ? 44 : 26;
+  if (disputed) {
+    /* A fill as well as a colour, because a register is read on paper as often as on screen
+       and a red italic line is easy to skim past in print. */
+    for (let i = 1; i <= width; i += 1) {
+      notice.getCell(i).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: DANGER_FILL } };
+    }
+    titleRow(ws, width, 'This register is produced so that the period is not left short of it. Check the layout against the prescribed form before it is filed or handed to an inspector.', {
+      size: 9,
+      color: { argb: DANGER },
+    });
+  }
 
   ws.addRow([]);
 

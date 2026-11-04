@@ -368,8 +368,8 @@ export function BatchPage({
 
           {view.locked ? (
             <LrBanner icon={Info} tone="info">
-              Old versions are never deleted. Retention runs to five years under the codes, and a register may not be
-              destroyed after it unless it has been properly transferred.
+              Old versions are never deleted. Retention runs to five years under the codes; this product keeps them
+              beyond that as a conservative default rather than deleting on a schedule.
             </LrBanner>
           ) : null}
         </aside>

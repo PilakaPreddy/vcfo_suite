@@ -49,7 +49,7 @@ function sheet(headers: string[], rows: Array<Record<string, string>>) {
   };
 }
 
-const PAY_HEADERS = ['Emp No', 'Name', 'Sex', 'Desig', 'Days', 'Basic', 'Gross', 'Total Ded', 'Net'];
+const PAY_HEADERS = ['Emp No', 'Name', 'Sex', 'Desig', 'Days', 'Basic', 'Gross', 'Total Ded', 'Net', 'Joined', 'Father'];
 
 function paysheet(count = 3): SlotInput {
   const rows = Array.from({ length: count }, (_, i) => ({
@@ -62,6 +62,8 @@ function paysheet(count = 3): SlotInput {
     Gross: '35000',
     'Total Ded': '1800',
     Net: '33200',
+    Joined: '2024-04-01',
+    Father: `Father ${i + 1}`,
   }));
   return {
     sheet: sheet(PAY_HEADERS, rows),
@@ -75,6 +77,8 @@ function paysheet(count = 3): SlotInput {
       grossEarnings: 'Gross',
       totalDeductions: 'Total Ded',
       netPay: 'Net',
+      dateOfJoining: 'Joined',
+      guardianName: 'Father',
     },
   };
 }
@@ -211,6 +215,20 @@ describe('what every register says about itself', () => {
     expect(await textOf(table)).toContain('not verified against the gazette');
   });
 
+  it('shouts on a disputed form, and still produces it', async () => {
+    /* Telangana Form V: our catalogue calls it a muster roll, the rules text appears to call it
+       a register of eating houses. A missing statutory register is a failure nobody notices;
+       a flagged one is a draft somebody reviews. So it is produced, loudly. */
+    const { form, table } = roll('tg-se-v');
+    expect(form.verification.status).toBe('disputed');
+
+    const text = await textOf(table);
+    expect(text).toContain('DISPUTED');
+    expect(text).toContain('DO NOT FILE WITHOUT CHECKING');
+    expect(text).toContain('Register of Establishments');
+    expect(text).toContain('before it is filed or handed to an inspector');
+  });
+
   it('words the notice from the form\'s own verification state', () => {
     const unverified = { form: { verification: { status: 'unverified', open: ['seal'] } } } as never;
     expect(verificationNotice(unverified)).toContain('not verified against the gazette');
@@ -221,6 +239,12 @@ describe('what every register says about itself', () => {
     } as never;
     expect(verificationNotice(sampled)).toContain('checked against a filed workbook');
     expect(verificationNotice(sampled)).toContain('not against the gazette');
+
+    const disputed = {
+      form: { verification: { status: 'disputed', disputedBecause: 'the rules text says otherwise' } },
+    } as never;
+    expect(verificationNotice(disputed)).toContain('DISPUTED');
+    expect(verificationNotice(disputed)).toContain('the rules text says otherwise');
   });
 
   it('carries the generator revision and the content address, so a printout is traceable', async () => {

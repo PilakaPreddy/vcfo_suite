@@ -31,7 +31,8 @@ import type { UploadSlot } from '@/lib/labour-registers/parse';
  *    correction is a new row that supersedes the old one. Rule 72 of the OSH (Central) Rules
  *    forbids destroying a register after its retention period unless it has been properly
  *    transferred, and the research found that an electronic register may change its layout but
- *    not its integrity, serial number or column contents.
+ *    not its integrity, serial numbering or column contents. That last principle is the
+ *    product’s own: a November 2026 research pass could not source it to a rule.
  */
 
 export type BatchRow = typeof labourRegisterBatches.$inferSelect;
