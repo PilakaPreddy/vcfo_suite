@@ -84,7 +84,12 @@ vi.mock('@/db/repositories/engagements', async (orig) => ({
   assertEngagementAccess: (...a: unknown[]) => assertEngagementAccess(...a),
 }));
 
-const { getClientDocuments, uploadRequestFiles, undoRequestUpload } = await import('@/db/repositories/client-documents');
+vi.mock('@/db/repositories/engagement-recipients', () => ({ resolveEngagementRecipients: async () => null }));
+vi.mock('@/db/repositories/documents', () => ({ getDocumentById: async () => null, listDocuments: async () => [] }));
+vi.mock('@/db/repositories/board-resolution', () => ({ getBoardResolutionByEngagementId: async () => null }));
+
+const { getClientDocuments, listClientDocumentsZip, uploadRequestFiles, undoRequestUpload } = await import('@/db/repositories/client-documents');
+const s3 = await import('@/storage/s3');
 
 const dialect = new PgDialect();
 const OWN = '11111111-1111-1111-1111-111111111101';
@@ -178,6 +183,30 @@ describe('getClientDocuments — who may read which engagement', () => {
     await expect(getClientDocuments(ctx('intern'), 'eng-9')).resolves.toBeNull();
     expect(getMyEngagement).not.toHaveBeenCalled();
     expect(assertEngagementAccess).toHaveBeenCalledWith(expect.anything(), 'eng-9');
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe('listClientDocumentsZip — one access check, no bytes read', () => {
+  it('lists an answered request file once, checking the engagement a single time', async () => {
+    vi.mocked(s3.listObjects).mockResolvedValue([]);
+    const uploadedAt = new Date('2026-10-01T00:00:00Z');
+    results = [
+      [{ req: { id: OTHER_REQUEST, title: 'Electricity bill', status: 'approved', detail: null }, det: null, askedBy: null }],
+      [{ id: FILE, requestId: OTHER_REQUEST, fileName: 'bill.pdf', contentType: 'application/pdf', sizeBytes: 4, uploadedAt, replacedAt: null }],
+      [{ id: FILE, objectKey: 'engagement-documents/own/requests/bill.pdf', fileName: 'bill.pdf', contentType: 'application/pdf' }],
+    ];
+    const zip = await listClientDocumentsZip(ctx('client'), 'all');
+    expect(assertEngagementAccess).toHaveBeenCalledTimes(1);
+    expect(s3.getObjectBuffer).not.toHaveBeenCalled();
+    expect(zip?.missing).toBe(0);
+    expect(zip?.entries).toHaveLength(1);
+    expect(zip?.entries[0]).toMatchObject({ key: 'engagement-documents/own/requests/bill.pdf', sizeBytes: 4 });
+    expect(zip?.entries[0]?.name).toMatch(/\/Electricity bill\.pdf$/);
+  });
+
+  it('staff without an engagement id get null', async () => {
+    await expect(listClientDocumentsZip(ctx('manager'), 'all')).resolves.toBeNull();
     expect(calls).toHaveLength(0);
   });
 });

@@ -97,9 +97,13 @@ export function useZipToast() {
       setToast({ name: zipName, total: Math.max(1, total), n: 0, done: false });
       try {
         const res = await fetch(`/api/client/documents/zip?folder=${encodeURIComponent(folder)}${engagementParam()}`, { signal: ac.signal });
-        if (!res.ok) throw new Error(res.status === 404 ? 'No files to download yet' : 'Could not prepare the ZIP');
+        if (!res.ok) {
+          const said = res.status === 400 ? ((await res.json().catch(() => null)) as { error?: string } | null)?.error : undefined;
+          throw new Error(said || (res.status === 404 ? 'No files to download yet' : 'Could not prepare the ZIP'));
+        }
         const files = Number(res.headers.get('X-Zip-Files') ?? total) || total;
-        const len = Number(res.headers.get('Content-Length') ?? 0);
+        // The archive is streamed without a length; the summed file sizes are close enough for progress.
+        const len = Number(res.headers.get('Content-Length') ?? res.headers.get('X-Zip-Bytes') ?? 0);
         const chunks: Uint8Array[] = [];
         let got = 0;
         const reader = res.body?.getReader();

@@ -8,6 +8,10 @@ import { signedDownloadUrl } from '@/storage/s3';
  * never needs a public URL and the browser never sees one.
  */
 
+/** One vault ZIP holds at most 500 files or 1 GB, for staff and clients alike. */
+export const ZIP_MAX_FILES = 500;
+export const ZIP_MAX_BYTES = 1024 * 1024 * 1024;
+
 /** Types the preview pane shows inline. SVG and HTML are left out: they can carry script. */
 const INLINE_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 
