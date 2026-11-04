@@ -1,6 +1,6 @@
 import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
 import type { AnswerEnvelope, Visual } from '@/data/ask/schema';
-import { visualText } from '@/components/ask/visuals/visual-text';
+import { visualText } from '@/lib/ask/visual-text';
 import { BRIEF_DISCLAIMER, type BriefItem } from './pdf-brief-types';
 
 /** The branded brief document (F3). Plain print styling: no screen tokens reach a PDF. */
