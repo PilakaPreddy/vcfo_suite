@@ -1,0 +1,98 @@
+ app.sbctrack.in/app/intern            Director's inbox                 app.sbctrack.in/app/client
+           |                                  |                                    |
+           v                                  |                                    |
+      [Lead login]                            |                                    |
+           |                                  |                                    |
+           v                                  |                                    |
+ [Compliances > Obligations]                  |                                    |
+           |                                  |                                    |
+           v                                  |                                    |
+     [New meeting] <--- (or Incorporation >   |                                    |
+           |             post-1 "Create first |                                    |
+           |             board meeting")      |                                    |
+   +-------+---------+                        |                                    |
+   |                 |                        |                                    |
+   v                 v                        |                                    |
+[Future date]  [Already happened] ------------|-----------------+                  |
+   |                                          |                 |                  |
+   v                                          |                 |                  |
+[Notice tab]                                  |                 |                  |
+   |                                          |                 |                  |
++--+--------+-----------+-----------+         |                 |                  |
+|           |           |           |         |                 |                  |
+v           v           v           v         |                 |                  |
+[Details][Directors][Agenda picker][Recipients]                 |                  |
+ date,    tick,       library left,  To / CC  |                 |                  |
+ venue    signatory   agenda right,           |                 |                  |
+                      drag and drop           |                 |                  |
+|           |           |           |         |                 |                  |
++-----------+-----+-----+-----------+         |                 |                  |
+                  |                           |                 |                  |
+                  v                           |                 |                  |
+        [Send for approval]                   |                 |                  |
+     (blocked: blank fields,                  |                 |                  |
+      no venue, no email)                     |                 |                  |
+                  |                           |                 |                  |
+                  v                           |                 |                  |
+ [Manager: Approvals > Review]                |                 |                  |
+                  |                           |                 |                  |
+        +---------+---------+                 |                 |                  |
+        |                   |                 |                 |                  |
+        v                   v                 |                 |                  |
+ [Send back + note]  [Edit text, recipients,  |                 |                  |
+        |             date, agenda]           |                 |                  |
+        v                   |                 |                 |                  |
+  (back to lead)            v                 |                 |                  |
+                    [Approve and send] -------|-----------------|-------------+    |
+                            |                 |                 |             |    |
+                            v                 v                 |             v    v
+                 [Email: To directors + CS,  [Notice email]     |    [Meeting page, read only]
+                  CC admin, manager, lead]    |                 |    [Home: Board meetings card]
+                 [Word notice + .ics +        v                 |             ^
+                  Teams link]          [I will attend /         |             |
+                            |           I can't attend]         |             |
+                            |                 |                 |             |
+                            v                 v                 |             |
+                    [Replies tab] <-----------+                 |             |
+                     quorum forecast                            |             |
+                            |                                   |             |
+                  +---------+---------+                         |             |
+                  |                   |                         |             |
+                  v                   v                         |             |
+              [Remind]       [Reschedule / Cancel]              |             |
+                                      |                         |             |
+                                      v                         |             |
+                         (reschedule: back to approval;         |             |
+                          cancel: email + calendar removal)     |             |
+                            |                                   |             |
+                            v                                   |             |
+                     [Meeting held] <---------------------------+             |
+                            |                                                 |
+                  +---------+-----------------+                               |
+                  |                           |                               |
+                  v                           v                               |
+           [MoM tab]                  [Resolutions tab]                       |
+                  |                           |                               |
+                  v                           v                               |
+           [Upload MoM]               [Add resolution]                        |
+                  |                   (circulation layout,                    |
+                  v                    pick signing directors)                |
+   [Send to directors to sign]                |                               |
+                  |                           v                               |
+                  v                    [Send to directors to sign]            |
+       [Upload signed copy]                   |                               |
+                  |                           v                               |
+                  v                    [Upload signed copy]                   |
+             [Locked]                         |                               |
+                  |                           v                               |
+                  v                       [Locked]                            |
+ [Final copy emailed: directors,              |                               |
+  admin, lead]                                v                               |
+                  |               [Carried into next notice                   |
+                  |                as BM-007 sub-points]                      |
+                  |                                                           |
+                  +----------------> [Documents > Board meetings] ------------+
+                                       (signed copies, client view)
+
+
+ Admin only:  [Home: Board meetings card]  [Firm settings > Agenda library]  [Clients > company > Directors]
