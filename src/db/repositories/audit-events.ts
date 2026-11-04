@@ -94,15 +94,9 @@ export async function listAuditEvents(
   ctx: AuthContext,
   options: ListAuditEventsOptions = {},
 ): Promise<AuditEventRow[]> {
-  const { isFirmWideAdmin } = await import('@/lib/auth');
+  const { isAdminOrManager, isFirmWideAdmin } = await import('@/lib/auth');
 
-  if (
-    ctx.role !== 'super_admin' &&
-    ctx.role !== 'admin' &&
-    ctx.role !== 'manager' &&
-    ctx.role !== 'intern' &&
-    ctx.role !== 'client'
-  ) {
+  if (!isAdminOrManager(ctx.role) && ctx.role !== 'intern' && ctx.role !== 'client') {
     return [];
   }
 

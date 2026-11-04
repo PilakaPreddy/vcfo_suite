@@ -14,7 +14,7 @@ import {
   documentRequests,
 } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
-import { initialsFromName, isFirmWideAdmin } from '@/lib/auth';
+import { initialsFromName, isAdminOrManager, isFirmWideAdmin } from '@/lib/auth';
 import { ownAvatarSrc } from '@/lib/account-avatar';
 import { isUuid } from '@/lib/slug';
 import { systemGetWhatsAppGatePrefs } from '@/db/repositories/notification-prefs';
@@ -65,7 +65,7 @@ function generateInternId(): string {
 }
 
 export async function listInternOptions(ctx: AuthContext): Promise<InternOptionRow[]> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Only admins or managers may list project leads');
   }
 
@@ -111,7 +111,7 @@ export async function createInternProfile(
   ctx: AuthContext,
   input: CreateInternProfileInput,
 ): Promise<CreateInternProfileResult> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Only admins or managers may create project leads');
   }
 
@@ -188,7 +188,7 @@ export async function createClientProfile(
   ctx: AuthContext,
   input: CreateClientProfileInput,
 ): Promise<CreateClientProfileResult> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Only admins or managers may create client accounts');
   }
 
@@ -415,7 +415,7 @@ export async function deleteProfileAccount(
   ctx: AuthContext,
   profileId: string,
 ): Promise<{ deletedId: string; email: string; role: string; name: string }> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
   if (profileId === ctx.userId) {
@@ -738,7 +738,7 @@ export async function updatePersonEmail(
   profileId: string,
   newEmail: string,
 ): Promise<{ id: string; name: string; email: string; previousEmail: string }> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
 
@@ -801,7 +801,7 @@ export async function updatePersonEmail(
 export async function listManagerOptions(
   ctx: AuthContext,
 ): Promise<{ id: string; name: string; email: string }[]> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
   const rows = await db
@@ -821,7 +821,7 @@ export async function listStaffContactsByIds(
   ctx: AuthContext,
   ids: string[],
 ): Promise<{ id: string; email: string; name: string }[]> {
-  if (!isFirmWideAdmin(ctx.role) && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
   const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
@@ -841,7 +841,7 @@ export async function listStaffContactsByIds(
 export async function listClientAccounts(
   ctx: AuthContext,
 ): Promise<{ id: string; name: string; email: string; clientId: string | null }[]> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
   const rows = await db
@@ -877,7 +877,7 @@ export type RemovedClientRow = {
  * record — People > Removed clients is where the history stays readable.
  */
 export async function listRemovedClients(ctx: AuthContext): Promise<RemovedClientRow[]> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
   const rows = await db
