@@ -458,7 +458,6 @@ export async function recordDocument(
   return row ?? null;
 }
 
-/** Count a download, so the saving from not regenerating is observable rather than claimed. */
 /**
  * One produced document, scoped the way everything else here is.
  *
@@ -476,6 +475,7 @@ export async function getDocument(ctx: AuthContext, documentId: string): Promise
   return batch ? doc : null;
 }
 
+/** Count a download, so the saving from not regenerating is observable rather than claimed. */
 export async function countDownload(ctx: AuthContext, documentId: string): Promise<void> {
   const [doc] = await db.select().from(labourRegisterDocuments).where(eq(labourRegisterDocuments.id, documentId)).limit(1);
   if (!doc) return;
@@ -495,7 +495,16 @@ export async function countDownload(ctx: AuthContext, documentId: string): Promi
  */
 export async function attestDocument(
   ctx: AuthContext,
-  input: { documentId: string; method: 'printed-wet-signature' | 'dsc' | 'aadhaar-esign' },
+  input: {
+    documentId: string;
+    method: 'printed-wet-signature' | 'dsc' | 'aadhaar-esign';
+    /** The signed scan. Required for the printed method, which is the one the firm uses. */
+    signedObjectKey?: string;
+    signedFileName?: string;
+    signedSha256?: string;
+    /** Who signed the paper. Not necessarily a user of this product. */
+    signedByName?: string;
+  },
 ): Promise<DocumentRow | null> {
   assertFirmAdmin(ctx);
   const [doc] = await db
@@ -508,13 +517,30 @@ export async function attestDocument(
   if (!batch) return null;
   if (doc.attestedAt) throw new Error('already attested — issue a superseding document instead');
 
+  /* The firm attests by signing a printout. Recording that without the scan would leave a row
+     claiming a signature nobody can produce, which is the one thing an attestation must not
+     be: the record exists so that somebody can be shown what was signed. */
+  if (input.method === 'printed-wet-signature' && !input.signedObjectKey) {
+    throw new Error('upload the signed printout before recording the attestation');
+  }
+
   const [row] = await db
     .update(labourRegisterDocuments)
-    .set({ status: 'attested', attestedBy: ctx.userId, attestedAt: new Date(), attestationMethod: input.method })
+    .set({
+      status: 'attested',
+      attestedBy: ctx.userId,
+      attestedAt: new Date(),
+      attestationMethod: input.method,
+      signedObjectKey: input.signedObjectKey ?? null,
+      signedFileName: input.signedFileName ?? null,
+      signedSha256: input.signedSha256 ?? null,
+      signedByName: input.signedByName ?? '',
+    })
     .where(eq(labourRegisterDocuments.id, doc.id))
     .returning();
   return row ?? null;
 }
+
 
 /**
  * Mark an attested document as replaced by a later one. The file itself is untouched and

@@ -103,16 +103,50 @@ function format(kind: FieldKind, raw: string | number | null | undefined): strin
  * muster roll that contradicts itself. So the week-off rule recorded with the assumption is
  * applied, and only the remaining days read as present.
  */
+export type WeekOffRule = 'none' | 'sun' | 'sat-sun' | 'alt-sat-sun';
+
+const WEEK_OFF_RULES: WeekOffRule[] = ['none', 'sun', 'sat-sun', 'alt-sat-sun'];
+
+/**
+ * The week-off rule a stated-present month is printed under.
+ *
+ * Unrecognised and absent both mean `none`, and that is the whole reason this function exists
+ * rather than two `if` chains. The grid and the footnote used to read the raw value separately:
+ * the grid fell through to `P` for anything it did not know, while the footnote fell through to
+ * "Sundays are shown as the weekly off". A value of `'Sunday'` — the word rather than the key —
+ * produced a muster roll with `P` on every Sunday and a note underneath saying those Sundays
+ * were off. A register contradicting itself in its own footnote is worse than one that says
+ * plainly that every day is marked present.
+ */
+export function weekOffRule(weekOff: string | undefined): WeekOffRule {
+  return WEEK_OFF_RULES.includes(weekOff as WeekOffRule) ? (weekOff as WeekOffRule) : 'none';
+}
+
+/** What the footnote says about that rule. One wording, derived from the same value. */
+export function weekOffNote(weekOff: string | undefined): string {
+  switch (weekOffRule(weekOff)) {
+    case 'sun':
+      return ' Sundays are shown as the weekly off.';
+    case 'sat-sun':
+      return ' Saturdays and Sundays are shown as the weekly off.';
+    case 'alt-sat-sun':
+      return ' Sundays and alternate Saturdays are shown as the weekly off.';
+    default:
+      return ' No weekly off was recorded, so every day is marked present.';
+  }
+}
+
 export function assumedCode(period: { from: string }, day: number, weekOff: string | undefined): string {
-  if (!weekOff || weekOff === 'none') return 'P';
+  const rule = weekOffRule(weekOff);
+  if (rule === 'none') return 'P';
 
   const date = new Date(`${period.from.slice(0, 8)}${String(day).padStart(2, '0')}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return 'P';
   const dow = date.getUTCDay();
 
-  if (weekOff === 'sun') return dow === 0 ? 'WO' : 'P';
-  if (weekOff === 'sat-sun') return dow === 0 || dow === 6 ? 'WO' : 'P';
-  if (weekOff === 'alt-sat-sun') {
+  if (rule === 'sun') return dow === 0 ? 'WO' : 'P';
+  if (rule === 'sat-sun') return dow === 0 || dow === 6 ? 'WO' : 'P';
+  if (rule === 'alt-sat-sun') {
     if (dow === 0) return 'WO';
     /* The second and fourth Saturday, which is the common Indian office rule. */
     if (dow === 6) return Math.ceil(day / 7) % 2 === 0 ? 'WO' : 'P';
@@ -283,16 +317,9 @@ export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
     );
   }
   if (dataset.assumptions.fullAttendanceAssumed) {
-    const off = dataset.assumptions.weekOff;
-    const rule =
-      off === 'sat-sun'
-        ? ' Saturdays and Sundays are shown as the weekly off.'
-        : off === 'alt-sat-sun'
-          ? ' Sundays and alternate Saturdays are shown as the weekly off.'
-          : off === 'none'
-            ? ''
-            : ' Sundays are shown as the weekly off.';
-    notes.push(`Attendance was stated fully present for the period rather than uploaded.${rule}`);
+    notes.push(
+      `Attendance was stated fully present for the period rather than uploaded.${weekOffNote(dataset.assumptions.weekOff)}`,
+    );
   }
 
   return { form, columns, rows, nil, notes };

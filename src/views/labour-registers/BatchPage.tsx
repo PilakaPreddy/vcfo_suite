@@ -4,7 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, ArrowLeft, CalendarCheck, Download, Info, Lock, RotateCcw } from 'lucide-react';
 
-import { ActDirectory, type DirectoryFolder } from '@/components/labour-registers/ActDirectory';
+import { ActDirectory, type DirectoryFile, type DirectoryFolder } from '@/components/labour-registers/ActDirectory';
+import { AttestDialog } from '@/components/labour-registers/AttestDialog';
+import { useAttest } from '@/components/labour-registers/use-attest';
 import { AttendanceChoiceDialog } from '@/components/labour-registers/AttendanceChoiceDialog';
 import { SphereCard } from '@/components/labour-registers/SphereCard';
 import { ReopenDialog } from '@/components/labour-registers/ReopenDialog';
@@ -14,6 +16,7 @@ import { useRegisterUpload } from '@/components/labour-registers/use-register-up
 import { LabourRegistersTheme } from '@/components/labour-registers/LabourRegistersTheme';
 import { ProvenanceBar } from '@/components/labour-registers/ProvenanceBar';
 import { ReadinessDialog } from '@/components/labour-registers/ReadinessDialog';
+import { cn } from '@/lib/utils';
 import { LrBanner, LrCard, LrHero, type LrStat } from '@/components/labour-registers/primitives';
 import { lr } from '@/components/labour-registers/theme';
 import type { ReadinessSummary } from '@/lib/labour-registers/readiness';
@@ -59,7 +62,16 @@ export interface BatchView {
   /** The client this batch belongs to, printed on every register. */
   companyName?: string;
   /** The documents produced, so the directory lists what exists rather than what might. */
-  documents?: Array<{ id: string; formId: string; byteLength: number; format: string }>;
+  documents?: Array<{
+    id: string;
+    formId: string;
+    byteLength: number;
+    format: string;
+    status: string;
+    attestedAt: string | null;
+    signedByName: string;
+    hasSignedCopy: boolean;
+  }>;
   /** Registers that carry a day grid and so cannot be produced without attendance. */
   needsAttendance?: string[];
   /** True when the month has been stated fully present rather than uploaded. */
@@ -113,23 +125,36 @@ function foldersFor(view: BatchView): DirectoryFolder[] {
   const tones = ['reg', 'ok', 'blue', 'warn', 'info', 'bad'] as const;
   /* What exists, not what might. A folder listing files that were never produced is the
      version of this screen that told everybody the feature worked. */
-  const byForm = new Map((view.documents ?? []).map((d) => [d.formId, d]));
+  const byForm = new Map<string, BatchView['documents']>();
+  for (const doc of view.documents ?? []) {
+    const list = byForm.get(doc.formId) ?? [];
+    list.push(doc);
+    byForm.set(doc.formId, list);
+  }
 
   return view.formsByAct.map(({ act, forms }, i) => ({
     act,
     tone: tones[i % tones.length],
     expected: forms.length,
-    files: forms.flatMap((form) => {
-      const doc = byForm.get(form.id);
-      if (!doc) return [];
-      return [
-        {
+    files: (forms.flatMap((form) =>
+      /* Workbook first, printout second: the order somebody works in. */
+      [...(byForm.get(form.id) ?? [])]
+        .sort((a, b) => (a.format === b.format ? 0 : a.format === 'xlsx' ? -1 : 1))
+        .map((doc) => ({
           name: `Form ${form.formNumber} - ${form.title} - ${stamp}.${doc.format}`,
           format: doc.format.toUpperCase(),
           href: `/api/labour-registers/download?document=${doc.id}`,
-        },
-      ];
-    }),
+          documentId: doc.id,
+          status: doc.status,
+          attestedOn: doc.attestedAt,
+          signedByName: doc.signedByName,
+          signedHref: doc.hasSignedCopy
+            ? `/api/labour-registers/download?document=${doc.id}&signed=1`
+            : undefined,
+          /* A signature goes on paper. The workbook is the working copy it came from. */
+          signable: doc.format === 'pdf',
+        })),
+    ) as DirectoryFolder['files']),
   }));
 }
 
@@ -137,6 +162,7 @@ export function BatchPage({
   view,
   shellBase,
   canPrepare = true,
+  canAttest = false,
 }: {
   view: BatchView;
   shellBase: string;
@@ -147,12 +173,28 @@ export function BatchPage({
    * other half of the same rule.
    */
   canPrepare?: boolean;
+  /**
+   * Whether this person may put the firm's name to a register.
+   *
+   * Narrower than `canPrepare` on purpose, and separate for the same reason the rest of this
+   * screen draws its controls by role: the attest route admits a firm-wide admin alone, and a
+   * manager offered the button and then refused is a bug report rather than a boundary.
+   */
+  canAttest?: boolean;
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reopenOpen, setReopenOpen] = useState(false);
   const [attendanceOpen, setAttendanceOpen] = useState(false);
+  /* The printout is produced alongside the workbook by default, because the printout is what
+     gets signed and an unsigned month is an unfinished one. It is a choice rather than a fixed
+     behaviour: a preparer re-running a batch only to re-check a figure does not need both. */
+  const [withPrintout, setWithPrintout] = useState(true);
+  const [attesting, setAttesting] = useState<DirectoryFile | null>(null);
   const { uploads, busySlot, errors, upload } = useRegisterUpload(view.batchId, view.uploads);
   const actions = useBatchActions(view.batchId, view.companyName);
+  const attestation = useAttest();
+
+  const formats = (): Array<'xlsx' | 'pdf'> => (withPrintout ? ['xlsx', 'pdf'] : ['xlsx']);
 
   /* Where a readiness line's "fix this" link goes. The dialog has always taken an onFix and
      has never been given one, so every fix link has been invisible. */
@@ -292,6 +334,12 @@ export function BatchPage({
           {actions.outcome.deferred.length > 0
             ? ` ${actions.outcome.deferred.length} use a form shape that is not built yet.`
             : ''}
+          {actions.outcome.suppressed.length > 0
+            ? ` ${actions.outcome.suppressed.length} were not produced because the firm has recorded that they do not apply: ${actions.outcome.suppressed
+                .slice(0, 2)
+                .map((x) => x.reason)
+                .join(' ')}`
+            : ''}
         </LrBanner>
       ) : null}
 
@@ -343,7 +391,34 @@ export function BatchPage({
             onPick={upload}
           />
 
-          <ActDirectory folders={foldersFor(view)} />
+          <ActDirectory
+            folders={foldersFor(view)}
+            onAttest={canAttest ? (file) => setAttesting(file) : undefined}
+          />
+
+          {canPrepare && !view.locked ? (
+            <div className="flex items-start gap-2.5 rounded-[var(--lr-radius-card)] border border-[var(--lr-line)] bg-[var(--lr-surface)] px-4 py-3">
+              <input
+                id="lr-with-printout"
+                type="checkbox"
+                checked={withPrintout}
+                onChange={(e) => setWithPrintout(e.target.checked)}
+                className="mt-0.5 size-4 flex-none"
+              />
+              <div className="min-w-0">
+                <label
+                  htmlFor="lr-with-printout"
+                  className="block text-[13px] font-semibold text-[var(--lr-ink)]"
+                >
+                  Produce the signing copy as well
+                </label>
+                <p className={cn(lr.small, 'm-0 mt-0.5')}>
+                  A PDF per register, laid out for A4 with the signature block the rules call for. It is the
+                  copy that gets printed, signed and scanned back — the workbook is the working copy.
+                </p>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <aside className="flex min-w-[260px] flex-[0_1_318px] flex-col gap-3">
@@ -389,7 +464,24 @@ export function BatchPage({
         onFix={goFix}
         onConfirm={(summary) => {
           setDialogOpen(false);
-          void actions.closeAndGenerate(summary);
+          void actions.closeAndGenerate(summary, formats());
+        }}
+      />
+
+      <AttestDialog
+        open={attesting !== null}
+        fileName={attesting?.name ?? ''}
+        downloadHref={attesting?.href}
+        busy={attestation.busy}
+        error={attestation.error}
+        onCancel={() => {
+          setAttesting(null);
+          attestation.clearError();
+        }}
+        onConfirm={async ({ file, signedByName }) => {
+          if (!attesting?.documentId) return;
+          const ok = await attestation.attest({ documentId: attesting.documentId, file, signedByName });
+          if (ok) setAttesting(null);
         }}
       />
 

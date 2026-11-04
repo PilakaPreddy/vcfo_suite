@@ -49,7 +49,7 @@ export default async function Page({
 
     const view = await loadBatchView(guard.ctx, batchId);
     if (!view) notFound();
-    return <BatchPage view={view} shellBase="/app/admin" />;
+    return <BatchPage view={view} canAttest={true} shellBase="/app/admin" />;
   }
 
   /* Opening a batch needs a client as well as a state, and this screen is state-first, so the

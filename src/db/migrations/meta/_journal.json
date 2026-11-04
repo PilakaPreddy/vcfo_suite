@@ -295,6 +295,13 @@
       "when": 1793818672190,
       "tag": "0041_labour_register_verifications",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793821076273,
+      "tag": "0042_labour_register_signed_scan",
+      "breakpoints": true
     }
   ]
 }

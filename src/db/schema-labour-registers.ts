@@ -189,6 +189,21 @@ export const labourRegisterDocuments = pgTable(
     attestedAt: timestamp('attested_at', { withTimezone: true }),
     /** printed-wet-signature | dsc | aadhaar-esign. */
     attestationMethod: text('attestation_method'),
+    /**
+     * The signed scan, for the method the firm actually uses.
+     *
+     * The decision taken in November 2026 is that a register is attested by a wet signature on
+     * a printout: the PDF is downloaded, signed and sealed, and the scan comes back here. From
+     * that moment the scan is the attested document and the generated file is the draft it was
+     * made from — which is why the key is on this row rather than in a separate table. Both
+     * stay downloadable, because an inspector asking what was signed should get the thing that
+     * was signed, and a preparer asking what it was generated from should get that too.
+     */
+    signedObjectKey: text('signed_object_key'),
+    signedFileName: text('signed_file_name'),
+    signedSha256: text('signed_sha256'),
+    /** The name written under the signature, which need not be a user of this product. */
+    signedByName: text('signed_by_name').notNull().default(''),
     /** The attested document this one replaces, when a correction had to be issued. */
     supersedesId: uuid('supersedes_id'),
     /** How many times the stored file has been served, so the saving is observable. */
