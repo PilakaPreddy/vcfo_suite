@@ -18,7 +18,7 @@ import { AssignTaskDialog } from '@/components/super/assign/AssignTaskDialog';
 import { useEscalations } from '@/components/super/escalations/use-escalations';
 import { SuperCapacityCard } from '@/components/super/overview/SuperCapacityCard';
 import { SuperReassignCard } from '@/components/super/overview/SuperReassignCard';
-import { medianResponse } from '@/components/super/insights/super-insights-model';
+import { medianResponse } from '@/lib/super/super-insights-model';
 import {
   NameCell,
   PersonAvatar,
@@ -29,7 +29,7 @@ import {
 } from '@/components/super/parts/super-parts';
 import { plainDay } from '@/components/super/parts/super-text';
 import { formatSuperAgo } from '@/components/super/overview/super-overview-format';
-import type { SuperTeamLead, SuperTeamManager } from '@/components/super/insights/super-insights-model';
+import type { SuperTeamLead, SuperTeamManager } from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import { CapacityControl, LoadCell, OnTimeCell } from '@/components/metrics/people-cells';
 import { indexPeople, usePeopleMetrics } from '@/components/metrics/use-metrics';

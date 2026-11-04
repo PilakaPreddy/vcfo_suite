@@ -22,7 +22,7 @@ import {
   SUPER_RISK_LABEL,
   type SuperRisk,
   type SuperRiskKind,
-} from '@/components/super/insights/super-insights-model';
+} from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import { superEngagementHref } from '@/lib/super/super-overview';
 import { cn } from '@/lib/utils';

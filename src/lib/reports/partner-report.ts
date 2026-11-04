@@ -12,7 +12,7 @@ import {
   type SuperInsights,
   type SuperMonth,
   type SuperTeamManager,
-} from '@/components/super/insights/super-insights-model';
+} from '@/lib/super/super-insights-model';
 
 /** How many months the page's month switch offers. */
 const REPORT_MONTHS = 6;

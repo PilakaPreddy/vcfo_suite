@@ -8,7 +8,7 @@ import { listDocumentRequests } from '@/db/repositories/document-requests';
 import { listChecklistIndex, listEngagements } from '@/db/repositories/engagements';
 import { getSuperFirmInsights } from '@/db/repositories/super-overview';
 import { listTasks } from '@/db/repositories/tasks';
-import { buildRisks } from '@/components/super/insights/super-insights-model';
+import { buildRisks } from '@/lib/super/super-insights-model';
 import { todayIso } from '@/lib/client-portal/compliances';
 import { appEngagementId } from '@/lib/projects/legacy-engagement-ids';
 import { adminProjectPath, adminProjectStepPath, internEngagementStepPath } from '@/lib/projects/project-step-path';

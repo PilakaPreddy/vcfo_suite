@@ -6,7 +6,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import type { ChipTone } from '@/components/ui/spectrum-chip';
 import { ToneBar } from '@/components/super/parts/super-parts';
 import { indexPeople, usePeopleMetrics } from '@/components/metrics/use-metrics';
-import type { SuperInsights } from '@/components/super/insights/super-insights-model';
+import type { SuperInsights } from '@/lib/super/super-insights-model';
 import type { LoadValue } from '@/lib/metrics/filing-metrics';
 
 /**

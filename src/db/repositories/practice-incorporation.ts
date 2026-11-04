@@ -19,7 +19,7 @@ import {
   SUPER_FILING_HORIZON_DAYS,
   type SuperOverviewState,
 } from '@/lib/super/super-overview';
-import { dayOf, daysBetweenDays } from '@/components/super/insights/super-insights-model';
+import { dayOf, daysBetweenDays } from '@/lib/super/super-insights-model';
 import type { PracticeIncorporationClient } from '@/lib/practice/practice-incorporation';
 
 /**

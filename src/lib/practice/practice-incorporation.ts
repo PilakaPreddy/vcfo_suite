@@ -1,4 +1,4 @@
-import type { SuperInsightClient } from '@/components/super/insights/super-insights-model';
+import type { SuperInsightClient } from '@/lib/super/super-insights-model';
 
 /**
  * One client row on Practice · Incorporation (rule R-51). The super admin's insights row

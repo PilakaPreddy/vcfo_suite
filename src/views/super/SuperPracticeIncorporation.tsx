@@ -26,7 +26,7 @@ import {
   superPhaseTrack,
   superStateChip,
 } from '@/components/super/overview/super-overview-format';
-import type { SuperInsightClient } from '@/components/super/insights/super-insights-model';
+import type { SuperInsightClient } from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import { usePracticeMetrics } from '@/components/metrics/use-metrics';
 import { ExpectedCoiCard, StageDaysCard } from '@/components/metrics/practice-cards';

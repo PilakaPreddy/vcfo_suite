@@ -2,7 +2,7 @@
 
 import { memo, useMemo } from 'react';
 import { SidebarNavCountBadge, SidebarRailBadge, type SidebarInk } from '@/components/shell/SidebarNavGroup';
-import { buildRisks } from '@/components/super/insights/super-insights-model';
+import { buildRisks } from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 
 /**

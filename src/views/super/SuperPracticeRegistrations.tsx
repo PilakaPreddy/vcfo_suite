@@ -27,7 +27,7 @@ import {
   SUPER_STUCK_DAYS,
   type SuperInsightClient,
   type SuperRegCell,
-} from '@/components/super/insights/super-insights-model';
+} from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import { usePracticeMetrics } from '@/components/metrics/use-metrics';
 import { cn } from '@/lib/utils';

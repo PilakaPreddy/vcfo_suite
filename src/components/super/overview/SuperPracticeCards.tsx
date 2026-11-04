@@ -25,7 +25,7 @@ import {
   type SuperInsights,
   type SuperRiskKind,
   type SuperTeamManager,
-} from '@/components/super/insights/super-insights-model';
+} from '@/lib/super/super-insights-model';
 import { cn } from '@/lib/utils';
 
 /**

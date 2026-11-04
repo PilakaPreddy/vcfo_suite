@@ -16,7 +16,7 @@ import {
 } from '@/components/super/parts/super-parts';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import { SuperCapacityCard } from '@/components/super/overview/SuperCapacityCard';
-import { roomAcross } from '@/components/super/insights/super-insights-model';
+import { roomAcross } from '@/lib/super/super-insights-model';
 import { indexPeople, usePeopleMetrics } from '@/components/metrics/use-metrics';
 import { Button } from '@/components/ui/button';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
