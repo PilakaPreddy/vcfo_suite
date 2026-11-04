@@ -1,44 +1,67 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowDownToLine, CalendarClock, CheckCircle2, CircleAlert, FileText, Printer, Search, Sparkles, Wallet, X } from 'lucide-react';
+import { DashHero, type DashHeroStat } from '@/components/dash/DashHero';
+import { DashSection } from '@/components/dash/DashSection';
 import { Button } from '@/components/ui/button';
-import { Chip, Tag } from '@/components/ui/spectrum-chip';
+import { EmptyState, SkeletonRows } from '@/components/ui/empty-state';
+import { Input } from '@/components/ui/input';
 import { FilterSelect } from '@/components/ui/native-select';
-import { daysLeft, monthBlockTitle, monthShort, sheetDate } from '@/lib/receivables/dates';
+import { Chip } from '@/components/ui/spectrum-chip';
+import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
+import { daysLeft, sheetDate } from '@/lib/receivables/dates';
+import type { PartnerInvoiceChange } from '@/lib/receivables/publish-alerts';
 import type { PartnerRowDto } from '@/lib/receivables/partner-wire';
-import { publicView } from '@/lib/receivables/public-view';
-import { payTiming, sumInr } from '@/lib/receivables/summary';
+import { receivedThisWeek, sumInr } from '@/lib/receivables/summary';
 import { PARTNER_EXPORT_HREF, usePartnerHome } from '@/hooks/use-receivables-partner';
-import { fcText, inr, stamp } from '../format';
-import { StatusChip } from '../StatusChip';
-import { SHEET_TD, SHEET_TH, SheetTile as Tile, plural } from '../sheet-parts';
+import { inr, stamp } from '../format';
+import { plural } from '../sheet-parts';
 import { InvoiceDetails } from './InvoiceDetails';
+import { InvoiceList } from './InvoiceList';
 import { PartnerHeader } from './PartnerHeader';
+import { changeWord, changesSince, readSeen, seenFrom, writeSeen } from './seen-changes';
 
 /**
- * The signed-in client partner's page (/receivables, Phase 8 of docs/specs/receivables/PLAN.md):
- * the partner's own invoices of the latest published version, laid out like the retired public
- * client page (month blocks, totals tiles, received this week), plus per-invoice details
- * (reminders, pause, promise to pay, notes) and the Excel download. `?invoice=<id>` opens that
- * invoice's details on load; reminder emails link there. A USD invoice shows its USD amount under
- * the INR (Phase 9); a snapshot from before Phase 9 has no currency and reads as INR.
+ * The signed-in client partner's page (/receivables, Phases 8 and 10 of
+ * docs/specs/receivables/PLAN.md): the partner's own invoices of the latest published version.
+ * The home card on the colour wash greets them and holds the numbers (open, overdue, due in seven
+ * days, received this week) with the published stamp; "What changed since your last visit"
+ * lists what SBC's latest Update moved (remembered per browser, `seen-changes.ts`); overdue
+ * invoices come first under "Needs attention"; search, a client filter and status tabs narrow
+ * the lists; each invoice opens in a drawer (promise to pay, notes, reminder timeline).
+ * `?invoice=<id>` opens that invoice on load; reminder emails link there.
  */
 
-const TH = SHEET_TH;
-const TD = SHEET_TD;
-const COLS = 6;
+type StatusFilter = 'open' | 'overdue' | 'not_due' | 'received';
+const DUE_SOON_DAYS = 7;
 
-type StatusFilter = 'open' | 'overdue' | 'not_due';
+function greeting(now = new Date()): string {
+  const h = Number(new Date(now.getTime() + 330 * 60_000).toISOString().slice(11, 13));
+  return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+}
 
-const STATUS_OPTIONS: Array<{ value: StatusFilter; label: string }> = [
-  { value: 'open', label: 'All open' },
-  { value: 'overdue', label: 'Overdue' },
-  { value: 'not_due', label: 'Not yet due' },
-];
+function Shell({ children, header }: { children: React.ReactNode; header: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-surface text-ink">
+      <div className="mx-auto flex max-w-[1180px] flex-col gap-4 px-4 pb-12">
+        {header}
+        {children}
+      </div>
+    </div>
+  );
+}
 
-function Header({ clientOrgName, partnerName }: { clientOrgName?: string; partnerName?: string }) {
-  return <PartnerHeader clientOrgName={clientOrgName} partnerName={partnerName} current="sheet" />;
+function matches(r: PartnerRowDto, q: string): boolean {
+  if (!q) return true;
+  const digits = q.replace(/[₹,\s]/g, '');
+  return (
+    r.clientName.toLowerCase().includes(q) ||
+    (r.invoiceNo ?? '').toLowerCase().includes(q) ||
+    (/^\d+$/.test(digits) && String(Math.round(r.amountInr)).includes(digits))
+  );
 }
 
 export function PartnerPage() {
@@ -48,6 +71,9 @@ export function PartnerPage() {
   const [openId, setOpenId] = useState<string | null>(params.get('invoice'));
   const [client, setClient] = useState('');
   const [status, setStatus] = useState<StatusFilter>('open');
+  const [search, setSearch] = useState('');
+  const [changes, setChanges] = useState<PartnerInvoiceChange[]>([]);
+  const [changesFrom, setChangesFrom] = useState<string | null>(null);
 
   // A reminder email links to ?invoice=<id>; follow the address when it changes.
   const fromUrl = params.get('invoice');
@@ -66,218 +92,251 @@ export function PartnerPage() {
 
   const data = home.data;
   const rows = useMemo(() => data?.rows ?? [], [data]);
+
+  // "What changed since your last visit": compare with what this browser last showed, then remember this version.
+  const email = data?.partner.email;
+  const publishedAt = data?.publishedAt ?? null;
+  useEffect(() => {
+    if (!email || !publishedAt) return;
+    const before = readSeen(email);
+    if (before && before.publishedAt !== publishedAt) {
+      setChanges(changesSince(before, publishedAt, rows));
+      setChangesFrom(before.publishedAt);
+    }
+    writeSeen(email, seenFrom(publishedAt, rows));
+  }, [email, publishedAt, rows]);
+
   const clients = useMemo(() => [...new Set(rows.map((r) => r.clientName))].sort((a, b) => a.localeCompare(b)), [rows]);
-  const clientRows = client && clients.includes(client) ? rows.filter((r) => r.clientName === client) : rows;
+  const header = <PartnerHeader clientOrgName={data?.clientOrgName} partnerName={data?.partner.name} current="sheet" />;
 
   if (home.isPending) {
     return (
-      <div className="min-h-screen bg-surface text-ink">
-        <div className="mx-auto max-w-[1180px] px-4 pb-12">
-          <Header />
-          <p className="py-10 text-center text-[13px] text-ink-muted">Loading your invoices…</p>
+      <Shell header={header}>
+        <div className="bg-wash rounded-md border-2 border-line px-5 py-6" aria-busy>
+          <SkeletonRows rows={2} />
         </div>
-      </div>
+        <DashSection title="Invoices" loading>
+          <span />
+        </DashSection>
+      </Shell>
     );
   }
 
   if (home.isError || !data) {
     return (
-      <div className="min-h-screen bg-surface text-ink">
-        <div className="mx-auto max-w-[1180px] px-4 pb-12">
-          <Header />
-          <div className="rounded-md border border-line bg-surface-raised px-4 py-8 text-center text-[13px]">
-            <p role="alert" className="text-ink-2">
+      <Shell header={header}>
+        <EmptyState
+          title={
+            <span role="alert" className="text-ink-2">
               {home.error instanceof Error ? home.error.message : 'The invoices did not load.'}
-            </p>
-            <Button size="sm" variant="secondary" className="mt-3" onClick={() => void home.refetch()}>
+            </span>
+          }
+          action={
+            <Button size="sm" variant="secondary" onClick={() => void home.refetch()}>
               Try again
             </Button>
-          </div>
-        </div>
-      </div>
+          }
+        />
+      </Shell>
     );
   }
 
   const today = data.today;
-  const details = openId ? <InvoiceDetails invoiceId={openId} today={today} onClose={() => showInvoice(null)} /> : null;
+  const first = data.partner.name.trim().split(/\s+/)[0] || data.partner.name;
+  const details = openId ? <InvoiceDetails invoiceId={openId} today={today} preview={rows.find((r) => r.id === openId)} onClose={() => showInvoice(null)} /> : null;
 
   if (!data.publishedAt) {
     return (
-      <div className="min-h-screen bg-surface text-ink">
-        <div className="mx-auto max-w-[1180px] px-4 pb-12">
-          <Header clientOrgName={data.clientOrgName} partnerName={data.partner.name} />
-          <div className="rounded-md border border-line bg-surface-raised px-4 py-12 text-center">
-            <p className="text-[14px] font-medium">Nothing is published yet.</p>
-            <p className="mt-1 text-[13px] text-ink-muted">SBC will share the sheet here.</p>
-          </div>
-        </div>
+      <Shell header={header}>
+        <DashHero title={`${greeting()}, ${first}`} subtitle="Nothing is published yet" />
+        <EmptyState title="Nothing is published yet." action={<span className="text-[13px]">SBC will share your invoices here after their first update.</span>} />
         {details}
-      </div>
+      </Shell>
     );
   }
 
-  const view = publicView(clientRows, null, today);
-  const t = view.totals;
-  const keep = (r: PartnerRowDto) => (status === 'overdue' ? daysLeft(r.dueDate, today) < 0 : status === 'not_due' ? daysLeft(r.dueDate, today) >= 0 : true);
-  const months = view.months.map((m) => ({ month: m.month, rows: (m.rows as PartnerRowDto[]).filter(keep) })).filter((m) => m.rows.length);
-  const received = view.received as PartnerRowDto[];
-  const emptyText = status === 'overdue' ? 'Nothing is overdue.' : status === 'not_due' ? 'No invoices are waiting for their due date.' : 'No open invoices.';
+  // Search and client narrow everything below the card; the card keeps the partner's whole picture.
+  const q = search.trim().toLowerCase();
+  const scoped = rows.filter((r) => (!client || r.clientName === client) && matches(r, q));
+  const open = rows.filter((r) => r.status === 'open');
+  const overdueAll = open.filter((r) => daysLeft(r.dueDate, today) < 0);
+  const soonAll = open.filter((r) => daysLeft(r.dueDate, today) >= 0 && daysLeft(r.dueDate, today) <= DUE_SOON_DAYS);
+  const weekAll = rows.filter((r) => receivedThisWeek(r, today));
+  const oldest = overdueAll.reduce((m, r) => Math.max(m, -daysLeft(r.dueDate, today)), 0);
+
+  const overdue = scoped.filter((r) => r.status === 'open' && daysLeft(r.dueDate, today) < 0).sort((a, b) => a.dueDate.localeCompare(b.dueDate) || b.amountInr - a.amountInr);
+  const notDue = scoped.filter((r) => r.status === 'open' && daysLeft(r.dueDate, today) >= 0).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const received = scoped.filter((r) => r.status === 'received').sort((a, b) => (b.paidOn ?? '').localeCompare(a.paidOn ?? ''));
+  const receivedWeek = received.filter((r) => receivedThisWeek(r, today));
+  const changedWords = new Map(changes.map((c) => [c.invoiceId, changeWord(c)]));
+  const filtering = Boolean(q || client);
+
+  const stats: DashHeroStat[] = [
+    { label: 'Open receivables', icon: Wallet, value: `₹${inr(sumInr(open))}`, note: plural(open.length, 'invoice') },
+    {
+      label: 'Overdue',
+      icon: CircleAlert,
+      value: `₹${inr(sumInr(overdueAll))}`,
+      hot: overdueAll.length > 0,
+      note: overdueAll.length ? `${plural(overdueAll.length, 'invoice')}, oldest ${plural(oldest, 'day')}` : 'Nothing overdue',
+      onClick: overdueAll.length ? () => setStatus('overdue') : undefined,
+    },
+    { label: `Due in ${DUE_SOON_DAYS} days`, icon: CalendarClock, value: `₹${inr(sumInr(soonAll))}`, note: soonAll.length ? plural(soonAll.length, 'invoice') : 'Nothing due this week' },
+    { label: 'Received this week', icon: CheckCircle2, value: `₹${inr(weekAll.reduce((s, r) => s + (r.paidAmount ?? 0), 0))}`, good: weekAll.length > 0, note: plural(weekAll.length, 'payment') },
+  ];
+
+  const tabs = [
+    { key: 'open', label: 'Open', count: overdue.length + notDue.length },
+    { key: 'overdue', label: 'Overdue', count: overdue.length },
+    { key: 'not_due', label: 'Not due', count: notDue.length },
+    { key: 'received', label: 'Received', count: received.length },
+  ];
+  const empty = (what: string) => (
+    <div className="p-4">
+      <EmptyState
+        title={filtering ? `No ${what} match your search.` : `No ${what}.`}
+        action={
+          filtering ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setSearch('');
+                setClient('');
+              }}
+            >
+              Clear search
+            </Button>
+          ) : undefined
+        }
+      />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-surface text-ink">
-      <div className="mx-auto max-w-[1180px] px-4 pb-12">
-        <Header clientOrgName={data.clientOrgName} partnerName={data.partner.name} />
+    <Shell header={header}>
+      <DashHero
+        title={`${greeting()}, ${first}`}
+        subtitle={
+          <>
+            <Chip raw tone="ok" className="min-w-0">
+              Live
+            </Chip>
+            <span className="truncate">Published {stamp(data.publishedAt)} by SBC</span>
+          </>
+        }
+        stats={stats}
+      >
+        <Button size="sm" variant="secondary" asChild>
+          <Link href="/receivables/statement">
+            <FileText aria-hidden /> Statement
+          </Link>
+        </Button>
+        <Button size="sm" variant="secondary" asChild>
+          <a href={PARTNER_EXPORT_HREF}>
+            <ArrowDownToLine aria-hidden /> Download Excel
+          </a>
+        </Button>
+      </DashHero>
 
-        <div className="mb-3.5 flex flex-wrap items-center gap-2 text-[13px] text-ink-2">
-          <Chip raw tone="ok">
-            Live
-          </Chip>
-          <span>Updated {stamp(data.publishedAt)} by SBC</span>
-        </div>
-
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-ink-muted print:hidden">
-          {clients.length > 1 ? (
-            <span className="flex items-center gap-2">
-              <label htmlFor="rcv-partner-client">Client</label>
-              <FilterSelect
-                id="rcv-partner-client"
-                value={client}
-                onChange={(e) => setClient(e.target.value)}
-                options={[{ value: '', label: 'All clients' }, ...clients.map((c) => ({ value: c, label: c }))]}
-              />
-            </span>
-          ) : null}
-          <span className="flex items-center gap-2">
-            <label htmlFor="rcv-partner-status">Status</label>
-            <FilterSelect id="rcv-partner-status" value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)} options={STATUS_OPTIONS} />
-          </span>
-        </div>
-
-        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Tile label="Open receivables" value={`₹${inr(t.openInr)}`} sub={plural(t.openCount, 'invoice')} />
-          <Tile label="Overdue" value={`₹${inr(t.overdueInr)}`} sub={t.overdueCount ? `${plural(t.overdueCount, 'invoice')}, oldest ${plural(t.oldestOverdueDays, 'day')}` : 'Nothing overdue'} />
-          <Tile label="Received this week" value={`₹${inr(t.receivedWeekInr)}`} sub={plural(t.receivedWeekCount, 'payment')} />
-        </div>
-
-        <div className="relative mb-4 overflow-x-auto rounded-md border border-line bg-surface-raised">
-          <table className="w-full border-collapse text-[13px] sm:min-w-[640px]">
-            <thead>
-              <tr>
-                <th className={TH}>Client</th>
-                <th className={`${TH} hidden sm:table-cell`}>Invoice no.</th>
-                <th className={TH}>Due date</th>
-                <th className={`${TH} text-right`}>Amount INR</th>
-                <th className={TH}>Status</th>
-                <th className={`${TH} print:hidden`}>
-                  <span className="sr-only">Details</span>
-                </th>
-              </tr>
-            </thead>
-            {months.length === 0 ? (
-              <tbody>
-                <tr>
-                  <td colSpan={COLS} className="px-2.5 py-8 text-center text-ink-muted">
-                    {emptyText}
-                  </td>
-                </tr>
-              </tbody>
-            ) : null}
-            {months.map(({ month, rows: list }) => (
-              <tbody key={month}>
-                <tr>
-                  <td colSpan={COLS} className="border-t border-line px-2.5 pb-1.5 pt-3 text-[12px] font-semibold uppercase tracking-[.04em]">
-                    {monthBlockTitle(month)}
-                  </td>
-                </tr>
-                {list.map((r) => (
-                  <tr key={r.id}>
-                    <td className={TD}>{r.clientName}</td>
-                    <td className={`${TD} hidden font-mono text-[12px] sm:table-cell`}>{r.invoiceNo}</td>
-                    <td className={`${TD} whitespace-nowrap`}>{sheetDate(r.dueDate)}</td>
-                    <td className={`${TD} text-right font-mono text-[12px]`}>
-                      {inr(r.amountInr)}
-                      {fcText(r) ? <div className="text-[11px] text-ink-muted">{fcText(r)}</div> : null}
-                    </td>
-                    <td className={TD}>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <StatusChip invoice={r} today={today} />
-                        {r.noteCount > 0 ? (
-                          <Tag>{plural(r.noteCount, 'note')}</Tag>
-                        ) : null}
-                      </div>
-                      {r.promisedOn ? <div className="mt-0.5 text-[12px] text-ink-muted">Promised {sheetDate(r.promisedOn)}</div> : null}
-                    </td>
-                    <td className={`${TD} text-right print:hidden`}>
-                      <Button size="sm" variant="secondary" onClick={() => showInvoice(r.id)} aria-label={`Details of ${r.clientName}${r.invoiceNo ? ` ${r.invoiceNo}` : ''}`}>
-                        Details
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-                <tr className="bg-surface-sunken font-semibold">
-                  <td colSpan={2} className={`${TD} sm:hidden`}>
-                    {monthShort(month)} receivables
-                  </td>
-                  <td colSpan={3} className={`${TD} hidden sm:table-cell`}>
-                    {monthShort(month)} receivables
-                  </td>
-                  <td className={`${TD} text-right font-mono text-[12px]`}>{inr(sumInr(list))}</td>
-                  <td colSpan={2} className={TD} />
-                </tr>
-              </tbody>
+      {changes.length ? (
+        <DashSection
+          title="What changed since your last visit"
+          headIcon={{ icon: Sparkles, tone: 'blue' }}
+          meta={changesFrom ? `SBC published an update after ${stamp(changesFrom)}` : undefined}
+          right={
+            <Button size="sm" variant="quiet" onClick={() => setChanges([])} aria-label="Hide what changed">
+              <X aria-hidden /> Hide
+            </Button>
+          }
+          flush
+        >
+          <ul>
+            {changes.map((c) => (
+              <li key={`${c.invoiceId}-${c.kind}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line-soft px-4 py-2.5 text-[13px] first:border-t-0 md:px-5">
+                <Chip raw tone={c.kind === 'removed' ? 'idle' : c.status === 'received' ? 'ok' : 'prog'} className="w-[136px]">
+                  {changeWord(c)}
+                </Chip>
+                <span className="ml-auto tabular-nums text-ink-2 sm:order-3 sm:ml-0">₹{inr(c.amountInr)}</span>
+                <span className="min-w-0 basis-full truncate sm:order-2 sm:flex-1 sm:basis-auto">
+                  <span className="font-medium">{c.clientName}</span>
+                  {c.invoiceNo ? <span className="ml-2 font-mono text-[12px] text-ink-muted">{c.invoiceNo}</span> : null}
+                  <span className="ml-2 text-[12.5px] text-ink-muted sm:hidden">due {sheetDate(c.dueDate)}</span>
+                </span>
+                <span className="hidden w-[92px] text-right text-[12.5px] text-ink-muted sm:order-4 sm:inline">due {sheetDate(c.dueDate)}</span>
+              </li>
             ))}
-          </table>
-        </div>
+          </ul>
+        </DashSection>
+      ) : null}
 
-        {received.length ? (
-          <div className="relative mb-4 overflow-x-auto rounded-md border border-line bg-surface-raised">
-            <table className="w-full border-collapse text-[13px] sm:min-w-[640px]">
-              <thead>
-                <tr>
-                  <td colSpan={5} className="px-2.5 pb-1.5 pt-3 text-[12px] font-semibold uppercase tracking-[.04em]">
-                    Received this week
-                  </td>
-                </tr>
-                <tr>
-                  <th className={TH}>Client</th>
-                  <th className={`${TH} hidden sm:table-cell`}>Invoice no.</th>
-                  <th className={TH}>Paid on</th>
-                  <th className={`${TH} text-right`}>Amount INR</th>
-                  <th className={TH}>Paid</th>
-                </tr>
-              </thead>
-              <tbody>
-                {received.map((r) => (
-                  <tr key={r.id} className="bg-positive-soft/40">
-                    <td className={TD}>{r.clientName}</td>
-                    <td className={`${TD} hidden font-mono text-[12px] sm:table-cell`}>{r.invoiceNo}</td>
-                    <td className={`${TD} whitespace-nowrap`}>{sheetDate(r.paidOn)}</td>
-                    <td className={`${TD} text-right font-mono text-[12px]`}>
-                      {inr(r.paidAmount)}
-                      {fcText(r, r.receivedFc) ? <div className="text-[11px] text-ink-muted">{fcText(r, r.receivedFc)}</div> : null}
-                    </td>
-                    <td className={TD}>{payTiming(r)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+      <div className="flex flex-wrap items-center gap-2.5 print:hidden">
+        <div className="relative min-w-0 flex-[1_1_240px] sm:max-w-[340px]">
+          <label htmlFor="rcv-partner-search" className="sr-only">
+            Search invoices
+          </label>
+          <Search size={15} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted" aria-hidden />
+          <Input id="rcv-partner-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search client, invoice no. or amount" className="h-control-sm pl-8 text-[13px]" />
+        </div>
+        {clients.length > 1 ? (
+          <FilterSelect
+            aria-label="Client"
+            value={client}
+            onChange={(e) => setClient(e.target.value)}
+            options={[{ value: '', label: 'All clients' }, ...clients.map((c) => ({ value: c, label: c }))]}
+          />
         ) : null}
+        <SpectrumTabs label="Status" items={tabs} value={status} onChange={(k) => setStatus(k as StatusFilter)} className="max-sm:w-full" />
+      </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 text-[12px] text-ink-muted">
-          <span>The figures change when SBC publishes an update.</span>
-          <div className="flex flex-wrap items-center gap-2 print:hidden">
-            <Button size="sm" variant="secondary" onClick={() => window.print()}>
-              Print
-            </Button>
-            <Button size="sm" variant="secondary" asChild>
-              <a href={PARTNER_EXPORT_HREF}>Download Excel</a>
-            </Button>
-          </div>
-        </div>
+      {status === 'open' || status === 'overdue' ? (
+        <DashSection
+          title="Needs attention"
+          headIcon={{ icon: CircleAlert, tone: overdue.length ? 'red' : 'green' }}
+          meta={overdue.length ? `${plural(overdue.length, 'overdue invoice')} · ₹${inr(sumInr(overdue))}` : undefined}
+          flush
+        >
+          {overdue.length ? (
+            <InvoiceList rows={overdue} today={today} onOpen={showInvoice} changed={changedWords} />
+          ) : filtering ? (
+            empty('overdue invoices')
+          ) : (
+            <div className="p-4">
+              <EmptyState title="Nothing is overdue. Thank you." />
+            </div>
+          )}
+        </DashSection>
+      ) : null}
+
+      {status === 'open' || status === 'not_due' ? (
+        <DashSection title="Coming up" headIcon={{ icon: CalendarClock, tone: 'blue' }} meta={notDue.length ? `${plural(notDue.length, 'invoice')} · ₹${inr(sumInr(notDue))}` : undefined} flush>
+          {notDue.length ? <InvoiceList rows={notDue} today={today} onOpen={showInvoice} changed={changedWords} /> : empty('invoices waiting for their due date')}
+        </DashSection>
+      ) : null}
+
+      {status === 'received' ? (
+        <DashSection title="Received" headIcon={{ icon: CheckCircle2, tone: 'green' }} meta={received.length ? plural(received.length, 'invoice') : undefined} flush>
+          {received.length ? <InvoiceList rows={received} today={today} onOpen={showInvoice} received changed={changedWords} /> : empty('received invoices')}
+        </DashSection>
+      ) : status === 'open' && receivedWeek.length ? (
+        <DashSection
+          title="Received this week"
+          headIcon={{ icon: CheckCircle2, tone: 'green' }}
+          meta={`${plural(receivedWeek.length, 'payment')} · ₹${inr(receivedWeek.reduce((s, r) => s + (r.paidAmount ?? 0), 0))}`}
+          flush
+        >
+          <InvoiceList rows={receivedWeek} today={today} onOpen={showInvoice} received changed={changedWords} />
+        </DashSection>
+      ) : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 text-[12.5px] text-ink-muted">
+        <span>The figures change when SBC publishes an update.</span>
+        <Button size="sm" variant="quiet" className="print:hidden" onClick={() => window.print()}>
+          <Printer aria-hidden /> Print
+        </Button>
       </div>
       {details}
-    </div>
+    </Shell>
   );
 }
 

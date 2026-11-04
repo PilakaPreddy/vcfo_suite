@@ -102,3 +102,14 @@ describe('USD credits', () => {
     expect(matchCredit({ payer: 'EMBURSE INC', inrAmount: 27000 }, BOOK).status).not.toBe('auto');
   });
 });
+
+describe('foreign matching in any supported currency (Phase 10)', () => {
+  const fx = (id: string, currency: string, fcAmount: number, amountInr: number) => ({ ...inv(id, 'Bosch GmbH', amountInr), currency, fcAmount });
+
+  it('matches a EUR credit on the EUR amount and never across currencies', () => {
+    const invoices = [fx('e1', 'EUR', 5000, 485000), fx('g1', 'GBP', 5000, 560000)];
+    expect(matchCredit({ payer: 'BOSCH GMBH', inrAmount: 486100, currency: 'EUR', fcAmount: 5000 }, invoices)).toMatchObject({ status: 'auto', invoiceIds: ['e1'] });
+    expect(matchCredit({ payer: 'BOSCH GMBH', inrAmount: 559000, currency: 'GBP', fcAmount: 4980 }, invoices)).toMatchObject({ status: 'to_confirm', invoiceIds: ['g1'] });
+    expect(matchCredit({ payer: 'BOSCH GMBH', inrAmount: 559000, currency: 'GBP', fcAmount: 4980 }, invoices).note).toContain('GBP 20');
+  });
+});

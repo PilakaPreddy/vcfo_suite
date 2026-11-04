@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAnyRole } from '@/auth/guards';
 import { ReceivablesError } from '@/db/repositories/receivables';
+import { INVOICE_CURRENCY_CODES } from '@/lib/receivables/currencies';
 
 /**
  * Shared parts of the /api/receivables routes (docs/specs/receivables/PLAN.md): the staff guard,
@@ -27,8 +28,8 @@ export const amount = z.number().positive('amount').max(1e12, 'amount');
 
 export type RouteContext = { params: Promise<{ id: string }> };
 
-/** Phase 9: the invoice currency (only INR and USD today) and the foreign-currency fields. */
-export const currency = z.enum(['INR', 'USD'], { message: 'currency' });
+/** Phase 9: the invoice currency (INR or a supported foreign currency, Phase 10) and the foreign-currency fields. */
+export const currency = z.enum(INVOICE_CURRENCY_CODES, { message: 'currency' });
 export const fxFields = {
   currency: currency.optional(),
   fcAmount: z.number().positive('fc_amount').max(1e12, 'fc_amount').nullable().optional(),

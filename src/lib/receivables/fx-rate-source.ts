@@ -12,7 +12,14 @@
  * Frankfurter's documented answer to `GET /v1/latest?base=USD&symbols=INR` is
  * `{ "amount": 1.0, "base": "USD", "date": "2026-10-30", "rates": { "INR": 84.12 } }`.
  * Nothing here throws: every failure returns null so the job can log and move on.
+ *
+ * Phase 10: `fetchReferenceRates` asks for several currencies at once. The FBIL-compatible source
+ * is still asked once per currency (its URL takes `{currency}`), and whatever it leaves out comes
+ * from one Frankfurter call with base EUR (the ECB's own quotes, so the cross rate loses no
+ * precision): INR per X is the EUR/INR rate divided by the EUR/X rate. The ECB does not publish
+ * the UAE dirham, so a currency pegged to the dollar is worked out from the USD rate at its peg.
  */
+import { currencyInfo } from './currencies';
 
 export type FetchedRate = {
   currency: string;
@@ -178,4 +185,76 @@ export async function fetchReferenceRate(currency: string, today: string, opts: 
   const base = (env.FX_FRANKFURTER_URL?.trim() || DEFAULT_FRANKFURTER_URL).replace(/\/+$/, '');
   const parsed = parseFrankfurter(await getJson(`${base}/latest?base=${encodeURIComponent(cur)}&symbols=INR`, fetchImpl, timeoutMs), cur);
   return parsed ? { ...parsed, source: 'ecb' } : null;
+}
+
+/**
+ * Reads Frankfurter's `{ base: "EUR", date, rates: { INR, USD, GBP, ... } }` into INR per one unit
+ * of each asked currency. EUR itself is the INR quote. A currency missing from the answer is left
+ * out; null when the answer has no INR quote or no date.
+ */
+export function parseFrankfurterCross(body: unknown, currencies: string[]): Array<Omit<FetchedRate, 'source'>> | null {
+  if (!body || typeof body !== 'object') return null;
+  const b = body as { amount?: unknown; base?: unknown; date?: unknown; rates?: unknown };
+  const base = typeof b.base === 'string' ? b.base.toUpperCase() : '';
+  const rates = b.rates && typeof b.rates === 'object' ? (b.rates as Record<string, unknown>) : null;
+  const rateDate = parseRateDate(b.date);
+  const inr = saneRate(rates?.INR);
+  if (!base || !rates || !rateDate || inr === null) return null;
+  const out: Array<Omit<FetchedRate, 'source'>> = [];
+  for (const raw of currencies) {
+    const cur = raw.toUpperCase();
+    // INR per one unit of the base, then per one unit of the asked currency.
+    const perBase = cur === base ? 1 : saneRate(rates[cur]);
+    if (perBase === null) continue;
+    const amount = typeof b.amount === 'number' && b.amount > 0 ? b.amount : 1;
+    out.push({ currency: cur, rateDate, rate: Math.round((inr / perBase / (cur === base ? amount : 1)) * 1e6) / 1e6 });
+  }
+  return out;
+}
+
+/**
+ * Today's reference rates for every currency in `currencies` (INR and bad codes are skipped):
+ * the FBIL-compatible source per currency first, then one Frankfurter call for the rest, then a
+ * dollar-pegged currency from the USD rate. A currency no source answers is simply absent; the
+ * job reports it as missing.
+ */
+export async function fetchReferenceRates(currencies: Iterable<string>, today: string, opts: RateSourceOptions = {}): Promise<FetchedRate[]> {
+  const env = opts.env ?? process.env;
+  const fetchImpl = opts.fetchImpl ?? fetch;
+  const timeoutMs = opts.timeoutMs ?? 10_000;
+  const wanted = [...new Set([...currencies].map((c) => String(c ?? '').trim().toUpperCase()))].filter((c) => /^[A-Z]{3}$/.test(c) && c !== 'INR');
+  const found = new Map<string, FetchedRate>();
+
+  const primary = env.FX_RATE_SOURCE_URL?.trim();
+  if (primary) {
+    for (const cur of wanted) {
+      const parsed = parseFbilLike(await getJson(fillUrl(primary, cur, today), fetchImpl, timeoutMs), cur, today);
+      if (parsed) found.set(cur, { ...parsed, source: 'fbil' });
+    }
+  }
+
+  const pegged = (c: string) => Boolean(currencyInfo(c).peggedToUsd);
+  // A pegged currency needs the USD rate, so USD is asked for whenever one is wanted.
+  const ask = [...new Set([...wanted.filter((c) => !found.has(c) && !pegged(c)), ...(wanted.some((c) => !found.has(c) && pegged(c)) && !found.has('USD') ? ['USD'] : [])])];
+  if (ask.length) {
+    const base = (env.FX_FRANKFURTER_URL?.trim() || DEFAULT_FRANKFURTER_URL).replace(/\/+$/, '');
+    const symbols = [...new Set(['INR', ...ask.filter((c) => c !== 'EUR')])].join(',');
+    const cross = parseFrankfurterCross(await getJson(`${base}/latest?base=EUR&symbols=${encodeURIComponent(symbols)}`, fetchImpl, timeoutMs), ask);
+    for (const r of cross ?? []) found.set(r.currency, { ...r, source: 'ecb' });
+    // When the one call fails, each currency is asked on its own, so one bad symbol cannot lose them all.
+    if (!cross) {
+      for (const cur of ask) {
+        const one = await fetchReferenceRate(cur, today, { fetchImpl, timeoutMs, env: { ...env, FX_RATE_SOURCE_URL: '' } });
+        if (one) found.set(cur, one);
+      }
+    }
+  }
+
+  const usd = found.get('USD');
+  for (const cur of wanted) {
+    const peg = currencyInfo(cur).peggedToUsd;
+    if (found.has(cur) || !peg || !usd) continue;
+    found.set(cur, { currency: cur, rateDate: usd.rateDate, rate: Math.round((usd.rate / peg) * 1e6) / 1e6, source: usd.source });
+  }
+  return wanted.filter((c) => found.has(c)).map((c) => found.get(c)!);
 }

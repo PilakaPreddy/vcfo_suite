@@ -138,8 +138,9 @@ function SignInPage({ resetNotice, profileError, variant }: SignInPageProps) {
         headerAction={<ThemeToggle />}
         {...(partner
           ? {
-              title: 'SBC receivables — client partner sign in',
-              subtitle: 'Use the email address SBC invited you with.',
+              title: 'Sign in to your receivables',
+              subtitle: 'For SBC client partners. Use the email address SBC invited you with.',
+              emailLabel: 'Email',
               foot: PARTNER_FOOT,
               showDemoAccounts: false,
             }

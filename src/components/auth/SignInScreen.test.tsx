@@ -28,7 +28,7 @@ vi.mock('@/lib/toast-errors', () => ({ toastError: vi.fn(), toastSuccess: vi.fn(
 import { SignInScreen } from './SignInScreen';
 
 function fill(email: string, password: string) {
-  fireEvent.change(screen.getByLabelText('Work email'), { target: { value: email } });
+  fireEvent.change(screen.getByLabelText(/^(Work email|Email)$/), { target: { value: email } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: password } });
 }
 
@@ -156,7 +156,8 @@ describe('SignInScreen, client partner variant', () => {
   it('shows the receivables heading and sends a partner to /receivables', async () => {
     signIn.mockResolvedValue({ user: { role: 'partner' } });
     render(<SignInScreen variant="partner" />);
-    expect(screen.getByRole('heading', { name: 'SBC receivables — client partner sign in' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sign in to your receivables' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.queryByText('Book a demo')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign in with Microsoft' })).not.toBeInTheDocument();
     expect(getProviders).not.toHaveBeenCalled();

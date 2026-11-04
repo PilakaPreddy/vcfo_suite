@@ -65,11 +65,12 @@ export function useFxRates(sheetId: string, days = 30) {
   return useQuery({ queryKey: [...ratesKey(sheetId), days], queryFn: () => call<FxRatesDto>(`/api/receivables/sheets/${sheetId}/fx-rates?days=${days}`) });
 }
 
-/** The USD rate in force on `date` (the booked-rate default of a USD invoice); fetched only when enabled. */
-export function useFxRateOn(sheetId: string, date: string, enabled = true) {
+/** The rate of `currency` in force on `date` (the booked-rate default of a foreign invoice); fetched only when enabled. */
+export function useFxRateOn(sheetId: string, date: string, enabled = true, currency = 'USD') {
   return useQuery({
-    queryKey: [...ratesKey(sheetId), 'on', date],
-    queryFn: async () => (await call<FxRatesDto>(`/api/receivables/sheets/${sheetId}/fx-rates?days=1&date=${encodeURIComponent(date)}`)).onDate ?? null,
+    queryKey: [...ratesKey(sheetId), 'on', currency, date],
+    queryFn: async () =>
+      (await call<FxRatesDto>(`/api/receivables/sheets/${sheetId}/fx-rates?days=1&date=${encodeURIComponent(date)}&currency=${encodeURIComponent(currency)}`)).onDate ?? null,
     enabled: enabled && /^\d{4}-\d{2}-\d{2}$/.test(date),
     staleTime: 5 * 60_000,
   });

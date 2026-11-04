@@ -86,7 +86,16 @@ function validRules(r: ReminderRules): ReminderRules {
   const days = [...new Set((r.daysBefore ?? []).map(Number))].filter((d) => Number.isInteger(d) && d >= 1 && d <= 60).sort((a, b) => b - a);
   const hour = Number(r.sendHourIst);
   if (!Number.isInteger(hour) || hour < 6 || hour > 20) throw invalid('send_hour');
-  return { enabled: Boolean(r.enabled), daysBefore: days, onDueDate: Boolean(r.onDueDate), dailyAfterDue: Boolean(r.dailyAfterDue), skipWeekends: Boolean(r.skipWeekends), sendHourIst: hour };
+  return {
+    enabled: Boolean(r.enabled),
+    daysBefore: days,
+    onDueDate: Boolean(r.onDueDate),
+    dailyAfterDue: Boolean(r.dailyAfterDue),
+    skipWeekends: Boolean(r.skipWeekends),
+    sendHourIst: hour,
+    // Phase 10: the Monday digest is on unless switched off.
+    digestEnabled: r.digestEnabled !== false,
+  };
 }
 
 export async function updateSheetSettings(ctx: AuthContext, sheetId: string, patch: { requireKey?: boolean; reminderRules?: ReminderRules }): Promise<SheetRow> {
