@@ -20,6 +20,7 @@ import { fieldByKey, type FieldKind } from '@/data/labour-registers/fields';
 import type { ColumnSource, FormColumn, FormSpec } from '@/data/labour-registers/types';
 import { nilColumns } from './catalogue';
 import type { Dataset, DatasetEmployee } from './dataset';
+import { AGGREGATORS, headCountNote } from './aggregate';
 import { DERIVERS, DerivationBlocked, deriveValue, num, type DeriveContext } from './derive';
 
 /** One column of the table, after the day grid has been expanded. */
@@ -182,6 +183,15 @@ function expandGrid(col: FormColumn, dataset: Dataset, ordinal: number): Project
 }
 
 export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
+  /* A layout nobody has seen cannot be produced. Telangana Form XXVII is the case: its
+     columns are recorded as `[1]` to `[7]`, and a sheet with seven columns headed that way is
+     worse than no sheet — it looks filed and says nothing. */
+  if (form.layoutPlaceholder) {
+    throw new ProjectionError(form.id, [], [
+      'the prescribed column layout is not known, so the form is not produced; record it on the verification screen',
+    ]);
+  }
+
   const mapped = new Set(Object.keys(dataset.mapping));
   const nilFields = new Set(nilColumns(form, mapped).map((c) => c.field));
 
@@ -216,6 +226,20 @@ export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
      * so a column with a deriver behind it is derived instead, and blocks if it cannot be.
      * A column with no deriver — a night shift allowance — still prints nil.
      */
+    /* An aggregate is a figure about the establishment, not a column of anybody's row, so
+       none of the mapping rules below apply to it. */
+    if (col.source === 'aggregate') {
+      columns.push({
+        field: col.field,
+        heading: col.heading,
+        ordinal,
+        source: 'aggregate',
+        kind: col.field.startsWith('count') ? 'number' : 'money',
+        nil: false,
+      });
+      continue;
+    }
+
     const derivable = col.source === 'input' && !mapped.has(col.field) && DERIVERS[col.field] !== undefined;
     const isNil = nilFields.has(col.field) && !derivable;
 
@@ -246,6 +270,42 @@ export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
 
   const blocked = new Set<string>();
   const rows: ProjectedTable['rows'] = [];
+
+  /*
+   * A return is one row about an establishment; a register is many rows about people.
+   *
+   * So a periodic return does not iterate the roll at all. Its aggregate columns are figures
+   * over the whole dataset, and its non-aggregate columns — Form D's "category of workers" —
+   * take the first row's value, because a return filed per category is filed once per
+   * category and this product produces one.
+   */
+  if (form.archetype === 'periodicReturn') {
+    const aggCtx = { period: dataset.period, days: dataset.days };
+    const first = dataset.employees[0];
+    rows.push(
+      columns.map((col) => {
+        if (col.source === 'aggregate') {
+          const fn = AGGREGATORS[col.field];
+          return fn ? fn(dataset.employees, aggCtx) : null;
+        }
+        if (col.source === 'signature') return null;
+        if (!first) return null;
+        if (col.source === 'master') return format(col.kind, masterValue(col.field, first, dataset));
+        return format(col.kind, first.values[col.field]);
+      }),
+    );
+
+    const notes = noteLines(columns, dataset);
+    const count = headCountNote(dataset.employees);
+    if (count) notes.push(count);
+    return {
+      form,
+      columns,
+      rows,
+      nil: columns.filter((c) => c.nil).map((c) => ({ heading: c.heading, field: c.field })),
+      notes,
+    };
+  }
 
   for (const [index, employee] of dataset.employees.entries()) {
     const row: Array<string | number | null> = [];
@@ -310,7 +370,18 @@ export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
     .filter((c) => c.nil)
     .map((c) => ({ heading: c.heading, field: c.field }));
 
+  return { form, columns, rows, nil, notes: noteLines(columns, dataset) };
+}
+
+/**
+ * What is printed under the table, whatever shape the form is.
+ *
+ * Shared by the register path and the return path, because a return printed under an assumed
+ * month should say so exactly as a muster roll does.
+ */
+function noteLines(columns: ProjectedColumn[], dataset: Dataset): string[] {
   const notes: string[] = [];
+  const nil = columns.filter((c) => c.nil);
   if (nil.length > 0) {
     notes.push(
       `Printed nil for this period: ${nil.map((c) => c.heading).join(', ')}. The column is prescribed and is not removed.`,
@@ -321,8 +392,7 @@ export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
       `Attendance was stated fully present for the period rather than uploaded.${weekOffNote(dataset.assumptions.weekOff)}`,
     );
   }
-
-  return { form, columns, rows, nil, notes };
+  return notes;
 }
 
 /** Project every form, keeping what succeeded and reporting what could not be produced. */

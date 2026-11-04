@@ -26,9 +26,8 @@ const ARCHETYPE_VERSION: Record<FormArchetype, string> = {
   combinedWages: 'v1',
   leave: 'v1',
   employment: 'v1',
-  /* Not built. A key is still returned so nothing has to special-case them. */
-  wageSlip: 'v0',
-  periodicReturn: 'v0',
+  wageSlip: 'v1',
+  periodicReturn: 'v1',
 };
 
 /**

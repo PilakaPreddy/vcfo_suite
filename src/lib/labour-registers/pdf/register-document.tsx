@@ -141,6 +141,104 @@ function bandCells(
   return out;
 }
 
+/**
+ * A wage slip as pages: one per employee, labels down the left.
+ *
+ * The frame repeats on every slip rather than appearing once at the top, because a slip torn
+ * off a stack has to say on its own which establishment issued it, under what rule and for
+ * which period. The register path below prints the frame once and the table under it.
+ */
+function WageSlipPages({ table, meta }: { table: ProjectedTable; meta: RegisterPdfMeta }) {
+  const { form, columns, rows } = table;
+  const verification = meta.verification ?? form.verification;
+  const disputed = verification.status === 'disputed';
+  const notice = verificationNotice(table, meta.verification);
+  const nameAt = columns.findIndex((c) => c.field === 'name');
+  const codeAt = columns.findIndex((c) => c.field === 'employeeId');
+
+  return (
+    <>
+      {rows.map((values, r) => {
+        const who =
+          [nameAt >= 0 ? String(values[nameAt] ?? '') : '', codeAt >= 0 ? String(values[codeAt] ?? '') : '']
+            .filter(Boolean)
+            .join(' · ') || `Employee ${r + 1}`;
+
+        return (
+          <Page key={`slip-${r}`} size="A4" style={s.page}>
+            <View>
+              <Text style={s.establishment}>{meta.establishmentName || 'Establishment'}</Text>
+              {meta.establishmentAddress ? <Text style={s.address}>{meta.establishmentAddress}</Text> : null}
+              <Text style={s.authority}>{form.authorityLine}</Text>
+              <Text style={s.formTitle}>
+                Form {form.formNumber} — {form.title}
+              </Text>
+              <Text style={s.rule}>
+                {form.rule} · {form.act}
+              </Text>
+              <Text style={s.period}>Period: {meta.periodLabel}</Text>
+            </View>
+
+            <View style={[s.notice, disputed ? s.noticeLoud : s.noticeQuiet]}>
+              <Text>{notice}</Text>
+            </View>
+
+            <View style={s.table}>
+              <View style={s.head}>
+                <View style={[s.cell, { width: '62%' }]}>
+                  <Text style={[s.headText, { fontSize: 8 }]}>Employee</Text>
+                </View>
+                <View style={[s.cell, { width: '38%' }]}>
+                  <Text style={[s.headText, { fontSize: 8 }]}>{who}</Text>
+                </View>
+              </View>
+
+              {columns.map((col, i) =>
+                i === nameAt || i === codeAt || col.source === 'signature' ? null : (
+                  <View key={`slip-${r}-${i}`} style={s.row}>
+                    <View style={[s.cell, { width: '62%' }]}>
+                      <Text style={{ fontSize: 8.5, color: '#5b6472' }}>{col.heading}</Text>
+                    </View>
+                    <View style={[s.cell, { width: '38%' }]}>
+                      <Text style={[{ fontSize: 9 }, align(col)]}>
+                        {values[i] === null || values[i] === undefined ? '' : String(values[i])}
+                      </Text>
+                    </View>
+                  </View>
+                ),
+              )}
+            </View>
+
+            <View style={s.signWrap} wrap={false}>
+              <View style={s.signRow}>
+                {[...signatoriesFor(form), { label: 'Received by the employee', note: 'Signature or thumb impression' }].map(
+                  (block) => (
+                    <View key={block.label} style={s.signBlock}>
+                      <View style={s.signLine}>
+                        <Text style={s.signLabel}>{block.label}</Text>
+                        <Text style={s.signSub}>{block.note}</Text>
+                        <Text style={s.signDate}>Date:</Text>
+                      </View>
+                    </View>
+                  ),
+                )}
+              </View>
+            </View>
+
+            <View style={s.footer} fixed>
+              <Text>
+                Form {form.formNumber} · {meta.periodLabel} · generator {meta.generatorRevision} · key{' '}
+                {meta.cacheKey.slice(0, 12)}
+              </Text>
+              <Text style={{ marginLeft: 'auto' }}>{who}</Text>
+            </View>
+          </Page>
+        );
+      })}
+    </>
+  );
+}
+
 export function RegisterDocument({ table, meta }: { table: ProjectedTable; meta: RegisterPdfMeta }) {
   const { form, columns, rows } = table;
   const layout = layoutFor(form.archetype);
@@ -169,6 +267,14 @@ export function RegisterDocument({ table, meta }: { table: ProjectedTable; meta:
      insurance" has to fit a column one twenty-sixth of a page, and the writer hyphenates but
      cannot set type smaller on its own; left at the body size it runs into its neighbour. */
   const headSize = columns.filter((c) => c.day === undefined).length > 18 ? 5.6 : 6.5;
+
+  if (form.archetype === 'wageSlip') {
+    return (
+      <Document title={`Form ${form.formNumber} — ${form.title}`} author={meta.establishmentName}>
+        <WageSlipPages table={table} meta={meta} />
+      </Document>
+    );
+  }
 
   return (
     <Document title={`Form ${form.formNumber} — ${form.title}`} author={meta.establishmentName}>

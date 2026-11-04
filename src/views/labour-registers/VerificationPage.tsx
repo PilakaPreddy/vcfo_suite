@@ -69,8 +69,21 @@ export interface VerificationRow {
   catalogueStatus: VerificationStatus;
 }
 
+export interface GapRow {
+  id: string;
+  jurisdiction: string;
+  jurisdictionName: string;
+  act: string;
+  formNumber: string;
+  title: string;
+  unknown: string;
+  source: string;
+}
+
 export interface VerificationView {
   rows: VerificationRow[];
+  /** Registers the research named whose layout nobody here has seen. Listed, never guessed. */
+  gaps: GapRow[];
   counts: {
     total: number;
     disputed: number;
@@ -256,6 +269,39 @@ export function VerificationPage({ view, shellBase }: { view: VerificationView; 
           </ul>
         )}
       </LrCard>
+
+      {view.gaps.length > 0 ? (
+        <LrCard>
+          <LrCardHead
+            icon={ShieldQuestion}
+            tone="warn"
+            label="Named in the rules, not produced"
+            right={<LrChip tone="warn">{view.gaps.length}</LrChip>}
+          />
+          <p className={cn(lr.small, 'm-0 px-5 pb-1 pt-3')}>
+            Registers a November 2026 research pass found named, whose prescribed layout nobody here has seen.
+            They are listed rather than built with a guessed layout: four errors in that pass were a form number
+            absorbed from an adjacent statute, and each would have produced a register citing a rule that does
+            not govern the client. If you have the form, record it here and it can be built.
+          </p>
+          <ul className="m-0 list-none p-0">
+            {view.gaps.map((gap) => (
+              <li key={gap.id} className="border-t border-[var(--lr-raised)] px-5 py-3.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[14px] font-semibold text-[var(--lr-ink)]">
+                    {gap.formNumber ? `Form ${gap.formNumber}` : gap.title}
+                  </span>
+                  <span className={cn(lr.code, 'text-[var(--lr-faint)]')}>{gap.jurisdictionName}</span>
+                </div>
+                {gap.formNumber ? <p className={cn(lr.small, 'm-0 mt-0.5')}>{gap.title}</p> : null}
+                <p className={cn(lr.small, 'm-0 mt-0.5 text-[var(--lr-muted)]')}>{gap.act}</p>
+                <p className="m-0 mt-1.5 text-[13px] leading-5 text-[var(--lr-warn)]">{gap.unknown}</p>
+                <p className={cn(lr.small, 'm-0 mt-1')}>Source: {gap.source}</p>
+              </li>
+            ))}
+          </ul>
+        </LrCard>
+      ) : null}
     </LabourRegistersTheme>
   );
 }

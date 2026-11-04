@@ -125,6 +125,8 @@ function gridRun(columns: ProjectedColumn[]): { first: number; last: number; ban
   return { first, last, band: columns[first].band ?? 'Days of the period' };
 }
 
+export { titleRow, DANGER, DANGER_FILL, WARNING, MUTED, LINE, HEAD_FILL, BORDER };
+
 function titleRow(ws: ExcelJS.Worksheet, width: number, text: string, style: Partial<ExcelJS.Font>): ExcelJS.Row {
   const row = ws.addRow([text]);
   if (width > 1) ws.mergeCells(row.number, 1, row.number, width);

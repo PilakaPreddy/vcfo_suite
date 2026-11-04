@@ -5,7 +5,7 @@ import { getBatch, getColumnMap, listUploads, type BatchRow } from '@/db/reposit
 import type { AssumptionSet } from '@/lib/labour-registers/cache-key';
 import { formsFor, type Period } from '@/lib/labour-registers/catalogue';
 import { buildDataset, EMPTY_ESTABLISHMENT, type Dataset, type EstablishmentMaster, type SlotInput } from '@/lib/labour-registers/dataset';
-import { formatForFileName, parseWorkbook, type UploadSlot } from '@/lib/labour-registers/parse';
+import { formatForFileName, UPLOAD_SLOTS, parseWorkbook, type UploadSlot } from '@/lib/labour-registers/parse';
 import type { FormSpec } from '@/data/labour-registers/types';
 import { getObjectBuffer } from '@/storage/s3';
 
@@ -30,7 +30,7 @@ export interface LoadedBatch {
   sources: Array<{ slot: UploadSlot; fileName: string; objectKey: string; sha256: string }>;
 }
 
-const SLOTS: UploadSlot[] = ['paysheet', 'attendance', 'overtime', 'employees'];
+const SLOTS: UploadSlot[] = [...UPLOAD_SLOTS];
 
 /**
  * The establishment's own values.

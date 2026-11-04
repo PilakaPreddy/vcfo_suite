@@ -154,6 +154,21 @@ export function formsNeedingAttendance(forms: FormSpec[]): FormSpec[] {
   return forms.filter((f) => f.columns.some((c) => c.source === 'grid'));
 }
 
+/** The leave fields no paysheet carries. A form printing one of these needs the leave sheet. */
+const LEAVE_FIELDS = new Set(['leavesAvailed', 'leaveBalance', 'leaveKind', 'weekOffs', 'leaveDatesFrom', 'leaveDatesTo']);
+
+/**
+ * The forms that cannot be produced without the leave sheet.
+ *
+ * Leave is kept in an HR system, not in a payroll run, so a leave register built from a
+ * paysheet alone comes out with its three substantive columns blank — a form that looks
+ * produced and says nothing. The close reports that in the same terms it reports a missing
+ * attendance sheet.
+ */
+export function formsNeedingLeave(forms: FormSpec[]): FormSpec[] {
+  return forms.filter((f) => f.columns.some((c) => c.source === 'input' && LEAVE_FIELDS.has(c.field)));
+}
+
 /**
  * The longest retention any applicable form demands, in years. Research put the legacy rules
  * at three years (rule 26A of the Minimum Wages Central Rules, rule 80 of the Contract Labour

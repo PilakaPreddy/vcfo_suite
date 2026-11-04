@@ -94,8 +94,11 @@ export type PeriodKind = 'monthly' | 'quarterly' | 'halfYearly' | 'annual' | 'pe
  *  - `derived`   — computed from other values (age from date of birth, overtime wages).
  *  - `grid`      — the per-day attendance block, mapped once as a group.
  *  - `signature` — left blank for a wet signature on the printed copy.
+ *  - `aggregate`  — a figure over the whole roll rather than one employee: a head count, a
+ *                   total of wages paid. Only a periodic return has these, and a return is one
+ *                   row about an establishment where a register is many rows about people.
  */
-export type ColumnSource = 'input' | 'master' | 'derived' | 'grid' | 'signature';
+export type ColumnSource = 'input' | 'master' | 'derived' | 'grid' | 'signature' | 'aggregate';
 
 /** One column of a form, in the order the prescribed sheet prints it. */
 export interface FormColumn {
@@ -180,6 +183,16 @@ export interface FormSpec {
   verification: FormVerification;
   /** Free text printed as the form's authority line, above the table. */
   authorityLine: string;
+  /**
+   * True when the columns here are a stand-in rather than the prescribed layout.
+   *
+   * Telangana Form XXVII is the case: its columns are recorded as `[1]` to `[7]` because
+   * nobody has seen the form. Producing it would emit a sheet with seven columns headed `[1]`
+   * through `[7]`, which is worse than producing nothing — a register that looks filed and
+   * says nothing is a register an inspector will ask about. The generator blocks it with the
+   * reason instead, and the layout-verification screen is where the real layout gets recorded.
+   */
+  layoutPlaceholder?: boolean;
 }
 
 /** A jurisdiction we can generate for, and how settled its law currently is. */

@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 
-import { formById } from '@/data/labour-registers/forms';
+import { FORMS, formById } from '@/data/labour-registers/forms';
 import { monthPeriod } from '../catalogue';
 import { buildDataset, type SlotInput } from '../dataset';
 import { parseWorkbook } from '../parse';
@@ -309,15 +309,24 @@ describe('printing', () => {
 });
 
 describe('layouts', () => {
-  it('builds five archetypes and refuses the two that are deferred', () => {
+  it('has a layout for every archetype in the catalogue', () => {
     for (const a of ['wages', 'musterRoll', 'combinedWages', 'leave', 'employment'] as const) {
       expect(isBuilt(a)).toBe(true);
       expect(layoutFor(a).orientation).toMatch(/portrait|landscape/);
     }
+    /* Both were deferred when this file was written: a wage slip is one document per
+       employee and a return is one row about an establishment, and neither fits the
+       one-row-per-employee shape. Both are built now, so what this asserts is that the
+       layout table has an entry for every archetype rather than that two are missing. */
     for (const a of ['wageSlip', 'periodicReturn'] as const) {
-      expect(isBuilt(a)).toBe(false);
-      expect(() => layoutFor(a)).toThrow(ArchetypeNotBuilt);
+      expect(isBuilt(a)).toBe(true);
+      expect(layoutFor(a).orientation).toBe('portrait');
     }
+
+    /* ArchetypeNotBuilt is still the guard, for an archetype added to the type without an
+       entry here. It is reachable only through a cast, which is the point: the next person to
+       add one gets a named failure instead of an undefined. */
+    expect(() => layoutFor('somethingNew' as never)).toThrow(ArchetypeNotBuilt);
   });
 
   it('formats a rupee figure to the paisa and leaves text alone', () => {
@@ -337,5 +346,49 @@ describe('layouts', () => {
        GENERATOR_REVISION and re-keys every one. */
     expect(templateVersionFor(formById('in-wages-iv')!)).toBe('v1');
     expect(templateVersionFor(formById('in-wages-ix')!)).toBe('v1');
+  });
+});
+
+describe('the two shapes that are not a table of people', () => {
+  it('writes a wage slip as one block per employee, not one row each', async () => {
+    /* A slip is handed to the person it is about. Transposed, with the frame repeated above
+       every block, so a slip torn off a stack still says who issued it and for what period. */
+    const { table } = roll('tg-se-xi', 3);
+    const ws = await reopen(table);
+
+    /* The establishment line starts a row once per slip, not once per sheet. Counted on the
+       first cell of each row rather than in the sheet's text, because the title is merged
+       across both columns and so appears in each of them. */
+    let starts = 0;
+    ws.eachRow((row) => {
+      if (String(row.getCell(1).value ?? '') === 'WebPT India Private Limited') starts += 1;
+    });
+    expect(starts).toBe(3);
+
+    /* Labels down the left, figures beside them — the opposite of every other form. */
+    const text = JSON.stringify(ws.getSheetValues());
+    expect(text).toContain('Net Wages Payable');
+    expect(text).toContain('Received by the employee');
+    /* Two columns, however many columns the form prescribes. */
+    expect(ws.getColumn(1).width).toBe(42);
+    expect(ws.getColumn(3).width).toBeUndefined();
+  });
+
+  it('writes a periodic return as one row of figures', async () => {
+    const { table } = roll('ka-se-xxi', 5);
+    expect(table.rows).toHaveLength(1);
+
+    const parsed = await readBack(await renderForForm(table, meta));
+    expect(parsed.headers).toEqual(['Adults — men', 'Adults — women', 'Total']);
+    /* The reader finds the heading row and everything under it, which on this sheet is the
+       one row of figures and then the footnotes. The figures are what matters. */
+    expect(parsed.rows[0]['Total']).toBe('5');
+    expect(parsed.rows[0]['Adults — men']).toBe('2');
+  });
+
+  it('gives every archetype a layout, so nothing is silently skipped', () => {
+    for (const form of FORMS) {
+      expect(isBuilt(form.archetype), `${form.archetype} has no layout`).toBe(true);
+    }
   });
 });

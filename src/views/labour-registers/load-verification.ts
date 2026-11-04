@@ -3,6 +3,7 @@ import 'server-only';
 import type { AuthContext } from '@/auth/guards';
 import { listVerifications } from '@/db/repositories/labour-registers';
 import { FORMS } from '@/data/labour-registers/forms';
+import { REGISTER_GAPS } from '@/data/labour-registers/gaps';
 import { STATES } from '@/data/labour-registers/states';
 import { resolveVerification, verificationIndex, verificationLabel } from '@/lib/labour-registers/verification';
 import { isAdminOrManager } from '@/lib/auth';
@@ -68,6 +69,19 @@ export async function loadVerificationView(ctx: AuthContext): Promise<Verificati
 
   return {
     rows,
+    /* The registers the research named and nobody here has seen. Listed beside what is built,
+       because an omission somebody can see is a different thing from one nobody can. */
+    gaps: REGISTER_GAPS.map((g) => ({
+      id: g.id,
+      jurisdiction: g.jurisdiction,
+      jurisdictionName:
+        g.jurisdiction === 'IN' ? 'All India' : (stateName.get(g.jurisdiction) ?? g.jurisdiction),
+      act: g.act,
+      formNumber: g.formNumber,
+      title: g.title,
+      unknown: g.unknown,
+      source: g.source,
+    })),
     counts: {
       total: rows.length,
       disputed: count('disputed'),

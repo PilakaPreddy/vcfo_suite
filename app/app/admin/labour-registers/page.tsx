@@ -8,6 +8,7 @@ import { LabourRegistersPage } from '@/views/labour-registers/LabourRegistersPag
 import { loadBatchView } from '@/views/labour-registers/load-batch';
 import { loadVerificationView } from '@/views/labour-registers/load-verification';
 import { VerificationPage } from '@/views/labour-registers/VerificationPage';
+import { UPLOAD_SLOTS } from '@/lib/labour-registers/parse';
 import { loadMappingView } from '@/views/labour-registers/load-mapping';
 import { MappingPage } from '@/views/labour-registers/MappingPage';
 import { pageMetadata } from '@/lib/shell/page-metadata';
@@ -41,7 +42,7 @@ export default async function Page({
 
     /* `?map=` opens the column reconciliation for one slot of that batch. */
     const slot = one('map');
-    if (slot && ['paysheet', 'attendance', 'overtime', 'employees'].includes(slot)) {
+    if (slot && (UPLOAD_SLOTS as readonly string[]).includes(slot)) {
       const mapping = await loadMappingView(guard.ctx, batchId, slot as 'paysheet');
       if (!mapping) notFound();
       return <MappingPage view={mapping} shellBase="/app/admin" />;

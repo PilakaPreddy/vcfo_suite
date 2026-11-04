@@ -37,6 +37,10 @@ function g(heading: string, ordinal?: number): FormColumn {
 function sig(heading: string, ordinal?: number): FormColumn {
   return { field: 'signature', heading, source: 'signature', ordinal };
 }
+/** A figure over the whole roll: a head count, a total. Only a periodic return has these. */
+function agg(field: string, heading: string, ordinal?: number): FormColumn {
+  return { field, heading, source: 'aggregate', ordinal };
+}
 const UNVERIFIED = {
   status: 'unverified' as const,
   open: ['signatory', 'seal', 'page initialling', 'exact column order'],
@@ -403,8 +407,8 @@ const EQUAL_REMUNERATION: FormSpec[] = [
     columns: [
       c('department', 'Category of workers', 1),
       c('designation', 'Brief description of work', 2),
-      d('serial', 'No. of women employed', 3),
-      d('serial', 'No. of men employed', 4),
+      agg('countWomen', 'No. of women employed', 3),
+      agg('countMen', 'No. of men employed', 4),
       c('grossEarnings', 'Rate of remuneration paid', 5),
       c('basic', 'Basic wage or salary', 6),
       c('dearnessAllowance', 'Dearness allowance', 7),
@@ -703,6 +707,10 @@ const TELANGANA: FormSpec[] = [
         'Our title said \u201cQuarterly Return\u201d and cited rule 29. The rules appear to title it \u201cPeriodical Returns\u201d under rule 33. The column layout here is a placeholder and has never been checked against the prescribed form.',
       open: ['the entire column layout', 'the prescribing rule'],
     },
+    /* Nobody has seen this form. Producing seven columns headed [1] to [7] would be worse
+       than producing nothing: a sheet that looks filed and says nothing is a sheet an
+       inspector asks about. The generator blocks it and names the reason. */
+    layoutPlaceholder: true,
     columns: [
       d('serial', '[1]', 1),
       d('serial', '[2]', 2),
@@ -856,10 +864,13 @@ const KARNATAKA: FormSpec[] = [
     effective: {},
     authorityLine: 'Karnataka Shops & Commercial Establishments Rules — FORM 21',
     verification: UNVERIFIED,
+    /* These were bound to `serial` — the row-number deriver — so the return would have
+       printed 1, 2, 3 under three headings asking for head counts. A return is one row of
+       figures about an establishment, not a numbered list of people. */
     columns: [
-      d('serial', 'Adults — men', 1),
-      d('serial', 'Adults — women', 2),
-      d('serial', 'Total', 3),
+      agg('countMen', 'Adults — men', 1),
+      agg('countWomen', 'Adults — women', 2),
+      agg('countEmployees', 'Total', 3),
     ],
   },
 ];
