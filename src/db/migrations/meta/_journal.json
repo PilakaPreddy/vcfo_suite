@@ -281,13 +281,6 @@
       "when": 1793730791627,
       "tag": "0039_receivables_fx",
       "breakpoints": true
-    },
-    {
-      "idx": 40,
-      "version": "7",
-      "when": 1793816484371,
-      "tag": "0040_receivables_send_status",
-      "breakpoints": true
     }
   ]
 }
