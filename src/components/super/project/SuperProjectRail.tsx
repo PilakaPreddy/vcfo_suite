@@ -140,31 +140,6 @@ export function SuperFilingsPanel({ detail }: { detail: SuperEngagementDetail })
   );
 }
 
-export function SuperTeamPanel({ detail }: { detail: SuperEngagementDetail }) {
-  return (
-    <DashSection title="Team" meta={detail.team.length || undefined} bodyClassName="p-0">
-      {detail.team.length === 0 ? (
-        <div className="p-4">
-          <EmptyState title="Nobody assigned yet" />
-        </div>
-      ) : (
-        <ul>
-          {detail.team.map((member) => (
-            <li key={member.id} className="flex min-w-0 items-center gap-3 border-t border-line-soft px-4 py-3 first:border-t-0">
-              <PersonAvatar name={member.name} size={28} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13.5px] font-medium text-ink">{member.name}</span>
-                <span className="block truncate text-[12.5px] text-ink-muted">{member.email}</span>
-              </span>
-              <span className="shrink-0 text-[12.5px] text-ink-2">{member.role}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </DashSection>
-  );
-}
-
 export function SuperActivityPanel({ detail }: { detail: SuperEngagementDetail }) {
   const entries = detail.activity;
 

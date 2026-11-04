@@ -6,8 +6,9 @@ import type { AuthContext } from '@/auth/guards';
 
 /**
  * Client team (Team page): a client sees the people of the own engagement only,
- * with their designation (C-888) read for exactly those people; staff roles are
- * refused; another tenant's engagement reads as not found.
+ * with their designation (C-888) read for exactly those people; staff read an
+ * engagement they name only when it passes the access check; another tenant's
+ * engagement reads as not found.
  */
 
 type Call = { op: string; where?: SQL; set?: Record<string, unknown> };
@@ -61,7 +62,7 @@ vi.mock('@/db/repositories/engagement-clients', () => ({
 }));
 vi.mock('@/db/repositories/audit-events', () => ({ recordAuditEvent: vi.fn() }));
 
-const { getClientTeam, systemSetInvitePassword, systemPeekInviteToken, hashSetPasswordToken } = await import('@/db/repositories/client-team');
+const { getClientTeam, createClientInvite, cancelClientInvite, systemSetInvitePassword, systemPeekInviteToken, hashSetPasswordToken } = await import('@/db/repositories/client-team');
 
 const dialect = new PgDialect();
 const OWN = '11111111-1111-1111-1111-111111111101';
@@ -87,9 +88,40 @@ beforeEach(() => {
 });
 
 describe('getClientTeam — designation scope', () => {
-  it.each(['admin', 'manager', 'intern'] as const)('%s is refused with 403 and no query', async (role) => {
-    await expect(getClientTeam(ctx(role))).rejects.toMatchObject({ status: 403 });
+  it.each(['admin', 'manager', 'intern'] as const)('%s without an engagement gets 404 and no query', async (role) => {
+    await expect(getClientTeam(ctx(role))).rejects.toMatchObject({ status: 404 });
+    expect(assertEngagementAccess).not.toHaveBeenCalled();
     expect(calls).toHaveLength(0);
+  });
+
+  it.each(['admin', 'manager', 'intern'] as const)('%s without access to the named engagement gets 404 and no query', async (role) => {
+    assertEngagementAccess.mockResolvedValue({ ok: false });
+    await expect(getClientTeam(ctx(role), 'other-slug')).rejects.toMatchObject({ status: 404 });
+    expect(assertEngagementAccess).toHaveBeenCalledWith(expect.anything(), 'other-slug');
+    expect(listEngagementClients).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('staff with access read the named engagement and are never Primary', async () => {
+    results = [[], []];
+    const view = await getClientTeam(ctx('manager'), 'own-slug');
+    expect(getMyEngagement).not.toHaveBeenCalled();
+    expect(assertEngagementAccess).toHaveBeenCalledWith(expect.anything(), 'own-slug');
+    expect(listEngagementClients).toHaveBeenCalledWith(expect.anything(), OWN);
+    expect(isPrimaryClient).not.toHaveBeenCalled();
+    expect(view.isPrimary).toBe(false);
+  });
+
+  it.each(['admin', 'manager', 'intern'] as const)('%s cannot invite or cancel, even with access', async (role) => {
+    await expect(createClientInvite(ctx(role), { name: 'X', email: 'x@nw.in', tempPassword: 'a-good-password' })).rejects.toMatchObject({ status: 403 });
+    await expect(cancelClientInvite(ctx(role), '66666666-6666-6666-6666-666666666606')).rejects.toMatchObject({ status: 403 });
+    expect(calls).toHaveLength(0);
+  });
+
+  it('a client cannot name another engagement', async () => {
+    results = [[], []];
+    await getClientTeam(ctx('client'), 'other-slug');
+    expect(assertEngagementAccess).toHaveBeenCalledWith(expect.anything(), 'own-slug');
   });
 
   it('another tenant’s engagement reads as 404', async () => {

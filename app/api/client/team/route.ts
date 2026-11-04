@@ -19,15 +19,16 @@ function setPasswordUrl(token: string): string {
 }
 
 /**
- * GET  /api/client/team — the Team page: Northwind's people + pending invites.
- * POST /api/client/team — { action: 'invite' | 'resend' | 'cancel' | 'restore' }.
+ * GET  /api/client/team — the Team page: Northwind's people + pending invites. Staff pass
+ *      `?engagement=<id>` for an engagement they may access; a client's own is always used.
+ * POST /api/client/team — { action: 'invite' | 'resend' | 'cancel' | 'restore' }, clients only.
  * Access lives in `client-team.ts` (own engagement; Primary contact only for writes).
  */
-export async function GET() {
+export async function GET(request: Request) {
   const guard = await requireAuth();
   if (guard.ok === false) return NextResponse.json({ error: guard.error }, { status: guard.status });
   try {
-    return NextResponse.json(await getClientTeam(guard.ctx));
+    return NextResponse.json(await getClientTeam(guard.ctx, new URL(request.url).searchParams.get('engagement') ?? undefined));
   } catch (e) {
     return fail(e);
   }

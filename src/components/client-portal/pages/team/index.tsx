@@ -3,12 +3,15 @@
 /**
  * Team-area page entries. A signed-in client inside the v7 portal gets the new
  * page; anyone else on /app/client/** (a super admin in the staff AppShell)
- * keeps the existing view passed as `legacy`.
+ * keeps the existing view passed as `legacy`, except Team, which sends them to
+ * the staff projects list.
  */
 import { useEffect, type ReactNode } from 'react';
 import { usePortalOptional } from '../../PortalProvider';
+import { StaffPortalProvider, StaffProjectsRedirect } from '../../StaffPortalProvider';
 import { useShellAppearance } from '@/hooks/use-shell-appearance';
 import { TeamPage } from './TeamPage';
+import { TeamSection } from './team-sections';
 import { AnnouncementsPage } from './AnnouncementsPage';
 import { NotificationsPage } from './NotificationsPage';
 import { AuditPage } from './AuditPage';
@@ -26,8 +29,23 @@ function Area({ page, legacy }: { page: ReactNode; legacy: ReactNode }) {
   return <>{portal ? page : legacy}</>;
 }
 
-export function ClientTeamEntry({ legacy }: { legacy: ReactNode }) {
-  return <Area page={<TeamPage />} legacy={legacy} />;
+/**
+ * A client's Team section for staff, on the project record's Team tab: the same SBC team card
+ * and people list the client sees, read-only (inviting and substituting stay the client's).
+ */
+export function StaffClientTeam({ engagementId, projectHref }: { engagementId: string; projectHref: string }) {
+  return (
+    <StaffPortalProvider engagementId={engagementId} projectHref={projectHref}>
+      <div className="cp-team">
+        <TeamSection />
+      </div>
+    </StaffPortalProvider>
+  );
+}
+
+/** Staff see a client's Team on the project record's Team tab, so a super admin goes there. */
+export function ClientTeamEntry() {
+  return <Area page={<TeamPage />} legacy={<StaffProjectsRedirect />} />;
 }
 export function ClientAnnouncementsEntry({ legacy }: { legacy: ReactNode }) {
   return <Area page={<AnnouncementsPage />} legacy={legacy} />;
