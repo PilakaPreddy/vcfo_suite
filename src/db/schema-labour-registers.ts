@@ -268,3 +268,40 @@ export const labourRegisterVerifications = pgTable(
     oneVerdictPerForm: uniqueIndex('labour_register_verification_form_idx').on(t.formId),
   }),
 );
+
+/**
+ * Where the firm says a state has got to, code by code.
+ *
+ * The catalogue's own figures in `src/data/labour-registers/code-rules.ts` are a research
+ * pass's reading of secondary trackers, changed only by a deploy. The thing they describe
+ * moves constantly and is checked by a company secretary reading a state gazette, so it has
+ * the same shape problem the form verification had and gets the same answer: a row here
+ * overrides the catalogue for one state and one code, and no row means the catalogue stands.
+ *
+ * Unlike a form's layout, this is not a property of the law alone — it is a fact about a state
+ * on a date. So the row carries when it was checked and against what, and the screen prints
+ * both. A tracker nobody dates is a tracker nobody trusts.
+ */
+export const labourRegisterCodeRules = pgTable(
+  'labour_register_code_rules',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** The two-letter state code, as `src/data/labour-registers/states.ts` spells it. */
+    stateCode: text('state_code').notNull(),
+    /** wages | osh | socialSecurity | relations. */
+    code: text('code').notNull(),
+    /** notified | draft | none. */
+    stage: text('stage').notNull(),
+    /** ISO date the rules were notified or the draft published. */
+    notifiedOn: text('notified_on').notNull().default(''),
+    /** Where the firm read it: a gazette citation, a department circular, a tracker. */
+    source: text('source').notNull().default(''),
+    note: text('note').notNull().default(''),
+    verifiedBy: uuid('verified_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    oneRowPerStateCode: uniqueIndex('labour_register_code_rule_idx').on(t.stateCode, t.code),
+  }),
+);

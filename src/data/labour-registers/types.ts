@@ -202,15 +202,14 @@ export interface StateSpec {
   /** The zone the state picker groups it under. */
   zone: 'North' | 'South' | 'East' | 'West' | 'Central' | 'North East';
   /**
-   * Whether the state has notified final rules under the four labour codes. As at 28 October
-   * 2026 the research found final rules in Gujarat, Andhra Pradesh and Uttar Pradesh only;
-   * Karnataka was at a January 2026 draft, Telangana and Haryana at May 2026 drafts, and
-   * Kerala had nothing newer than a December 2021 draft. Trackers disagreed on Telangana and
-   * Haryana, so this field is a product input, not a legal opinion.
+   * Where a state has got to under the codes is **not** here.
+   *
+   * It used to be, as one value for a whole state, and that could not be true of a state at
+   * all: the four codes were commenced together and are being notified separately, so a state
+   * can have final Wage Code rules and nothing under the OSH Code. It lives in
+   * `src/data/labour-registers/code-rules.ts`, one row per state and code, each with where it
+   * was read and when somebody last looked.
    */
-  codeRules: 'notified' | 'draft' | 'none';
-  /** ISO date the state's rules were notified, when they have been. */
-  codeRulesOn?: string;
   /** False until a form of this state has been checked against its own prescribed PDF. */
   configured: boolean;
 }

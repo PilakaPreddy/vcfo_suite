@@ -8,6 +8,7 @@ import {
   labourRegisterColumnMaps,
   labourRegisterDocuments,
   labourRegisterUploads,
+  labourRegisterCodeRules,
   labourRegisterVerifications,
 } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
@@ -40,6 +41,7 @@ export type BatchRow = typeof labourRegisterBatches.$inferSelect;
 export type UploadRow = typeof labourRegisterUploads.$inferSelect;
 export type DocumentRow = typeof labourRegisterDocuments.$inferSelect;
 export type VerificationRow = typeof labourRegisterVerifications.$inferSelect;
+export type CodeRuleOverrideRow = typeof labourRegisterCodeRules.$inferSelect;
 
 function assertStaff(ctx: AuthContext) {
   if (!isAdminOrManager(ctx.role) && ctx.role !== 'intern') {
@@ -622,4 +624,59 @@ export async function saveVerification(
 export async function clearVerification(ctx: AuthContext, formId: string): Promise<void> {
   assertStaff(ctx);
   await db.delete(labourRegisterVerifications).where(eq(labourRegisterVerifications.formId, formId));
+}
+
+/* ── Where each state has got to ──────────────────────────────────────────── */
+
+/**
+ * The firm's own reading of which states have notified rules under which code.
+ *
+ * Readable by anyone who can see a batch, because which rules govern a client's registers is
+ * something that client is entitled to understand. Writable only by staff, for the same reason
+ * a verification verdict is: it is the firm's professional reading of a gazette.
+ */
+export async function listCodeRuleOverrides(ctx: AuthContext): Promise<CodeRuleOverrideRow[]> {
+  void ctx;
+  return db.select().from(labourRegisterCodeRules);
+}
+
+/** Record, or revise, how far one state has got under one code. */
+export async function saveCodeRuleOverride(
+  ctx: AuthContext,
+  input: {
+    stateCode: string;
+    code: string;
+    stage: 'notified' | 'draft' | 'none';
+    notifiedOn?: string;
+    source?: string;
+    note?: string;
+  },
+): Promise<CodeRuleOverrideRow | null> {
+  assertStaff(ctx);
+  const values = {
+    stateCode: input.stateCode,
+    code: input.code,
+    stage: input.stage,
+    notifiedOn: input.notifiedOn ?? '',
+    source: input.source ?? '',
+    note: input.note ?? '',
+    verifiedBy: ctx.userId,
+  };
+  const [row] = await db
+    .insert(labourRegisterCodeRules)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [labourRegisterCodeRules.stateCode, labourRegisterCodeRules.code],
+      set: { ...values, verifiedAt: new Date(), updatedAt: new Date() },
+    })
+    .returning();
+  return row ?? null;
+}
+
+/** Undo an entry, so the catalogue's own reading stands again. */
+export async function clearCodeRuleOverride(ctx: AuthContext, stateCode: string, code: string): Promise<void> {
+  assertStaff(ctx);
+  await db
+    .delete(labourRegisterCodeRules)
+    .where(and(eq(labourRegisterCodeRules.stateCode, stateCode), eq(labourRegisterCodeRules.code, code)));
 }

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlertTriangle, ArrowRight, CheckCheck, FileSpreadsheet, History, MapPin, Printer, ShieldQuestion, TriangleAlert } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CheckCheck, FileSpreadsheet, History, MapPin, Printer, Scale, ShieldQuestion, TriangleAlert } from 'lucide-react';
 
 import { regimeNote, stateByCode, statesForPicker } from '@/data/labour-registers/states';
 import {
@@ -195,10 +195,16 @@ export function LabourRegistersPage({
         stats={stats}
         action={
           canPrepare ? (
-            <Link href={`${shellBase}/labour-registers?verify=1`} className={lr.quiet}>
-              <ShieldQuestion className="size-4" strokeWidth={1.8} aria-hidden={true} />
-              What we have checked
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href={`${shellBase}/labour-registers?codes=1`} className={lr.quiet}>
+                <Scale className="size-4" strokeWidth={1.8} aria-hidden={true} />
+                Where each state has got to
+              </Link>
+              <Link href={`${shellBase}/labour-registers?verify=1`} className={lr.quiet}>
+                <ShieldQuestion className="size-4" strokeWidth={1.8} aria-hidden={true} />
+                What we have checked
+              </Link>
+            </div>
           ) : undefined
         }
       />

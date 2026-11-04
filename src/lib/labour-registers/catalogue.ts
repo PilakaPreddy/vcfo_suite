@@ -11,6 +11,7 @@
  * therefore owes the central code registers AND its state's existing registers for the same
  * month. A generator that picked one stack would under-file.
  */
+import { isHybrid } from '@/data/labour-registers/code-rules';
 import { FORMS } from '@/data/labour-registers/forms';
 import { stateByCode } from '@/data/labour-registers/states';
 import { fieldByKey } from '@/data/labour-registers/fields';
@@ -185,13 +186,18 @@ export function retentionYears(forms: FormSpec[]): number {
 }
 
 /**
- * What the catalogue screen says about a state's position. A state at draft stage gets the
- * hybrid warning, because that is the difference between a complete filing and a short one.
+ * What the catalogue screen says about a state's position.
+ *
+ * The hybrid flag now comes from the per-code tracker rather than from one value per state.
+ * A state that has notified Wage Code rules and nothing under the OSH Code is on a split
+ * regime, and the single `codeRules` field could not say that in either direction: it told a
+ * client with notified wage rules that nothing had moved, or a client with nothing under OSH
+ * that everything had.
  */
 export function regimeSummary(state: StateSpec, period: Period): { hybrid: boolean; stateForms: number; centralForms: number } {
   const forms = formsFor(state.code, period);
   return {
-    hybrid: state.codeRules !== 'notified',
+    hybrid: isHybrid(state.code),
     stateForms: forms.filter((f) => f.regime === 'state').length,
     centralForms: forms.filter((f) => f.regime !== 'state').length,
   };
