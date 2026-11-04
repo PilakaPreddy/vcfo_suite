@@ -28,6 +28,7 @@ import {
   fmtDM,
   fyLabelOf,
   fyStartOfMonth,
+  slugOf,
   todayIso,
   type CompStatus,
   type PortalFiling,
@@ -36,7 +37,7 @@ import { DUE_SOON_DAYS } from '@/lib/compliance/filings';
 import { useAllFilings } from './api';
 import { usePageTips } from './bits';
 import { CompProvider } from './ctx';
-import { FREQ_ORDER, dueWithin, freqKey, groupObligations, slugOf, waitingOnClient, type Obligation } from './obligations';
+import { FREQ_ORDER, dueWithin, freqKey, groupObligations, waitingOnClient, type Obligation } from './obligations';
 import { useComplianceStarts, type StartedObligation } from '@/components/compliances/use-compliance-records';
 import {
   AreaTag,

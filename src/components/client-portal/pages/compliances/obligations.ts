@@ -8,6 +8,7 @@ import {
   focusNodes,
   freqLabel,
   fyStartOfMonth,
+  slugOf,
   sortByDue,
   statusOf,
   type AreaCode,
@@ -43,17 +44,6 @@ export interface Obligation {
   /** The date the list tile shows: the next due date, else the last filed date. */
   tileDate: string;
   ownerName: string | null;
-}
-
-export function slugOf(text: string): string {
-  return (
-    text
-      .toLowerCase()
-      .normalize('NFKD')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 80) || 'filing'
-  );
 }
 
 /** FY start year of an ISO date (April to March). */

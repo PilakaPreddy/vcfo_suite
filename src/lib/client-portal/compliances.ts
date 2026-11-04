@@ -492,3 +492,15 @@ export function filingsIcs(rows: PortalFiling[], stamp: Date = new Date()): stri
   });
   return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//VCFO Suite//Compliances//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', ...ev, 'END:VCALENDAR'].join('\r\n') + '\r\n';
 }
+
+/** The URL segment of a filing or obligation name: lowercase words joined by hyphens, at most 80 characters. */
+export function slugOf(text: string): string {
+  return (
+    text
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'filing'
+  );
+}

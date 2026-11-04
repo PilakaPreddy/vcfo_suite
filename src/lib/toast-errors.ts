@@ -1,9 +1,6 @@
 import toast from 'react-hot-toast';
-import {
-  getToastVariantStyle,
-  infoToastIcon,
-  warningToastIcon,
-} from '@/components/ui/hot-toast';
+import { getToastVariantStyle } from '@/lib/toast-style';
+import { infoToastIcon, warningToastIcon } from '@/components/ui/hot-toast';
 import {
   emailDispatchNotice,
   emailDispatchToastId,
