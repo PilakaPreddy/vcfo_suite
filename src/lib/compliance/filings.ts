@@ -136,8 +136,17 @@ export function quarterForMonthKey(monthKey: string, startYear: number): Filings
 // Status
 // ---------------------------------------------------------------------------
 
-/** Days before the due date that an unfiled obligation reads as "due soon". */
-const DUE_SOON_DAYS = 14;
+/**
+ * Days before the due date that an unfiled obligation reads as "due soon". This is
+ * the one window for every compliance screen, client and staff (owner spec:
+ * docs/specs/client-pages/BUILD-INVENTORY.md, "due within 15 days and not filed").
+ */
+export const DUE_SOON_DAYS = 15;
+
+/** Today in India as `YYYY-MM-DD`; the firm works on IST dates, never the UTC day. */
+export function todayIST(now: Date = new Date()): string {
+  return new Date(now.getTime() + 330 * 60_000).toISOString().slice(0, 10);
+}
 
 /**
  * Display status. `filedOn` wins outright; everything else is a function of the
@@ -148,7 +157,7 @@ export function filingStatus(row: Pick<FilingRow, 'filedOn' | 'dueDate'>, now = 
   if (row.filedOn?.trim()) return 'filed';
   const due = parseIsoDate(row.dueDate);
   if (!due) return 'upcoming';
-  const today = startOfUtcDay(now);
+  const today = parseIsoDate(todayIST(now))!;
   const days = Math.round((due.getTime() - today.getTime()) / 86_400_000);
   if (days < 0) return 'overdue';
   if (days <= DUE_SOON_DAYS) return 'due-soon';
@@ -326,12 +335,6 @@ export function parseIsoDate(value: string | null | undefined): Date | null {
   if (!trimmed) return null;
   const date = new Date(`${trimmed.slice(0, 10)}T00:00:00Z`);
   return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function startOfUtcDay(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  );
 }
 
 /** "11 Sep 2026" — the register's date face. */

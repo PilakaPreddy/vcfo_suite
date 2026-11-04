@@ -2,6 +2,7 @@ import type { ChipTone } from '@/components/ui/spectrum-chip';
 import {
   filingStatus,
   parseIsoDate,
+  todayIST,
   type FilingRow,
   type FilingStatus,
 } from '@/lib/compliance/filings';
@@ -105,7 +106,7 @@ export function tileParts(iso: string): { day: string; month: string } {
 export function daysUntil(iso: string, now: Date): number | null {
   const d = parseIsoDate(iso);
   if (!d) return null;
-  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const today = parseIsoDate(todayIST(now))!.getTime();
   return Math.round((d.getTime() - today) / 86_400_000);
 }
 

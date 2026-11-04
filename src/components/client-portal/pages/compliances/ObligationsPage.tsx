@@ -32,6 +32,7 @@ import {
   type CompStatus,
   type PortalFiling,
 } from '@/lib/client-portal/compliances';
+import { DUE_SOON_DAYS } from '@/lib/compliance/filings';
 import { useAllFilings } from './api';
 import { usePageTips } from './bits';
 import { CompProvider } from './ctx';
@@ -123,10 +124,10 @@ function ObligationsBody({ today }: { today: string }) {
   const groups = sections.filter((s) => s.rows.length);
   const fy = fyLabelOf(fyStartOfMonth(today.slice(0, 7)));
 
-  const due = hasStat ? dueWithin(obligations, today, 15) : [];
+  const due = hasStat ? dueWithin(obligations, today, DUE_SOON_DAYS) : [];
   const waiting = hasStat ? waitingOnClient(obligations, today, companyShort) : [];
   const openTasks = hasNs ? tasks.filter((t) => t.stage !== 'completed') : [];
-  const dueTasks = openTasks.filter((t) => daysBetween(today, t.endDate) <= 15).sort((a, b) => a.endDate.localeCompare(b.endDate));
+  const dueTasks = openTasks.filter((t) => daysBetween(today, t.endDate) <= DUE_SOON_DAYS).sort((a, b) => a.endDate.localeCompare(b.endDate));
   const waitTasks = openTasks.filter((t) => taskWord(t, today) === 'Waiting');
   const dueAll: Array<{ date: string; node: React.ReactNode }> = [
     ...due.map(({ o, f }) => ({ date: f.dueDate, node: <DueRow key={f.id} o={o} f={f} today={today} /> })),

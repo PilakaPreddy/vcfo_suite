@@ -9,6 +9,7 @@ import { isReviewRejected } from '@/lib/checklist/checklist-item-review';
 import { approvalStateOf } from '@/lib/checklist/checklist-step-approval';
 import { isClientFillAwaitingClient } from '@/lib/checklist/checklist-client-fill';
 import { complianceGroupForAuthority, type ClientOverview, type ComplianceGroup } from '@/lib/client/client-overview';
+import { DUE_SOON_DAYS } from '@/lib/compliance/filings';
 import type { PortalIncorporationModel, PortalStep } from '@/lib/client-portal/step-model';
 import type { ClientHome, HomeFiling, NeedKind, TimelinePhaseDates } from '@/lib/client/client-home';
 import type { DrillConfig, DrillRow, DrillStepMeta } from '@/components/client-portal/PortalProvider';
@@ -208,7 +209,6 @@ const NEED_TABS: [NeedKind, string][] = [
 /* ---------------------------------------------------------- filings */
 
 export type FilingBucket = 'filed' | 'dueSoon' | 'overdue' | 'upcoming';
-const DUE_SOON_DAYS = 15;
 
 export function bucketOf(f: HomeFiling, today: string): FilingBucket {
   if (f.status === 'filed' || f.filedOn) return 'filed';

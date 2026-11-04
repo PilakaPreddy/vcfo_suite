@@ -13,6 +13,7 @@ import { useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { usePortalOptional } from '@/components/client-portal/PortalProvider';
 import { findEngagementForClientUser } from '@/lib/checklist/checklist-state-key';
+import { todayIST } from '@/lib/compliance/filings';
 import { buildIncorporationModel, type PortalIncorporationModel } from '@/lib/client-portal/step-model';
 import type { Engagement } from '@/data/engagements';
 import type { ChecklistItemState } from '@/context/AppContext';
@@ -33,10 +34,8 @@ function useMyEngagement(): {
   return { engagement, state, loading: !engagementsSettled };
 }
 
-/** Today in India (yyyy-mm-dd) — the firm works on IST dates. */
-export function todayIST(now: Date = new Date()): string {
-  return new Date(now.getTime() + 330 * 60_000).toISOString().slice(0, 10);
-}
+/** Today in India (yyyy-mm-dd); the one helper lives in `filings.ts`. */
+export { todayIST };
 
 export function usePortalIncorporation(): {
   model: PortalIncorporationModel;
