@@ -163,8 +163,23 @@ export function tagText(n: DocNode): string {
   return t === 'FILE' ? 'FILE' : t;
 }
 
+/**
+ * The engagement a staff member is viewing in the shared Documents explorer; null for a client,
+ * whose own engagement the server always uses.
+ * shortcut: one explorer is on screen at a time, so this is module state; use a React context if
+ * two explorers ever render side by side.
+ */
+let viewingEngagement: string | null = null;
+export function setViewingEngagement(id: string | null) {
+  viewingEngagement = id;
+}
+/** `&engagement=<id>` for staff, empty for a client. */
+export function engagementParam(): string {
+  return viewingEngagement ? `&engagement=${encodeURIComponent(viewingEngagement)}` : '';
+}
+
 export function fileUrl(ref: string, download = false): string {
-  return `/api/client/documents/file?ref=${encodeURIComponent(ref)}${download ? '&dl=1' : ''}`;
+  return `/api/client/documents/file?ref=${encodeURIComponent(ref)}${download ? '&dl=1' : ''}${engagementParam()}`;
 }
 
 /** Counts for a folder's progress bar (non-replaced files under it). */

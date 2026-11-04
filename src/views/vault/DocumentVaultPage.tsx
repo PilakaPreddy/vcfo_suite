@@ -64,6 +64,7 @@ import {
 } from '@/views/vault/vault-files';
 import { useVaultActions } from '@/views/vault/use-vault-actions';
 import { VaultUploadDialog } from '@/views/vault/VaultUploadDialog';
+import { StaffClientDocuments } from '@/components/client-portal/pages/documents/StaffClientDocuments';
 import { useVaultRequests, VaultRequestsSection } from '@/views/vault/VaultRequestsSection';
 import type { VaultDocument } from '@/lib/documents/vault-documents';
 
@@ -82,6 +83,10 @@ import type { VaultDocument } from '@/lib/documents/vault-documents';
 const FILTER = 'inline-flex h-[30px] flex-none items-center gap-2 rounded-md border-1.5 px-2.5 text-[13px] font-medium';
 const FILTER_ON = 'border-brand-line bg-brand-soft text-brand-text';
 const FILTER_OFF = 'border-line-strong text-ink-2 hover:bg-surface-sunken';
+
+/** Client view (the client's own Documents page) or Manage (the staff tree, review and requests). */
+type VaultMode = 'client' | 'manage';
+const MODE_KEY = 'vcfo.vault-mode';
 
 const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
 
@@ -147,6 +152,22 @@ function DocumentVaultPageContent() {
   /** The file waiting on the delete confirm (P-596). */
   const [deleting, setDeleting] = useState<VaultDocument | null>(null);
   const actions = useVaultActions();
+  const [mode, setModeState] = useState<VaultMode>('client');
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(MODE_KEY) === 'manage') setModeState('manage');
+    } catch {
+      /* private mode */
+    }
+  }, []);
+  const setMode = (next: VaultMode) => {
+    setModeState(next);
+    try {
+      localStorage.setItem(MODE_KEY, next);
+    } catch {
+      /* private mode */
+    }
+  };
   // `<vault>/view/<id>` opens the viewer over the explorer.
   const viewId = viewerIdFrom(pathname);
   const urlClient = searchParams.get('client');
@@ -256,6 +277,9 @@ function DocumentVaultPageContent() {
     const keep = new Set(allFolderIds.filter((id) => urlFolder === id || urlFolder.startsWith(`${id}:`)));
     setClosed(new Set(allFolderIds.filter((id) => !keep.has(id))));
   }, [urlFolder, allFolderIds]);
+
+  // The filter searches every client, so typing in Manage leaves the client view.
+  const clientView = mode === 'client' && Boolean(selectedEntity) && !isSearching;
 
   const { data: requests } = useVaultRequests(selectedEntity?.engagementId ?? null);
   const requestedCount = (requests ?? []).filter((r) => r.status === 'pending').length;
@@ -517,89 +541,105 @@ function DocumentVaultPageContent() {
               </SelectContent>
             </Select>
 
-            <label className="flex h-9 min-w-[140px] flex-1 items-center gap-2 rounded-md border-1.5 border-line-strong bg-surface-raised px-2.5 focus-within:border-brand focus-within:ring-4 focus-within:ring-brand-line sm:w-[240px] sm:flex-none">
-              <Search className="h-[15px] w-[15px] flex-none text-ink-muted" strokeWidth={1.6} aria-hidden />
-              <input
-                type="search"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Filter documents"
-                aria-label="Filter documents"
-                className="h-full min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-faint"
-              />
-              <span className="flex-none text-[12.5px] tabular-nums text-ink-muted">
-                {isSearching ? `${searchHits.length}/${allDocs.length}` : selectedEntity?.docCount ?? 0}
-              </span>
-            </label>
-
-            <button
-              type="button"
-              aria-pressed={showStatus}
-              onClick={() => setShowStatus((v) => !v)}
-              className={cn(FILTER, showStatus ? FILTER_ON : FILTER_OFF)}
-            >
-              <span className="flex gap-0.5" aria-hidden>
-                <i className="h-1.5 w-1.5 rounded-[2px] bg-positive-mid" />
-                <i className="h-1.5 w-1.5 rounded-[2px] bg-brand" />
-                <i className="h-1.5 w-1.5 rounded-[2px] bg-warning-mid" />
-              </span>
-              Status
-            </button>
-
-            <button
-              type="button"
-              aria-pressed={showReplaced}
-              onClick={() => setShowReplaced((v) => !v)}
-              className={cn(FILTER, showReplaced ? FILTER_ON : FILTER_OFF)}
-              title={replacedCount > 0 ? `${replacedCount} replaced` : 'No replaced files'}
-            >
-              <EyeOff className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden /> Replaced
-            </button>
-
-            {isSearching ? null : (
+            {selectedEntity ? (
               <SpectrumTabs
-                label="Group documents"
+                label="Vault view"
                 items={[
-                  { key: 'step', label: 'By step' },
-                  { key: 'cat', label: 'By category' },
+                  { key: 'client', label: 'Client view' },
+                  { key: 'manage', label: 'Manage' },
                 ]}
-                value={view}
-                onChange={(v) => setView(v as VaultTreeView)}
+                value={clientView ? 'client' : 'manage'}
+                onChange={(v) => setMode(v as VaultMode)}
               />
-            )}
-
-            {selectedEntity && !isSearching ? (
-              <span className="ml-auto flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={actions.zipping || selectedEntity.docCount === 0}
-                  onClick={() =>
-                    checkedDocs.length > 0
-                      ? zipDocs(`${selectedEntity.companyName} selection`, checkedDocs)
-                      : zipDocs(`${selectedEntity.companyName} documents`, allEntityDocs(selectedEntity))
-                  }
-                  aria-label={checkedDocs.length > 0 ? `Download ${checkedDocs.length} selected (ZIP)` : 'Download all (ZIP)'}
-                  title={checkedDocs.length > 0 ? `Download ${checkedDocs.length} selected (ZIP)` : 'Download all (ZIP)'}
-                >
-                  <Download aria-hidden />
-                  {checkedDocs.length > 0 ? (
-                    `${checkedDocs.length} selected`
-                  ) : (
-                    <span className="sm:hidden 2xl:inline">Download all (ZIP)</span>
-                  )}
-                </Button>
-                {checkedDocs.length > 0 ? (
-                  <Button type="button" size="sm" variant="quiet" onClick={() => setCheckedIds(new Set())}>
-                    Clear
-                  </Button>
-                ) : null}
-                <Button type="button" size="sm" onClick={() => setUploadOpen(true)}>
-                  <Upload aria-hidden /> {requestedCount > 0 ? `Upload · ${requestedCount} requested` : 'Upload'}
-                </Button>
-              </span>
             ) : null}
+
+            {clientView ? null : (
+              <>
+                <label className="flex h-9 min-w-[140px] flex-1 items-center gap-2 rounded-md border-1.5 border-line-strong bg-surface-raised px-2.5 focus-within:border-brand focus-within:ring-4 focus-within:ring-brand-line sm:w-[240px] sm:flex-none">
+                  <Search className="h-[15px] w-[15px] flex-none text-ink-muted" strokeWidth={1.6} aria-hidden />
+                  <input
+                    type="search"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Filter documents"
+                    aria-label="Filter documents"
+                    className="h-full min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-faint"
+                  />
+                  <span className="flex-none text-[12.5px] tabular-nums text-ink-muted">
+                    {isSearching ? `${searchHits.length}/${allDocs.length}` : selectedEntity?.docCount ?? 0}
+                  </span>
+                </label>
+
+                <button
+                  type="button"
+                  aria-pressed={showStatus}
+                  onClick={() => setShowStatus((v) => !v)}
+                  className={cn(FILTER, showStatus ? FILTER_ON : FILTER_OFF)}
+                >
+                  <span className="flex gap-0.5" aria-hidden>
+                    <i className="h-1.5 w-1.5 rounded-[2px] bg-positive-mid" />
+                    <i className="h-1.5 w-1.5 rounded-[2px] bg-brand" />
+                    <i className="h-1.5 w-1.5 rounded-[2px] bg-warning-mid" />
+                  </span>
+                  Status
+                </button>
+
+                <button
+                  type="button"
+                  aria-pressed={showReplaced}
+                  onClick={() => setShowReplaced((v) => !v)}
+                  className={cn(FILTER, showReplaced ? FILTER_ON : FILTER_OFF)}
+                  title={replacedCount > 0 ? `${replacedCount} replaced` : 'No replaced files'}
+                >
+                  <EyeOff className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden /> Replaced
+                </button>
+
+                {isSearching ? null : (
+                  <SpectrumTabs
+                    label="Group documents"
+                    items={[
+                      { key: 'step', label: 'By step' },
+                      { key: 'cat', label: 'By category' },
+                    ]}
+                    value={view}
+                    onChange={(v) => setView(v as VaultTreeView)}
+                  />
+                )}
+
+                {selectedEntity && !isSearching ? (
+                  <span className="ml-auto flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={actions.zipping || selectedEntity.docCount === 0}
+                      onClick={() =>
+                        checkedDocs.length > 0
+                          ? zipDocs(`${selectedEntity.companyName} selection`, checkedDocs)
+                          : zipDocs(`${selectedEntity.companyName} documents`, allEntityDocs(selectedEntity))
+                      }
+                      aria-label={checkedDocs.length > 0 ? `Download ${checkedDocs.length} selected (ZIP)` : 'Download all (ZIP)'}
+                      title={checkedDocs.length > 0 ? `Download ${checkedDocs.length} selected (ZIP)` : 'Download all (ZIP)'}
+                    >
+                      <Download aria-hidden />
+                      {checkedDocs.length > 0 ? (
+                        `${checkedDocs.length} selected`
+                      ) : (
+                        <span className="sm:hidden 2xl:inline">Download all (ZIP)</span>
+                      )}
+                    </Button>
+                    {checkedDocs.length > 0 ? (
+                      <Button type="button" size="sm" variant="quiet" onClick={() => setCheckedIds(new Set())}>
+                        Clear
+                      </Button>
+                    ) : null}
+                    <Button type="button" size="sm" onClick={() => setUploadOpen(true)}>
+                      <Upload aria-hidden /> {requestedCount > 0 ? `Upload · ${requestedCount} requested` : 'Upload'}
+                    </Button>
+                  </span>
+                ) : null}
+              </>
+            )}
 
             {selectedEntity && !isSearching ? (
               <Button asChild size="sm" variant="secondary">
@@ -617,71 +657,86 @@ function DocumentVaultPageContent() {
             ) : null}
           </div>
 
-          {/* The filter searches every client, so the line names how many files and clients match. */}
-          {isSearching && filteredGroups.length > 0 ? (
-            <p className="border-b border-line-soft px-4 py-2 text-[12.5px] text-ink-muted">
-              {searchHits.length} {searchHits.length === 1 ? 'file' : 'files'} in{' '}
-              {filteredGroups.length} {filteredGroups.length === 1 ? clientWord : clientWords}
-            </p>
-          ) : null}
-
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:grid-cols-[440px_minmax(0,1fr)]">
-            <div
-              role="tree"
-              aria-label="Folders and files"
-              // Keys bubble up from the focused row; the tree itself is not a tab stop.
-              tabIndex={-1}
-              className="min-w-0 py-2 md:border-r md:border-line-soft"
-              onKeyDown={(e) => {
-                // C copies the picked file's viewer link (the menu's key hint).
-                if (e.key.toLowerCase() !== 'c' || e.metaKey || e.ctrlKey || e.altKey) return;
-                if ((e.target as HTMLElement).closest('input, textarea, [role="menu"]')) return;
-                if (!selectedDoc) return;
-                e.preventDefault();
-                copyLink(viewerPath(vaultPath, selectedDoc.id));
-              }}
-            >
-              {treeBody}
-            </div>
-            <aside className="min-w-0 border-t border-line-soft md:border-t-0" aria-label="Preview">
-              {selectedDoc ? (
-                <VaultPreviewPane
-                  doc={selectedDoc}
-                  fileRef={selectedRef}
-                  contentType={selectedIndex?.contentType}
-                  review={
-                    selectedIndex
-                      ? {
-                          status: selectedIndex.reviewStatus ?? 'none',
-                          note: selectedIndex.reviewNote ?? null,
-                          reviewedAt: selectedIndex.reviewedAt ?? null,
-                        }
-                      : null
-                  }
-                  onReview={reviewRef ? (status, note) => actions.review(reviewRef, status, note) : undefined}
-                  viewerHref={viewerPath(vaultPath, selectedDoc.id)}
-                  from={fromLabel(selectedIndex, selectedDoc.companyName)}
-                  replaced={isReplacedDoc(selectedDoc, selectedIndex)}
-                />
-              ) : (
-                <div className="grid h-full min-h-[240px] place-items-center bg-surface-sunken p-5 text-[13px] text-ink-faint">
-                  —
-                </div>
+          {clientView && selectedEntity ? (
+            <StaffClientDocuments
+              key={selectedEntity.engagementId}
+              engagementId={selectedEntity.engagementId}
+              projectHref={projectHref(
+                selectedEntity.engagementId,
+                selectedEntity.slug ?? engagements.find((e) => e.id === selectedEntity.engagementId)?.slug,
               )}
-            </aside>
-          </div>
+            />
+          ) : (
+            <>
+              {/* The filter searches every client, so the line names how many files and clients match. */}
+              {isSearching && filteredGroups.length > 0 ? (
+                <p className="border-b border-line-soft px-4 py-2 text-[12.5px] text-ink-muted">
+                  {searchHits.length} {searchHits.length === 1 ? 'file' : 'files'} in{' '}
+                  {filteredGroups.length} {filteredGroups.length === 1 ? clientWord : clientWords}
+                </p>
+              ) : null}
+
+              <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:grid-cols-[440px_minmax(0,1fr)]">
+                <div
+                  role="tree"
+                  aria-label="Folders and files"
+                  // Keys bubble up from the focused row; the tree itself is not a tab stop.
+                  tabIndex={-1}
+                  className="min-w-0 py-2 md:border-r md:border-line-soft"
+                  onKeyDown={(e) => {
+                    // C copies the picked file's viewer link (the menu's key hint).
+                    if (e.key.toLowerCase() !== 'c' || e.metaKey || e.ctrlKey || e.altKey) return;
+                    if ((e.target as HTMLElement).closest('input, textarea, [role="menu"]')) return;
+                    if (!selectedDoc) return;
+                    e.preventDefault();
+                    copyLink(viewerPath(vaultPath, selectedDoc.id));
+                  }}
+                >
+                  {treeBody}
+                </div>
+                <aside className="min-w-0 border-t border-line-soft md:border-t-0" aria-label="Preview">
+                  {selectedDoc ? (
+                    <VaultPreviewPane
+                      doc={selectedDoc}
+                      fileRef={selectedRef}
+                      contentType={selectedIndex?.contentType}
+                      review={
+                        selectedIndex
+                          ? {
+                              status: selectedIndex.reviewStatus ?? 'none',
+                              note: selectedIndex.reviewNote ?? null,
+                              reviewedAt: selectedIndex.reviewedAt ?? null,
+                            }
+                          : null
+                      }
+                      onReview={reviewRef ? (status, note) => actions.review(reviewRef, status, note) : undefined}
+                      viewerHref={viewerPath(vaultPath, selectedDoc.id)}
+                      from={fromLabel(selectedIndex, selectedDoc.companyName)}
+                      replaced={isReplacedDoc(selectedDoc, selectedIndex)}
+                    />
+                  ) : (
+                    <div className="grid h-full min-h-[240px] place-items-center bg-surface-sunken p-5 text-[13px] text-ink-faint">
+                      —
+                    </div>
+                  )}
+                </aside>
+              </div>
+            </>
+          )}
         </section>
       )}
 
       {selectedEntity && !isSearching ? (
         <>
-          <VaultRequestsSection
-            key={selectedEntity.engagementId}
-            engagementId={selectedEntity.engagementId}
-            companyName={selectedEntity.companyName}
-            onZip={(name, items) => void actions.downloadZip(name, items)}
-            zipping={actions.zipping}
-          />
+          {clientView ? null : (
+            <VaultRequestsSection
+              key={selectedEntity.engagementId}
+              engagementId={selectedEntity.engagementId}
+              companyName={selectedEntity.companyName}
+              onZip={(name, items) => void actions.downloadZip(name, items)}
+              zipping={actions.zipping}
+            />
+          )}
           <VaultUploadDialog
             open={uploadOpen}
             onOpenChange={setUploadOpen}

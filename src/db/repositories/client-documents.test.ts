@@ -84,7 +84,7 @@ vi.mock('@/db/repositories/engagements', async (orig) => ({
   assertEngagementAccess: (...a: unknown[]) => assertEngagementAccess(...a),
 }));
 
-const { uploadRequestFiles, undoRequestUpload } = await import('@/db/repositories/client-documents');
+const { getClientDocuments, uploadRequestFiles, undoRequestUpload } = await import('@/db/repositories/client-documents');
 
 const dialect = new PgDialect();
 const OWN = '11111111-1111-1111-1111-111111111101';
@@ -156,5 +156,28 @@ describe('undoRequestUpload — tenant scope', () => {
     expect(await undoRequestUpload(ctx('client'), OTHER_REQUEST, FILE)).toBe(true);
     const reopen = calls.find((c) => c.op === 'update' && c.set?.status === 'pending');
     expect(reopen?.set).toMatchObject({ closedAt: null });
+  });
+});
+
+describe('getClientDocuments — who may read which engagement', () => {
+  it('a client always reads its own engagement, whatever id it passes', async () => {
+    assertEngagementAccess.mockResolvedValue({ ok: false });
+    await expect(getClientDocuments(ctx('client'), 'someone-else')).resolves.toBeNull();
+    expect(getMyEngagement).toHaveBeenCalled();
+    expect(assertEngagementAccess).toHaveBeenCalledWith(expect.anything(), 'own-slug');
+  });
+
+  it('staff without an engagement id get null and no access check', async () => {
+    await expect(getClientDocuments(ctx('manager'))).resolves.toBeNull();
+    expect(assertEngagementAccess).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('staff are checked against the engagement they name, and a refusal reads nothing', async () => {
+    assertEngagementAccess.mockResolvedValue({ ok: false, forbidden: true });
+    await expect(getClientDocuments(ctx('intern'), 'eng-9')).resolves.toBeNull();
+    expect(getMyEngagement).not.toHaveBeenCalled();
+    expect(assertEngagementAccess).toHaveBeenCalledWith(expect.anything(), 'eng-9');
+    expect(calls).toHaveLength(0);
   });
 });

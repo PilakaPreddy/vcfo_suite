@@ -11,9 +11,10 @@
  */
 import { BoardMeetingDocs } from './BoardMeetingDocs';
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePortal, usePortalOptional, PORTAL_SHELL_KEY } from '@/components/client-portal/PortalProvider';
-import LegacyClientDocuments from '@/views/client/Documents';
+import { useStaffBasePath } from '@/hooks/use-staff-base-path';
 import { usePortalIncorporation } from '@/components/client-portal/hooks';
 import type { DocNode } from '@/lib/client-portal/documents';
 import { useDocViewer } from './DocViewer';
@@ -28,17 +29,28 @@ import type { View } from './model';
 import '../../css/documents-explorer.css';
 import '../../css/documents-boards.css';
 
-/** Staff (super admin) opening /app/client/* outside the portal shell keep the previous view. */
+/**
+ * Staff (super admin) opening /app/client/documents outside the portal shell have no engagement
+ * of their own here; their Vault shows each client's Documents page, so they go there.
+ */
 export function DocumentsPage() {
   const portal = usePortalOptional();
-  if (!portal) return <LegacyClientDocuments />;
+  if (!portal) return <ToStaffVault />;
   return <DocumentsInner />;
 }
 
-function DocumentsInner() {
-  const { prefs, savePrefs, toast, go, shell } = usePortal();
+function ToStaffVault() {
+  const router = useRouter();
+  const base = useStaffBasePath();
+  useEffect(() => router.replace(`${base}/vault`), [router, base]);
+  return null;
+}
+
+/** The page body. Staff render it too, through `StaffClientDocuments`, for one engagement. */
+export function DocumentsInner() {
+  const { prefs, savePrefs, toast, go, shell, engagementId } = usePortal();
   const { model, loading: engLoading } = usePortalIncorporation();
-  const q = useClientDocuments();
+  const q = useClientDocuments(engagementId);
   const qc = useQueryClient();
   const phone = usePhone();
   const zip = useZipToast();
@@ -91,13 +103,17 @@ function DocumentsInner() {
 
   const openUpload = useCallback(
     (requestId?: string, file?: File) => {
+      if (engagementId) {
+        toast('Clients upload against their requests. Use Manage to add a file for them.');
+        return;
+      }
       if (!data?.openRequests.length) {
         toast('There is no open request to upload against');
         return;
       }
       setUpload({ requestId, file });
     },
-    [data?.openRequests.length, toast],
+    [data?.openRequests.length, engagementId, toast],
   );
 
   const onUploaded = useCallback(
@@ -167,7 +183,7 @@ function DocumentsInner() {
           <div className="vdoc-col">
             <main className="vdoc-main">
               {body}
-              <BoardMeetingDocs engagementId={shell?.engagementId} />
+              <BoardMeetingDocs engagementId={shell?.engagementId ?? engagementId} />
             </main>
           </div>
         </div>
