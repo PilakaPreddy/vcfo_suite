@@ -28,6 +28,7 @@ export async function GET(_request: Request, context: RouteContext) {
       lists: recipientLists({ partners: src.partners, rows: src.version.snapshot, today, lastSend: src.lastSend }),
       contacts: contactSuggestions(src.partners, src.lastSend),
       lastSentAt: src.lastSend?.sentAt ?? null,
+      lastSendStatus: src.lastSend?.status ?? null,
     });
   } catch (e) {
     return receivablesError(e);

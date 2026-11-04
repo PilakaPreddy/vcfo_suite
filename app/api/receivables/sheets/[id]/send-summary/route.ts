@@ -1,17 +1,23 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/api/parse-body';
-import { todayIst } from '@/lib/receivables/dates';
 import { cleanRecipients, tidyEmailHtml } from '@/lib/receivables/recipients';
-import { receivablesWorkbook, receivablesWorkbookName } from '@/lib/receivables/xlsx';
-import { getSummarySource, recordSummarySend } from '@/db/repositories/receivables';
-import { sendMailViaOutlook } from '@/db/repositories/outlook-connections';
+import { deliverSummary, outlookErrorCode } from '@/lib/receivables/summary-send';
+import { getSummarySendStatus, getSummarySource, recordSummarySend } from '@/db/repositories/receivables';
+import { assertOutlookReady } from '@/db/repositories/outlook-connections';
 import { denied, guardReceivables, receivablesError, type RouteContext } from '../../../_respond';
 
 /**
  * POST /api/receivables/sheets/:id/send-summary — sends the (edited) summary from the manager's
- * own Outlook to any To, Cc and Bcc, with the published version as an Excel file when asked, and
- * logs the send. 409 outlook_not_connected when the mailbox is not linked.
+ * own Outlook to any To, Cc and Bcc, with the published version as an Excel file when asked.
+ *
+ * Everything that can fail fast is checked before the answer: the input, the addresses, the
+ * published version and the Outlook link (409 outlook_not_connected or outlook_reconnect). The
+ * send is then logged as `sending` and the route answers 202 { ok, queued, sendId }. Building the
+ * workbook and the Graph call run after the response (`after` from next/server, because Inngest
+ * cloud keys are not set on App Runner); the log row ends as `sent` or `failed` with the reason.
+ *
+ * GET ?send=<sendId> — the state of that send, which the dialog polls to show the outcome.
  */
 const person = z.object({ name: z.string().max(120).default(''), email: z.string().max(200) });
 const schema = z.object({
@@ -33,36 +39,43 @@ export async function POST(request: Request, context: RouteContext) {
   const people = cleanRecipients({ to: input.to, cc: input.cc, bcc: input.bcc });
   if (people.invalid.length) return NextResponse.json({ error: 'bad_email', invalid: people.invalid }, { status: 400 });
   if (!people.to.length) return NextResponse.json({ error: 'to_required' }, { status: 400 });
+  const subject = input.subject.trim();
   try {
     const src = await getSummarySource(guard.ctx, id);
-    const today = todayIst();
-    const attachments = input.attachExcel
-      ? [
-          {
-            name: receivablesWorkbookName(src.sheet.clientOrgName, today),
-            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            contentBase64: Buffer.from(await receivablesWorkbook(src.version.snapshot, today)).toString('base64'),
-          },
-        ]
-      : [];
-    const { msEmail } = await sendMailViaOutlook(guard.ctx, {
-      to: people.to.map((r) => r.email),
-      cc: people.cc.map((r) => r.email),
-      bcc: people.bcc.map((r) => r.email),
-      subject: input.subject.trim(),
-      html: tidyEmailHtml(input.html),
-      attachments,
-    });
-    await recordSummarySend(guard.ctx, id, { versionId: src.version.id, to: people.to, cc: people.cc, bcc: people.bcc, subject: input.subject.trim(), channel: 'outlook' });
-    return NextResponse.json({ ok: true, from: msEmail, to: people.to.length, cc: people.cc.length, bcc: people.bcc.length });
+    const { msEmail } = await assertOutlookReady(guard.ctx);
+    const { id: sendId } = await recordSummarySend(guard.ctx, id, { versionId: src.version.id, to: people.to, cc: people.cc, bcc: people.bcc, subject, channel: 'outlook', status: 'sending' });
+    const ctx = guard.ctx;
+    after(() =>
+      deliverSummary(ctx, id, sendId, {
+        clientOrgName: src.sheet.clientOrgName,
+        snapshot: src.version.snapshot,
+        attachExcel: input.attachExcel,
+        mail: {
+          to: people.to.map((r) => r.email),
+          cc: people.cc.map((r) => r.email),
+          bcc: people.bcc.map((r) => r.email),
+          subject,
+          html: tidyEmailHtml(input.html),
+        },
+      }),
+    );
+    return NextResponse.json({ ok: true, queued: true, sendId, from: msEmail, to: people.to.length, cc: people.cc.length, bcc: people.bcc.length }, { status: 202 });
   } catch (e) {
-    const message = e instanceof Error ? e.message : '';
-    if (message === 'outlook_not_connected') return NextResponse.json({ error: 'outlook_not_connected' }, { status: 409 });
-    if (message.includes('invalid_grant') || message.includes('refresh')) return NextResponse.json({ error: 'outlook_reconnect' }, { status: 409 });
-    if (e instanceof Error && !('status' in e) && message) {
-      console.error('[receivables] summary send failed', message.slice(0, 200));
-      return NextResponse.json({ error: 'send_failed' }, { status: 502 });
-    }
+    const code = outlookErrorCode(e);
+    if (code) return NextResponse.json({ error: code }, { status: 409 });
+    return receivablesError(e);
+  }
+}
+
+export async function GET(request: Request, context: RouteContext) {
+  const guard = await guardReceivables();
+  if (guard.ok === false) return denied(guard);
+  const { id } = await context.params;
+  const sendId = new URL(request.url).searchParams.get('send') ?? '';
+  if (!/^[0-9a-f-]{36}$/i.test(sendId)) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  try {
+    return NextResponse.json(await getSummarySendStatus(guard.ctx, id, sendId));
+  } catch (e) {
     return receivablesError(e);
   }
 }

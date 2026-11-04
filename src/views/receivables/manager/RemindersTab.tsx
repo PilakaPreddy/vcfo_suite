@@ -7,11 +7,11 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { Textarea } from '@/components/ui/textarea';
-import { toastError, toastSuccess } from '@/lib/toast-errors';
+import { toastError, toastInfo, toastLoading, toastSuccess } from '@/lib/toast-errors';
 import { sheetDate } from '@/lib/receivables/dates';
 import type { ReminderRules } from '@/lib/receivables/model';
 import type { ManagerSheetDto, ReminderRowDto } from '@/lib/receivables/wire';
-import { useOutlookStatus, useReminderActions, useReminderDesk, type useReceivablesActions } from '@/hooks/use-receivables';
+import { remindersSendOutcome, useOutlookStatus, useReminderActions, useReminderDesk, type useReceivablesActions } from '@/hooks/use-receivables';
 import { inr } from '../format';
 
 /**
@@ -148,6 +148,7 @@ export function RemindersTab({ data, actions }: { data: ManagerSheetDto; actions
   const rem = useReminderActions(data.sheet.id);
   const outlook = useOutlookStatus();
   const [editing, setEditing] = useState<ReminderRowDto | null>(null);
+  const [watching, setWatching] = useState(false);
   const rules = desk.data?.rules ?? data.sheet.reminderRules;
   const today = desk.data?.today;
   const queue = desk.data?.queue ?? [];
@@ -159,8 +160,24 @@ export function RemindersTab({ data, actions }: { data: ManagerSheetDto; actions
 
   const sendNow = () => {
     if (!window.confirm(`Send ${pending} reminder${pending === 1 ? '' : 's'} now instead of at ${hourLabel(rules.sendHourIst)}?`)) return;
+    const ids = queue.filter((r) => r.status === 'queued' && r.invoiceOpen).map((r) => r.id);
+    const toastId = `rcv-send-now-${data.sheet.id}`;
     rem.sendNow.mutate(undefined, {
-      onSuccess: (r) => (r.failed ? toastError(`${r.sent} sent, ${r.failed} failed`, 'See the reason on each row.') : toastSuccess(`${r.sent} reminder${r.sent === 1 ? '' : 's'} sent`)),
+      onSuccess: (r) => {
+        // The server answers at once and sends after the response; follow the rows to the outcome.
+        toastLoading(`Sending ${r.pending} reminder${r.pending === 1 ? '' : 's'}…`, undefined, { id: toastId });
+        setWatching(true);
+        void remindersSendOutcome(data.sheet.id, ids)
+          .then((o) => {
+            if (o.failed) toastError(`${o.sent} sent, ${o.failed} failed`, 'See the reason on each row.', { id: toastId });
+            else if (o.queued) toastInfo(`${o.sent} sent so far`, 'The rest are still sending. The rows update as they go.', { id: toastId });
+            else toastSuccess(`${o.sent} reminder${o.sent === 1 ? '' : 's'} sent`, undefined, { id: toastId });
+          })
+          .finally(() => {
+            setWatching(false);
+            void desk.refetch();
+          });
+      },
       onError: (e) => toastError('Not sent', errorText(e)),
     });
   };
@@ -175,8 +192,8 @@ export function RemindersTab({ data, actions }: { data: ManagerSheetDto; actions
               {off ? 'When on, it sends' : 'Sends'} on its own at {hourLabel(rules.sendHourIst)} India time from {outlook.data?.connected ? outlook.data.msEmail : 'SBC email (connect Outlook to send from your mailbox)'}. Edit or skip any reminder before then.
             </p>
           </div>
-          <Button onClick={sendNow} disabled={off || !pending || rem.sendNow.isPending}>
-            {rem.sendNow.isPending ? 'Sending…' : 'Send now'}
+          <Button onClick={sendNow} disabled={off || !pending || rem.sendNow.isPending || watching}>
+            {rem.sendNow.isPending || watching ? 'Sending…' : 'Send now'}
           </Button>
         </div>
         {off ? (

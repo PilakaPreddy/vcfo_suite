@@ -8,7 +8,7 @@ export { getVersion, listVersions, publishSheet, type VersionMeta } from './vers
 export { addPartner, updatePartner } from './partners';
 export { editReminder, getReminderDesk, setReminderSkipped, systemDueReminders, systemQueueReminders, systemRecordReminder, type DueReminder, type ReminderRow } from './reminders';
 export { confirmCredit, ignoreCredit, importCredits, listCredits, systemIngestCredits, type CreditRow, type IncomingCredit, type IngestResult } from './credits';
-export { getSummarySource, recordSummarySend, type SummarySource } from './emails';
+export { finishSummarySend, getSummarySendStatus, getSummarySource, recordSummarySend, type SummarySendStatus, type SummarySource } from './emails';
 export { PARTNER_NOTE_MAX, addPartnerNote, partnerExportRows, partnerHome, partnerInvoiceDetail, setNotifyOnPublish, setPromise } from './partner-portal';
 export {
   partnerLoginAction,

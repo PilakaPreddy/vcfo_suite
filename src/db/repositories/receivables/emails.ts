@@ -4,7 +4,7 @@ import { db } from '@/db/client';
 import { receivableEmailSends, receivablePartners, receivableVersions } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
 import type { EmailRecipient, Partner, SnapshotRow } from '@/lib/receivables/model';
-import { conflict, scopedSheet, type SheetRow } from './shared';
+import { conflict, ReceivablesError, scopedSheet, type SheetRow } from './shared';
 import { toPartner } from './sheets';
 
 /**
@@ -17,7 +17,7 @@ export type SummarySource = {
   version: { id: string; seq: number; publishedAt: Date; snapshot: SnapshotRow[] };
   partners: Partner[];
   /** The recipients of the previous summary, the default for the next one. */
-  lastSend: { to: EmailRecipient[]; cc: EmailRecipient[]; bcc: EmailRecipient[]; subject: string; sentAt: Date } | null;
+  lastSend: { to: EmailRecipient[]; cc: EmailRecipient[]; bcc: EmailRecipient[]; subject: string; sentAt: Date; status: SummarySendStatus; error: string | null } | null;
 };
 
 export async function getSummarySource(ctx: AuthContext, sheetId: string): Promise<SummarySource> {
@@ -37,26 +37,57 @@ export async function getSummarySource(ctx: AuthContext, sheetId: string): Promi
     sheet,
     version: v,
     partners: partners.map(toPartner),
-    lastSend: last ? { to: last.toList, cc: last.ccList, bcc: last.bccList, subject: last.subject, sentAt: last.sentAt } : null,
+    lastSend: last ? { to: last.toList, cc: last.ccList, bcc: last.bccList, subject: last.subject, sentAt: last.sentAt, status: last.status as SummarySendStatus, error: last.error } : null,
   };
 }
 
+/**
+ * Logs one summary send. The route writes it as `sending` before it answers, then the work after
+ * the response marks it `sent` or `failed` with `finishSummarySend`, so a failure stays visible.
+ */
 export async function recordSummarySend(
   ctx: AuthContext,
   sheetId: string,
-  input: { versionId: string; to: EmailRecipient[]; cc: EmailRecipient[]; bcc: EmailRecipient[]; subject: string; channel: 'outlook' | 'email' },
-): Promise<void> {
+  input: { versionId: string; to: EmailRecipient[]; cc: EmailRecipient[]; bcc: EmailRecipient[]; subject: string; channel: 'outlook' | 'email'; status?: SummarySendStatus },
+): Promise<{ id: string }> {
   const sheet = await scopedSheet(ctx, sheetId);
-  await db.insert(receivableEmailSends).values({
-    sheetId: sheet.id,
-    versionId: input.versionId,
-    toList: input.to,
-    ccList: input.cc,
-    bccList: input.bcc,
-    subject: input.subject.slice(0, 200),
-    channel: input.channel,
-    sentBy: ctx.userId,
-  });
+  const [row] = await db
+    .insert(receivableEmailSends)
+    .values({
+      sheetId: sheet.id,
+      versionId: input.versionId,
+      toList: input.to,
+      ccList: input.cc,
+      bccList: input.bcc,
+      subject: input.subject.slice(0, 200),
+      channel: input.channel,
+      status: input.status ?? 'sent',
+      sentBy: ctx.userId,
+    })
+    .returning({ id: receivableEmailSends.id });
+  return { id: row.id };
+}
+
+export type SummarySendStatus = 'sending' | 'sent' | 'failed';
+
+export async function finishSummarySend(ctx: AuthContext, sheetId: string, sendId: string, outcome: { status: 'sent' | 'failed'; error?: string }): Promise<void> {
+  const sheet = await scopedSheet(ctx, sheetId);
+  await db
+    .update(receivableEmailSends)
+    .set({ status: outcome.status, error: outcome.error?.slice(0, 200) ?? null })
+    .where(and(eq(receivableEmailSends.id, sendId), eq(receivableEmailSends.sheetId, sheet.id)));
+}
+
+/** The state of one send, which the Send email dialog polls after the 202. */
+export async function getSummarySendStatus(ctx: AuthContext, sheetId: string, sendId: string): Promise<{ status: SummarySendStatus; error: string | null }> {
+  const sheet = await scopedSheet(ctx, sheetId);
+  const [row] = await db
+    .select({ status: receivableEmailSends.status, error: receivableEmailSends.error })
+    .from(receivableEmailSends)
+    .where(and(eq(receivableEmailSends.id, sendId), eq(receivableEmailSends.sheetId, sheet.id)))
+    .limit(1);
+  if (!row) throw new ReceivablesError(404, 'not_found');
+  return { status: row.status as SummarySendStatus, error: row.error };
 }
 
 async function listSummarySends(ctx: AuthContext, sheetId: string) {

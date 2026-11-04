@@ -131,8 +131,7 @@ export function useReminderActions(sheetId: string) {
       onSettled,
     }),
     sendNow: useMutation({
-      mutationFn: () => call<{ sent: number; failed: number; viaOutlook: number; viaEmail: number }>(`/api/receivables/sheets/${sheetId}/reminders/send-now`, json('POST')),
-      onSettled,
+      mutationFn: () => call<{ ok: true; queued: true; pending: number }>(`/api/receivables/sheets/${sheetId}/reminders/send-now`, json('POST')),
     }),
     saveRules: useMutation({
       mutationFn: (reminderRules: ReminderRules) => call(`/api/receivables/sheets/${sheetId}`, json('PATCH', { reminderRules })),
@@ -174,10 +173,48 @@ export function useOutlookStatus() {
 
 export type SummarySendInput = { to: EmailRecipient[]; cc: EmailRecipient[]; bcc: EmailRecipient[]; subject: string; html: string; attachExcel: boolean };
 
+/** The 202 of Send: the send is logged as `sending` and finishes after the response. */
+export type SummarySendQueued = { ok: true; queued: true; sendId: string; from: string; to: number; cc: number; bcc: number };
+
 export function useSendSummary(sheetId: string) {
   return useMutation({
-    mutationFn: (input: SummarySendInput) => call<{ from: string; to: number; cc: number; bcc: number }>(`/api/receivables/sheets/${sheetId}/send-summary`, json('POST', input)),
+    mutationFn: (input: SummarySendInput) => call<SummarySendQueued>(`/api/receivables/sheets/${sheetId}/send-summary`, json('POST', input)),
   });
+}
+
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Polls one queued summary send until it is sent or failed, for about three minutes. A plain
+ * function, not a hook, so closing the dialog does not stop it. `error` is ready to show.
+ */
+export async function summarySendOutcome(sheetId: string, sendId: string): Promise<{ status: 'sending' | 'sent' | 'failed'; error: string | null }> {
+  for (let i = 0; i < 90; i++) {
+    await pause(2000);
+    const s = await call<{ status: 'sending' | 'sent' | 'failed'; error: string | null }>(`/api/receivables/sheets/${sheetId}/send-summary?send=${sendId}`).catch(() => null);
+    if (s && s.status !== 'sending') return { status: s.status, error: s.error ? ERROR_TEXT[s.error] || s.error : null };
+  }
+  return { status: 'sending', error: null };
+}
+
+/**
+ * After Send now's 202: refetches the Reminders tab until none of the given reminders is still
+ * queued (about three minutes at most), then counts how they ended.
+ */
+export async function remindersSendOutcome(sheetId: string, ids: string[]): Promise<{ sent: number; failed: number; queued: number }> {
+  let rows: ReminderDeskDto['queue'] = [];
+  for (let i = 0; i < 90; i++) {
+    await pause(2000);
+    const desk = await call<ReminderDeskDto>(`/api/receivables/sheets/${sheetId}/reminders`).catch(() => null);
+    if (!desk) continue;
+    rows = desk.queue.filter((r) => ids.includes(r.id));
+    if (!rows.some((r) => r.status === 'queued')) break;
+  }
+  return {
+    sent: rows.filter((r) => r.status === 'sent').length,
+    failed: rows.filter((r) => r.status === 'failed').length,
+    queued: rows.filter((r) => r.status === 'queued').length,
+  };
 }
 
 /** All the writes of the manager area, each refetching the sheet (and versions after Update). */

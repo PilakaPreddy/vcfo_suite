@@ -61,6 +61,8 @@ export type SummaryDto = {
   lists: RecipientListDto[];
   contacts: EmailRecipient[];
   lastSentAt: string | null;
+  /** sending | sent | failed: a failed last send shows in the dialog so the manager can retry. */
+  lastSendStatus: 'sending' | 'sent' | 'failed' | null;
 };
 
 export type OutlookStatusDto = { configured: boolean; connected: boolean; msEmail?: string };
