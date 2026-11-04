@@ -137,3 +137,15 @@ Then run `npm run totp:reencrypt` through the tunnel (docs/context/AWS-DEPLOY.md
 | Rollback image | ✓ | `vcfo-suite:rollback-7fb6b705`. |
 | Image | ✓ | `vcfo-suite:b54acd9d` and `:latest`. App Runner deployment succeeded at 12:17 IST. |
 | Live check | ✓ | `/` and `/login` answer 200. No errors in the application log. Not checked signed in. |
+
+## 11. Deploy, 4 Nov 2026 09:24 IST
+
+| Step | Done | Detail |
+|---|---|---|
+| `main` | ✓ | `832949e1`: Labour registers lock, upload, projection and reconciliation (migration 0035), the checklist removal (PR #13, migration 0036), and Receivables phases 8 to 10 with partner portal, FX and forex desk (PR #14 and PR #16, migrations 0037 to 0040). |
+| Gate | ✓ | 0 type errors, 0 lint errors (541 warnings), 4,309 tests pass. Migration chain checked; no schema drift. |
+| RDS snapshot | ✓ | `vcfo-suite-db-pre-0035-20261104-0904`. |
+| Migrations 0035 to 0040 on RDS | ✓ | The owner ran them through the SSM tunnel; RDS stayed private; the tunnel is closed. 0036 dropped the two labour-register checklist tables, which had 0 rows each (the owner approved this exception to the additive-only rule). |
+| Rollback image | ✓ | `vcfo-suite:rollback-b54acd9d`. |
+| Image | ✓ | `vcfo-suite:832949e1` and `:latest`. App Runner deployment succeeded at 09:24 IST. |
+| Live check | ✓ | `/`, `/login` and `/receivables/login` answer 200. No errors in the application log. Not checked signed in. |
