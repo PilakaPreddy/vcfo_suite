@@ -116,6 +116,15 @@ function updatesGroup(base: string): NavGroupDef {
   };
 }
 
+/** Staff read official updates in the Updates group while the Watch flag is on. */
+export function withOfficialUpdates(items: NavEntry[]): NavEntry[] {
+  return items.map((entry) =>
+    !isNavSectionBreak(entry) && isNavGroup(entry) && entry.id.startsWith('updates:')
+      ? { ...entry, items: [...entry.items, { to: `${entry.id.slice('updates:'.length)}/watch`, label: 'Official updates', icon: Landmark, iconTone: TONE.news }] }
+      : entry,
+  );
+}
+
 /** The practice block's three labels, in order (R-51). */
 export const PRACTICE_BLOCK_LABELS = ['Incorporation', 'Compliances', 'Registrations'] as const;
 

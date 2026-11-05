@@ -17,7 +17,9 @@ import { useShellNav } from '@/components/shell/shell-nav-context';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useStaffBasePath } from '@/hooks/use-staff-base-path';
 import { SidebarComplianceMini } from '@/components/shell/SidebarComplianceMini';
-import { isNavGroup, isNavSectionBreak, sidebarItemsFor } from '@/components/shell/sidebar-items';
+import { isNavGroup, isNavSectionBreak, sidebarItemsFor, withOfficialUpdates } from '@/components/shell/sidebar-items';
+import { useWatchEnabled } from '@/hooks/use-watch';
+import { isWatchStaff } from '@/lib/watch/recipients';
 import {
   showsIncorporationCount,
   useComplianceDueCount,
@@ -178,6 +180,7 @@ function SidebarNavBody({
   const complianceDueCount = useComplianceDueCount(user?.role);
   const pathname = usePathname();
   const staffBase = useStaffBasePath();
+  const watchEnabled = useWatchEnabled(isWatchStaff(user?.role));
   const osReduce = useReducedMotion();
   const { reduceMotion: prefReduce, motion: motionStyle } = useShellAppearance();
   const reduceMotion = Boolean(osReduce) || prefReduce;
@@ -192,7 +195,8 @@ function SidebarNavBody({
 
   /* P-255: inside the developer console the super admin sees the console's own items. */
   const inDevConsole = user.role === 'super_admin' && pathname.startsWith('/app/dev');
-  const items = sidebarItemsFor(user.role, staffBase, inDevConsole);
+  const baseItems = sidebarItemsFor(user.role, staffBase, inDevConsole);
+  const items = watchEnabled && !inDevConsole ? withOfficialUpdates(baseItems) : baseItems;
 
   return (
     <>

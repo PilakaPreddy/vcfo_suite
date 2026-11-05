@@ -80,6 +80,7 @@ function AnnouncementGenieCard({
             {announcementIsImportant(item.kind) && parseAnnouncementKind(item.kind) !== 'deadline' ? (
               <Tag tone="bad">Important</Tag>
             ) : null}
+            {item.unreviewed ? <Tag tone="warn">Not yet reviewed</Tag> : null}
             <time dateTime={item.publishedAt} className="text-[12.5px] tabular-nums text-ink-muted">
               {formatAnnouncementWhen(item.publishedAt)}
             </time>
