@@ -19,7 +19,7 @@ import { usePortalIncorporation } from '../../hooks';
 import { portalHref } from '../../routes';
 import { subList } from '../incorporation/data';
 import { useAllFilings } from '../compliances/api';
-import { groupObligations } from '../compliances/obligations';
+import { groupCompanyObligations } from '@/lib/compliance/obligation-groups';
 import { obligationHref } from '../compliances/ObligationsPage';
 import { Empty, FactRows, GoLink, Island, ListRow, PeopleStack, RecordHead, SCard, StatusChip, StepList, TextCard, WordPill } from '../compliances/spectrum';
 import { FromClientCard, useRecordPeople } from '../compliances/inputs';
@@ -78,7 +78,7 @@ function Record({ r, credsError, credsLoading }: { r: RegItem; credsError: boole
   const starts = useMemo(() => {
     const rule = startsFilings(r.stepId);
     if (!rule) return [];
-    return groupObligations(filings.data?.rows ?? [], today).filter((o) => o.area === rule.area && (!rule.name || rule.name.test(`${o.name} ${o.particular}`)));
+    return groupCompanyObligations(filings.data?.rows ?? [], today).filter((o) => o.area === rule.area && (!rule.name || rule.name.test(`${o.name} ${o.particular}`)));
   }, [filings.data, r.stepId, today]);
   const date = r.status === 'Done' ? r.doneOn : r.due;
   const numberEmpty = credsLoading ? 'Loading' : credsError ? 'Could not load' : '-';

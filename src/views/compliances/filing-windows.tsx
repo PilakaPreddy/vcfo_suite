@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { setFilingWindowInDb } from '@/lib/projects/engagements-db';
 import { toastError, errorMessage } from '@/lib/toast-errors';
 import { filingStatus, type FilingRow, type FilingStatus } from '@/lib/compliance/filings';
-import { areaLabel, STATUS_FILL, worstStatus } from '@/views/compliances/spectrum-status';
+import { areaLabel, STATUS_FILL, worstStatus } from '@/lib/compliance/spectrum-status';
 
 /**
  * TIMELINE VIEW of the staff calendar (prototype `FilingWindows`): one lane

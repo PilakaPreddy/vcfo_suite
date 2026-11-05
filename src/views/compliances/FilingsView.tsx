@@ -68,7 +68,7 @@ import {
   filingWord,
   plainDate,
   toCsv,
-} from '@/views/compliances/spectrum-status';
+} from '@/lib/compliance/spectrum-status';
 import {
   CompactChip,
   DateTile,

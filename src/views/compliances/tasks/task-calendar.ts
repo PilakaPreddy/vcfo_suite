@@ -1,6 +1,6 @@
 import type { FilingRow, FilingStatus } from '@/lib/compliance/filings';
 import { financialYearMonths } from '@/lib/compliance/filings';
-import { plainDate } from '@/views/compliances/spectrum-status';
+import { plainDate } from '@/lib/compliance/spectrum-status';
 import type { TaskRowDto } from '@/views/compliances/tasks/api';
 import { taskCal } from '@/views/compliances/tasks/task-model';
 

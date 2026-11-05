@@ -30,7 +30,7 @@ import { activityEntries, blockedLine, reminderViews } from '@/views/compliances
 import { FilingProofCell, FilingWindowCell } from '@/views/compliances/filing-actions';
 import { StaffFromClientCard, StaffSbcFieldsCard } from '@/views/compliances/input-cards';
 import { BeforeFilingCard, FilingThreadCard } from '@/views/compliances/record-cards';
-import { areaLabel, plainDate } from '@/views/compliances/spectrum-status';
+import { areaLabel, plainDate } from '@/lib/compliance/spectrum-status';
 import {
   ApiError,
   useSetReminderDays,

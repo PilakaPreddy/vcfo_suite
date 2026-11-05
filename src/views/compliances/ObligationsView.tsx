@@ -24,7 +24,7 @@ import {
   soleCompany,
   type ComplianceScope,
 } from '@/views/compliances/compliance-scope';
-import { areaLabel, daysUntil, plainDate } from '@/views/compliances/spectrum-status';
+import { areaLabel, daysUntil, plainDate } from '@/lib/compliance/spectrum-status';
 import {
   FilingBand,
   FilterStrip,
@@ -56,7 +56,7 @@ import {
   type ObligationClientRow,
   type ObligationFilter,
   type ObligationGroup,
-} from '@/views/compliances/obligation-groups';
+} from '@/lib/compliance/obligation-groups';
 
 type GroupBy = 'filing' | 'frequency' | 'law';
 

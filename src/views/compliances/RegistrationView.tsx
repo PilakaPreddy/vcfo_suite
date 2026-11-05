@@ -16,7 +16,7 @@ import { adminProjectStepPath, internEngagementStepPath } from '@/lib/projects/p
 import { formatWindow } from '@/lib/projects/schedule-windows';
 import { cn } from '@/lib/utils';
 import type { ComplianceScope } from '@/views/compliances/compliance-scope';
-import { daysUntil, isIdentifier, plainDate } from '@/views/compliances/spectrum-status';
+import { daysUntil, isIdentifier, plainDate } from '@/lib/compliance/spectrum-status';
 import { Fact, HeadRing, RailCard, TextCard, WordChip } from '@/views/compliances/spectrum-parts';
 import { PersonCell } from '@/views/compliances/identity';
 import { BeforeFilingCard } from '@/views/compliances/record-cards';

@@ -2,9 +2,9 @@ import { regOf, type Regulator } from '@/lib/ui/regulator';
 import { filingStatus, monthKeyOf, sortByDueDate, todayIST, type FilingRow, type FilingStatus } from '@/lib/compliance/filings';
 import type { PortalFiling } from '@/lib/client-portal/compliances';
 import { filingMonths, type FilingRecord } from '@/lib/metrics/filing-metrics';
-import { daysUntil, filingWord, plainDate, worstStatus, type SixWord } from '@/views/compliances/spectrum-status';
+import { daysUntil, filingWord, plainDate, worstStatus, type SixWord } from '@/lib/compliance/spectrum-status';
 import { companyInitials } from '@/components/super/parts/super-text';
-import { waitingOnClient } from '@/views/compliances/obligation-groups';
+import { waitingOnClient } from '@/lib/compliance/obligation-groups';
 
 /**
  * THE STAFF FILINGS BOARD (prototype C-05 to C-07, C-0118) — pure logic.

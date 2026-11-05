@@ -37,7 +37,7 @@ import { DUE_SOON_DAYS } from '@/lib/compliance/filings';
 import { useAllFilings } from './api';
 import { usePageTips } from './bits';
 import { CompProvider } from './ctx';
-import { FREQ_ORDER, dueWithin, freqKey, groupObligations, waitingOnClient, type Obligation } from './obligations';
+import { FREQ_ORDER, freqKey, groupCompanyObligations, periodsDueSoon, periodsWaitingOnClient, type Obligation } from '@/lib/compliance/obligation-groups';
 import { useComplianceStarts, type StartedObligation } from '@/components/compliances/use-compliance-records';
 import {
   AreaTag,
@@ -99,7 +99,7 @@ function ObligationsBody({ today }: { today: string }) {
   const root = useRef<HTMLDivElement>(null);
   usePageTips(root);
   const q = useAllFilings(after);
-  const obligations = useMemo(() => groupObligations(after ? q.data?.rows ?? [] : [], today), [after, q.data, today]);
+  const obligations = useMemo(() => groupCompanyObligations(after ? q.data?.rows ?? [] : [], today), [after, q.data, today]);
   const [view, setView] = useState<'freq' | 'area'>('freq');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<CompStatus | null>(null);
@@ -125,8 +125,8 @@ function ObligationsBody({ today }: { today: string }) {
   const groups = sections.filter((s) => s.rows.length);
   const fy = fyLabelOf(fyStartOfMonth(today.slice(0, 7)));
 
-  const due = hasStat ? dueWithin(obligations, today, DUE_SOON_DAYS) : [];
-  const waiting = hasStat ? waitingOnClient(obligations, today, companyShort) : [];
+  const due = hasStat ? periodsDueSoon(obligations, today) : [];
+  const waiting = hasStat ? periodsWaitingOnClient(obligations, today, companyShort) : [];
   const openTasks = hasNs ? tasks.filter((t) => t.stage !== 'completed') : [];
   const dueTasks = openTasks.filter((t) => daysBetween(today, t.endDate) <= DUE_SOON_DAYS).sort((a, b) => a.endDate.localeCompare(b.endDate));
   const waitTasks = openTasks.filter((t) => taskWord(t, today) === 'Waiting');

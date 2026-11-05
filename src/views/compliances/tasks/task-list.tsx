@@ -5,7 +5,7 @@ import type { GridColumn, GridGroup } from '@/views/compliances/grouped-grid';
 import { PersonCell } from '@/views/compliances/identity';
 import { WordChip } from '@/views/compliances/spectrum-parts';
 import { Tag } from '@/components/ui/spectrum-chip';
-import { plainDate } from '@/views/compliances/spectrum-status';
+import { plainDate } from '@/lib/compliance/spectrum-status';
 import type { TaskRowDto } from '@/views/compliances/tasks/api';
 import { WEEK_GROUPS, type StripKey } from '@/views/compliances/tasks/task-model';
 

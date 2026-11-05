@@ -12,7 +12,7 @@ import { setFilingWindowInDb } from '@/lib/projects/engagements-db';
 import { errorMessage, toastError } from '@/lib/toast-errors';
 import type { FilingRow } from '@/lib/compliance/filings';
 import type { PortalFiling } from '@/lib/client-portal/compliances';
-import { isIdentifier, plainDate } from '@/views/compliances/spectrum-status';
+import { isIdentifier, plainDate } from '@/lib/compliance/spectrum-status';
 
 /**
  * The register's two row actions, shared by Filings and the obligation

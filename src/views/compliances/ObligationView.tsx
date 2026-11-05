@@ -21,7 +21,7 @@ import {
   rowsForCompany,
   type ComplianceScope,
 } from '@/views/compliances/compliance-scope';
-import { areaLabel, daysUntil, filingWord, isIdentifier, plainDate } from '@/views/compliances/spectrum-status';
+import { areaLabel, daysUntil, filingWord, isIdentifier, plainDate } from '@/lib/compliance/spectrum-status';
 import { Fact, FlowCard, HeadRing, RailCard, WordChip } from '@/views/compliances/spectrum-parts';
 import { areaOf, focusNodes, portalFor } from '@/lib/client-portal/compliances';
 import { AssistCard } from '@/components/compliances/AssistParts';
@@ -37,7 +37,7 @@ import {
   flowCounts,
   groupObligations,
   waitingOnClient,
-} from '@/views/compliances/obligation-groups';
+} from '@/lib/compliance/obligation-groups';
 
 const RISK_WORD: Record<string, string> = { low: 'Low', medium: 'Medium', high: 'High' };
 

@@ -56,13 +56,13 @@ import {
   STATUS_TILE,
   worstStatus,
   type SixWord,
-} from '@/views/compliances/spectrum-status';
+} from '@/lib/compliance/spectrum-status';
 import { DateTile, StatusDonutCard, WordChip } from '@/views/compliances/spectrum-parts';
-import { MonthGrid, YearGrid, type CalendarMark } from '@/views/compliances/calendar-grids';
+import { MonthGrid, YearGrid, type CalendarMark } from '@/components/compliances/calendar-grids';
 import { StaffComplianceCalendar } from '@/views/compliances/staff-compliance-calendar';
 import { AreaShort, ClientDot, ClientTag } from '@/views/compliances/identity';
 import { FilingWindows } from '@/views/compliances/filing-windows';
-import { MonthNav } from '@/views/compliances/month-nav';
+import { MonthNav } from '@/components/compliances/month-nav';
 import { useMayWriteFilings } from '@/views/compliances/use-register';
 import { CatFilterTabs } from '@/components/compliances/CategoryTabs';
 import { UrgencyPill } from '@/components/compliances/TaskMarks';

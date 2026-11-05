@@ -30,7 +30,7 @@ import {
   RemindersCard,
 } from '@/views/compliances/detail/detail-parts';
 import { activityEntries, blockedLine, reminderViews } from '@/views/compliances/detail/detail-model';
-import { plainDate } from '@/views/compliances/spectrum-status';
+import { plainDate } from '@/lib/compliance/spectrum-status';
 import {
   ApiError,
   openTaskAttachment,

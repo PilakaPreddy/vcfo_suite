@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaLabel, daysUntil, filingWord, plainDate, toCsv, worstStatus } from '@/views/compliances/spectrum-status';
+import { areaLabel, daysUntil, filingWord, plainDate, toCsv, worstStatus } from '@/lib/compliance/spectrum-status';
 
 const NOW = new Date('2026-10-16T09:00:00Z');
 

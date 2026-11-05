@@ -5,7 +5,7 @@ import { addDaysYmd } from '@/lib/work/planner';
 import type { CalendarEventKind } from '@/lib/work/calendar-moves';
 import type { TaskRowDto } from '@/views/compliances/tasks/api';
 import { taskHintOf, taskStatus } from '@/views/compliances/tasks/task-calendar';
-import { areaLabel } from '@/views/compliances/spectrum-status';
+import { areaLabel } from '@/lib/compliance/spectrum-status';
 
 const TONE: Record<FilingStatus, StaffEventTone> = {
   filed: 'done',
