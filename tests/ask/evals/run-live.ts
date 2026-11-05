@@ -23,7 +23,7 @@ import { SNAPSHOTS, GOLDEN, type EvalSnapshot } from './golden';
 import { askConfig } from '@/lib/ask/config';
 import { generateAnswer } from '@/lib/ask/generate';
 import { runGuard } from '@/lib/ask/guard';
-import { getAskProvider } from '@/lib/ask/provider';
+import { addLlmUsage, getAskProvider, NO_LLM_USAGE, type LlmUsage } from '@/lib/ask/provider';
 import { CLIENT_TOOLS, type ClientToolContext } from '@/lib/ask/tools/client';
 import { STAFF_TOOLS, type StaffData } from '@/lib/ask/tools/staff';
 import { appliesTo, applicabilityFromSnapshot, listTopics } from '@/lib/ask/topics';
@@ -38,7 +38,27 @@ interface CaseResult {
   problems: string[];
   line: string;
   tools: string[];
+  guardTokens: LlmUsage;
+  answerTokens: LlmUsage;
+  cost: number;
 }
+
+/** USD per million tokens, for the report only. Cache reads are 0.1x and 5-minute writes 1.25x of input. */
+const PRICES: Array<{ match: string; input: number; output: number }> = [
+  { match: 'haiku-5-5', input: 0.1, output: 0.5 },
+  { match: 'haiku-4-5', input: 1, output: 5 },
+  { match: 'sonnet-5-5', input: 2, output: 10 },
+];
+
+function costOf(model: string, u: LlmUsage): number {
+  const price = PRICES.find((p) => model.includes(p.match));
+  if (!price) return 0;
+  const input = u.inputTokens + u.cacheReadTokens * 0.1 + u.cacheWriteTokens * 1.25;
+  return (input * price.input + u.outputTokens * price.output) / 1_000_000;
+}
+
+/** Everything the model read or wrote for one case, cached or not. */
+const totalTokens = (u: LlmUsage) => u.inputTokens + u.outputTokens + u.cacheReadTokens + u.cacheWriteTokens;
 
 /** Checklist state matching each fixture snapshot, so tools and snapshot agree. */
 function stateFor(name: EvalSnapshot): ClientToolContext['state'] {
@@ -68,7 +88,6 @@ async function main() {
   const out = outPath(process.argv.slice(2));
   const cases = GOLDEN.filter((c) => c.live && c.message);
   const results: CaseResult[] = [];
-  const tokens = { guardIn: 0, guardOut: 0, answerIn: 0, answerOut: 0, cacheRead: 0 };
   const models = { guard: config.models.guard, answer: config.models.answer };
 
   for (const c of cases) {
@@ -80,6 +99,8 @@ async function main() {
     let intentSeen = '—';
     let line = '';
     let toolsCalled: string[] = [];
+    let guardTokens = NO_LLM_USAGE;
+    let answerTokens = NO_LLM_USAGE;
     try {
       const topics = listTopics().filter((t) => t.audience === 'both' || t.audience === audience);
       const guard = await runGuard(provider, {
@@ -90,8 +111,7 @@ async function main() {
         topics: topics.map((t) => ({ slug: t.slug, question: t.question })),
       });
       models.guard = guard.model;
-      tokens.guardIn += guard.usage.inputTokens;
-      tokens.guardOut += guard.usage.outputTokens;
+      guardTokens = guard.usage;
       intentSeen = guard.result.intent;
       if (!live.intents.includes(guard.result.intent)) {
         problems.push(`intent ${guard.result.intent}, expected ${live.intents.join('|')}`);
@@ -144,9 +164,7 @@ async function main() {
             ),
         });
         models.answer = generated.model;
-        tokens.answerIn += generated.usage.inputTokens;
-        tokens.answerOut += generated.usage.outputTokens;
-        tokens.cacheRead += generated.usage.cacheReadTokens;
+        answerTokens = generated.usage;
         toolsCalled = generated.toolCalls.map((t) => t.name);
         const result = generated.result;
         if (result.ok !== true) {
@@ -171,14 +189,24 @@ async function main() {
       problems,
       line,
       tools: toolsCalled,
+      guardTokens,
+      answerTokens,
+      cost: costOf(models.guard, guardTokens) + costOf(models.answer, answerTokens),
     });
     console.log(`${problems.length === 0 ? 'PASS' : 'FAIL'}  ${c.id}${problems.length ? `  — ${problems.join(' / ')}` : ''}`);
   }
 
   const passed = results.filter((r) => r.pass).length;
-  const totalIn = tokens.guardIn + tokens.answerIn;
-  const totalOut = tokens.guardOut + tokens.answerOut;
-  console.log(`\n${passed}/${results.length} live cases passed. Tokens: ${totalIn} in, ${totalOut} out.`);
+  const guardSum = results.reduce((sum, r) => addLlmUsage(sum, r.guardTokens), NO_LLM_USAGE);
+  const answerSum = results.reduce((sum, r) => addLlmUsage(sum, r.answerTokens), NO_LLM_USAGE);
+  const answered = results.filter((r) => totalTokens(r.answerTokens) > 0);
+  const cost = results.reduce((sum, r) => sum + r.cost, 0);
+  const perGuard = Math.round(totalTokens(guardSum) / Math.max(results.length, 1));
+  const perAnswer = Math.round(totalTokens(answerSum) / Math.max(answered.length, 1));
+  const describe = (u: LlmUsage) =>
+    `${u.inputTokens} input, ${u.cacheReadTokens} cache read, ${u.cacheWriteTokens} cache write, ${u.outputTokens} output`;
+  console.log(`\n${passed}/${results.length} live cases passed. Guard: ${describe(guardSum)}. Answer: ${describe(answerSum)}.`);
+  console.log(`Per guard call ${perGuard} tokens; per generated answer ${perAnswer} tokens on ${answered.length} cases; about $${cost.toFixed(3)}.`);
 
   if (out) {
     const date = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
@@ -191,13 +219,15 @@ async function main() {
       `- **Provider:** ${provider.name}`,
       `- **Guard model:** ${models.guard}`,
       `- **Answer model:** ${models.answer} (effort ${config.answerEffort})`,
-      `- **Tokens:** ${totalIn} input (${tokens.guardIn} guard, ${tokens.answerIn} answer; ${tokens.cacheRead} read from cache), ${totalOut} output (${tokens.guardOut} guard, ${tokens.answerOut} answer)`,
+      `- **Guard tokens:** ${describe(guardSum)} (${perGuard} per call)`,
+      `- **Answer tokens:** ${describe(answerSum)} (${perAnswer} per generated answer, ${answered.length} cases)`,
+      `- **Cost at list price:** about $${cost.toFixed(3)}`,
       '',
-      '| Case | Category | Result | Intent seen | Intent expected | Problems |',
-      '|---|---|---|---|---|---|',
+      '| Case | Category | Result | Intent seen | Intent expected | Guard tokens | Answer tokens | Problems |',
+      '|---|---|---|---|---|---:|---:|---|',
       ...results.map(
         (r) =>
-          `| ${r.id} | ${r.category} | ${r.pass ? 'pass' : '**FAIL**'} | ${r.intentSeen} | ${r.intentExpected} | ${cell(r.problems.join(' / ')) || '—'} |`,
+          `| ${r.id} | ${r.category} | ${r.pass ? 'pass' : '**FAIL**'} | ${r.intentSeen} | ${r.intentExpected} | ${totalTokens(r.guardTokens)} | ${totalTokens(r.answerTokens)} | ${cell(r.problems.join(' / ')) || '—'} |`,
       ),
       '',
       '## Answers (for human review)',

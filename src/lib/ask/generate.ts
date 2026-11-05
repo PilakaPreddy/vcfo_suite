@@ -2,7 +2,7 @@ import 'server-only';
 
 import { ASK_PLAYBOOK } from '@/data/ask/playbook';
 import { ANSWER_ACTIONS, type AnswerDepth, type AskShell, type ProjectSnapshot } from '@/data/ask/schema';
-import type { LlmMessage, LlmProvider, LlmSystemBlock, LlmTool } from '@/lib/ask/provider';
+import { addLlmUsage, NO_LLM_USAGE, type LlmMessage, type LlmProvider, type LlmSystemBlock, type LlmTool, type LlmUsage } from '@/lib/ask/provider';
 import type { RetrievedSource } from '@/lib/ask/retrieve';
 import { listTopics } from '@/lib/ask/topics';
 import type { ValidationResult } from '@/lib/ask/validate';
@@ -124,7 +124,7 @@ export interface GenerateOutput {
   model: string;
   toolCalls: Array<{ name: string; args: unknown }>;
   toolResultTexts: string[];
-  usage: { inputTokens: number; outputTokens: number; cacheReadTokens: number };
+  usage: LlmUsage;
 }
 
 function escapeSource(text: string): string {
@@ -163,7 +163,7 @@ function buildSystem(input: Pick<GenerateInput, 'shell' | 'firmName' | 'snapshot
 export async function generateAnswer(input: GenerateInput): Promise<GenerateOutput> {
   const toolCalls: GenerateOutput['toolCalls'] = [];
   const toolResultTexts: string[] = [];
-  const usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
+  let usage = NO_LLM_USAGE;
   let model = input.model;
   const byName = new Map(input.tools.map((t) => [t.definition.name, t]));
   const tools = [...input.tools.map((t) => t.definition), RENDER_ANSWER_TOOL];
@@ -187,9 +187,7 @@ export async function generateAnswer(input: GenerateInput): Promise<GenerateOutp
       tools,
     });
     model = response.model;
-    usage.inputTokens += response.usage.inputTokens;
-    usage.outputTokens += response.usage.outputTokens;
-    usage.cacheReadTokens += response.usage.cacheReadTokens;
+    usage = addLlmUsage(usage, response.usage);
 
     if (response.stopReason === 'refusal') {
       return { result: { ok: false, errors: ['model refused'], refused: true }, model, toolCalls, toolResultTexts, usage };

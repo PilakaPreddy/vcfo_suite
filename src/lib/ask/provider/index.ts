@@ -25,11 +25,45 @@ export interface LlmRequest {
   timeoutMs?: number;
 }
 
+export interface LlmUsage {
+  /** Uncached input only; cache reads and writes are counted apart, as the API reports them. */
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+}
+
+export const NO_LLM_USAGE: LlmUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+
+export function addLlmUsage(a: LlmUsage, b: LlmUsage): LlmUsage {
+  return {
+    inputTokens: a.inputTokens + b.inputTokens,
+    outputTokens: a.outputTokens + b.outputTokens,
+    cacheReadTokens: a.cacheReadTokens + b.cacheReadTokens,
+    cacheWriteTokens: a.cacheWriteTokens + b.cacheWriteTokens,
+  };
+}
+
 export interface LlmResult {
   model: string;
   content: LlmContentBlock[];
   stopReason: string | null;
-  usage: { inputTokens: number; outputTokens: number; cacheReadTokens: number };
+  usage: LlmUsage;
+}
+
+/** The one mapping from an API response to the seam, shared by both adapters. */
+export function toLlmResult(response: Anthropic.Beta.BetaMessage): LlmResult {
+  return {
+    model: response.model,
+    content: response.content,
+    stopReason: response.stop_reason,
+    usage: {
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
+      cacheWriteTokens: response.usage.cache_creation_input_tokens ?? 0,
+    },
+  };
 }
 
 export interface LlmProvider {

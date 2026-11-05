@@ -2,7 +2,7 @@ import 'server-only';
 
 import { z } from 'zod';
 import type { AskShell } from '@/data/ask/schema';
-import type { LlmProvider, LlmTool } from '@/lib/ask/provider';
+import type { LlmProvider, LlmTool, LlmUsage } from '@/lib/ask/provider';
 
 /** Given to the guard verbatim (ASK-VCFO-CONTEXT §6.2). */
 const IN_SCOPE_DEFINITION =
@@ -70,7 +70,7 @@ function escapeTags(text: string): string {
 export interface GuardRun {
   result: GuardResult;
   model: string;
-  usage: { inputTokens: number; outputTokens: number; cacheReadTokens: number };
+  usage: LlmUsage;
 }
 
 /**

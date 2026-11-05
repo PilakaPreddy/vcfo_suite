@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { AnthropicBedrockMantle } from '@anthropic-ai/bedrock-sdk';
-import type { LlmProvider, LlmRequest, LlmResult } from './index';
+import { toLlmResult, type LlmProvider, type LlmRequest, type LlmResult } from './index';
 
 /**
  * Amazon Bedrock adapter (Mantle Messages endpoint). AWS credentials come
@@ -22,16 +22,7 @@ export function createBedrockProvider(region: string): LlmProvider {
         ...(req.tools && req.tools.length > 0 ? { tools: req.tools, tool_choice: { type: 'auto' } } : {}),
         ...(req.effort ? { output_config: { effort: req.effort } } : {}),
       }, req.timeoutMs ? { timeout: req.timeoutMs } : undefined);
-      return {
-        model: response.model,
-        content: response.content,
-        stopReason: response.stop_reason,
-        usage: {
-          inputTokens: response.usage.input_tokens,
-          outputTokens: response.usage.output_tokens,
-          cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
-        },
-      };
+      return toLlmResult(response);
     },
   };
 }

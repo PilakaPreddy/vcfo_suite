@@ -40,7 +40,7 @@ const { AskForbiddenError } = await import('@/lib/ask/access');
 const { REFUSAL_COPY } = await import('@/lib/ask/refusals');
 
 function content(reply: Record<string, unknown>, i: number): LlmResult {
-  const usage = { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0 };
+  const usage = { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 };
   if ('toolCall' in reply) {
     return {
       model: 'mock',
@@ -66,7 +66,7 @@ function providerFor(c: GoldenCase): LlmProvider & { calls: LlmRequest[] } {
     replies.push({
       model: 'mock-guard',
       stopReason: 'tool_use',
-      usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0 },
+      usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 },
       content: [
         {
           type: 'tool_use',

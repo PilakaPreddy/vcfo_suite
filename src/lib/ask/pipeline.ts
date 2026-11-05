@@ -22,7 +22,7 @@ import { sanitizeLinks, type DestinationScope } from '@/lib/ask/destinations';
 import { gateActiveCatalog } from '@/lib/checklist/checklist-step-gate';
 import { generateAnswer } from '@/lib/ask/generate';
 import { runGuard, type GuardResult } from '@/lib/ask/guard';
-import { getAskProvider } from '@/lib/ask/provider';
+import { addLlmUsage, getAskProvider, NO_LLM_USAGE, type LlmUsage } from '@/lib/ask/provider';
 import { checkAskRateLimit } from '@/lib/ask/rate-limit';
 import {
   greetingAnswer,
@@ -85,17 +85,12 @@ export type AskEvent =
 
 type Emit = (event: AskEvent) => void;
 
-type Usage = { model: string | null; inputTokens: number; outputTokens: number; cacheReadTokens: number };
+type Usage = LlmUsage & { model: string | null };
 
-const NO_USAGE: Usage = { model: null, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
+const NO_USAGE: Usage = { model: null, ...NO_LLM_USAGE };
 
-function addUsage(a: Usage, model: string, u: { inputTokens: number; outputTokens: number; cacheReadTokens: number }): Usage {
-  return {
-    model,
-    inputTokens: a.inputTokens + u.inputTokens,
-    outputTokens: a.outputTokens + u.outputTokens,
-    cacheReadTokens: a.cacheReadTokens + u.cacheReadTokens,
-  };
+function addUsage(a: Usage, model: string, u: LlmUsage): Usage {
+  return { model, ...addLlmUsage(a, u) };
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

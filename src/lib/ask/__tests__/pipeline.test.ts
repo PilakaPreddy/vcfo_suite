@@ -50,7 +50,7 @@ function toolUse(name: string, input: unknown, id = `tu-${name}`) {
 }
 
 function result(content: LlmResult['content'], stopReason = 'tool_use'): LlmResult {
-  return { model: 'mock-model', content, stopReason, usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0 } };
+  return { model: 'mock-model', content, stopReason, usage: { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 } };
 }
 
 function mockProvider(replies: LlmResult[]): LlmProvider & { calls: LlmRequest[] } {

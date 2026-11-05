@@ -1,7 +1,7 @@
 import 'server-only';
 
 import Anthropic from '@anthropic-ai/sdk';
-import type { LlmProvider, LlmRequest, LlmResult } from './index';
+import { toLlmResult, type LlmProvider, type LlmRequest, type LlmResult } from './index';
 import { anthropicApiKey } from '@/lib/secrets/app-secrets';
 import { withSecretRetry, type RuntimeSecret } from '@/lib/secrets/runtime-secret';
 
@@ -57,14 +57,5 @@ async function send(client: Anthropic, req: LlmRequest, refusalFallback: boolean
     },
     req.timeoutMs ? { timeout: req.timeoutMs } : undefined,
   );
-  return {
-    model: response.model,
-    content: response.content,
-    stopReason: response.stop_reason,
-    usage: {
-      inputTokens: response.usage.input_tokens,
-      outputTokens: response.usage.output_tokens,
-      cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
-    },
-  };
+  return toLlmResult(response);
 }
