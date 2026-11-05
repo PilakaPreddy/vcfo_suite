@@ -480,6 +480,17 @@ describe('path, usage and limits', () => {
     expect(lastStored()).toMatchObject({ path: 'tool_answer' });
   });
 
+  it('draws no table when the list is empty', async () => {
+    const provider = mockProvider([
+      guard('ops_query'),
+      result([toolUse('listPendingApprovals', {})]),
+      result([toolUse('render_answer', { line: 'No approvals are pending.', citations: [], actions: [] })]),
+    ]);
+    setAskProviderForTests(provider);
+    const { answer } = await run('admin', { shell: 'admin', message: 'What approvals are pending?' });
+    expect(answer?.visual).toBeUndefined();
+  });
+
   it('stops model calls once the daily budget is reached, while suggestions keep working', async () => {
     systemTodayTokenTotal.mockResolvedValue(2_000_000);
     const provider = mockProvider([]);

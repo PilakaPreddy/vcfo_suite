@@ -312,7 +312,9 @@ const TOOL_QUERIES: Readonly<Record<string, StaffQuery>> = {
 /** The table a staff list tool's answer shows: code draws it, so the model never reads or writes the rows. */
 export function staffToolCard(tool: string, data: StaffData, input: Record<string, unknown>): Visual | undefined {
   const query = TOOL_QUERIES[tool];
-  return query ? staffQueryAnswer(query, data, numberArg(input, 'days', 7, 30)).visual : undefined;
+  if (!query) return undefined;
+  const { visual } = staffQueryAnswer(query, data, numberArg(input, 'days', 7, 30));
+  return visual?.type === 'projectRows' && visual.rows.length > 0 ? visual : undefined;
 }
 
 /**
