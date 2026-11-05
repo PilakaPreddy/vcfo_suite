@@ -146,6 +146,14 @@ export async function systemStuckRegUpdateIds(before: Date): Promise<string[]> {
   return rows.map((row) => row.id);
 }
 
+/** A link that stayed unreachable this long needs a person, so it stops going round and says why. */
+export async function systemGiveUpOnUnreadUpdates(createdBefore: Date): Promise<void> {
+  await db
+    .update(regUpdates)
+    .set({ status: 'failed', error: 'The document could not be reached for three days. Upload the PDF instead.' })
+    .where(and(eq(regUpdates.status, 'queued'), lt(regUpdates.createdAt, createdBefore)));
+}
+
 // ---------- The pipeline (jobs) ----------
 
 export interface PipelineUpdate {
