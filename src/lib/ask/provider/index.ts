@@ -21,6 +21,10 @@ export interface LlmRequest {
   maxTokens: number;
   /** Only sent when set — models without effort support reject it. */
   effort?: 'low' | 'medium' | 'high';
+  /** Turns thinking off on a route that only classifies; everywhere else effort is the lever. */
+  thinking?: 'off';
+  /** Asks for JSON matching this schema as the reply, which costs far fewer tokens than a tool call. */
+  outputSchema?: Record<string, unknown>;
   /** Per-request timeout (ms) for long jobs such as document transcription. */
   timeoutMs?: number;
 }
@@ -51,11 +55,22 @@ export interface LlmResult {
   usage: LlmUsage;
 }
 
-/** The one mapping from an API response to the seam, shared by both adapters. */
+/** The `output_config` for a request, or nothing when it sets neither effort nor a format. */
+export function outputConfigFor(req: LlmRequest) {
+  if (!req.effort && !req.outputSchema) return {};
+  return {
+    output_config: {
+      ...(req.effort ? { effort: req.effort } : {}),
+      ...(req.outputSchema ? { format: { type: 'json_schema' as const, schema: req.outputSchema } } : {}),
+    },
+  };
+}
+
+/** The one mapping from an API response to the seam, shared by both adapters. A refusal carries no content. */
 export function toLlmResult(response: Anthropic.Beta.BetaMessage): LlmResult {
   return {
     model: response.model,
-    content: response.content,
+    content: response.stop_reason === 'refusal' ? [] : response.content,
     stopReason: response.stop_reason,
     usage: {
       inputTokens: response.usage.input_tokens,

@@ -8,6 +8,7 @@ import type {
   ProjectSnapshot,
   StaffQuery,
   Suggestion,
+  Visual,
 } from '@/data/ask/schema';
 import {
   appliesTo,
@@ -22,6 +23,7 @@ import { PREVIEW_CLIENT_LINE } from '@/lib/ask/preview';
 import { getClientResponseFields } from '@/lib/checklist/checklist-responses';
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
 import { atRisk, firmPulse, overdueAndDueSoon, pendingApprovals, waitingOnClient, type StaffData } from '@/lib/ask/tools/staff';
+import { numberArg } from '@/lib/ask/tools/types';
 
 /**
  * Pre-kept questions (T1): listed per shell and answered without a model
@@ -175,7 +177,7 @@ function plural(n: number, one: string, many = `${one}s`): string {
 }
 
 /** Staff "query" suggestions: tool call + template, no model (§9). */
-export function staffQueryAnswer(query: StaffQuery, data: StaffData): AnswerEnvelope {
+export function staffQueryAnswer(query: StaffQuery, data: StaffData, days = 7): AnswerEnvelope {
   const base = { origin: 'deterministic' as const, depth: 'normal' as const };
   switch (query) {
     case 'waitingOnClient': {
@@ -206,14 +208,14 @@ export function staffQueryAnswer(query: StaffQuery, data: StaffData): AnswerEnve
       };
     }
     case 'overdueAndDueSoon': {
-      const rows = overdueAndDueSoon(data, 7);
+      const rows = overdueAndDueSoon(data, days);
       const overdue = rows.filter((r) => r.overdue).length;
       return {
         ...base,
         line:
           rows.length === 0
-            ? 'Nothing is overdue or due in the next 7 days.'
-            : `${plural(overdue, 'filing is', 'filings are')} overdue and ${plural(rows.length - overdue, 'is', 'are')} due in the next 7 days.`,
+            ? `Nothing is overdue or due in the next ${days} days.`
+            : `${plural(overdue, 'filing is', 'filings are')} overdue and ${plural(rows.length - overdue, 'is', 'are')} due in the next ${days} days.`,
         visual: {
           type: 'projectRows',
           rows: rows.slice(0, 20).map((r) => ({
@@ -300,6 +302,18 @@ export function staffQueryAnswer(query: StaffQuery, data: StaffData): AnswerEnve
   }
 }
 
+
+const TOOL_QUERIES: Readonly<Record<string, StaffQuery>> = {
+  listWaitingOnClient: 'waitingOnClient',
+  listOverdueAndDueSoon: 'overdueAndDueSoon',
+  listPendingApprovals: 'pendingApprovals',
+};
+
+/** The table a staff list tool's answer shows: code draws it, so the model never reads or writes the rows. */
+export function staffToolCard(tool: string, data: StaffData, input: Record<string, unknown>): Visual | undefined {
+  const query = TOOL_QUERIES[tool];
+  return query ? staffQueryAnswer(query, data, numberArg(input, 'days', 7, 30)).visual : undefined;
+}
 
 /**
  * Deterministic answer for a suggestion, or null when it is not for this

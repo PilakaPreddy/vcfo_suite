@@ -15,11 +15,18 @@ let snapshot: ProjectSnapshot;
 
 vi.mock('@/db/repositories/ask-conversations', () => ({
   createAskConversation: (...a: unknown[]) => createAskConversation(...a),
-  getAskConversationWithMessages: vi.fn(async () => null),
+  getAskConversationWithMessages: (...a: unknown[]) => getAskConversationWithMessages(...a),
 }));
 vi.mock('@/db/repositories/ask-messages', () => ({
   appendAskMessage: (...a: unknown[]) => appendAskMessage(...a),
   countModelAnswersSince: (...a: unknown[]) => countModelAnswersSince(...a),
+}));
+const getAskConversationWithMessages = vi.fn();
+const systemRecordAskUsage = vi.fn();
+const systemTodayTokenTotal = vi.fn();
+vi.mock('@/db/repositories/ask-usage', () => ({
+  systemRecordAskUsage: (...a: unknown[]) => systemRecordAskUsage(...a),
+  systemTodayTokenTotal: (...a: unknown[]) => systemTodayTokenTotal(...a),
 }));
 const loadProjectSnapshot = vi.fn();
 const createAskConversation = vi.fn();
@@ -68,7 +75,10 @@ function mockProvider(replies: LlmResult[]): LlmProvider & { calls: LlmRequest[]
 }
 
 const guard = (intent: string, extra: Record<string, unknown> = {}) =>
-  result([toolUse('classify', { intent, rewrittenQuery: 'q', topicSlug: '', language: 'en', ...extra })]);
+  result(
+    [{ type: 'text', text: JSON.stringify({ intent, rewrittenQuery: 'q', topicSlug: '', language: 'en', ...extra }) } as unknown as LlmResult['content'][number]],
+    'end_turn',
+  );
 
 async function run(role: AuthContext['role'], request: Parameters<typeof runAskChat>[1]) {
   const events: Array<Record<string, unknown>> = [];
@@ -93,11 +103,18 @@ beforeEach(() => {
   };
   appendAskMessage.mockImplementation(async () => ({ id: `msg-${appendAskMessage.mock.calls.length}` }));
   countModelAnswersSince.mockResolvedValue(0);
+  getAskConversationWithMessages.mockResolvedValue(null);
+  loadStaffData.mockResolvedValue({ engagements: [], filings: [], now: new Date() });
+  systemRecordAskUsage.mockResolvedValue(undefined);
+  systemTodayTokenTotal.mockResolvedValue(0);
   loadProjectSnapshot.mockImplementation(async () => defaultSnapshotLoad());
   createAskConversation.mockResolvedValue({ id: 'conv-1' });
 });
 
-afterEach(() => setAskProviderForTests(undefined));
+afterEach(() => {
+  setAskProviderForTests(undefined);
+  vi.unstubAllEnvs();
+});
 
 describe('role gate', () => {
   it.each(['developer'] as const)('rejects %s before any work', async (role) => {
@@ -259,7 +276,7 @@ describe('super admin preview as a client', () => {
     expect(loadProjectSnapshot.mock.calls[0]![1]).toBe('eng-chosen');
     expect(createAskConversation.mock.calls[0]![1]).toMatchObject({ shell: 'client', engagementId: 'eng-db-1' });
     const toolNames = (provider.calls[1]!.tools ?? []).map((t) => t.name);
-    expect(toolNames).toContain('getProjectSnapshot');
+    expect(toolNames).toContain('getPhaseProgress');
     expect(toolNames).not.toContain('listWaitingOnClient');
     expect(toolNames).not.toContain('getFirmPulse');
     expect(loadStaffData).not.toHaveBeenCalled();
@@ -340,5 +357,168 @@ describe('"Where is my incorporation now?"', () => {
     setAskProviderForTests(provider);
     await run('client', { shell: 'client', engagementId: 'eng-1', message: 'how far along are we' });
     expect((provider.calls[1]!.tools ?? []).map((t) => t.name)).toContain('getPhaseProgress');
+  });
+});
+
+describe('path, usage and limits', () => {
+  const lastStored = () => appendAskMessage.mock.calls.at(-1)![2] as Record<string, unknown>;
+  const rendered = (extra: Record<string, unknown> = {}) =>
+    result([toolUse('render_answer', { line: 'A DIN identifies a director.', citations: [], actions: [], ...extra })]);
+
+  it('records the path of a suggestion, with no usage row', async () => {
+    setAskProviderForTests(mockProvider([]));
+    await run('client', { shell: 'client', engagementId: 'eng-1', suggestionId: 'client-next-step' });
+    expect(lastStored()).toMatchObject({ path: 'suggestion', model: null, inputTokens: null });
+    expect(systemRecordAskUsage).not.toHaveBeenCalled();
+  });
+
+  it('records a refusal against the router, usage included', async () => {
+    setAskProviderForTests(mockProvider([guard('off_topic')]));
+    await run('client', { shell: 'client', engagementId: 'eng-1', message: 'write me a poem' });
+    expect(lastStored()).toMatchObject({ path: 'router_refusal', inputTokens: 10, cacheWriteTokens: 0 });
+    expect(systemRecordAskUsage.mock.calls[0]![0]).toBe('router_refusal');
+    expect(systemRecordAskUsage.mock.calls[0]![1]).toMatchObject([{ model: 'mock-model', calls: 1 }]);
+  });
+
+  it('adds the router and the answer call together, and tells document from tool answers', async () => {
+    setAskProviderForTests(mockProvider([guard('explain'), rendered()]));
+    await run('client', { shell: 'client', engagementId: 'eng-1', message: 'What is a DIN?' });
+    expect(lastStored()).toMatchObject({ path: 'document_answer', inputTokens: 20, outputTokens: 10 });
+
+    setAskProviderForTests(mockProvider([guard('project_status'), result([toolUse('getPhaseProgress', {})]), rendered()]));
+    await run('client', { shell: 'client', engagementId: 'eng-1', message: 'Where are we?' });
+    expect(lastStored()).toMatchObject({ path: 'tool_answer', inputTokens: 30 });
+  });
+
+  it('a refused router call counts as unsafe, and a malformed one as explain', async () => {
+    setAskProviderForTests(mockProvider([result([], 'refusal')]));
+    await run('client', { shell: 'client', engagementId: 'eng-1', message: 'something' });
+    expect(lastStored()).toMatchObject({ path: 'router_refusal', origin: 'refusal' });
+
+    setAskProviderForTests(mockProvider([result([{ type: 'text', text: 'not json' } as never], 'end_turn'), rendered()]));
+    await run('client', { shell: 'client', engagementId: 'eng-1', message: 'What is a DIN?' });
+    expect(lastStored()).toMatchObject({ path: 'document_answer' });
+  });
+
+  it('asks to do work get a plain line and no generation', async () => {
+    const provider = mockProvider([guard('do_work')]);
+    setAskProviderForTests(provider);
+    const { answer } = await run('admin', { shell: 'admin', message: 'Send the reminder' });
+    expect(provider.calls).toHaveLength(1);
+    expect(answer?.line).toBe(REFUSAL_COPY.doWork);
+  });
+
+  it('routes the router and document answers to Haiku, thinking off for the router', async () => {
+    const provider = mockProvider([guard('explain'), rendered()]);
+    setAskProviderForTests(provider);
+    await run('client', { shell: 'client', engagementId: 'eng-1', message: 'What is a DIN?' });
+    expect(provider.calls[0]).toMatchObject({ model: 'claude-haiku-5-5', thinking: 'off', effort: 'low' });
+    expect(provider.calls[1]).toMatchObject({ model: 'claude-haiku-5-5', maxTokens: 1500 });
+  });
+
+  it('the router reads a short topic list, not all of them', async () => {
+    const provider = mockProvider([guard('explain'), rendered()]);
+    setAskProviderForTests(provider);
+    await run('client', { shell: 'client', engagementId: 'eng-1', message: 'What is GSTR-3B and the GST return?' });
+    const system = provider.calls[0]!.system.map((b) => b.text).join('\n');
+    expect(system.match(/^- /gm)?.length ?? 0).toBeLessThanOrEqual(8);
+    expect(system).toContain('obligation-gst-gstr-3b');
+  });
+
+  it('generation reads the rewritten question plus the last two turns', async () => {
+    getAskConversationWithMessages.mockResolvedValue({
+      conversation: { id: 'conv-9', shell: 'client', engagementId: 'eng-db-1' },
+      messages: Array.from({ length: 6 }, (_, i) => ({ sender: i % 2 ? 'assistant' : 'user', text: `turn ${i}` })),
+    });
+    const provider = mockProvider([guard('explain', { rewrittenQuery: 'How often is DIR-3 KYC filed?' }), rendered()]);
+    setAskProviderForTests(provider);
+    await run('client', { shell: 'client', engagementId: 'eng-1', conversationId: '11111111-1111-4111-8111-111111111111', message: 'how often?' });
+    expect(provider.calls[1]!.messages).toEqual([
+      { role: 'user', content: 'turn 4' },
+      { role: 'assistant', content: 'turn 5' },
+      { role: 'user', content: 'How often is DIR-3 KYC filed?' },
+    ]);
+  });
+
+  it('a reply cut at the limit is asked for again with twice the room', async () => {
+    const provider = mockProvider([guard('explain'), result([], 'max_tokens'), rendered()]);
+    setAskProviderForTests(provider);
+    const { answer } = await run('client', { shell: 'client', engagementId: 'eng-1', message: 'What is a DIN?', depth: 'detail' });
+    expect(provider.calls.map((c) => c.maxTokens)).toEqual([1024, 2500, 5000]);
+    expect(answer?.line).toBe('A DIN identifies a director.');
+  });
+
+  it('an identity number is masked before it is stored or sent', async () => {
+    const provider = mockProvider([guard('explain'), rendered()]);
+    setAskProviderForTests(provider);
+    await run('client', { shell: 'client', engagementId: 'eng-1', message: 'Is ABCDE1234F a valid PAN?' });
+    expect(appendAskMessage.mock.calls[0]![2]).toMatchObject({ text: 'Is XXXXXX234F a valid PAN?' });
+    expect(JSON.stringify(provider.calls[0]!.messages)).not.toContain('ABCDE1234F');
+  });
+
+  it('staff list tools give the model the count and top rows, while code draws the full table', async () => {
+    const filings = Array.from({ length: 12 }, (_, i) => ({
+      engagementId: `e${i}`,
+      companyName: `Company ${i}`,
+      particular: 'GSTR-3B',
+      dueDate: `2026-01-${String(i + 1).padStart(2, '0')}`,
+      filedOn: null,
+    }));
+    loadStaffData.mockResolvedValue({ engagements: [], filings, now: new Date('2026-02-01T00:00:00Z') });
+    const provider = mockProvider([
+      guard('ops_query'),
+      result([toolUse('listOverdueAndDueSoon', { days: 7 })]),
+      result([toolUse('render_answer', { line: '12 filings are overdue.', citations: [{ id: 'listOverdueAndDueSoon', label: 'Live data' }], actions: [] })]),
+    ]);
+    setAskProviderForTests(provider);
+    const { answer } = await run('admin', { shell: 'admin', message: 'What is overdue?' });
+    const toolResult = (provider.calls[2]!.messages.at(-1)!.content as Array<{ content: string }>)[0]!.content;
+    expect(JSON.parse(toolResult).count).toBe(12);
+    expect(JSON.parse(toolResult).top).toHaveLength(5);
+    expect((answer?.visual as { type: string; rows: unknown[] }).type).toBe('projectRows');
+    expect((answer?.visual as { rows: unknown[] }).rows).toHaveLength(12);
+    expect(lastStored()).toMatchObject({ path: 'tool_answer' });
+  });
+
+  it('stops model calls once the daily budget is reached, while suggestions keep working', async () => {
+    systemTodayTokenTotal.mockResolvedValue(2_000_000);
+    const provider = mockProvider([]);
+    setAskProviderForTests(provider);
+    const { answer } = await run('client', { shell: 'client', engagementId: 'eng-1', message: 'What is a DIN?' });
+    expect(provider.calls).toHaveLength(0);
+    expect(answer?.line).toBe(REFUSAL_COPY.budgetReached);
+    const suggestion = await run('client', { shell: 'client', engagementId: 'eng-1', suggestionId: 'client-next-step' });
+    expect(suggestion.answer?.origin).toBe('deterministic');
+  });
+
+  it('stops an answer that runs past its budget, and says so', async () => {
+    vi.stubEnv('ASK_ANSWER_MAX_TOKENS', '10');
+    setAskProviderForTests(mockProvider([guard('project_status'), result([toolUse('getPhaseProgress', {})])]));
+    const { answer } = await run('client', { shell: 'client', engagementId: 'eng-1', message: 'Where are we?' });
+    expect(answer?.line).toBe(REFUSAL_COPY.runTooLong);
+    expect(lastStored()).toMatchObject({ path: 'document_answer' });
+  });
+
+  it.each([
+    ['suggestion', { suggestionId: 'client-next-step' }],
+    ['document_answer', { message: 'What is a DIN?' }],
+  ])('the kill switch stops %s with a clear message', async (path, request) => {
+    vi.stubEnv('ASK_KILL_PATHS', path);
+    setAskProviderForTests(mockProvider([guard('explain')]));
+    const { answer } = await run('client', { shell: 'client', engagementId: 'eng-1', ...request });
+    expect(answer?.line).toBe(REFUSAL_COPY.pathStopped);
+    expect(lastStored()).toMatchObject({ path });
+  });
+
+  it('a killed tool path offers no tools to a document answer', async () => {
+    vi.stubEnv('ASK_KILL_PATHS', 'tool_answer');
+    const provider = mockProvider([guard('explain'), rendered()]);
+    setAskProviderForTests(provider);
+    await run('client', { shell: 'client', engagementId: 'eng-1', message: 'What is a DIN?' });
+    expect((provider.calls[1]!.tools ?? []).map((t) => t.name)).toEqual(['render_answer']);
+
+    setAskProviderForTests(mockProvider([guard('project_status')]));
+    const { answer } = await run('client', { shell: 'client', engagementId: 'eng-1', message: 'Where are we?' });
+    expect(answer?.line).toBe(REFUSAL_COPY.pathStopped);
   });
 });

@@ -20,6 +20,10 @@ vi.mock('@/db/repositories/ask-messages', () => ({
   appendAskMessage: vi.fn(async () => ({ id: 'msg-eval' })),
   countModelAnswersSince: vi.fn(async () => 0),
 }));
+vi.mock('@/db/repositories/ask-usage', () => ({
+  systemRecordAskUsage: vi.fn(async () => undefined),
+  systemTodayTokenTotal: vi.fn(async () => 0),
+}));
 vi.mock('@/lib/ask/snapshot', () => ({
   loadProjectSnapshot: vi.fn(async () => ({
     snapshot: SNAPSHOTS[current.snapshot ?? 'foreignCompany'],
@@ -65,14 +69,12 @@ function providerFor(c: GoldenCase): LlmProvider & { calls: LlmRequest[] } {
   if (c.mock?.guard) {
     replies.push({
       model: 'mock-guard',
-      stopReason: 'tool_use',
+      stopReason: 'end_turn',
       usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 },
       content: [
         {
-          type: 'tool_use',
-          id: 'tu-guard',
-          name: 'classify',
-          input: { intent: c.mock.guard.intent, rewrittenQuery: c.message ?? 'q', topicSlug: c.mock.guard.topicSlug ?? '', language: 'en' },
+          type: 'text',
+          text: JSON.stringify({ intent: c.mock.guard.intent, rewrittenQuery: c.message ?? 'q', topicSlug: c.mock.guard.topicSlug ?? '', language: 'en' }),
         } as never,
       ],
     });

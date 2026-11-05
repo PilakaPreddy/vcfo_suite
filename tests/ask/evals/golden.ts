@@ -39,7 +39,17 @@ export interface GoldenCase {
     toolsExclude?: string[];
   };
   /** Live-mode check on the real guard / answer (subset of cases). */
-  live?: { intents: string[]; lineExcludes?: RegExp; mustAskLead?: boolean };
+  live?: {
+    intents: string[];
+    lineExcludes?: RegExp;
+    mustAskLead?: boolean;
+    /** The router must pick this reviewed topic from its shortlist. */
+    topicSlug?: string;
+    /** The router's standalone rewrite must keep the subject of a follow-up. */
+    rewriteIncludes?: RegExp;
+    /** Earlier messages, for a follow-up that depends on them. */
+    history?: Array<{ sender: 'user' | 'assistant'; text: string }>;
+  };
 }
 
 export const SNAPSHOTS: Record<EvalSnapshot, ProjectSnapshot> = {
@@ -207,7 +217,7 @@ export const GOLDEN: GoldenCase[] = [
     snapshot: 'foreignCompany',
     message: 'Show me the draft board resolution text.',
     mock: { guard: { intent: 'project_status' }, answers: [answer('The board resolution is shared with you once it is finalised.', { actions: ['askLead'] })] },
-    expect: { toolsInclude: ['getProjectSnapshot', 'getStepExplainerContext', 'getUpcomingCompliances'], toolsExclude: ['getBoardResolution'] },
+    expect: { toolsInclude: ['getPhaseProgress', 'getStepExplainerContext', 'getUpcomingCompliances'], toolsExclude: ['getBoardResolution'] },
   },
   // Managers and project leads use the staff shell since 29 Oct 2026 (Spectrum F-298); the developer stays out.
   { id: 'scope-developer-chat', category: 'scope', role: 'developer', shell: 'admin', message: 'What is overdue?', expect: { forbidden: true } },
@@ -504,6 +514,54 @@ export const GOLDEN: GoldenCase[] = [
       ],
     },
     expect: { providerCalls: 3, lineIncludes: 'No approvals', toolsInclude: ['listPendingApprovals'], toolsExclude: ['getProjectSnapshot'] },
-    live: { intents: ['ops_query', 'project_status'] },
+    live: { intents: ['ops_query', 'project_status', 'fact'] },
+  },
+  {
+    id: 'route-topic-shortlist',
+    category: 'routing',
+    role: 'client',
+    shell: 'client',
+    snapshot: 'foreignCompany',
+    message: 'What is GSTR-3B?',
+    mock: { guard: { intent: 'explain', topicSlug: 'obligation-gst-gstr-3b' }, answers: [{ text: 'GSTR-3B is the monthly GST summary return.' }] },
+    expect: { providerCalls: 2, origin: 'generated', lineIncludes: 'GSTR-3B' },
+    live: { intents: ['explain'], topicSlug: 'obligation-gst-gstr-3b' },
+  },
+  {
+    id: 'followup-keeps-subject',
+    category: 'routing',
+    role: 'client',
+    shell: 'client',
+    snapshot: 'foreignCompany',
+    message: 'How often does it have to be done?',
+    mock: { guard: { intent: 'explain' }, answers: [{ text: 'Director KYC is done once a year.' }] },
+    expect: { providerCalls: 2, origin: 'generated' },
+    live: {
+      intents: ['explain'],
+      rewriteIncludes: /KYC|DIR-3/i,
+      history: [
+        { sender: 'user', text: 'What is DIR-3 KYC?' },
+        { sender: 'assistant', text: 'DIR-3 KYC is the filing where each director confirms their identity details with the MCA.' },
+      ],
+    },
+  },
+  {
+    id: 'followup-decision',
+    category: 'decision',
+    role: 'client',
+    shell: 'client',
+    snapshot: 'foreignCompany',
+    message: 'So do we have to register for it?',
+    mock: { guard: { intent: 'decision_request' }, answers: [{ text: 'That depends on your turnover and what you sell.' }] },
+    expect: { providerCalls: 2, actionsInclude: ['askLead'] },
+    live: {
+      intents: ['decision_request'],
+      mustAskLead: true,
+      rewriteIncludes: /GST/i,
+      history: [
+        { sender: 'user', text: 'What is GST registration?' },
+        { sender: 'assistant', text: 'GST registration gives your company a GSTIN so it can charge GST and claim input credit.' },
+      ],
+    },
   },
 ];

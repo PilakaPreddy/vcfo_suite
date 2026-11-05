@@ -4,7 +4,6 @@ import { ASK_PLAYBOOK } from '@/data/ask/playbook';
 import { ANSWER_ACTIONS, type AnswerDepth, type AskShell, type ProjectSnapshot } from '@/data/ask/schema';
 import { addLlmUsage, NO_LLM_USAGE, type LlmMessage, type LlmProvider, type LlmSystemBlock, type LlmTool, type LlmUsage } from '@/lib/ask/provider';
 import type { RetrievedSource } from '@/lib/ask/retrieve';
-import { listTopics } from '@/lib/ask/topics';
 import type { ValidationResult } from '@/lib/ask/validate';
 
 /**
@@ -16,54 +15,61 @@ import type { ValidationResult } from '@/lib/ask/validate';
  */
 
 const RENDER_ANSWER = 'render_answer';
+/** The citation id of the project snapshot; suggestions cite the same id. */
+export const SNAPSHOT_SOURCE_ID = 'getProjectSnapshot';
 const MAX_ROUNDS = 5;
+/** Room for thinking plus `render_answer`. A reply cut at the limit is asked for again with twice the room. */
+const MAX_TOKENS: Record<AnswerDepth, number> = { simple: 1000, normal: 1500, detail: 2500 };
 
-const VISUAL_GUIDE = [
+const SHARED_VISUALS = [
   'visual is optional and must be exactly one of:',
   '{"type":"flow","stages":[{"label","sub?","state":"done|here|next"}]} (2-5 stages)',
   '{"type":"steps","items":[{"label","form?"}]} (2-8)',
   '{"type":"compare","left":{"title","points":[]},"right":{"title","points":[]}} (<=5 points each)',
   '{"type":"timeline","events":[{"label","when","source":"calendar|rule"}]} (2-6; calendar dates only from tool results)',
   '{"type":"keyFacts","facts":[{"k","v"}]} (2-6)',
-  'Client only: {"type":"nextStep","stepId","title","dueLabel?","items":[]}',
-  'Staff only: {"type":"projectRows","rows":[{"engagementId","name","step","meta","tone":"late|waiting|plain"}]}, {"type":"metrics","items":[{"k","v"}]} (2-4)',
-].join('\n');
+];
+const CLIENT_VISUAL = '{"type":"nextStep","stepId","title","dueLabel?","items":[]}';
+const STAFF_VISUAL = '{"type":"metrics","items":[{"k","v"}]} (2-4)';
 
-const LINK_GUIDE = [
-  'Allowed places (client): {"to":"incorporation","focusStepId"?}, {"to":"step","stepId","section"?:"upload|form"}, {"to":"compliances"}, {"to":"documents"}, {"to":"library"}, {"to":"learn","slug"}.',
-  'Allowed places (staff): {"to":"project","engagementId"}, {"to":"projectStep","engagementId","stepId"}, {"to":"approvals"}, {"to":"compliance","filter"?:"overdue|dueSoon"}, {"to":"composeReminder","engagementId"}.',
-  'Links only open a page; they never submit, approve, upload or send. Use ids exactly as tools returned them.',
-].join(' ');
+const CLIENT_PLACES =
+  '{"to":"incorporation","focusStepId"?}, {"to":"step","stepId","section"?:"upload|form"}, {"to":"compliances"}, {"to":"documents"}, {"to":"library"}, {"to":"learn","slug"}';
+const STAFF_PLACES =
+  '{"to":"project","engagementId"}, {"to":"projectStep","engagementId","stepId"}, {"to":"approvals"}, {"to":"compliance","filter"?:"overdue|dueSoon"}, {"to":"composeReminder","engagementId"}';
 
-const RENDER_ANSWER_TOOL: LlmTool = {
-  name: RENDER_ANSWER,
-  description: `Deliver the final answer to the user. Call exactly once, last.\n${VISUAL_GUIDE}`,
-  input_schema: {
-    type: 'object',
-    properties: {
-      line: { type: 'string', description: 'The plain-English answer, 1-3 short sentences, in the user language' },
-      why: { type: 'string', description: 'Client only: why it matters to them, 1-2 sentences' },
-      visual: { type: 'object', description: 'Optional visual, one of the allowed shapes' },
-      citations: {
-        type: 'array',
-        items: {
-          type: 'object',
-          properties: { id: { type: 'string' }, label: { type: 'string' } },
-          required: ['id', 'label'],
+/** Only the shapes this shell may use, so neither persona pays for the other's. */
+function renderAnswerTool(shell: AskShell): LlmTool {
+  const client = shell === 'client';
+  return {
+    name: RENDER_ANSWER,
+    description: `Deliver the final answer to the user. Call exactly once, last.\n${[...SHARED_VISUALS, client ? CLIENT_VISUAL : STAFF_VISUAL].join('\n')}`,
+    input_schema: {
+      type: 'object',
+      properties: {
+        line: { type: 'string', description: 'The plain-English answer, 1-3 short sentences, in the user language' },
+        ...(client ? { why: { type: 'string', description: 'Why it matters to them, 1-2 sentences' } } : {}),
+        visual: { type: 'object', description: 'Optional visual, one of the allowed shapes' },
+        citations: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: { id: { type: 'string' }, label: { type: 'string' } },
+            required: ['id', 'label'],
+          },
+          description: 'Ids of the sources or tools this answer relies on',
         },
-        description: 'Ids of the sources or tools this answer relies on',
+        related: { type: 'array', items: { type: 'string' }, description: 'Up to 3 topic ids from the sources' },
+        actions: { type: 'array', items: { type: 'string', enum: [...ANSWER_ACTIONS] } },
+        links: {
+          type: 'array',
+          description: `Optional go-there links, at most 2 and at most 1 primary: {"dest": <place>, "label": "Verb + place", "primary"?: true}. Allowed places: ${client ? CLIENT_PLACES : STAFF_PLACES}. Links only open a page; they never submit, approve, upload or send. Use ids exactly as tools returned them.`,
+          items: { type: 'object' },
+        },
       },
-      related: { type: 'array', items: { type: 'string' }, description: 'Up to 3 topic slugs' },
-      actions: { type: 'array', items: { type: 'string', enum: [...ANSWER_ACTIONS] } },
-      links: {
-        type: 'array',
-        description: `Optional go-there links, at most 2 and at most 1 primary: {"dest": <place>, "label": "Verb + place", "primary"?: true}. ${LINK_GUIDE}`,
-        items: { type: 'object' },
-      },
+      required: ['line', 'citations', 'actions'],
     },
-    required: ['line', 'citations', 'actions'],
-  },
-};
+  };
+}
 
 function personaBlock(shell: AskShell, firmName: string): string {
   if (shell === 'client') {
@@ -95,13 +101,6 @@ const RULES_BLOCK = [
   `- Finish by calling ${RENDER_ANSWER} exactly once.`,
 ].join('\n');
 
-function topicSummaries(): string {
-  return listTopics()
-    .filter((t) => t.status === 'published')
-    .map((t) => `- ${t.slug}: ${t.question} ${t.body.normal}`)
-    .join('\n');
-}
-
 export interface GenerateInput {
   provider: LlmProvider;
   model: string;
@@ -111,16 +110,19 @@ export interface GenerateInput {
   snapshot: ProjectSnapshot | null;
   sources: readonly RetrievedSource[];
   history: ReadonlyArray<{ sender: 'user' | 'assistant'; text: string }>;
+  /** The router's standalone rewrite, so only the last two turns of history need to come along. */
   message: string;
   language: string;
   depth: AnswerDepth;
   decision: boolean;
   tools: ReadonlyArray<{ definition: LlmTool; run: (input: Record<string, unknown>) => Promise<unknown> }>;
   validate: (raw: unknown, toolResultTexts: readonly string[]) => ValidationResult;
+  /** Input plus output tokens this answer may spend across its rounds. */
+  maxTotalTokens: number;
 }
 
 export interface GenerateOutput {
-  result: ValidationResult | { ok: false; errors: string[]; textOnly: string } | { ok: false; errors: string[]; refused: true };
+  result: ValidationResult | { ok: false; errors: string[]; textOnly: string } | { ok: false; errors: string[]; refused: true } | { ok: false; errors: string[]; overBudget: true };
   model: string;
   toolCalls: Array<{ name: string; args: unknown }>;
   toolResultTexts: string[];
@@ -137,11 +139,9 @@ function buildSystem(input: Pick<GenerateInput, 'shell' | 'firmName' | 'snapshot
     RULES_BLOCK,
     'Firm playbook:',
     ASK_PLAYBOOK,
-    'Reviewed topics:',
-    topicSummaries() || '(none published yet)',
   ].join('\n\n');
   const turn = [
-    input.snapshot ? `Project snapshot (the user's own project):\n${JSON.stringify(input.snapshot)}` : '',
+    input.snapshot ? `Project snapshot (the user's own project, id ${SNAPSHOT_SOURCE_ID}):\n${JSON.stringify(input.snapshot)}` : '',
     input.sources.length > 0
       ? `Sources:\n${input.sources
           .map((s) => `<source id="${s.id}" label="${s.label.replace(/"/g, "'")}">\n${escapeSource(s.text)}\n</source>`)
@@ -166,21 +166,22 @@ export async function generateAnswer(input: GenerateInput): Promise<GenerateOutp
   let usage = NO_LLM_USAGE;
   let model = input.model;
   const byName = new Map(input.tools.map((t) => [t.definition.name, t]));
-  const tools = [...input.tools.map((t) => t.definition), RENDER_ANSWER_TOOL];
+  const tools = [...input.tools.map((t) => t.definition), renderAnswerTool(input.shell)];
   const system = buildSystem(input);
 
   const messages: LlmMessage[] = [
-    ...input.history.slice(-6).map((m) => ({ role: m.sender, content: m.text }) as LlmMessage),
+    ...input.history.slice(-2).map((m) => ({ role: m.sender, content: m.text }) as LlmMessage),
     { role: 'user', content: input.message },
   ];
   // The API needs a user turn first and alternating roles are merged; drop a leading assistant turn.
   while (messages.length > 0 && messages[0]!.role !== 'user') messages.shift();
 
   let retried = false;
+  let maxTokens = MAX_TOKENS[input.depth];
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
     const response = await input.provider.complete({
       model: input.model,
-      maxTokens: 4096,
+      maxTokens,
       effort: input.effort,
       system,
       messages,
@@ -188,6 +189,14 @@ export async function generateAnswer(input: GenerateInput): Promise<GenerateOutp
     });
     model = response.model;
     usage = addLlmUsage(usage, response.usage);
+
+    if (usage.inputTokens + usage.outputTokens >= input.maxTotalTokens) {
+      return { result: { ok: false, errors: ['answer budget'], overBudget: true }, model, toolCalls, toolResultTexts, usage };
+    }
+    if (response.stopReason === 'max_tokens') {
+      maxTokens *= 2;
+      continue;
+    }
 
     if (response.stopReason === 'refusal') {
       return { result: { ok: false, errors: ['model refused'], refused: true }, model, toolCalls, toolResultTexts, usage };

@@ -16,6 +16,10 @@ export const REFUSAL_COPY = {
   greetingClient: 'Hello. Ask me anything about your company setup, or pick a question below.',
   greetingStaff: 'Hello. Ask about firm projects, deadlines or compliance rules, or pick a question below.',
   rateLimited: "You've asked a lot of questions in a short time. Please try again a little later.",
+  budgetReached: "Ask VCFO has reached today's usage limit, so typed questions resume tomorrow. Suggested questions still work.",
+  pathStopped: 'This kind of answer is switched off for now. Suggested questions still work.',
+  runTooLong: 'That question needed more work than one answer allows. Try asking about one project or one form at a time.',
+  doWork: "I can't do that from chat yet. I can explain it or show you where to do it.",
 } as const;
 
 function envelope(line: string, shell: AskShell, extra: Partial<AnswerEnvelope> = {}): AnswerEnvelope {
@@ -37,6 +41,10 @@ export function offTopicAnswer(shell: AskShell): AnswerEnvelope {
 
 export function unavailableAnswer(shell: AskShell): AnswerEnvelope {
   return envelope(shell === 'client' ? REFUSAL_COPY.unavailable : REFUSAL_COPY.unavailableStaff, shell);
+}
+
+export function limitAnswer(shell: AskShell, limit: 'budgetReached' | 'pathStopped' | 'runTooLong' | 'doWork'): AnswerEnvelope {
+  return envelope(REFUSAL_COPY[limit], shell);
 }
 
 export function greetingAnswer(shell: AskShell): AnswerEnvelope {

@@ -10,7 +10,8 @@ import { numberArg, type AskTool } from './types';
 /**
  * CLIENT TOOLS — read-only, scoped to the one engagement the snapshot was
  * loaded for (already access-checked, client-redacted state). None of them
- * reads board resolutions, identity numbers, addresses or people.
+ * reads board resolutions, identity numbers, addresses or people. The snapshot
+ * itself is in the system prompt, so no tool repeats it.
  */
 export interface ClientToolContext {
   snapshot: ProjectSnapshot;
@@ -50,15 +51,6 @@ function upcomingCompliances(ctx: ClientToolContext, days: number) {
 }
 
 export const CLIENT_TOOLS: Record<string, AskTool<ClientToolContext>> = {
-  getProjectSnapshot: {
-    definition: {
-      name: 'getProjectSnapshot',
-      description: "The client's own project: company, legal form, phase, current step and progress.",
-      strict: true,
-      input_schema: { type: 'object', properties: {}, required: [], additionalProperties: false },
-    },
-    run: async (ctx) => ctx.snapshot,
-  },
   getPhaseProgress: {
     definition: {
       name: 'getPhaseProgress',

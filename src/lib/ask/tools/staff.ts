@@ -15,6 +15,8 @@ import { numberArg, type AskTool } from './types';
  * data loaded through scoped repositories (`staff-data.ts`), so they are
  * testable without a database. Results carry only company names, step titles,
  * counts and calendar dates — never identity numbers, addresses or people.
+ * List tools give the model the count and the top rows; code draws the full
+ * table in the card (`staffToolCard` in suggestions.ts).
  */
 export interface StaffEngagement {
   dbId: string;
@@ -81,7 +83,6 @@ export function overdueAndDueSoon(data: StaffData, days: number) {
   return data.filings
     .filter((f) => !f.filedOn && f.dueDate <= endIso)
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-    .slice(0, 50)
     .map((f) => {
       const e = byDb.get(f.engagementId) ?? byApp.get(f.engagementId);
       return {
@@ -206,22 +207,28 @@ export function atRisk(data: StaffData) {
   return out;
 }
 
+const MODEL_ROWS = 5;
+
+function forModel<Row>(rows: readonly Row[]) {
+  return { count: rows.length, top: rows.slice(0, MODEL_ROWS) };
+}
+
 const EMPTY_SCHEMA = { type: 'object' as const, properties: {}, required: [], additionalProperties: false };
 
 export const STAFF_TOOLS: Record<string, AskTool<StaffData>> = {
   listWaitingOnClient: {
     definition: {
       name: 'listWaitingOnClient',
-      description: 'Projects whose next step is waiting on the client, with the step and days waiting.',
+      description: 'Projects whose next step is waiting on the client: the count and top rows. The app shows the full table.',
       strict: true,
       input_schema: EMPTY_SCHEMA,
     },
-    run: async (data) => waitingOnClient(data),
+    run: async (data) => forModel(waitingOnClient(data)),
   },
   listOverdueAndDueSoon: {
     definition: {
       name: 'listOverdueAndDueSoon',
-      description: 'Unfiled compliance items that are overdue or due within N days (max 30), firm-wide.',
+      description: 'Unfiled compliance items overdue or due within N days (max 30): the count and top rows. The app shows the full table.',
       strict: true,
       input_schema: {
         type: 'object',
@@ -230,16 +237,16 @@ export const STAFF_TOOLS: Record<string, AskTool<StaffData>> = {
         additionalProperties: false,
       },
     },
-    run: async (data, input) => overdueAndDueSoon(data, numberArg(input, 'days', 7, 30)),
+    run: async (data, input) => forModel(overdueAndDueSoon(data, numberArg(input, 'days', 7, 30))),
   },
   listPendingApprovals: {
     definition: {
       name: 'listPendingApprovals',
-      description: 'Steps waiting on a manager or admin decision across the firm.',
+      description: 'Steps waiting on a manager or admin decision: the count and top rows. The app shows the full table.',
       strict: true,
       input_schema: EMPTY_SCHEMA,
     },
-    run: async (data) => pendingApprovals(data),
+    run: async (data) => forModel(pendingApprovals(data)),
   },
   getProjectSummary: {
     definition: {
