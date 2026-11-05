@@ -48,6 +48,7 @@
     "@anthropic-ai/sdk": "^0.129.0",
     "@aws-sdk/client-apprunner": "^3.1105.0",
     "@aws-sdk/client-backup": "^3.1160.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.1163.0",
     "@aws-sdk/client-cloudwatch-logs": "^3.1105.0",
     "@aws-sdk/client-cost-explorer": "^3.1105.0",
     "@aws-sdk/client-ec2": "^3.1160.0",
@@ -105,6 +106,7 @@
     "server-only": "^0.0.1",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "unpdf": "^2.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
