@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import { Check, ExternalLink, ThumbsDown, ThumbsUp } from 'lucide-react';
 import type { AnswerEnvelope } from '@/data/ask/schema';
 import { saveToLibrary } from '@/hooks/ask/ask-api';
-import { useStaffBasePath } from '@/hooks/use-staff-base-path';
+import { useAskLinkBase } from '@/components/ask/use-ask-link-base';
 import { getTopic } from '@/lib/ask/topics';
 import { clientStepHref } from '@/lib/client/client-overview';
-import { adminProjectPath } from '@/lib/projects/project-step-path';
+import { askProjectPath } from '@/lib/ask/resolve-href';
 import { reminderComposeHref } from '@/lib/ask/reminder';
 import { buttonVariants } from '@/components/ui/button-variants';
 import { Tag } from '@/components/ui/spectrum-chip';
@@ -43,7 +43,7 @@ export function AskAnswerCard({
 }) {
   const ask = useAskOptional();
   const router = useRouter();
-  const staffBase = useStaffBasePath();
+  const linkBase = useAskLinkBase();
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -184,12 +184,12 @@ export function AskAnswerCard({
           </button>
         )}
         {has('openProject') && !hasLinks && !client && rowTarget && (
-          <Link href={adminProjectPath({ slug: rowTarget, id: rowTarget }, staffBase)} className={secondary}>
+          <Link href={askProjectPath(rowTarget, linkBase)} className={secondary}>
             Open in Projects
           </Link>
         )}
         {has('draftReminder') && !client && (
-          <Link href={reminderComposeHref(staffBase, answer)} className={secondary}>
+          <Link href={reminderComposeHref(linkBase, answer)} className={secondary}>
             Draft reminder
           </Link>
         )}

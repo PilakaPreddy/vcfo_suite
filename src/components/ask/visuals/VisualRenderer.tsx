@@ -2,6 +2,7 @@
 
 import { visualSchema } from '@/data/ask/schema';
 import { visualText } from '@/lib/ask/visual-text';
+import { Bars } from './Bars';
 import { Compare } from './Compare';
 import { Flow } from './Flow';
 import { KeyFacts } from './KeyFacts';
@@ -47,6 +48,9 @@ export function VisualRenderer({ visual }: { visual: unknown }) {
       break;
     case 'metrics':
       body = <Metrics visual={v} />;
+      break;
+    case 'bars':
+      body = <Bars visual={v} />;
       break;
   }
   return (

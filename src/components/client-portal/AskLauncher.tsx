@@ -19,8 +19,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAskOptional } from '@/components/ask/ask-context';
+import type { Destination } from '@/data/ask/schema';
 import { ASK_PANEL_SIZES, useAskPanelSize, type AskPanelSize } from '@/components/ask/use-ask-layout';
 import { useApp } from '@/context/AppContext';
+import { CLIENT_BASE, resolveHref } from '@/lib/ask/resolve-href';
 import { AFTER_QUESTIONS, BEFORE_QUESTIONS } from '@/lib/client-portal/answers';
 import { usePortal, type WhatsThisAnswer } from './PortalProvider';
 import { VisorCharacter, VisorHead } from '@/components/ask/Visor';
@@ -50,8 +52,10 @@ function readLog(): LogItem[] {
 }
 
 /** Ask VCFO go-there link → a portal path. */
-function destHref(dest: { to: string; stepId?: string; focusStepId?: string; slug?: string; itemId?: string }): string {
+function destHref(dest: Destination): string {
   switch (dest.to) {
+    case 'list':
+      return resolveHref(dest, CLIENT_BASE);
     case 'step':
       return dest.stepId ? stepHref(dest.stepId) : '/app/client/incorporation';
     case 'incorporation':
@@ -222,7 +226,7 @@ export function AskLauncher() {
         t: last.answer.line + (last.answer.why ? `\n${last.answer.why}` : ''),
         k: refusal ? 'nan' : 'ok',
         h: refusal,
-        links: (last.answer.links ?? []).map((l) => ({ label: l.label, href: destHref(l.dest as never) })),
+        links: (last.answer.links ?? []).map((l) => ({ label: l.label, href: destHref(l.dest) })),
         mid: last.messageId,
         q: [...ask.thread].reverse().find((i) => i.kind === 'user')?.kind === 'user' ? ([...ask.thread].reverse().find((i) => i.kind === 'user') as { text: string }).text : undefined,
       };

@@ -47,8 +47,9 @@ function VisualBlock({ visual }: { visual: Visual }) {
         </View>
       );
     case 'keyFacts':
-    case 'metrics': {
-      const rows = visual.type === 'keyFacts' ? visual.facts : visual.items;
+    case 'metrics':
+    case 'bars': {
+      const rows = visual.type === 'keyFacts' ? visual.facts : visual.items.map((item) => ({ k: item.k, v: String(item.v) }));
       return (
         <View style={{ marginBottom: 8 }}>
           {rows.map((r) => (
