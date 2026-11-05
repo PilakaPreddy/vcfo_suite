@@ -12,10 +12,11 @@ import {
   index,
   uniqueIndex,
   primaryKey,
-  customType,
+  vector,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
+import { EMBEDDING_DIMENSIONS, tsvector } from './schema-types';
 
 /**
  * VCFO Suite database schema (Drizzle).
@@ -932,11 +933,29 @@ export const announcementSources = pgTable(
     enabled: boolean('enabled').notNull().default(true),
     lastFetchedAt: timestamp('last_fetched_at', { withTimezone: true }),
     lastError: text('last_error'),
+    /** Watch: feed | page | manual | email. For manual and email, feed_url holds the official home page. */
+    sourceType: text('source_type').notNull().default('feed'),
+    /** The code adapter that reads a page source (src/lib/watch/adapters). */
+    adapter: text('adapter'),
+    /** Law area for the update and the filters: gst, mca, tax, fema and so on. */
+    area: text('area'),
+    /** everyone | staff: a staff source never reaches a client. */
+    audience: text('audience').notNull().default('everyone'),
+    checkEveryMinutes: integer('check_every_minutes').notNull().default(180),
+    nextCheckAt: timestamp('next_check_at', { withTimezone: true }),
+    etag: text('etag'),
+    lastModified: text('last_modified'),
+    contentHash: text('content_hash'),
+    lastSuccessAt: timestamp('last_success_at', { withTimezone: true }),
+    consecutiveFailures: integer('consecutive_failures').notNull().default(0),
+    /** unknown | ok | empty | failing | blocked (a 403 or a robots refusal stays blocked). */
+    health: text('health').notNull().default('unknown'),
     createdById: uuid('created_by_id').references(() => profiles.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     feedUrlUidx: uniqueIndex('announcement_sources_feed_url_uidx').on(t.feedUrl),
+    nextCheckIdx: index('announcement_sources_next_check_idx').on(t.enabled, t.nextCheckAt),
   }),
 );
 
@@ -953,6 +972,10 @@ export const announcements = pgTable(
     sourceUrl: text('source_url'),
     /** In-app client portal page the announcement points to (`/app/client/...`); drives the detail "Open" button (C-741). */
     linkPath: text('link_path'),
+    /** everyone | staff. A Watch update stays staff-only until a reviewer publishes it. */
+    audience: text('audience').notNull().default('everyone'),
+    /** Shows the "Not yet reviewed" mark on a Watch update. */
+    unreviewed: boolean('unreviewed').notNull().default(false),
     authorId: uuid('author_id').references(() => profiles.id, { onDelete: 'set null' }),
     authorName: text('author_name').notNull(),
     authorRole: text('author_role'),
@@ -1020,13 +1043,6 @@ export const engagementChangeRequests = pgTable(
 // items are private to their profile; knowledge sources are admin / super only.
 // ---------------------------------------------------------------------------
 
-/** Postgres full-text vector; drizzle has no built-in column type for it. */
-const tsvector = customType<{ data: string }>({
-  dataType() {
-    return 'tsvector';
-  },
-});
-
 export const askConversations = pgTable(
   'ask_conversations',
   {
@@ -1065,11 +1081,15 @@ export const askMessages = pgTable(
     inputTokens: integer('input_tokens'),
     outputTokens: integer('output_tokens'),
     cacheReadTokens: integer('cache_read_tokens'),
+    cacheWriteTokens: integer('cache_write_tokens'),
+    /** The route this answer took (AskPath in src/lib/ask/paths.ts). */
+    path: text('path'),
     latencyMs: integer('latency_ms'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
     conversationIdx: index('ask_messages_conversation_idx').on(t.conversationId, t.createdAt),
+    pathIdx: index('ask_messages_path_idx').on(t.path, t.createdAt),
   }),
 );
 
@@ -1109,6 +1129,13 @@ export const askDocuments = pgTable('ask_documents', {
   sourceUrl: text('source_url'),
   s3Key: text('s3_key'),
   effectiveFrom: date('effective_from'),
+  effectiveTo: date('effective_to'),
+  /** The older source this one replaces; set `superseded_at` on that row in the same write. */
+  supersedesDocumentId: uuid('supersedes_document_id').references((): AnyPgColumn => askDocuments.id, {
+    onDelete: 'set null',
+  }),
+  /** Search leaves out a replaced source, because a confident old rule is the worst failure. */
+  supersededAt: timestamp('superseded_at', { withTimezone: true }),
   lastVerifiedAt: timestamp('last_verified_at', { withTimezone: true }),
   ownerProfileId: uuid('owner_profile_id').references(() => profiles.id, { onDelete: 'set null' }),
   status: text('status').notNull().default('processing'), // processing|ready|failed|archived
@@ -1116,11 +1143,14 @@ export const askDocuments = pgTable('ask_documents', {
   /** Last ingestion failure, shown on the sources page with a retry. */
   error: text('error'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  /** Part of the knowledge version that saved answers are keyed on. */
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
 /**
- * No `embedding` column in v1: local Postgres has no pgvector (Phase 0), and
- * retrieval is full-text only (OD2). Adding a nullable vector later is additive.
+ * `embedding` stays null when the provider is "none"; search then runs on full-text alone. Effective
+ * dates and supersession here are for one section replaced inside a document that otherwise stands.
+ * There is no vector index: the corpus is small, so search filters by access and compares directly.
  */
 export const askChunks = pgTable(
   'ask_chunks',
@@ -1135,6 +1165,14 @@ export const askChunks = pgTable(
     tsv: tsvector('tsv').generatedAlwaysAs(
       sql`to_tsvector('english', coalesce(context_prefix, '') || ' ' || text)`,
     ),
+    embedding: vector('embedding', { dimensions: EMBEDDING_DIMENSIONS }),
+    embeddingModel: text('embedding_model'),
+    effectiveFrom: date('effective_from'),
+    effectiveTo: date('effective_to'),
+    supersedesChunkId: uuid('supersedes_chunk_id').references((): AnyPgColumn => askChunks.id, {
+      onDelete: 'set null',
+    }),
+    supersededAt: timestamp('superseded_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
@@ -1236,3 +1274,5 @@ export * from './schema-compliance-tasks';
 export * from './schema-labour-registers';
 export * from './schema-board-meetings';
 export * from './schema-receivables';
+export * from './schema-ask';
+export * from './schema-watch';

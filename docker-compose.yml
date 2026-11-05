@@ -11,7 +11,9 @@
 
 services:
   postgres:
-    image: postgres:16
+    # Postgres 16 with pgvector, for Ask VCFO's vector search. The data volume format is the same
+    # as plain postgres:16, so the existing volume keeps working.
+    image: pgvector/pgvector:pg16
     container_name: vcfo-postgres
     restart: "no"
     environment:
