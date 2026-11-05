@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Award, IdCard, ShieldCheck } from 'lucide-react';
 import { indexPeople, usePeopleMetrics } from '@/components/metrics/use-metrics';
-import { DashSection } from '@/components/dash/DashSection';
+import { DashSection, ListRow } from '@/components/dash/DashSection';
 import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
 import { Tag } from '@/components/ui/spectrum-chip';
 import {
@@ -13,6 +13,8 @@ import {
   ToneBar,
 } from '@/components/super/parts/super-parts';
 import { shortCompany } from '@/components/super/parts/super-text';
+import { INC_STAGES, incStageOf, shortRegistration } from '@/components/super/overview/super-overview-format';
+import { useFirmSettings } from '@/views/firm-settings/use-firm-settings';
 import {
   buildRisks,
   capacityTone,
@@ -37,7 +39,7 @@ import { todayIST } from '@/lib/compliance/filings';
 
 const PRACTICE_INCORPORATION_HREF = '/app/super/practice/incorporation';
 const PRACTICE_REGISTRATIONS_HREF = '/app/super/practice/registrations';
-const COMPLIANCE_CALENDAR_HREF = '/app/admin/compliances/calendar';
+const COMPLIANCE_CALENDAR_HREF = '/app/super/practice/compliances';
 const TEAM_HREF = '/app/super/team';
 const RISKS_HREF = '/app/super/risks';
 
@@ -52,24 +54,23 @@ export function SuperPracticeCards({ insights }: { insights: SuperInsights }) {
 }
 
 function IncorporationCard({ insights }: { insights: SuperInsights }) {
+  const target = useFirmSettings().settings?.serviceTargets.daysToCoi ?? null;
   const incorporating = insights.clients.filter((c) => !c.summary.incorporated);
-  const phases = insights.clients[0]?.summary.phases ?? [];
-  const rows = phases.map((phase, index) => ({
-    id: phase.id,
-    label: phase.label,
-    list: incorporating.filter((c) => c.summary.phases.findIndex((p) => p.done < p.total) === index),
+  const rows = INC_STAGES.map((stage) => ({
+    ...stage,
+    list: incorporating.filter((c) => incStageOf(c.summary) === stage.key),
   }));
   const max = Math.max(1, ...rows.map((r) => r.list.length));
   const coi = insights.clients.flatMap((c) => (c.daysToCoi === null ? [] : [c.daysToCoi]));
   const avg = coi.length ? Math.round(coi.reduce((a, b) => a + b, 0) / coi.length) : null;
 
   return (
-    <DashSection title="Incorporation" meta={String(incorporating.length)} icon={Award} tone="violet" href={PRACTICE_INCORPORATION_HREF} hrefLabel="Open">
+    <DashSection title="Incorporation" meta={String(incorporating.length)} headIcon={{ icon: Award, tone: 'violet' }} href={PRACTICE_INCORPORATION_HREF} hrefLabel="Open">
       <ul className="grid gap-2.5">
         {rows.map((row) => (
           <li
-            key={row.id}
-            className="grid grid-cols-[100px_1fr_24px] items-center gap-2 text-[13px]"
+            key={row.key}
+            className="grid grid-cols-[110px_1fr_24px] items-center gap-2 text-[13px]"
             title={row.list.map((c) => c.summary.companyName).join(', ') || 'None'}
           >
             <span className="truncate text-ink-2">{row.label}</span>
@@ -83,7 +84,7 @@ function IncorporationCard({ insights }: { insights: SuperInsights }) {
           'No certificate recorded yet'
         ) : (
           <>
-            Average <b className="font-medium text-ink">{avg} days</b> to COI
+            Average <b className="font-medium text-ink">{avg} days</b> to COI{target !== null ? ` · target ${target}` : ''}
           </>
         )}
       </p>
@@ -103,12 +104,12 @@ function RegistrationsCard({ insights }: { insights: SuperInsights }) {
   const worst = [...counts].sort((a, b) => b.waiting - a.waiting)[0];
 
   return (
-    <DashSection title="Registrations" meta={String(reached.length)} icon={IdCard} tone="violet" href={PRACTICE_REGISTRATIONS_HREF} hrefLabel="Open">
+    <DashSection title="Registrations" headIcon={{ icon: IdCard, tone: 'violet' }} href={PRACTICE_REGISTRATIONS_HREF} hrefLabel="Open">
       <div className="grid grid-cols-3 gap-2">
         {[
           { n: sum('done'), label: 'Done', cls: 'text-positive' },
           { n: sum('progress'), label: 'In progress', cls: 'text-brand-text' },
-          { n: sum('waiting'), label: 'Waiting', cls: 'text-waiting' },
+          { n: sum('waiting'), label: 'Pending', cls: 'text-waiting' },
         ].map((x) => (
           <div key={x.label}>
             <b className={cn('block text-[26px] font-medium leading-none tabular-nums', x.cls)}>{x.n}</b>
@@ -121,17 +122,17 @@ function RegistrationsCard({ insights }: { insights: SuperInsights }) {
           {top.map((x) => (
             <li
               key={x.id}
-              className="grid grid-cols-[96px_1fr_24px] items-center gap-2 text-[13px]"
-              title={`${x.title}: ${x.done} done, ${x.progress} in progress, ${x.waiting} waiting, ${x.overdue} overdue`}
+              className="grid grid-cols-[70px_1fr_24px] items-center gap-2 text-[13px]"
+              title={`${x.title}: ${x.done} done, ${x.progress} in progress, ${x.waiting} pending, ${x.overdue} overdue`}
             >
-              <span className="truncate text-ink-2">{x.title}</span>
+              <span className="truncate text-ink-2">{shortRegistration(x.title)}</span>
               <StackedBar
                 height={6}
                 legend={false}
                 segments={[
                   { label: 'Done', value: x.done, tone: 'ok' },
                   { label: 'In progress', value: x.progress, tone: 'prog' },
-                  { label: 'Waiting', value: x.waiting, tone: 'teal' },
+                  { label: 'Pending', value: x.waiting, tone: 'teal' },
                   { label: 'Overdue', value: x.overdue, tone: 'bad' },
                 ]}
               />
@@ -141,7 +142,7 @@ function RegistrationsCard({ insights }: { insights: SuperInsights }) {
         </ul>
       ) : null}
       <p className="mt-3 border-t border-line-soft pt-3 text-[12.5px] text-ink-muted">
-        Most waiting: <b className="font-medium text-ink">{worst && worst.waiting > 0 ? worst.title : 'None'}</b>
+        Most pending: <b className="font-medium text-ink">{worst && worst.waiting > 0 ? shortRegistration(worst.title) : 'None'}</b>
       </p>
     </DashSection>
   );
@@ -155,7 +156,8 @@ function CompliancesCard({ insights }: { insights: SuperInsights }) {
   const today = todayIST(new Date(insights.generatedAt));
   for (const f of insights.filings) {
     if (!f.dueDate.startsWith(monthKey)) continue;
-    if (filingOutcome(f, today) === 'overdue') byAuthority.set(f.authority, (byAuthority.get(f.authority) ?? 0) + 1);
+    const outcome = filingOutcome(f, today);
+    if (outcome === 'overdue' || outcome === 'late') byAuthority.set(f.authority, (byAuthority.get(f.authority) ?? 0) + 1);
   }
   const worst = [...byAuthority.entries()].sort((a, b) => b[1] - a[1])[0];
   // "Due this week": this month's filings still to file and due in the next 7 days.
@@ -166,9 +168,11 @@ function CompliancesCard({ insights }: { insights: SuperInsights }) {
   const stillToFile = Math.max(0, (month?.open ?? 0) - dueWeek);
 
   return (
-    <DashSection title={title} icon={ShieldCheck} tone="success" href={COMPLIANCE_CALENDAR_HREF} hrefLabel="Open">
-      <b className="mb-2 block text-[26px] font-medium leading-none tabular-nums text-ink">{month?.filingsDue ?? 0}</b>
+    <DashSection title={title} headIcon={{ icon: ShieldCheck, tone: 'green' }} href={COMPLIANCE_CALENDAR_HREF} hrefLabel="Open">
       <StackedBar
+        total={month?.filingsDue ?? 0}
+        rows
+        height={8}
         segments={[
           { label: 'Overdue', value: month?.overdue ?? 0, tone: 'bad' },
           { label: 'Filed late', value: month?.filedLate ?? 0, tone: 'warn' },
@@ -178,7 +182,7 @@ function CompliancesCard({ insights }: { insights: SuperInsights }) {
         ]}
       />
       <p className="mt-3 border-t border-line-soft pt-3 text-[12.5px] text-ink-muted">
-        Most overdue: <b className="font-medium text-ink">{worst ? worst[0] : 'None'}</b>
+        Worst statute: <b className="font-medium text-ink">{worst ? worst[0] : 'None'}</b>
       </p>
     </DashSection>
   );
@@ -200,6 +204,7 @@ export function SuperManagersPanel({
   adminOf?: (managerId: string) => string | null;
 }) {
   const managers = insights.team.managers;
+  const router = useRouter();
   const people = indexPeople(usePeopleMetrics().data).byProfileId;
   const max = Math.max(1, ...managers.map((m) => m.clients));
   const columns: EFilingColumn<SuperTeamManager>[] = [
@@ -208,15 +213,15 @@ export function SuperManagersPanel({
       header: 'Manager',
       render: (m) => {
         const admin = adminOf?.(m.id);
-        return <NameCell lead={<PersonAvatar name={m.name} />} title={m.name} sub={admin ? `under ${admin}` : `${m.leads.length} project leads`} />;
+        return <NameCell lead={<PersonAvatar name={m.name} />} title={m.name} sub={admin ? `under ${admin}` : 'No admin'} />;
       },
     },
     { key: 'clients', header: 'Clients', width: '72px', align: 'right', render: (m) => <span className="tabular-nums">{m.clients}</span> },
     { key: 'open', header: 'Open', width: '64px', align: 'right', render: (m) => <span className="tabular-nums">{m.openSteps}</span> },
     {
       key: 'late',
-      header: 'Overdue',
-      width: '80px',
+      header: 'Late',
+      width: '64px',
       align: 'right',
       render: (m) => (
         <span className={cn('tabular-nums', m.overdueSteps + m.overdueFilings > 0 ? 'font-medium text-danger' : 'text-ink-faint')}>
@@ -250,8 +255,8 @@ export function SuperManagersPanel({
     },
   ];
   return (
-    <DashSection title="Managers" meta={String(managers.length)} href={TEAM_HREF} hrefLabel="Open team" bodyClassName="px-2 pb-2 pt-1">
-      <EFilingGrid caption="Managers" columns={columns} rows={managers} rowKey={(m) => m.id} empty="No manager yet" minWidth={600} pageSize={6} />
+    <DashSection title="Managers" flush>
+      <EFilingGrid caption="Managers" columns={columns} rows={managers} rowKey={(m) => m.id} onRowClick={() => router.push(TEAM_HREF)} empty="No manager yet" minWidth={600} pageSize={6} />
     </DashSection>
   );
 }
@@ -268,30 +273,26 @@ const KIND_TONE: Record<SuperRiskKind, 'bad' | 'warn' | 'violet'> = {
 export function SuperTopRisks({ insights }: { insights: SuperInsights }) {
   const risks = buildRisks(insights, new Date());
   return (
-    <DashSection title="Top risks" meta={String(risks.length)} href={RISKS_HREF} hrefLabel="All risks" bodyClassName="p-0">
+    <DashSection title="Top risks" meta={String(risks.length)} href={RISKS_HREF} hrefLabel="All risks" flush>
       {risks.length === 0 ? (
         <p className="px-4 py-4 text-center text-[13px] text-ink-muted">None</p>
       ) : (
-        <ul>
-          {risks.slice(0, 5).map((r) => (
-            <li key={r.id} className="border-t border-line-soft first:border-t-0">
-              <Link href={r.href} className="flex min-w-0 items-center gap-3 px-4 py-3 hover:bg-surface-sunken/60">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13.5px] font-medium text-ink">
-                    {r.title} · {shortCompany(r.companyName)}
-                  </span>
-                  <span className="block truncate text-[12.5px] text-ink-muted">
-                    {r.managerName ?? 'No manager'}
-                    {r.ageDays !== null ? ` · ${riskAgeLabel(r.ageDays)}` : ''}
-                  </span>
-                </span>
-                <Tag tone={KIND_TONE[r.kind]} className="w-[104px] flex-none">
-                  {SUPER_RISK_LABEL[r.kind]}
-                </Tag>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        risks.slice(0, 5).map((r) => (
+          <ListRow key={r.id} href={r.href}>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13.5px] font-medium text-ink">
+                {r.title} · {shortCompany(r.companyName)}
+              </span>
+              <span className="block truncate text-[12.5px] text-ink-muted">
+                {r.managerName ?? 'No manager'}
+                {r.ageDays !== null ? ` · ${riskAgeLabel(r.ageDays)}` : ''}
+              </span>
+            </span>
+            <Tag tone={KIND_TONE[r.kind]} className="w-[104px] flex-none">
+              {SUPER_RISK_LABEL[r.kind]}
+            </Tag>
+          </ListRow>
+        ))
       )}
     </DashSection>
   );

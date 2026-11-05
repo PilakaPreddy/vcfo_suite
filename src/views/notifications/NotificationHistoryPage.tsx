@@ -11,41 +11,33 @@ import { Button } from '@/components/ui/button';
 import { buttonVariants } from '@/components/ui/button-variants';
 import { Chip, Tag } from '@/components/ui/spectrum-chip';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
-import { FilterChip } from '@/components/ui/filter-chip';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { DashSection } from '@/components/dash/DashSection';
 import { NotificationKindTile } from '@/components/notifications/notification-kind';
-import {
-  NOTIFICATION_GROUPS,
-  NOTIFICATION_KIND_LOOK,
-  type NotificationGroup,
-} from '@/components/notifications/notification-kind-look';
+import { NOTIFICATION_KIND_LOOK } from '@/components/notifications/notification-kind-look';
 import { useApp } from '@/context/AppContext';
 import { useNotificationHistory } from '@/hooks/use-notification-history';
 import {
   formatNotificationTimestampIst,
   formatNotificationWhen,
   groupNotificationsForHistory,
-  isCreatedAtIstToday,
-  isCreatedAtThisIstWeek,
   notificationHrefIsNavigable,
   type NotificationHistoryGroup,
 } from '@/lib/notifications/notification-dismiss';
 import { NOTIFICATION_KIND_LABEL } from '@/lib/notifications/notification-popup';
-import {
-  notificationsInDirection,
-  type AppNotification,
-  type NotificationDirection,
-} from '@/lib/checklist/checklist-notifications';
+import type { AppNotification } from '@/lib/checklist/checklist-notifications';
 import { cn } from '@/lib/utils';
 import {
+  NOTIFICATION_GROUPS,
+  chipWordOf,
   groupOf,
   isCreatedThisIstMonth,
   matchesTab,
   notificationSettingsHref,
   tabCounts,
+  type NotificationGroup,
   type NotificationTab,
 } from './notification-view';
 
@@ -53,22 +45,8 @@ import {
    One card headed by the tabs (All, Unread and one per type, with counts), rows grouped by day
    with a type tile, the title link, the second line, a status chip, the client and time, an
    unread dot that marks the row read, and an open button for the side panel. The "This month"
-   card counts the month by type and opens a drill dialog. The date and direction filters are the
-   real tool's own and sit as filter chips in the head. Data and read marks are the real history
-   query's. */
-
-type RangeFilter = '' | 'today' | 'week' | 'earlier';
-
-const RANGE_OPTIONS = [
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'This week' },
-  { value: 'earlier', label: 'Earlier' },
-];
-
-const DIRECTION_OPTIONS: Array<{ value: NotificationDirection; label: string }> = [
-  { value: 'received', label: 'Received' },
-  { value: 'sent', label: 'Sent' },
-];
+   card counts the month by type and opens a drill dialog. Data and read marks are the real
+   history query's. */
 
 const GROUP_LABEL: Record<NotificationHistoryGroup, string> = {
   today: 'Today',
@@ -78,21 +56,19 @@ const GROUP_LABEL: Record<NotificationHistoryGroup, string> = {
 
 /* Status colours only (R-25), one per type group. */
 const BAR_TONE: Record<NotificationGroup, string> = {
-  Steps: 'bg-brand',
   Documents: 'bg-warning-mid',
-  Requests: 'bg-waiting-mid',
-  Team: 'bg-upcoming-mid',
-  Email: 'bg-positive-mid',
+  Steps: 'bg-brand',
+  Deadlines: 'bg-danger-mid',
+  Messages: 'bg-waiting-mid',
 };
 
 const TAB_LABEL: Record<NotificationTab, string> = {
   all: 'All',
   unread: 'Unread',
-  Steps: 'Steps',
   Documents: 'Documents',
-  Requests: 'Requests',
-  Team: 'Team',
-  Email: 'Email',
+  Steps: 'Steps',
+  Deadlines: 'Deadlines',
+  Messages: 'Messages',
 };
 
 const TABS: NotificationTab[] = ['all', 'unread', ...NOTIFICATION_GROUPS];
@@ -134,12 +110,12 @@ function NotificationRow({
             )}
             {dismissed ? <Tag className="h-5 flex-none px-1.5 text-[11px]">Cleared</Tag> : null}
           </span>
-          {item.body ? <span className="mt-0.5 block truncate text-[12.5px] text-ink-2">{item.body}</span> : null}
+          {item.body ? <span className="mt-0.5 block text-[12.5px] text-ink-2">{item.body}</span> : null}
           <span className="mt-0.5 block truncate text-[12.5px] text-ink-muted sm:hidden">{who}</span>
         </span>
         <span className="hidden w-[104px] flex-none sm:block">
-          <Chip fixed tone={look?.tone}>
-            {NOTIFICATION_KIND_LABEL[item.kind]}
+          <Chip fixed raw tone={look?.tone}>
+            {chipWordOf(item)}
           </Chip>
         </span>
         <span className="hidden w-[150px] flex-none truncate text-right text-[12.5px] text-ink-muted sm:block" title={who}>
@@ -190,7 +166,7 @@ function NotificationPanel({ item, onClose }: { item: AppNotification | null; on
               </p>
               <SheetTitle className="mt-1 text-[18px] font-medium leading-snug">{item.title}</SheetTitle>
               <div className="mt-2">
-                <Tag tone={look?.tone}>{NOTIFICATION_KIND_LABEL[item.kind]}</Tag>
+                <Tag tone={look?.tone}>{chipWordOf(item)}</Tag>
               </div>
             </div>
             <div className="grid gap-3 px-5 py-4">
@@ -281,8 +257,8 @@ function MonthDrill({
                     </span>
                   </span>
                   <span className="hidden sm:inline-flex">
-                    <Chip fixed tone={NOTIFICATION_KIND_LOOK[n.kind]?.tone}>
-                      {NOTIFICATION_KIND_LABEL[n.kind]}
+                    <Chip fixed raw tone={NOTIFICATION_KIND_LOOK[n.kind]?.tone}>
+                      {chipWordOf(n)}
                     </Chip>
                   </span>
                 </button>
@@ -317,9 +293,8 @@ function ChannelsCard({ role }: { role: Parameters<typeof notificationSettingsHr
     <DashSection title="You get these by" bodyClassName="p-0">
       <div className="grid gap-2 px-4 py-4 md:px-5">
         <span className="flex flex-wrap gap-2">
-          <Tag tone="prog">✓ In-app</Tag>
           <Tag tone="prog">✓ Email</Tag>
-          {profile.isLoading ? null : whatsapp ? <Tag tone="ok">✓ WhatsApp</Tag> : <Tag>WhatsApp off</Tag>}
+          {whatsapp ? <Tag tone="ok">✓ WhatsApp</Tag> : null}
         </span>
         <Link href={notificationSettingsHref(role)} className="text-[13px] font-medium text-brand-text hover:underline">
           Change in Settings ›
@@ -352,41 +327,29 @@ export default function NotificationHistoryPage() {
   const { markNotificationRead, user } = useApp();
   const query = useNotificationHistory();
   const [tab, setTab] = useState<NotificationTab>('all');
-  const [range, setRange] = useState<RangeFilter>('');
-  const [direction, setDirection] = useState<'' | NotificationDirection>('');
   const [detail, setDetail] = useState<AppNotification | null>(null);
   const [drill, setDrill] = useState<'all' | NotificationGroup | null>(null);
   const [readHere, setReadHere] = useState<Set<string>>(() => new Set());
 
   const now = useMemo(() => new Date(), [query.data]);
 
-  /** The date and direction filters; the tab applies after, so each tab can count its rows. */
-  const inView = useMemo(() => {
-    let items = query.data ?? [];
-    if (direction) items = notificationsInDirection(items, direction);
-    if (range === 'today') items = items.filter((n) => isCreatedAtIstToday(n.createdAt, now));
-    else if (range === 'week') items = items.filter((n) => isCreatedAtThisIstWeek(n.createdAt, now));
-    else if (range === 'earlier') items = items.filter((n) => !isCreatedAtThisIstWeek(n.createdAt, now));
-    return items;
-  }, [query.data, direction, range, now]);
+  const inView = query.data ?? [];
 
   const isUnread = (n: AppNotification) => !n.read && !readHere.has(n.id);
   const counts = tabCounts(inView, isUnread);
   const filtered = inView.filter((n) => matchesTab(n, tab, isUnread));
 
-  const grouped = range === '' ? groupNotificationsForHistory(filtered, now) : null;
-  const sections = grouped
-    ? (['today', 'week', 'earlier'] as const)
-        .map((id) => ({ id, label: GROUP_LABEL[id] as string | null, items: grouped[id] }))
-        .filter((section) => section.items.length > 0)
-    : [{ id: 'flat' as const, label: null, items: filtered }];
+  const grouped = groupNotificationsForHistory(filtered, now);
+  const sections = (['today', 'week', 'earlier'] as const)
+    .map((id) => ({ id, label: GROUP_LABEL[id], items: grouped[id] }))
+    .filter((section) => section.items.length > 0);
 
   const month = useMemo(
     () => (query.data ?? []).filter((n) => isCreatedThisIstMonth(n.createdAt, now)),
     [query.data, now],
   );
   const monthCount = (g: NotificationGroup) => month.filter((n) => groupOf(n) === g).length;
-  const filtersSet = tab !== 'all' || range !== '' || direction !== '';
+  const filtersSet = tab !== 'all';
 
   function markRead(id: string) {
     markNotificationRead(id);
@@ -400,8 +363,6 @@ export default function NotificationHistoryPage() {
 
   function resetFilters() {
     setTab('all');
-    setRange('');
-    setDirection('');
   }
 
   return (
@@ -426,20 +387,6 @@ export default function NotificationHistoryPage() {
                 onChange={(key) => setTab(key as NotificationTab)}
               />
             </div>
-            <span className="flex flex-wrap items-center gap-2 lg:ml-auto">
-              <FilterChip<RangeFilter>
-                label="Date"
-                value={range}
-                options={RANGE_OPTIONS}
-                onChange={(v) => setRange(v)}
-              />
-              <FilterChip<'' | NotificationDirection>
-                label="Direction"
-                value={direction}
-                options={DIRECTION_OPTIONS}
-                onChange={(v) => setDirection(v)}
-              />
-            </span>
           </div>
 
           {query.isLoading ? (
@@ -527,7 +474,6 @@ export default function NotificationHistoryPage() {
                         onClick={() => setDrill(g)}
                         className="flex min-h-11 w-full items-center gap-2.5 px-4 py-2 text-left text-[14px] hover:bg-surface-sunken md:px-5"
                       >
-                        <i className={cn('h-2 w-2 flex-none rounded-[2px]', BAR_TONE[g])} aria-hidden />
                         <span className="min-w-0 flex-1">{g}</span>
                         <b className="font-medium tabular-nums">{monthCount(g)}</b>
                         <ChevronRight className="h-3.5 w-3.5 text-ink-faint" strokeWidth={1.6} aria-hidden />
@@ -554,7 +500,6 @@ export default function NotificationHistoryPage() {
         }}
         onShowInList={() => {
           setTab(drill && drill !== 'all' ? drill : 'all');
-          setRange('');
           setDrill(null);
         }}
       />

@@ -1,8 +1,3 @@
-import {
-  NOTIFICATION_GROUPS,
-  NOTIFICATION_KIND_LOOK,
-  type NotificationGroup,
-} from '@/components/notifications/notification-kind-look';
 import { ymdInNotificationTz } from '@/lib/notifications/notification-dismiss';
 import { roleSettingsPath } from '@/lib/auth-routes';
 import type { Role } from '@/lib/auth';
@@ -11,11 +6,32 @@ import type { AppNotification } from '@/lib/checklist/checklist-notifications';
 /* Pure helpers for the Notifications page (prototype NotificationsScreen): the tab filter, the
    counts on each tab, the "This month" card and the link to the person's notification settings. */
 
+/** The page's groups, as the prototype names them. A Chatbot group waits for chatbot notifications to exist. */
+export type NotificationGroup = 'Documents' | 'Steps' | 'Deadlines' | 'Messages';
+export const NOTIFICATION_GROUPS: NotificationGroup[] = ['Documents', 'Steps', 'Deadlines', 'Messages'];
+
 /** "all", "unread" or one type group. */
 export type NotificationTab = 'all' | 'unread' | NotificationGroup;
 
-export function groupOf(item: AppNotification): NotificationGroup {
-  return NOTIFICATION_KIND_LOOK[item.kind]?.group ?? 'Steps';
+export function groupOf(item: Pick<AppNotification, 'kind'>): NotificationGroup {
+  const k = item.kind as string;
+  if (k === 'docs.share' || k.startsWith('request.')) return 'Documents';
+  if (k === 'schedule.window' || k.startsWith('compliance.') || k === 'board.meeting') return 'Deadlines';
+  if (k === 'message.received' || k.startsWith('email.') || k.startsWith('team.')) return 'Messages';
+  return 'Steps';
+}
+
+/** The one word on a row's chip (prototype `NOTIF_TYPE`). */
+export function chipWordOf(item: Pick<AppNotification, 'kind'>): string {
+  const k = item.kind as string;
+  if (k === 'docs.share') return 'Document';
+  if (k.startsWith('request.')) return 'Request';
+  if (k === 'schedule.window') return 'Timeline';
+  if (k.startsWith('compliance.') || k === 'board.meeting') return 'Deadline';
+  if (k === 'message.received') return 'Message';
+  if (k.startsWith('email.')) return 'Email';
+  if (k.startsWith('team.')) return 'Team';
+  return 'Step';
 }
 
 export function matchesTab(item: AppNotification, tab: NotificationTab, isUnread: (n: AppNotification) => boolean): boolean {

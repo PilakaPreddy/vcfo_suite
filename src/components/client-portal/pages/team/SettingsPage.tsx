@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { usePortal } from '../../PortalProvider';
 import { SELF_TINT, initialsOf } from './common';
-import { TeamSection, useClientTeam } from './team-sections';
+import { TeamSection } from './team-sections';
 import { FormSection, LABEL, type SecKey } from './profile/sections';
 import { ClientSettingsView } from './profile/settings-view';
 import { useProfileData } from './profile/use-profile';
@@ -43,8 +43,7 @@ function sectionFromUrl(search: string, hash: string): SecKey {
 
 export function SettingsPage() {
   const { shell } = usePortal();
-  const { p } = useProfileData();
-  const team = useClientTeam();
+  const { p, account } = useProfileData();
   const [sec, setSec] = useState<SecKey>('about');
 
   useEffect(() => {
@@ -77,8 +76,7 @@ export function SettingsPage() {
   }, [sec]);
 
   const name = p?.name ?? shell?.me.name ?? '';
-  const isPrimary = team.data?.isPrimary;
-  const role = [isPrimary === undefined ? null : isPrimary ? 'Primary' : 'Member', shell?.companyShort || shell?.companyName].filter(Boolean).join(' · ');
+  const role = [account?.designation, shell?.companyShort || shell?.companyName].filter(Boolean).join(' · ');
 
   return (
     <div className="cp-team">

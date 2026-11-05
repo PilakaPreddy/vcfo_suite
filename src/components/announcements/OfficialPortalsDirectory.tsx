@@ -100,7 +100,7 @@ export function OfficialPortalsDirectory({ compact }: { compact?: boolean }) {
 
   return (
     <div id="official-portals">
-      <DashSection title="Official portals" headIcon={{ icon: Landmark, tone: 'blue' }} bodyClassName="grid gap-1 px-4 pb-2 pt-3">
+      <DashSection title="Official portals" headIcon={{ icon: Landmark, tone: 'blue' }} bodyClassName="grid gap-1 px-4 pb-2 pt-3 md:px-5">
         <div>
           <SpectrumTabs
             label="Portal group"

@@ -1,20 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { CalendarClock, Download, Play, Trash2 } from 'lucide-react';
+import { CalendarClock, Download, Play, Save, Trash2 } from 'lucide-react';
 import { DashSection } from '@/components/dash/DashSection';
-import { EFilingGrid, GRID_SUB, type EFilingColumn } from '@/components/dash/EFilingGrid';
+import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
 import { Button } from '@/components/ui/button';
+import { AreaPill } from '@/components/ui/spectrum-chip';
 import { SkeletonRows } from '@/components/ui/empty-state';
 import { plainDay } from '@/lib/date-format';
 import { SuperFilterChips } from '@/components/super/parts/super-parts';
 import { monthKeyLabel, REPORT_SCHEDULE_LABEL, type SavedReport } from '@/lib/reports/partner-report';
-import { cn } from '@/lib/utils';
 
 /**
- * The caller's saved reports (G-21): which month, the schedule, who gets it, when it last
- * went out, and Run (opens it above), Schedule, Download (PDF or Excel CSV, as saved) and Delete on each row. The report
- * open above has the soft blurple row fill; the Period chip narrows the list by month.
+ * The caller's saved reports (G-21): the area (every saved report is the firm's partner report),
+ * the period, when it last went out and the schedule, with Run (opens it above), Schedule, Download
+ * (PDF or Excel CSV, as saved) and Delete on each row. The recipients are in the Schedule dialog.
+ * The report open above has the soft blurple row fill; the Period chip narrows the list by month.
+ * "Save report" sits in the head because it is the only way to make one.
  */
 export function SavedReportsCard({
   reports,
@@ -23,6 +25,7 @@ export function SavedReportsCard({
   onOpen,
   onSchedule,
   onDelete,
+  onSave,
   openId = null,
 }: {
   reports: SavedReport[];
@@ -33,6 +36,8 @@ export function SavedReportsCard({
   onOpen: (r: SavedReport) => void;
   onSchedule: (r: SavedReport) => void;
   onDelete: (r: SavedReport) => void;
+  /** Saves the month open above as a new report. */
+  onSave?: () => void;
 }) {
   const [period, setPeriod] = useState('');
   const periods = [...new Set(reports.map((r) => monthKeyLabel(r.params.month)))];
@@ -47,24 +52,10 @@ export function SavedReportsCard({
         </button>
       ),
     },
-    { key: 'month', header: 'Month', width: '140px', render: (r) => monthKeyLabel(r.params.month) },
+    { key: 'area', header: 'Area', width: '124px', render: () => <AreaPill area="Firm" /> },
+    { key: 'period', header: 'Period', width: '140px', render: (r) => monthKeyLabel(r.params.month) },
+    { key: 'sent', header: 'Last run', width: '96px', render: (r) => (r.lastSentAt ? plainDay(r.lastSentAt) : 'Never') },
     { key: 'schedule', header: 'Schedule', width: '120px', render: (r) => REPORT_SCHEDULE_LABEL[r.schedule] },
-    {
-      key: 'to',
-      header: 'Send to',
-      render: (r) =>
-        r.recipients.length === 0 ? (
-          '–'
-        ) : (
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate">{r.recipients[0]}</span>
-            {r.recipients.length > 1 ? (
-              <span className={cn(GRID_SUB, 'text-[12px] text-ink-muted')}>and {r.recipients.length - 1} more</span>
-            ) : null}
-          </span>
-        ),
-    },
-    { key: 'sent', header: 'Last sent', width: '96px', render: (r) => (r.lastSentAt ? plainDay(r.lastSentAt) : 'Never') },
     {
       key: 'act',
       header: '',
@@ -98,24 +89,30 @@ export function SavedReportsCard({
   return (
     <DashSection
       title="Saved reports"
-      meta={
+      right={
         loading ? undefined : (
-          <span className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="tabular-nums">{rows.length}</span>
+          <>
             {periods.length > 1 ? (
               <SuperFilterChips
                 onClear={() => setPeriod('')}
                 filters={[{ key: 'period', label: 'Period', value: period, options: periods, onChange: setPeriod }]}
               />
             ) : null}
-          </span>
+            {onSave ? (
+              <Button size="sm" variant="outline" onClick={onSave}>
+                <Save aria-hidden />
+                Save report
+              </Button>
+            ) : null}
+          </>
         )
       }
+      flush
     >
       {loading ? (
-        <SkeletonRows rows={3} />
+        <SkeletonRows rows={3} className="p-4" />
       ) : error ? (
-        <p className="text-[13.5px] text-danger">{error}</p>
+        <p className="p-4 text-[13.5px] text-danger">{error}</p>
       ) : (
         <EFilingGrid
           caption="Saved reports"

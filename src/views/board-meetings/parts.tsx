@@ -99,7 +99,7 @@ export function Banner({ tone, children, action }: { tone: 'ok' | 'warn' | 'bad'
 
 export function Card({ title, right, children, className, id }: { title: ReactNode; right?: ReactNode; children: ReactNode; className?: string; id?: string }) {
   return (
-    <section aria-labelledby={id} className={cn('min-w-0 rounded-md border-2 border-line bg-surface', className)}>
+    <section aria-labelledby={id} className={cn('min-w-0 rounded-md border border-line bg-surface', className)}>
       <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3 border-b border-line-soft px-5 py-2">
         <h2 id={id} className="m-0 text-[15px] font-medium">
           {title}

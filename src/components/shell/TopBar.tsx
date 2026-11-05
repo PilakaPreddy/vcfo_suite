@@ -65,13 +65,13 @@ function ShellLocationTrail({
   const Icon = CRUMB_ICONS[icon];
 
   return (
-    <nav aria-label="Location" className="hidden min-w-0 flex-1 items-center gap-1.5 sm:flex">
+    <nav aria-label="Location" className="flex min-w-0 flex-1 items-center gap-1.5">
       <span className="sr-only"><Icon aria-hidden /></span>
       <ol className="flex min-w-0 list-none items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {segments.map((seg, index) => (
-          <li key={`${seg.label}-${index}`} className="flex shrink-0 items-center gap-2">
+          <li key={`${seg.label}-${index}`} className={cn("flex shrink-0 items-center gap-2", index < segments.length - 1 && "max-sm:hidden")}>
             {index > 0 ? (
-              <span className="text-ink-faint" aria-hidden>/</span>
+              <span className="text-ink-faint max-sm:hidden" aria-hidden>/</span>
             ) : null}
             {seg.href ? (
               <Link
@@ -142,7 +142,7 @@ export function TopBar() {
           type="button"
           onClick={() => setCommandOpen(true)}
           className={cn(
-            "flex h-control-md w-control-md items-center justify-center rounded-md text-ink-muted hover:bg-surface-sunken hover:text-ink sm:hidden",
+            "flex h-control-md w-control-md items-center justify-center rounded-md border-1.5 border-line bg-surface-sunken text-ink-muted hover:border-line-strong hover:text-ink sm:hidden",
             commandOpen && "pointer-events-none opacity-0",
           )}
           aria-label="Search"

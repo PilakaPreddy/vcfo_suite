@@ -73,9 +73,9 @@ function AnnouncementDateTile({ iso, warn }: { iso: string; warn?: boolean }) {
       )}
       aria-hidden
     >
-      <b className="text-[16px] font-medium tabular-nums">{d.getDate()}</b>
+      <b className="text-[16px] font-medium tabular-nums">{String(d.getDate()).padStart(2, '0')}</b>
       <span className={cn('text-[10.5px] font-medium uppercase tracking-wider', warn ? 'opacity-80' : 'text-ink-muted')}>
-        {d.toLocaleDateString('en-GB', { month: 'short' })}
+        {sep(d.toLocaleDateString('en-GB', { month: 'short' }))}
       </span>
     </span>
   );
@@ -144,7 +144,6 @@ export function AnnouncementRow({
   // The prototype leads with the title; the body follows on a muted line when it says more.
   const headline = item.title?.trim() || message;
   const sentBy = announcementAuthorName(item);
-  const showExtraTitle = Boolean(item.title && item.body && item.title !== item.body && !compact);
   const includeSource = Boolean(showSource ?? !compact) && Boolean(item.sourceUrl);
   const host = includeSource ? sourceHost(item.sourceUrl) : null;
   const rowClass = cn(
@@ -192,7 +191,6 @@ export function AnnouncementRow({
         <p className={cn('mt-1.5 truncate text-[14px]', unread ? 'font-medium text-ink' : 'text-ink-2')} title={headline}>
           {headline}
         </p>
-        {showExtraTitle ? <p className="mt-0.5 truncate text-[12.5px] text-ink-muted">{item.body.trim()}</p> : null}
       </div>
       {host && item.sourceUrl ? (
         <a

@@ -133,7 +133,7 @@ export function AuditPage() {
     setWho('all');
     setText('');
   };
-  /** The day drill-down covers the 14 summary days that have events. */
+  /** The day drill-down covers the 14 summary days that have events; an older When opens that event. */
   const hasDay = (day: string) => Boolean(summary?.days.some((b) => b.day === day && b.count > 0));
 
   return (
@@ -239,21 +239,18 @@ export function AuditPage() {
                             }}
                           >
                             <td style={{ whiteSpace: 'nowrap' }}>
-                              {hasDay(e.day) ? (
-                                <button
-                                  type="button"
-                                  className="tb-when"
-                                  aria-label={`Show all events on ${p.n} ${p.m}`}
-                                  onClick={(ev) => {
-                                    ev.stopPropagation();
-                                    setDd(e.day);
-                                  }}
-                                >
-                                  {label}
-                                </button>
-                              ) : (
-                                <span className="cap">{label}</span>
-                              )}
+                              <button
+                                type="button"
+                                className="tb-when"
+                                aria-label={hasDay(e.day) ? `Show all events on ${p.n} ${p.m}` : `Open ${e.action}, ${p.n} ${p.m}`}
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  if (hasDay(e.day)) setDd(e.day);
+                                  else setPick(e);
+                                }}
+                              >
+                                {label}
+                              </button>
                             </td>
                             <td>
                               <span style={{ display: 'block', minWidth: 180 }}>

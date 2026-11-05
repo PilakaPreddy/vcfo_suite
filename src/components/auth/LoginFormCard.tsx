@@ -154,7 +154,7 @@ export function LoginFormCard({
     document.getElementById('password')?.focus();
   };
   return (
-    <div className="relative z-[1] w-full max-w-[420px] overflow-hidden rounded-[14px] border border-line bg-surface-raised px-[18px] py-[22px] text-ink shadow-dialog sm:p-7">
+    <div className="relative z-[1] w-full max-w-[420px] overflow-hidden rounded-[14px] bg-surface-raised px-[18px] py-[22px] text-ink shadow-dialog sm:p-7">
       <span
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 h-[90px] bg-brand-text opacity-[.07]"

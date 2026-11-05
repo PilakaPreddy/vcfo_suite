@@ -56,11 +56,11 @@ export function RecordDocumentsPanel({ engagement, vaultHref }: { engagement: En
 
   return (
     <section className="surface min-w-0 overflow-hidden" aria-label="Documents">
-      <div className="flex min-h-[52px] min-w-0 items-center gap-2.5 border-b border-line-soft px-4 py-2">
+      <div className="flex min-h-[52px] min-w-0 items-center gap-2.5 border-b border-line-soft px-4 py-2 md:px-5">
         <CardHeadTile title="Documents" />
-        <h2 className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">Documents</h2>
-        {docs.data ? <span className="text-[12.5px] tabular-nums text-ink-muted">{list.length}</span> : null}
-        <Link href={vaultHref} className="shrink-0 text-[13px] font-medium text-brand-text hover:underline">
+        <h2 className="whitespace-nowrap text-[15px] font-medium text-ink">Documents</h2>
+        {docs.data ? <span className="truncate text-[13px] tabular-nums text-ink-muted">{list.length}</span> : null}
+        <Link href={vaultHref} className="ml-auto shrink-0 text-[13px] font-medium text-brand-text hover:underline">
           Vault ›
         </Link>
       </div>
@@ -78,14 +78,14 @@ export function RecordDocumentsPanel({ engagement, vaultHref }: { engagement: En
         </div>
       ) : (
         <div role="list">
-          <div className="border-b border-line-soft bg-surface-sunken px-4 py-1.5 text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted">
+          <div className="border-b border-line-soft bg-surface-sunken px-4 py-1.5 md:px-5 text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted">
             All
           </div>
           {list.map((doc) => {
             const fromClient = Boolean(engagement.clientUserId) && doc.uploadedBy === engagement.clientUserId;
             const size = sizeOf(doc.sizeBytes);
             return (
-              <div key={doc.id} role="listitem" className="flex min-h-row items-center gap-3 border-b border-line-soft px-4 py-2 last:border-0">
+              <div key={doc.id} role="listitem" className="flex min-h-row items-center gap-3 border-b border-line-soft px-4 py-2 last:border-0 md:px-5">
                 <FileBadge type={fileType(doc.fileName)} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13.5px] text-ink" title={doc.fileName}>

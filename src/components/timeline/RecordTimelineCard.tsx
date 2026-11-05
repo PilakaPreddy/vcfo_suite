@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Pencil } from 'lucide-react';
 import { CardHeadTile } from '@/components/common/CardHeadTile';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -60,17 +59,11 @@ export function RecordTimelineCard({
 
   return (
     <section className={cn('surface min-w-0 overflow-hidden', className)} aria-label="Timeline">
-      <div className="flex min-h-[52px] min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-line-soft px-4 py-2">
+      <div className="flex min-h-[52px] min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-line-soft px-4 py-2 md:px-5">
         <CardHeadTile title="Timeline" />
         <h2 className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">Timeline</h2>
-        {timeline.coi ? (
-          <span className="text-[12.5px] tabular-nums text-ink-muted">
-            {timeline.coi.source === 'actual' ? 'Incorporated' : 'COI'} {formatLong(timeline.coi.on)}
-          </span>
-        ) : null}
         {canEdit ? (
           <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-            <Pencil size={14} strokeWidth={1.6} aria-hidden />
             Edit
           </Button>
         ) : null}
@@ -94,11 +87,6 @@ export function RecordTimelineCard({
       {canEdit ? <EditTimelineDialog open={editing} onOpenChange={setEditing} engagement={engagement} /> : null}
     </section>
   );
-}
-
-function formatLong(iso: string): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/\bSept\b/, 'Sep');
 }
 
 function EditTimelineDialog({

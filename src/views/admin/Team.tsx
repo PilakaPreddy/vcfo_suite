@@ -104,7 +104,7 @@ export default function Team() {
         title="Project leads"
       />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,22rem)_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
         <PeopleCard title="Add project lead" className="h-fit">
           <div className="p-4 sm:p-5">
             <CreateInternForm />
@@ -125,7 +125,7 @@ export default function Team() {
                 rowKey={(m) => m.id}
                 onRowClick={(m) => router.push(`${base}/team/${encodeURIComponent(m.id)}`)}
                 pageSize={12}
-                minWidth={canSetCapacity ? 900 : 800}
+                minWidth={canSetCapacity ? 860 : 760}
               />
             </div>
           )}

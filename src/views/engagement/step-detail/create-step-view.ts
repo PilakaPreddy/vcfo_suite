@@ -99,6 +99,7 @@ export function createStepView(state: StepDetailState, eng: Engagement, item: Ch
     brSnapshot,
     eng.ownershipType,
     eng.schedule,
+    isClientRoute,
   );
   const internPhaseRailItems = internPhase
     ? journeyRailItems(
@@ -108,6 +109,7 @@ export function createStepView(state: StepDetailState, eng: Engagement, item: Ch
         brSnapshot,
         eng.ownershipType,
         eng.schedule,
+        isClientRoute,
       )
     : [];
   /**

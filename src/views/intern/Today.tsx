@@ -16,10 +16,8 @@ import { LeadHero } from '@/components/intern/LeadHero';
 import { LeadInboxCard } from '@/components/intern/LeadInboxCard';
 import { LeadActionQueue } from '@/components/intern/LeadActionQueue';
 import { LeadPhaseProgress } from '@/components/intern/LeadPhaseProgress';
-import { LeadOverdueFilings } from '@/components/intern/LeadOverdueFilings';
 import { FilingsMatrix } from '@/components/intern/FilingsMatrix';
 import { LeadSideRail } from '@/components/intern/LeadSideRail';
-import { LeadManagersCard } from '@/components/intern/LeadManagersCard';
 import { TodayScopeTabs } from '@/components/staff/today/today-parts';
 import { engagementInScope, todayStatusOf, type TodayScope } from '@/components/staff/today/today-rows';
 import type { InternWorkItem } from '@/lib/intern/intern-work';
@@ -29,8 +27,8 @@ const GRID = 'grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2.4fr)_m
 
 /**
  * The lead's Today (prototype TodayScreen, C-0103, C-0114): the compact home card with five
- * numbers, then the Action queue, Phase progress and the overdue filings beside the rail
- * (Todos, Waiting on, My managers). The practice strip left the page; its numbers are in the
+ * numbers, then the Action queue, Phase progress and Clients × filings beside the rail
+ * (Inbox, Waiting on client). The practice strip left the page; its numbers are in the
  * home card and the cards below. The scope switch sits in the home card (D-17) and narrows
  * the cards below it to the incorporating companies or the incorporated ones. The home card numbers follow the scope too. The rail's Inbox holds the client messages to triage
  * (G-11) beside the lead's own to-dos.
@@ -86,8 +84,9 @@ export default function InternToday() {
           stamp={scope === 'all' && !engagementsLoading}
           scope={<TodayScopeTabs value={scope} onChange={setScope} counts={scopeCounts} />}
         >
-          <Button onClick={() => setTodoOpen(true)}>
-            <Plus className="h-4 w-4" strokeWidth={1.6} /> New to-do
+          {/* M-30: on a phone the button is a 36 px icon, so it fits beside the scope switch. */}
+          <Button onClick={() => setTodoOpen(true)} className="max-sm:w-9 max-sm:px-0" title="New to-do">
+            <Plus className="h-4 w-4" strokeWidth={1.6} aria-hidden /> <span className="max-sm:sr-only">New to-do</span>
           </Button>
         </LeadHero>
 
@@ -103,16 +102,12 @@ export default function InternToday() {
             />
             {scope !== 'compliance' ? <LeadPhaseProgress engagements={engagements} getState={getStateForEngagement} /> : null}
             {scope !== 'incorporating' ? (
-              <>
-                <FilingsMatrix filings={scopedFilings} engagements={engagements} now={now} />
-                <LeadOverdueFilings filings={scopedFilings} engagements={engagements} now={now} />
-              </>
+              <FilingsMatrix filings={scopedFilings} engagements={engagements} now={now} />
             ) : null}
           </div>
           <div className="flex min-w-0 flex-col gap-5" aria-label="Inbox">
             <LeadInboxCard userId={user?.id ?? ''} items={workItems} todos={todos} engagementIds={ids} />
             <LeadSideRail items={items} />
-            <LeadManagersCard engagements={myEngagements} />
           </div>
         </div>
       </div>

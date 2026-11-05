@@ -165,10 +165,10 @@ function isLate(p: PortalPhase, plan: [string, string] | null, today: string): b
   return p.steps.some((s) => s.late) || (p.state === 'active' && !!plan && today > plan[1]);
 }
 
-/** Monday ticks across the axis, every week or every second week when the axis is long. */
+/** Monday ticks across the axis, every week, or every second or fourth week when the labels would touch. */
 function ticksOf(start: string, end: string): string[] {
   const span = daysBetween(start, end);
-  const every = span > 150 ? 28 : span > 75 ? 14 : 7;
+  const every = span > 224 ? 28 : span > 112 ? 14 : 7;
   const first = new Date(`${start}T00:00:00Z`);
   const toMonday = (8 - first.getUTCDay()) % 7;
   const out: string[] = [];
@@ -210,8 +210,8 @@ export function buildRecordTimeline(input: RecordTimelineInput): RecordTimeline 
       status,
       bars: barsOf(p, plan, today),
       count: `${p.done}/${p.total}`,
-      note: late ? { text: 'Overdue', bad: true } : undefined,
-      label: status === 'done' ? (end ? `Done ${shortDate(end)}` : 'Done') : status === 'current' ? `${p.done}/${p.total}` : undefined,
+      note: late ? { text: 'Stuck', bad: true } : undefined,
+      label: status === 'done' ? (end ? `Done ${shortDate(end)}` : 'Done') : status === 'current' ? `${p.total ? Math.round((p.done / p.total) * 100) : 0}%` : undefined,
     };
   };
 

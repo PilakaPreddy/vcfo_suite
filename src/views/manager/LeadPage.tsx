@@ -17,7 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Chip } from '@/components/ui/spectrum-chip';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { DashSection } from '@/components/dash/DashSection';
-import { GanttTimeline } from '@/components/timeline';
+import { PlanTimeline } from '@/components/work/PlanTimeline';
 import { AssignTaskDialog } from '@/components/staff/today/AssignTaskDialog';
 import { copyRowLink, exportRowsCsv } from '@/components/staff/today/work-actions';
 import { PersonAvatar } from '@/views/admin/firm-people/parts';
@@ -26,7 +26,7 @@ import { formatDueLabel, ymdInIst } from '@/lib/intern/intern-work';
 import { cn } from '@/lib/utils';
 import { WorkScreen } from '@/views/intern/MyWork';
 import { useTeamWork } from '@/views/manager/use-team-work';
-import { workTimeline, type TeamWorkItem } from '@/views/manager/team-work';
+import type { TeamWorkItem } from '@/views/manager/team-work';
 import { WorkAreaCard, WorkStatusCard } from '@/views/manager/work-summary';
 
 /**
@@ -231,7 +231,6 @@ function LeadPlanner({ items, now, profileId, leadKey }: { items: TeamWorkItem[]
         })),
     [items],
   );
-  const timeline = useMemo(() => workTimeline(items, today), [items, today]);
   const todosQuery = usePersonalTodos(Boolean(profileId));
   const ownTodos = (todosQuery.data ?? []).filter((t) => t.ownerId === profileId);
   const tasks = items
@@ -243,13 +242,7 @@ function LeadPlanner({ items, now, profileId, leadKey }: { items: TeamWorkItem[]
   return (
     <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="flex min-w-0 flex-col gap-4">
-      <DashSection
-        title="Timeline"
-        meta={timeline?.start && timeline.end ? `${formatDueLabel(`${timeline.start}T12:00:00+05:30`, now)} to ${formatDueLabel(`${timeline.end}T12:00:00+05:30`, now)}` : undefined}
-        flush
-      >
-        {timeline ? <GanttTimeline timeline={timeline} today={today} className="pb-3" /> : <EmptyState title="Nothing dated" className="m-4" />}
-      </DashSection>
+      <PlanTimeline items={items} now={now} onOpen={(i) => router.push(i.href)} />
       {/* The lead's own week (read only): their time blocks on the manager's clients. */}
       <PlannerCalendar
         days={weekDays}

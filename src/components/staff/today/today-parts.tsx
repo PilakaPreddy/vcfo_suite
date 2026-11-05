@@ -1,19 +1,31 @@
 'use client';
 
+import { use } from 'react';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
+import { AppContext } from '@/context/app-context-store';
 import { initialsFromName } from '@/lib/auth';
+import { identityTone, type IdentityTone } from '@/views/compliances/identity';
+import { clientIdentityTone } from '@/views/client-record/client-identity';
 import { cn } from '@/lib/utils';
 import { TODAY_STATUS_ORDER, type TodayScope, type TodayStatus } from '@/components/staff/today/today-rows';
 
-/* Small shared parts for the staff Today screens. Companies are identities and stay neutral
-   (docs/design/TOKENS.md): colour on these screens only carries status. */
+/* Small shared parts for the staff Today screens. Each client keeps one colour on every staff
+   screen (R-35), so the lead knows a client at a glance. */
 
-/** The company tile: initials on a neutral 6px square (R-44). */
+/** The id the colour comes from: the engagement with this name, so a tile given only a name matches the tiles given an id. */
+function useClientColourKey(name: string): string {
+  const app = use(AppContext);
+  return app?.engagements.find((e) => e.companyName === name)?.id ?? name;
+}
+
+/** The company tile: initials on a 6px square in the client's colour (R-44, R-35). */
 export function CompanyTile({ name, size = 26 }: { name: string; size?: 26 | 30 }) {
+  const key = useClientColourKey(name);
   return (
     <span
       className={cn(
-        'grid flex-none place-items-center rounded-md bg-surface-sunken font-medium tracking-[.02em] text-ink-2',
+        'grid flex-none place-items-center rounded-md font-medium tracking-[.02em]',
+        clientIdentityTone(key),
         size === 30 ? 'h-[30px] w-[30px] text-[13px]' : 'h-[26px] w-[26px] text-[11px]',
       )}
       title={name}
@@ -22,6 +34,21 @@ export function CompanyTile({ name, size = 26 }: { name: string; size?: 26 | 30 
       {(initialsFromName(name) || '·').slice(0, 2).toUpperCase()}
     </span>
   );
+}
+
+const DOT: Record<IdentityTone, string> = {
+  brand: 'bg-brand',
+  identity: 'bg-identity-mid',
+  waiting: 'bg-waiting-mid',
+  warning: 'bg-warning-mid',
+  positive: 'bg-positive-mid',
+  upcoming: 'bg-upcoming-mid',
+};
+
+/** The client's colour as an 8px square, for rows that show a plain name (prototype ClientDot). */
+export function ClientDot({ name, className }: { name: string; className?: string }) {
+  const key = useClientColourKey(name);
+  return <i className={cn('inline-block h-2 w-2 flex-none rounded-[2px]', DOT[identityTone(key)], className)} aria-hidden />;
 }
 
 /** A person's face (initials in a circle) and first name (or the full name), for lead cells. */

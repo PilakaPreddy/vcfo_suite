@@ -5,7 +5,7 @@ import { WhatsThisButton } from '@/components/ask/WhatsThisButton';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertTriangle, BellRing, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, Clock, Download, ListChecks, Search } from 'lucide-react';
+import { AlertTriangle, BellRing, CalendarDays, ChevronLeft, ChevronRight, CircleCheck, Clock, Download, ListChecks, Search, ShieldCheck } from 'lucide-react';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
 import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
@@ -24,7 +24,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { OnTimeColumns } from '@/components/compliances/OnTimeColumns';
 import {
   PreIncorporationNotice,
-  PreIncorporationPortfolioNote,
 } from '@/components/compliances/PreIncorporationNotice';
 import { useApp } from '@/context/AppContext';
 import { isFirmWideAdmin } from '@/lib/auth';
@@ -157,7 +156,7 @@ const ON_TIME_MONTHS = 6;
  * bands each filing (one obligation and due date) with its client rows, "By
  * client" bands each company, and "All filings" is the flat register (with
  * row selection and the bulk bar), or, for a quarter or the year, the period
- * matrix. The rail has "On time vs late" (C4), "By regulator" for all six
+ * matrix. The rail has "On time vs late" (C4), "By area" for all six
  * regulators, and "Filings by status".
  *
  * URL state: `?tab=`, `?kpi=`, `?area=` (a regulator), `?status=`, `?lead=`,
@@ -258,7 +257,8 @@ export function FilingsView({
     return map;
   }, [internOptions, teamMembers]);
   const leadName = (row: FilingRow) => people.get(leadIdOf.get(row.engagementId) ?? '') ?? '';
-  const showLead = user?.role !== 'intern' && scope.audience === 'staff';
+  const showLead = scope.audience === 'staff';
+  const leadChip = showLead && user?.role !== 'intern';
   const leadOptions = useMemo(() => {
     const ids = new Set(baseRows.map((row) => leadIdOf.get(row.engagementId) ?? '').filter(Boolean));
     return [...ids]
@@ -266,7 +266,7 @@ export function FilingsView({
       .filter((o) => o.label)
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [baseRows, leadIdOf, people]);
-  const lead = showLead && leadOptions.some((o) => o.value === leadParam) ? leadParam : '';
+  const lead = leadChip && leadOptions.some((o) => o.value === leadParam) ? leadParam : '';
 
   const chipMatch = (row: FilingRow, withRegulator = true) =>
     (!withRegulator || !regulator || regulatorOf(row) === regulator) &&
@@ -452,25 +452,22 @@ export function FilingsView({
   const controls = (
     <div className="flex flex-wrap items-center gap-2">
       <span className="inline-flex gap-1.5">
-        <Button size="icon" variant="outline" disabled={!prevAnchor || !!tile} onClick={() => step(prevAnchor)} aria-label="Previous period">
-          <ChevronLeft aria-hidden />
-        </Button>
-        <Button size="icon" variant="outline" disabled={!nextAnchor || !!tile} onClick={() => step(nextAnchor)} aria-label="Next period">
-          <ChevronRight aria-hidden />
-        </Button>
-      </span>
-      <span className="inline-flex h-control-md items-center gap-0.5 rounded-md border-1.5 border-line px-0.5">
-        <Button size="icon" variant="quiet" className="h-7 w-7" onClick={() => setParams({ fy: String(fyStartYear - 1), period: null })} aria-label="Previous financial year">
-          <ChevronLeft aria-hidden />
-        </Button>
-        <span className="px-1 text-[13px] font-medium tabular-nums text-ink">{fyLabel}</span>
+        {/* The arrows run past the year's ends into the next or previous financial year. */}
         <Button
           size="icon"
-          variant="quiet"
-          className="h-7 w-7"
-          disabled={fyStartYear >= currentFy.startYear + 2}
-          onClick={() => setParams({ fy: String(fyStartYear + 1), period: null })}
-          aria-label="Next financial year"
+          variant="outline"
+          disabled={!!tile}
+          onClick={() => (prevAnchor ? step(prevAnchor) : setParams({ fy: String(fyStartYear - 1), period: null }))}
+          aria-label="Previous period"
+        >
+          <ChevronLeft aria-hidden />
+        </Button>
+        <Button
+          size="icon"
+          variant="outline"
+          disabled={!!tile || (!nextAnchor && fyStartYear >= currentFy.startYear + 2)}
+          onClick={() => (nextAnchor ? step(nextAnchor) : setParams({ fy: String(fyStartYear + 1), period: null }))}
+          aria-label="Next period"
         >
           <ChevronRight aria-hidden />
         </Button>
@@ -524,7 +521,7 @@ export function FilingsView({
     className: 'hidden md:table-cell',
     render: (row) => <FilingAction row={row} now={now} href={recordHref(row)} />,
   };
-  const statusCol: GridColumn<FilingRow> = { key: 'status', label: 'Status', width: 128, render: (row) => <WordChip word={boardWord(row, details.get(row.id), now)} /> };
+  const statusCol: GridColumn<FilingRow> = { key: 'status', label: 'Status', width: 128, render: (row) => <WordChip filing word={boardWord(row, details.get(row.id), now)} /> };
   const noteCol: GridColumn<FilingRow> = {
     key: 'note',
     label: 'Note',
@@ -650,7 +647,7 @@ export function FilingsView({
       set: !!status,
       node: <FilterChip label="Status" value={status} options={BOARD_STATUS_OPTIONS} onChange={(v) => setParams({ status: v || null })} />,
     },
-    ...(showLead && leadOptions.length > 0
+    ...(leadChip && leadOptions.length > 0
       ? [
           {
             key: 'lead',
@@ -811,14 +808,13 @@ export function FilingsView({
           <PreIncorporationNotice
             scope={{ audience: scope.audience, companyName: pickedPreIncorporation.companyName }}
           />
-        ) : !picked ? (
-          <PreIncorporationPortfolioNote count={scope.preIncorporationIds.size} />
         ) : null}
 
         {/* The rail is narrower than the default 360 px, so the grouped grid keeps its five columns at 1440. */}
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div className="grid min-w-0 gap-3.5">
             <div className="flex flex-wrap items-center gap-2">
+              <CatFilterTabs value={cat} onChange={(c) => setParams({ cat: c === 'all' ? null : c })} stat={catStat} ns={catTasks} />
               <span className="relative w-full sm:w-[260px]">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" strokeWidth={1.6} aria-hidden />
                 <Input
@@ -830,7 +826,6 @@ export function FilingsView({
                   className="h-9 pl-9"
                 />
               </span>
-              <CatFilterTabs value={cat} onChange={(c) => setParams({ cat: c === 'all' ? null : c })} stat={catStat} ns={catTasks} />
               <FilterChipRow chips={chips} onClear={anyFilter ? clearAll : undefined} />
             </div>
             <div ref={listRef} className="min-w-0">
@@ -841,6 +836,7 @@ export function FilingsView({
           <div className="grid min-w-0 gap-5">
             <DashSection
               title="On time vs late"
+              headIcon={{ icon: ShieldCheck, tone: 'green' }}
               meta={onTimePct === null ? undefined : `${onTimePct}% on time`}
               loading={history.isPending}
               loadingVariant="block"
@@ -851,7 +847,7 @@ export function FilingsView({
                 <p className="text-[13px] text-ink-faint">No filing recorded in the last {ON_TIME_MONTHS} months</p>
               )}
             </DashSection>
-            <DashSection title="By regulator" meta={periodShort} loading={query_.isPending}>
+            <DashSection title="By area" meta={periodShort} loading={query_.isPending}>
               <div className="grid gap-1">
                 {regulators.map((r) => {
                   const pct = r.total ? Math.round((r.filed / r.total) * 100) : 0;
@@ -879,7 +875,7 @@ export function FilingsView({
                     </button>
                   );
                 })}
-                {internalRows.length ? (
+                {cat !== 'statutory' ? (
                   // Non-statutory work has no regulator; its row shows beside the six (F-3).
                   <span className="-mx-1.5 flex items-center gap-2.5 px-1.5 py-1" aria-label={`Internal: ${internalRows.length} done`}>
                     <i className="h-2 w-2 flex-none rounded-[2px] border-[1.5px] border-ink-2" aria-hidden />
@@ -888,7 +884,7 @@ export function FilingsView({
                       {internalRows.length} / {internalRows.length}
                     </span>
                     <span className="relative h-1.5 w-[90px] flex-none overflow-hidden rounded-bar bg-surface-sunken" aria-hidden>
-                      <i className="absolute inset-y-0 left-0 w-full rounded-bar bg-ink-2" />
+                      {internalRows.length ? <i className="absolute inset-y-0 left-0 w-full rounded-bar bg-ink-2" /> : null}
                     </span>
                   </span>
                 ) : null}
@@ -910,7 +906,7 @@ export function FilingsView({
                   {CHART_STATUSES.map((s) => (
                     <li key={s} className="flex items-center gap-2 text-[12.5px] font-medium text-ink-2">
                       <Swatch className={STATUS_FILL[s]} />
-                      <span className="flex-1">{FILING_WORD[s]}</span>
+                      <span className="flex-1">{s === 'filed' ? (cat === 'all' ? 'Filed or done' : cat === 'statutory' ? 'Filed' : 'Done') : s === 'upcoming' ? 'Upcoming' : FILING_WORD[s]}</span>
                       <b className="font-medium tabular-nums text-ink">{counts[s]}</b>
                     </li>
                   ))}
@@ -1077,7 +1073,7 @@ function RegisterTable({
           <FilingWindowCell row={row} mayWrite={mayWrite} />
         ),
     },
-    { key: 'status', header: 'Status', width: '128px', render: (row) => <WordChip word={boardWord(row, details.get(row.id), now)} /> },
+    { key: 'status', header: 'Status', width: '128px', render: (row) => <WordChip filing word={boardWord(row, details.get(row.id), now)} /> },
     {
       key: 'proof',
       header: 'Proof',

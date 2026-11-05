@@ -112,7 +112,7 @@ export function PartnerPage() {
   if (home.isPending) {
     return (
       <Shell header={header}>
-        <div className="bg-wash rounded-md border-2 border-line px-5 py-6" aria-busy>
+        <div className="bg-wash rounded-md border border-line px-5 py-6" aria-busy>
           <SkeletonRows rows={2} />
         </div>
         <DashSection title="Invoices" loading>

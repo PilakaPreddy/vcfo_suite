@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Calendar, CalendarClock, CircleCheck, User } from 'lucide-react';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
-import { CompanyPicker } from '@/components/admin/CompanyPicker';
+import { FilterSelect } from '@/components/ui/native-select';
 import { Button } from '@/components/ui/button';
 import { AreaPill } from '@/components/ui/spectrum-chip';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
@@ -12,7 +12,6 @@ import { Term } from '@/components/ui/term';
 import { SkeletonRows } from '@/components/ui/empty-state';
 import {
   PreIncorporationNotice,
-  PreIncorporationPortfolioNote,
 } from '@/components/compliances/PreIncorporationNotice';
 import { monthKeyOf, rowsInMonth } from '@/lib/compliance/filings';
 import { cn } from '@/lib/utils';
@@ -62,9 +61,9 @@ type GroupBy = 'filing' | 'frequency' | 'law';
 
 /** S-8: the strip labels follow the category in view. */
 const STRIP_LABELS: Record<Category, [string, string, string, string, string]> = {
-  stat: ['Overdue', 'Due in 15 days', 'Waiting on client', 'Done', 'Not started'],
+  stat: ['Overdue', 'Due in 15 days', 'Waiting on client', 'Filed', 'Upcoming'],
   ns: ['Overdue', 'Due this week', 'Waiting on client', 'Done', 'Not started'],
-  all: ['Overdue', 'Due soon', 'Waiting on client', 'Done', 'Not started'],
+  all: ['Overdue', 'Due soon', 'Waiting on client', 'Filed or done', 'Upcoming'],
 };
 const FREQUENCIES: Array<[string, string]> = [
   ['monthly', 'Monthly'],
@@ -194,7 +193,7 @@ export function ObligationsView({ basePath, scope, embedded = false }: { basePat
     label: 'Next due',
     width: 108,
     render: (r) => (
-      <span className={r.status === 'overdue' ? 'font-medium text-danger' : 'text-ink-muted'}>{plainDate(r.nextDue ?? r.row.dueDate, now)}</span>
+      <span className={cn('whitespace-nowrap', r.status === 'overdue' ? 'font-medium text-danger' : 'text-ink-muted')}>{plainDate(r.nextDue ?? r.row.dueDate, now)}</span>
     ),
   };
   const lastCol: GridColumn<FlatRow> = {
@@ -337,12 +336,11 @@ export function ObligationsView({ basePath, scope, embedded = false }: { basePat
   const head = (
     <span ref={filterRef} className="contents">
       {sole ? null : (
-        <CompanyPicker
-          engagements={engagements}
+        <FilterSelect
+          aria-label="Client"
+          options={[{ value: ALL_COMPANIES, label: 'All my clients' }, ...engagements.map((e) => ({ value: e.id, label: e.companyName }))]}
           value={companyId}
-          allLabel="All my clients"
-          allHint="Every client in view"
-          onChange={(id) => setParams({ company: id === ALL_COMPANIES ? null : id })}
+          onChange={(e) => setParams({ company: e.target.value === ALL_COMPANIES ? null : e.target.value })}
         />
       )}
       {filter || (!sole && companyId !== ALL_COMPANIES) ? (
@@ -433,8 +431,6 @@ export function ObligationsView({ basePath, scope, embedded = false }: { basePat
 
         {pickedPreIncorporation ? (
           <PreIncorporationNotice scope={{ audience: scope.audience, companyName: pickedPreIncorporation.companyName }} />
-        ) : !picked ? (
-          <PreIncorporationPortfolioNote count={scope.preIncorporationIds.size} />
         ) : null}
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -483,7 +479,7 @@ function FilingHead({ group }: { group: ObligationGroup }) {
       iso={group.dueDate}
       status={group.status}
       name={<Term>{group.name}</Term>}
-      sub={`Due ${plainDate(group.dueDate)} · ${group.authority}`}
+      sub={`Due ${plainDate(group.dueDate)}`}
       area={areaLabel(group.area)}
       filed={group.filed}
       total={group.total}

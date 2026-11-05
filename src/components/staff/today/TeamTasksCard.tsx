@@ -9,7 +9,6 @@ import { EFilingGrid, GRID_SUB, type EFilingColumn } from '@/components/dash/EFi
 import { AreaPill, Chip } from '@/components/ui/spectrum-chip';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { FilterChip, FilterChipRow } from '@/components/ui/filter-chip';
-import { SavedViews, type SavedView, type ViewFilters } from '@/components/ui/saved-views';
 import { StatusMenu, type SixWord } from '@/components/ui/status-menu';
 import type { BulkAction } from '@/components/ui/bulk-bar';
 import { CompanyTile, PersonCell } from '@/components/staff/today/today-parts';
@@ -34,6 +33,8 @@ import {
 } from '@/components/staff/today/today-rows';
 import { ReassignDialog, canMoveItem } from '@/views/admin/work/ReassignDialog';
 import { toastError } from '@/lib/toast-errors';
+import type { SavedView, ViewFilters } from '@/components/ui/saved-views';
+import { shortCompany } from '@/components/super/parts/super-text';
 import { cn } from '@/lib/utils';
 
 /** Status filter words: "Open" for everything not done, then the six (R-13). */
@@ -112,7 +113,7 @@ function TaskCell({ row, link }: { row: TeamTaskRow; link?: boolean }) {
             {row.title}
           </span>
         )}
-        <span className={cn('truncate text-[12.5px] text-ink-muted', GRID_SUB)}>{row.companyName}</span>
+        <span className={cn('truncate text-[12.5px] text-ink-muted', GRID_SUB)}>{shortCompany(row.companyName)}</span>
       </span>
     </span>
   );
@@ -127,7 +128,7 @@ type Props = {
 };
 
 /**
- * Team tasks (prototype ManagerToday "Team tasks"): R-10 filter chips, saved views, a List or
+ * Team tasks (prototype ManagerToday "Team tasks"): R-10 filter chips, a List or
  * Board switch, and a T1 table. Each row opens the step, the filing calendar or the project.
  * With `tools` the table gets row selection and the bulk bar (Assign, Remind, Mark done,
  * Export), quick actions on hover and focus (Enter opens, R reminds, A reassigns, C copies the
@@ -320,31 +321,21 @@ function TeamTasksBody({ rows, tools, loading, viewParam }: Props & { viewParam:
   ];
 
   return (
-    <DashSection title="Team tasks" meta={String(shown.length)} bodyClassName="p-0">
-      <div className="flex flex-col gap-2.5 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <SavedViews
-            storageKey={`${tools?.storageScope ?? 'staff'}:team-tasks`}
-            views={TEAM_TASK_VIEWS}
-            current={current}
-            onApply={apply}
-          />
-          <span className="ml-auto flex flex-wrap items-center gap-2">
-            <SpectrumTabs
-              label="Team tasks view"
-              items={[
-                { key: 'list', label: 'List' },
-                { key: 'board', label: 'Board' },
-              ]}
-              value={view}
-              onChange={setView}
-            />
-          </span>
-        </div>
-        <FilterChipRow chips={chips} onClear={clear} />
+    <DashSection title="Team tasks" meta={String(shown.length)} flush>
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3 md:px-5">
+        <FilterChipRow chips={chips} onClear={clear} className="min-w-0 flex-1" />
+        <SpectrumTabs
+          label="Team tasks view"
+          items={[
+            { key: 'list', label: 'List' },
+            { key: 'board', label: 'Board' },
+          ]}
+          value={view}
+          onChange={setView}
+        />
       </div>
       {view === 'list' ? (
-        <div className="border-t border-line-soft px-2 pb-3">
+        <div className="border-t border-line-soft">
           <EFilingGrid
             caption="Team tasks"
             columns={columns}
@@ -367,6 +358,7 @@ function TeamTasksBody({ rows, tools, loading, viewParam }: Props & { viewParam:
                   bulkNoun: ['task', 'tasks'] as [string, string],
                   // M-27 (D1): Open and Remind at the row end, then the row menu with Reassign (A)
                   // and Copy link (C). The row column holds three buttons, so Reassign lives in the menu.
+                  actionsColumn: 'task',
                   rowActions: (r: TeamTaskRow) => (
                     <RowQuickActions onOpen={() => router.push(r.href)} onRemind={teamRowRemindKey(r) ? () => remind([r]) : undefined}>
                       <RowMoreMenu

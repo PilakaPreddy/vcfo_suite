@@ -538,7 +538,7 @@ export function NoticeTab({ meeting }: { meeting: MeetingDto }) {
         ) : null}
 
         {editable || meeting.can.submit ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-line bg-surface px-5 py-3.5">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-surface px-5 py-3.5">
             <span className={cn('text-[13px]', blanks.length ? 'font-medium text-warning' : 'text-ink-2')}>
               {blanks.length ? `${blanks.length === 1 ? '1 field' : `${blanks.length} fields`} to fill before sending.` : meeting.can.submit ? 'The manager approves. Then VCFO emails the notice.' : 'Save your edits, then decide.'}
             </span>

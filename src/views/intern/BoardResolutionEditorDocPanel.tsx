@@ -330,7 +330,7 @@ export function BoardResolutionEditorDocPanel(p: BoardResolutionEditorProps) {
 
             ) : (
 
-              <div className="mb-6 rounded-md border border-warning/25 bg-warning/10 px-4 py-4 text-[13px] text-warning">
+              <div className="mb-6 rounded-md border-1.5 border-line bg-surface-raised px-4 py-4 text-[13px] text-ink-2">
 
                 <p className="flex items-start gap-2 font-medium text-ink mb-2">
 
@@ -388,7 +388,7 @@ export function BoardResolutionEditorDocPanel(p: BoardResolutionEditorProps) {
               {!isFinalized && isLead ? (
                 <Button
                   type="button"
-                  variant="success"
+                  variant="default"
                   disabled={
                     lockedForViewer ||
                     busy !== null ||

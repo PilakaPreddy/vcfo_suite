@@ -17,6 +17,7 @@ import type {
   EventMountArg,
 } from '@fullcalendar/core';
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { CardHeadTile } from '@/components/common/CardHeadTile';
 import { Button } from '@/components/ui/button';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import {
@@ -32,8 +33,8 @@ import { cn } from '@/lib/utils';
 import './staff-calendar.css';
 
 /**
- * The one FullCalendar surface of the staff calendars (M6 G2): the Planner's time blocks and
- * the staff compliance calendar. It runs FullCalendar's MIT packages (daygrid, timegrid,
+ * The Planner's calendar, drawn as the prototype's `HourWeek`: an inset framed grid, stacked day
+ * heads, hour rows and blocks in the client's colour. It runs FullCalendar's MIT packages (daygrid, timegrid,
  * interaction) in UTC mode with India Standard Time wall-clock values (`calendar-moves.ts`),
  * hides FullCalendar's own toolbar for ours (Day, Week, Month, Previous, Next, Today), and is
  * restyled with the design tokens in `staff-calendar.css` (light and dark).
@@ -76,6 +77,12 @@ export interface StaffCalEvent {
   hint?: string;
   /** Hollow square for a non-statutory task in a statutory grid (the old MonthGrid mark). */
   hollow?: boolean;
+  /** R-35: the block's client colour (`brand`, `identity`, `waiting`, `warning`, `positive`, `upcoming`). */
+  client?: string;
+  /** The person's own block, not tied to a work item: a dashed edge. */
+  own?: boolean;
+  /** Planned after the item's due date: an amber ring. */
+  late?: boolean;
 }
 
 export interface StaffMove {
@@ -149,8 +156,8 @@ export function StaffCalendar({
   onOpen?: (event: StaffCalEvent) => void;
   /** A click (or drag) on an empty slot: the create form opens there. */
   onSlot?: (slot: { start: Date; end: Date; allDay: boolean }) => void;
-  /** A Work item dragged in from outside (an element with `data-plan-key`). */
-  onExternalDrop?: (drop: { key: string; date: Date; allDay: boolean }) => void;
+  /** A to-do dragged in from the to-do list (an element with `data-plan-key` and `data-plan-title`). */
+  onExternalDrop?: (drop: { key: string; title: string; date: Date; allDay: boolean }) => void;
   /** The shown range changed: first day and the day after the last, and the mode. */
   onRange?: (range: { from: string; to: string; mode: StaffCalendarMode }) => void;
   /** Extra text under a day head in Day and Week (the planned hours). */
@@ -204,7 +211,15 @@ export function StaffCalendar({
         allDay: e.allDay,
         startEditable: isDraggable(e.kind, rights),
         durationEditable: isResizable(e.kind, rights),
-        classNames: ['vc-ev', `vc-ev--${e.tone}`, e.reg ? `vc-reg--${e.reg}` : '', e.kind === 'statutory' ? 'vc-ev--locked' : ''].filter(Boolean),
+        classNames: [
+          'vc-ev',
+          `vc-ev--${e.tone}`,
+          e.client ? `vc-client--${e.client}` : '',
+          e.own ? 'vc-ev--own' : '',
+          e.late ? 'vc-ev--late' : '',
+          e.reg ? `vc-reg--${e.reg}` : '',
+          e.kind === 'statutory' ? 'vc-ev--locked' : '',
+        ].filter(Boolean),
       })),
     [events, rights],
   );
@@ -261,17 +276,10 @@ export function StaffCalendar({
 
   return (
     <section className={cn('surface vc-cal min-w-0 overflow-hidden', className)}>
-      <div className="flex min-h-[52px] flex-wrap items-center gap-2 border-b border-line-soft px-4 py-2">
+      <div className="flex min-h-head flex-wrap items-center gap-x-2.5 gap-y-2 border-b border-line-soft px-4 py-2 md:px-5">
+        <CardHeadTile title={title} />
         <h2 className="text-[15px] font-medium text-ink">{title}</h2>
         <span className="min-w-0 flex-1 truncate text-[13px] text-ink-muted tabular-nums">{label}</span>
-        {modes.length > 1 ? (
-          <SpectrumTabs
-            label="Calendar view"
-            items={modes.map((m) => ({ key: m, label: m === 'day' ? 'Day' : m === 'week' ? 'Week' : 'Month' }))}
-            value={mode}
-            onChange={(k) => setMode(k as StaffCalendarMode)}
-          />
-        ) : null}
         <span className="flex items-center gap-1">
           <Button variant="outline" size="icon" className="h-control-sm w-control-sm" aria-label={`Previous ${mode}`} onClick={() => api()?.prev()}>
             <ChevronLeft className="h-4 w-4" strokeWidth={1.6} />
@@ -283,10 +291,18 @@ export function StaffCalendar({
             Today
           </Button>
         </span>
+        {modes.length > 1 ? (
+          <SpectrumTabs
+            label="Calendar view"
+            items={modes.map((m) => ({ key: m, label: m === 'day' ? 'Day' : m === 'week' ? 'Week' : 'Month' }))}
+            value={mode}
+            onChange={(k) => setMode(k as StaffCalendarMode)}
+          />
+        ) : null}
         {actions}
       </div>
-      <div className="overflow-x-auto">
-        <div className={mode === 'day' ? 'min-w-[320px]' : 'min-w-[680px]'}>
+      <div className="overflow-x-auto px-4 py-4 md:px-5">
+        <div className={cn('overflow-hidden rounded-md border-1.5 border-line', mode === 'day' ? 'min-w-[320px]' : 'min-w-[640px]')}>
           <FullCalendar
             ref={ref}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -302,11 +318,14 @@ export function StaffCalendar({
             allDayText="All day"
             slotMinTime={`${pad(dayStartHour)}:00:00`}
             slotMaxTime={`${pad(dayEndHour)}:00:00`}
-            slotDuration="00:30:00"
+            slotDuration="01:00:00"
             snapDuration="00:15:00"
-            slotLabelFormat={{ hour: 'numeric', meridiem: 'short' }}
+            slotLabelContent={(arg) => {
+              const h = arg.date.getUTCHours();
+              return `${h > 12 ? h - 12 : h} ${h >= 12 ? 'PM' : 'AM'}`;
+            }}
             eventTimeFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}
-            dayHeaderFormat={mode === 'month' ? { weekday: 'short' } : { weekday: 'short', day: 'numeric' }}
+            dayHeaderFormat={{ weekday: 'short' }}
             dayMaxEvents={3}
             moreLinkText={(n) => `${n} more`}
             events={input}
@@ -349,7 +368,7 @@ export function StaffCalendar({
             }}
             drop={(arg: DropArg) => {
               const key = arg.draggedEl.dataset.planKey;
-              if (key) onExternalDrop?.({ key, date: arg.date, allDay: arg.allDay });
+              if (key) onExternalDrop?.({ key, title: arg.draggedEl.dataset.planTitle ?? '', date: arg.date, allDay: arg.allDay });
             }}
             datesSet={(arg: DatesSetArg) => {
               setLabel(arg.view.title);
@@ -363,6 +382,7 @@ export function StaffCalendar({
               ) : (
                 <span className="vc-dayhead">
                   <span>{arg.text}</span>
+                  <span className={cn('vc-dayhead__date', arg.isToday && 'vc-dayhead__date--today')}>{arg.date.getUTCDate()}</span>
                   {dayHeaderExtra ? <span className="vc-dayhead__extra">{dayHeaderExtra(wallYmd(arg.date))}</span> : null}
                 </span>
               )

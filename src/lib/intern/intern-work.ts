@@ -925,9 +925,10 @@ function companyPill(items: InternWorkItem[]): { label: string; tone: InternChip
 export function internActionQueueByCompany(
   items: InternWorkItem[],
   now = new Date(),
+  opts: { includeWaiting?: boolean } = {},
 ): InternActionCompanyGroup[] {
   const open = sortInternWork(
-    items.filter((i) => i.kind !== 'done' && internWorkBoardColumn(i, now) !== 'waiting'),
+    items.filter((i) => i.kind !== 'done' && (opts.includeWaiting || internWorkBoardColumn(i, now) !== 'waiting')),
   );
   const groups = new Map<string, InternActionCompanyGroup>();
   for (const item of open) {

@@ -86,9 +86,24 @@ describe('partnerParams', () => {
 
 describe('buildPartnerReport', () => {
   it('lays out the same numbers the page shows', () => {
-    const data = buildPartnerReport(insights, insights.months[1]!, new Date('2026-10-29T06:00:00Z'));
+    const data = buildPartnerReport(insights, insights.months[1]!, new Date('2026-10-29T06:00:00Z'), {
+      prospects: [
+        { stage: 'won', closedAt: '2026-10-12T00:00:00.000Z' },
+        { stage: 'lost', closedAt: '2026-09-12T00:00:00.000Z' },
+      ],
+      targetDays: 30,
+    });
     expect(data.monthLabel).toBe('October 2026');
-    expect(data.numbers.find((n) => n.k === 'Filed late')).toEqual({ k: 'Filed late', v: 1, tone: 'warn' });
+    expect(data.numbers.map((n) => n.k)).toEqual([
+      'Active clients',
+      'Client movement',
+      'Certificates (COI) issued',
+      'Average days to COI · target 30',
+      'Filings on time (1 late)',
+      'Registrations completed',
+    ]);
+    expect(data.numbers[1]).toEqual({ k: 'Client movement', v: '1 won · 0 lost' });
+    expect(data.numbers[4]?.v).toBe('67%');
     expect(data.managers[0]).toEqual({ name: 'Pranay', clients: 3, onTime: '75%', overdue: 3, daysToCoi: '21 days' });
     expect(data.clientLine).toBe('0 clients in the book: 0 in incorporation and 0 incorporated.');
     expect(partnerReportFilename(data.monthLabel)).toBe('SBC-partner-report-October-2026.pdf');

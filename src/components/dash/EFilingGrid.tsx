@@ -106,6 +106,7 @@ export function EFilingGrid<T>({
   bulkNoun,
   rowActions,
   rowShortcuts,
+  actionsColumn,
   stickyHead,
   stickyTop = 'var(--shell-sticky-top)',
   stickyFirstColumn,
@@ -144,6 +145,8 @@ export function EFilingGrid<T>({
   rowActions?: (row: T) => ReactNode;
   /** E-02: one-key actions on a focused row. */
   rowShortcuts?: EFilingRowShortcut<T>[];
+  /** E-02: show the row actions over the right end of this column (a text column) instead of in a column of their own. The density switch then sits in this column's head. */
+  actionsColumn?: string;
   /** E-09: sticky head. */
   stickyHead?: boolean;
   /** Where the sticky head stops: the top bar plus the ribbon by default. Pass 0 inside a scrolling panel. */
@@ -238,7 +241,7 @@ export function EFilingGrid<T>({
       )
     : [];
 
-  const trailing = !!rowActions || !!densityScope;
+  const trailing = (!!rowActions || !!densityScope) && !actionsColumn;
   const colCount = columns.length + (selectable ? 1 : 0) + (trailing ? 1 : 0);
   const headTop = sticky.fits ? stickyTop : undefined;
   const stickTh = stickyHead ? 'sticky z-[2] bg-surface-raised' : '';
@@ -287,8 +290,17 @@ export function EFilingGrid<T>({
           {caption ? <caption className="sr-only">{caption}</caption> : null}
           <colgroup>
             {selectable ? <col style={{ width: '36px' }} /> : null}
-            {columns.map((c) => (
-              <col key={c.key} style={c.width ? { width: c.width } : undefined} />
+            {columns.map((c, ci) => (
+              // The last cell's edge padding is 10px more than a normal cell's, and a fixed 104px chip
+              // needs that room back or its cell ellipsis shows beside the chip.
+              <col
+                key={c.key}
+                style={
+                  c.width
+                    ? { width: !trailing && ci === columns.length - 1 && c.width.endsWith('px') ? `calc(${c.width} + 20px)` : c.width }
+                    : undefined
+                }
+              />
             ))}
             {trailing ? <col style={{ width: rowActions ? '104px' : '44px' }} /> : null}
           </colgroup>
@@ -309,15 +321,21 @@ export function EFilingGrid<T>({
                   scope="col"
                   style={headTop !== undefined ? { top: headTop } : undefined}
                   className={cn(
-                    'h-9 whitespace-nowrap border-b-1.5 border-line px-2.5 text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted',
+                    'h-9 whitespace-nowrap border-b-1.5 border-line px-2.5 first:pl-4 md:first:pl-5 last:pr-4 md:last:pr-5 text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted',
                     alignClass(c.align),
                     stickTh,
                     ci === 0 && firstSticky,
                     ci === 0 && stickyFirstColumn && 'max-sm:z-[3]',
                     bulk && ci === 0 && cn('z-[4] overflow-visible', stickyHead ? null : stickyFirstColumn ? 'sm:relative' : 'relative'),
+                    c.key === actionsColumn && !stickyHead && 'relative',
                   )}
                 >
                   {c.header}
+                  {c.key === actionsColumn && !bulk && densityScope && densityProp === undefined ? (
+                    <span className="absolute inset-y-0 right-1 flex items-center normal-case tracking-normal max-md:hidden">
+                      <DensityMenu value={density} onChange={setStoredDensity} />
+                    </span>
+                  ) : null}
                   {bulk && ci === 0 ? (
                     // E-01: the bar covers the head row while rows are picked, so the rows do not move.
                     <div
@@ -360,7 +378,7 @@ export function EFilingGrid<T>({
                   <tr key={`sk${i}`} aria-hidden>
                     {selectable ? <td className="border-b border-line-soft pl-2.5" /> : null}
                     {columns.map((c, ci) => (
-                      <td key={c.key} className={cn('border-b border-line-soft px-2.5 align-middle', compact ? 'h-8' : 'h-11')}>
+                      <td key={c.key} className={cn('border-b border-line-soft px-2.5 first:pl-4 md:first:pl-5 last:pr-4 md:last:pr-5 align-middle', compact ? 'h-8' : 'h-11')}>
                         {ci === 0 && !compact ? (
                           <span className="grid gap-1.5">
                             <span className="block h-3 w-3/5 animate-pulse rounded-bar bg-line motion-reduce:animate-none" />
@@ -458,16 +476,22 @@ export function EFilingGrid<T>({
                       <td
                         key={c.key}
                         className={cn(
-                          'border-b border-line-soft px-2.5 align-middle text-ink-2',
+                          'border-b border-line-soft px-2.5 first:pl-4 md:first:pl-5 last:pr-4 md:last:pr-5 align-middle text-ink-2',
                           compact ? 'h-8' : 'h-11',
                           alignClass(c.align),
                           c.wrap ? 'whitespace-normal' : 'truncate whitespace-nowrap',
                           ci === 0 && firstSticky,
                           ci === 0 && !selectable && mark && 'relative',
+                          c.key === actionsColumn && 'relative',
                         )}
                       >
                         {ci === 0 && !selectable ? mark : null}
                         {c.render(row)}
+                        {c.key === actionsColumn && rowActions ? (
+                          <span className="invisible absolute inset-y-0 right-1 flex items-center gap-0.5 bg-surface-raised pl-1.5 group-hover/row:visible group-focus-within/row:visible group-focus-visible/row:visible max-md:hidden">
+                            {rowActions(row)}
+                          </span>
+                        ) : null}
                       </td>
                     ))}
                     {trailing ? (
@@ -501,7 +525,7 @@ export function EFilingGrid<T>({
         />
       ) : null}
       {rows.length > 0 && !loading ? (
-        <footer className="mt-2 flex flex-wrap items-center gap-3 border-t border-line-soft pt-2 text-[13px] text-ink-muted">
+        <footer className="flex flex-wrap items-center gap-3 px-4 py-2 text-[13px] text-ink-muted md:px-5">
           <span className="tabular-nums">
             {current * pageSize + 1}–{Math.min(rows.length, (current + 1) * pageSize)} of {rows.length}
           </span>

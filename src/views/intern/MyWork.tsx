@@ -5,9 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { BellRing, CheckCheck, CheckCircle2, Download, MoreHorizontal, Plus, Sparkles } from 'lucide-react';
 import { ActionMenu } from '@/components/ui/action-menu';
 import { DashSection } from '@/components/dash/DashSection';
-import { GanttTimeline } from '@/components/timeline';
+import { PlanTimeline } from '@/components/work/PlanTimeline';
 import { shortDate } from '@/components/timeline/timeline-model';
-import { workTimeline } from '@/views/manager/team-work';
 import { WorkAreaCard, WorkStatusCard } from '@/views/manager/work-summary';
 import type { Engagement } from '@/data/engagements';
 import { PageTransition } from '@/components/shell/PageTransition';
@@ -60,7 +59,6 @@ import {
   filterInternWork,
   formatDueLabel,
   formatIstWeekdayDay,
-  internTimelineGantt,
   internWorkPath,
   parseInternWorkDay,
   parseInternWorkFocus,
@@ -85,7 +83,6 @@ const VIEWS: { key: WorkView; label: string }[] = [
   { key: 'plan', label: 'Planner' },
   { key: 'list', label: 'List' },
   { key: 'board', label: 'Board' },
-  { key: 'tl', label: 'Timeline' },
 ];
 
 /** The six status words (R-13) for the Status filter. */
@@ -96,7 +93,8 @@ const DUE_OPTIONS = [
 ];
 
 function parseWorkView(value: string | null | undefined): WorkView {
-  return value === 'plan' ? 'plan' : parseInternWorkView(value);
+  if (value === 'plan' || value === 'tl') return 'plan';
+  return parseInternWorkView(value);
 }
 
 /**
@@ -457,6 +455,21 @@ export function WorkScreen({
             ]
           : []),
         {
+          key: 'show',
+          set: kind !== 'all',
+          node: (
+            <FilterChip
+              label="Show"
+              value={kind === 'all' ? '' : kind}
+              options={[
+                { value: 'steps', label: 'Steps only' },
+                { value: 'filings', label: 'Filings only' },
+              ]}
+              onChange={(v) => go({ kind: (v || 'all') as InternWorkKindFilter })}
+            />
+          ),
+        },
+        {
           key: 'status',
           set: !!statusFilter,
           node: (
@@ -489,21 +502,6 @@ export function WorkScreen({
               },
             ]
           : []),
-        {
-          key: 'show',
-          set: kind !== 'all',
-          node: (
-            <FilterChip
-              label="Show"
-              value={kind === 'all' ? '' : kind}
-              options={[
-                { value: 'steps', label: 'Steps only' },
-                { value: 'filings', label: 'Filings only' },
-              ]}
-              onChange={(v) => go({ kind: (v || 'all') as InternWorkKindFilter })}
-            />
-          ),
-        },
         ...(tag
           ? [{ key: 'tag', set: true, node: <FilterChip label="Tag" value={tag} valueLabel={TAG_LABEL[tag]} options={[]} onChange={() => go({ tag: null })} /> }]
           : []),
@@ -538,7 +536,6 @@ export function WorkScreen({
     return key?.startsWith('filing:') ? key.slice('filing:'.length) : undefined;
   };
 
-  const plannerTimeline = workTimeline(filtered, istYmdOf(now));
   const statusRows = filtered.map((i) => ({ status: statusOf(i), area: areaOf(i) }));
   const exportShown = () =>
     exportRowsCsv(
@@ -641,22 +638,12 @@ export function WorkScreen({
           <WorkBoard items={filtered} now={now} onOpen={(item) => setOpenId(item.id)} ownerOf={team?.showLead ? (i) => team.byId.get(i.id)?.leadName : undefined} />
         </>
       ) : null}
-      {view === 'tl' ? (
-        <TimelineView items={filtered} now={now} selectedDay={day} onOpen={(item) => setOpenId(item.id)} />
-      ) : null}
-
       {view === 'plan' && planner ? planner : null}
       {view === 'plan' && !planner ? (
         <>
           <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="flex min-w-0 flex-col gap-4">
-              <DashSection title="Timeline" meta={plannerTimeline?.start && plannerTimeline.end ? `${shortDate(plannerTimeline.start)} to ${shortDate(plannerTimeline.end)}` : undefined} flush>
-                {plannerTimeline ? (
-                  <GanttTimeline timeline={plannerTimeline} today={istYmdOf(now)} className="pb-3" />
-                ) : (
-                  <EmptyState title="Nothing dated" className="m-4" />
-                )}
-              </DashSection>
+              <PlanTimeline items={filtered} now={now} onOpen={(item) => setOpenId(item.id)} />
               <PlannerCalendar days={weekDays} onWeek={stepWeek} onDate={setWeekYmd} items={plannerItems} now={now} onOpenItem={openByKey} />
             </div>
             <PlannerTodos
@@ -668,7 +655,7 @@ export function WorkScreen({
               byId={todoItems}
               persist={persistTodos}
               onOpenItem={setOpenId}
-              onNew={() => setTodoOpen(true)}
+              planKeyOf={(i) => keyOf.get(i.id)}
               hand={
                 team && team.leads.length > 0
                   ? {
@@ -691,10 +678,13 @@ export function WorkScreen({
               }
             />
           </div>
-          <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-            <WorkStatusCard title="My work · status" items={statusRows} />
-            <WorkAreaCard items={statusRows} />
-          </div>
+          {/* The lead's own summary; a manager's Work has none in the prototype. */}
+          {team ? null : (
+            <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+              <WorkStatusCard title="My work · status" items={statusRows} />
+              <WorkAreaCard items={statusRows} />
+            </div>
+          )}
         </>
       ) : null}
 
@@ -1017,175 +1007,6 @@ function ListView({
             }
           : {})}
       />
-    </div>
-  );
-}
-
-const BAR_TONE = {
-  overdue: 'bg-danger-mid text-white',
-  soon: 'border-1.5 border-warning-mid bg-warning-soft text-warning',
-  ok: 'hatch text-brand-text',
-  done: 'bg-positive-mid text-white',
-} as const;
-
-const TIMELINE_LEGEND: Array<[string, string]> = [
-  ['On track', 'hatch'],
-  ['Due soon', 'border-1.5 border-warning-mid bg-warning-soft'],
-  ['Overdue', 'bg-danger-mid'],
-  ['Done', 'bg-positive-mid'],
-  ['Step due', 'h-2.5 w-2.5 rotate-45 bg-ink'],
-  ['Filing due', 'h-2.5 w-2.5 rotate-45 bg-danger-mid'],
-];
-
-/**
- * Timeline view (R-21): a 14-day Gantt with 16px bars, 3px corners and the orange today line.
- * An on-track bar shows the part up to today solid and the rest as blurple hatch.
- */
-function TimelineView({
-  items,
-  now,
-  selectedDay,
-  onOpen,
-}: {
-  items: InternWorkItem[];
-  now: Date;
-  selectedDay: string | null;
-  onOpen: (item: InternWorkItem) => void;
-}) {
-  const today = ymdInIst(now);
-  const gantt = internTimelineGantt(items, now);
-  const todayIdx = gantt.window.indexOf(today);
-  const groups: { id: string; name: string; rows: typeof gantt.rows }[] = [];
-  for (const row of gantt.rows) {
-    let g = groups.find((x) => x.id === row.item.engagementId);
-    if (!g) {
-      g = { id: row.item.engagementId, name: row.item.companyName, rows: [] };
-      groups.push(g);
-    }
-    g.rows.push(row);
-  }
-  const grid = { gridTemplateColumns: `minmax(150px,220px) repeat(${gantt.window.length}, minmax(30px, 1fr))` };
-  const legend = (
-    <span className="hidden flex-wrap items-center gap-3 text-[12px] text-ink-muted xl:flex">
-      {TIMELINE_LEGEND.map(([label, cls]) => (
-        <span key={label} className="flex items-center gap-1.5">
-          <i className={cn('h-2.5 w-3.5 rounded-bar', cls)} aria-hidden />
-          {label}
-        </span>
-      ))}
-    </span>
-  );
-  const first = gantt.window[0];
-  const last = gantt.window[gantt.window.length - 1];
-
-  return (
-    <div className="flex flex-col gap-4">
-      <WorkCard
-        title="Timeline"
-        right={legend}
-        meta={first && last ? `${formatDueLabel(`${first}T12:00:00+05:30`, now)} to ${formatDueLabel(`${last}T12:00:00+05:30`, now)}` : undefined}
-      >
-        {gantt.rows.length === 0 && gantt.later.length === 0 ? (
-          <EmptyWork className="m-4" />
-        ) : (
-          <div className="overflow-x-auto">
-            <div className="min-w-[680px]">
-              <div className="grid h-9 items-center border-b-1.5 border-line text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted" style={grid}>
-                <span className="px-4">Task</span>
-                {gantt.window.map((ymd) => {
-                  const heading = formatIstWeekdayDay(ymd);
-                  const isToday = ymd === today;
-                  const weekend = heading.weekday === 'Sat' || heading.weekday === 'Sun';
-                  return (
-                    <span
-                      key={ymd}
-                      id={selectedDay === ymd ? 'intern-tl-day' : undefined}
-                      className={cn(
-                        'text-center tracking-normal tabular-nums',
-                        isToday && 'text-brand-text',
-                        weekend && !isToday && 'text-ink-faint',
-                        selectedDay === ymd && 'rounded-mark bg-brand-soft text-brand-text',
-                      )}
-                    >
-                      {heading.weekday.charAt(0)} {heading.day}
-                    </span>
-                  );
-                })}
-              </div>
-              {groups.map((group) => (
-                <div key={group.id}>
-                  <p className="flex items-center gap-2 border-b border-line-soft px-4 py-1.5 text-[12px] font-medium text-ink-muted">
-                    <LeadCompanyChip name={group.name} compact />
-                    <span className="truncate">{group.name}</span>
-                  </p>
-                  {group.rows.map((row) => {
-                    const span = Math.max(1, row.endIdx - row.startIdx + 1);
-                    const doneShare =
-                      row.priority === 'ok' && todayIdx >= row.startIdx
-                        ? Math.max(0, Math.min(1, (todayIdx + 1 - row.startIdx) / span))
-                        : 0;
-                    return (
-                      <div key={row.item.id} className="relative grid border-b border-line-soft py-2 last:border-b-0" style={grid}>
-                        <button
-                          type="button"
-                          onClick={() => onOpen(row.item)}
-                          title={row.item.title}
-                          className="min-w-0 truncate px-4 text-left text-[13px] font-medium text-ink hover:underline"
-                          style={{ gridColumn: 1, gridRow: 1 }}
-                        >
-                          {row.item.title}
-                        </button>
-                        {todayIdx >= 0 ? (
-                          <span
-                            aria-hidden
-                            className="pointer-events-none -my-2 flex justify-center"
-                            style={{ gridColumn: `${todayIdx + 2} / span 1`, gridRow: 1 }}
-                          >
-                            <i className="block h-full w-0.5 bg-highlight-bright" />
-                          </span>
-                        ) : null}
-                        <button
-                          type="button"
-                          onClick={() => onOpen(row.item)}
-                          title={`${row.item.title} · ${row.item.why}`}
-                          className={cn(
-                            'relative z-[1] flex h-4 min-w-0 items-center self-center overflow-hidden whitespace-nowrap rounded-bar px-1.5 text-[11px] font-medium hover:opacity-90',
-                            BAR_TONE[row.priority],
-                          )}
-                          style={{ gridColumn: `${row.startIdx + 2} / ${row.endIdx + 3}`, gridRow: 1 }}
-                        >
-                          {doneShare > 0 ? (
-                            <i className="absolute inset-y-0 left-0 bg-brand" style={{ width: `${doneShare * 100}%` }} aria-hidden />
-                          ) : null}
-                          <span className={cn('relative truncate', doneShare > 0.5 && 'text-on-brand')}>{row.item.why}</span>
-                        </button>
-                        {row.item.dueAt && row.item.kind !== 'done' ? (
-                          <span
-                            aria-hidden
-                            className="pointer-events-none relative z-[2] flex items-center justify-end self-center"
-                            style={{ gridColumn: `${row.endIdx + 2} / span 1`, gridRow: 1 }}
-                          >
-                            <i className={cn('block h-3 w-3 rotate-45 rounded-[2px]', row.item.source === 'filing' ? 'bg-danger-mid' : 'bg-ink')} />
-                          </span>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </WorkCard>
-      {gantt.later.length > 0 ? (
-        <section className="surface min-w-0 overflow-hidden">
-          <div className="flex min-h-[52px] items-center gap-2.5 border-b border-line-soft px-4">
-            <h2 className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">Later</h2>
-            <span className="text-[12.5px] text-ink-muted tabular-nums">{gantt.later.length}</span>
-          </div>
-          <ListView items={gantt.later} now={now} onOpen={onOpen} />
-        </section>
-      ) : null}
     </div>
   );
 }

@@ -33,7 +33,7 @@ import { usePortal } from '../../PortalProvider';
 import { portalHref } from '../../routes';
 import { useDismiss } from './bits';
 import { exactDate } from '@/lib/relative-due';
-import { FILING_WORD, SIX_TONE, STATUS_FILL, STATUS_STROKE, STATUS_TILE, type SixWord } from '@/lib/compliance/spectrum-status';
+import { STATUS_FILL, STATUS_STROKE } from '@/lib/compliance/spectrum-status';
 
 /* ------------------------------------------------------------------ island */
 
@@ -46,20 +46,24 @@ export function Island({ className, inline, children }: { className?: string; in
 /* ------------------------------------------------------------ status words */
 
 /**
- * R-13: the four register buckets in the six status words, with their colours, from the staff
- * maps in `src/lib/compliance/spectrum-status.ts` re-keyed by the portal's short keys. A filed
- * row is Done; an upcoming row that is not yet in its due-soon window is Not started.
+ * The four register buckets in the prototype's filing words: Filed, Due soon, Overdue, Upcoming.
+ * A filing keeps these words on screen; a task keeps the six status words.
  */
-export const WORD: Record<CompStatus, SixWord> = byComp(FILING_WORD);
-const TONE = (s: CompStatus): ChipTone => SIX_TONE[WORD[s]];
+export const WORD: Record<CompStatus, string> = { ok: 'Filed', due: 'Due soon', over: 'Overdue', up: 'Upcoming' };
+export const TONE: Record<CompStatus, ChipTone> = { ok: 'ok', due: 'warn', over: 'bad', up: 'idle' };
 /** Solid marks for bars, legend squares and dots (R-25: status colours only in charts). */
 export const FILL: Record<CompStatus, string> = byComp(STATUS_FILL);
 /** SVG stroke colours for the donut, from the same tokens. */
 export const STROKE: Record<CompStatus, string> = byComp(STATUS_STROKE);
 /** Soft tint for a date tile or a day number. */
-export const TINT: Record<CompStatus, string> = byComp(STATUS_TILE);
-/** Legend and drill order: worst first, then the rest. */
-export const STATUS_ORDER: CompStatus[] = ['over', 'due', 'up', 'ok'];
+export const TINT: Record<CompStatus, string> = {
+  ok: 'bg-positive-soft text-positive',
+  due: 'bg-warning-soft text-warning',
+  over: 'bg-danger-soft text-danger',
+  up: 'bg-upcoming-soft text-ink',
+};
+/** Legend and drill order, as in the prototype: Filed first, then Due soon, Overdue and Upcoming. */
+export const STATUS_ORDER: CompStatus[] = ['ok', 'due', 'over', 'up'];
 
 /** R-13 status chip, 104px. `compact` keeps only the square dot for narrow rails (the word stays for screen readers). */
 export function StatusChip({ s, compact, className }: { s: CompStatus; compact?: boolean; className?: string }) {
@@ -71,7 +75,7 @@ export function StatusChip({ s, compact, className }: { s: CompStatus; compact?:
       </span>
     );
   return (
-    <Chip tone={TONE(s)} fixed className={className}>
+    <Chip tone={TONE[s]} fixed raw className={className}>
       {WORD[s]}
     </Chip>
   );

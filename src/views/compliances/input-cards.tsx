@@ -51,6 +51,16 @@ async function downloadRequestFile(fileId: string) {
   window.open(body.url, '_blank', 'noopener');
 }
 
+/** Label and value on one row (prototype `ItemScreen` KV). */
+function KvRow({ k, first, children }: { k: string; first?: boolean; children: React.ReactNode }) {
+  return (
+    <div className={cn('grid grid-cols-1 gap-1 border-line-soft px-4 py-2 sm:grid-cols-[190px_minmax(0,1fr)] sm:items-center sm:gap-3 md:px-5', !first && 'border-t')}>
+      <dt className="text-[13px] text-ink-muted">{k}</dt>
+      <dd className="m-0 min-w-0 text-[14px]">{children}</dd>
+    </div>
+  );
+}
+
 export function StaffFromClientCard({
   engagementId,
   kind,
@@ -197,9 +207,12 @@ export function StaffFromClientCard({
           {(data?.needs ?? []).map((n) => (
             <div key={`need-${n}`} className="flex flex-wrap items-center gap-3 border-t border-line-soft px-4 py-3 text-[13.5px] first:border-t-0 md:px-5">
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-ink-2">{n}</span>
-                <span className="block truncate text-[12.5px] text-ink-muted">Not asked yet</span>
+                <span className="block truncate font-medium text-ink">{n}</span>
+                <span className="block truncate text-[12.5px] text-ink-muted">SBC will ask when this starts</span>
               </span>
+              <Chip tone="idle" fixed className="hidden sm:inline-flex" raw>
+                Not asked yet
+              </Chip>
               <Button size="sm" variant="outline" disabled={act.isPending} onClick={() => run({ action: 'ask', engagementId, kind, key: subjectKey, label: n }, `Asked ${clientName}`)}>
                 Ask
               </Button>
@@ -207,17 +220,16 @@ export function StaffFromClientCard({
           ))}
           {!docs.length && !data?.needs.length && !filled.length ? <p className="px-4 py-3 text-[13px] text-ink-faint">Nothing asked yet</p> : null}
           {data && data.client.length ? (
-            <div className="border-t border-line-soft px-4 py-4 md:px-5">
-              <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-                {data.client.map((f) => (
-                  <div key={f.key} className="min-w-0">
-                    <dt className="text-[12.5px] text-ink-muted">{f.label}</dt>
-                    <dd className={cn('text-[14px] text-ink', (f.mono || (f.value && isIdentifier(f.value))) && 'font-mono text-[13.5px]', !f.value && 'text-ink-faint')}>{f.value ?? '-'}</dd>
-                  </div>
+            <div className="border-t border-line-soft">
+              <dl className="m-0">
+                {data.client.map((f, i) => (
+                  <KvRow key={f.key} k={f.label} first={i === 0}>
+                    <b className={cn('font-medium text-ink', (f.mono || (f.value && isIdentifier(f.value))) && 'font-mono text-[13.5px]', !f.value && 'font-normal text-ink-faint')}>{f.value ?? '-'}</b>
+                  </KvRow>
                 ))}
               </dl>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <p className="min-w-0 flex-1 text-[12.5px] text-ink-muted">
+              <div className="flex flex-wrap items-center gap-3 border-t border-line-soft px-4 py-2.5 md:px-5">
+                <p className="min-w-0 flex-1 text-[13px] text-ink-muted">
                   {data.confirmedBy && data.confirmedAt
                     ? `Confirmed by ${data.confirmedBy} · ${plainDate(data.confirmedAt.slice(0, 10), now)}`
                     : data.submittedAt
@@ -255,10 +267,8 @@ export function StaffSbcFieldsCard({
 }) {
   const q = useSubjectInputs({ engagementId, kind, key: subjectKey });
   const act = useInputsAction();
-  const [edit, setEdit] = useState<string | null>(null);
   const rows = q.data?.sbc ?? [];
   const save = (key: string, value: string, before: string | null) => {
-    setEdit(null);
     if ((value.trim() || null) === before) return;
     act.mutate(
       { action: 'save', engagementId, kind, key: subjectKey, side: 'sbc', values: { [key]: value.trim() || null } },
@@ -266,55 +276,43 @@ export function StaffSbcFieldsCard({
     );
   };
   return (
-    <DashSection title="Filled by SBC" meta={locked ? 'Locked after filing' : undefined}>
+    <DashSection title="Filled by SBC" meta={locked ? 'Locked after filing' : undefined} flush>
       {q.isLoading ? (
-        <SkeletonRows rows={2} />
+        <div className="p-4">
+          <SkeletonRows rows={2} />
+        </div>
       ) : q.isError ? (
-        <p className="text-[13px] text-ink-faint">Could not load the fields</p>
+        <p className="px-4 py-3 text-[13px] text-ink-faint md:px-5">Could not load the fields</p>
       ) : rows.length === 0 && facts.length === 0 ? (
-        <p className="text-[13px] text-ink-faint">None</p>
+        <p className="px-4 py-3 text-[13px] text-ink-faint md:px-5">None</p>
       ) : (
-        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-          {facts.map((f) => (
-            <div key={`fact-${f.key}`} className="min-w-0">
-              <dt className="text-[12.5px] text-ink-muted">{f.label}</dt>
-              <dd className={cn('truncate text-[14px]', f.value ? 'text-ink' : 'text-ink-faint', f.value && isIdentifier(f.value) && 'font-mono text-[13.5px]')}>
-                {f.value ?? '-'}
-                {f.sub ? <span className="ml-1.5 font-sans text-[12.5px] text-ink-muted">{f.sub}</span> : null}
-              </dd>
-            </div>
+        <dl className="m-0">
+          {facts.map((f, i) => (
+            <KvRow key={`fact-${f.key}`} k={f.label} first={i === 0}>
+              <b className={cn('font-medium', f.value ? 'text-ink' : 'font-normal text-ink-faint', f.value && isIdentifier(f.value) && 'font-mono text-[13.5px]')}>{f.value ?? '-'}</b>
+              {f.sub ? <span className="ml-1.5 font-sans text-[12.5px] text-ink-muted">{f.sub}</span> : null}
+            </KvRow>
           ))}
-          {rows.map((f) => {
+          {rows.map((f, i) => {
             const mono = f.mono || Boolean(f.value && isIdentifier(f.value));
             return (
-              <div key={f.key} className="min-w-0">
-                <dt className="text-[12.5px] text-ink-muted">{f.label}</dt>
-                <dd className={cn('text-[14px]', mono && 'font-mono text-[13.5px]')}>
-                  {edit === f.key && !locked ? (
-                    <Input
-                      ref={focusOnMount}
-                      aria-label={f.label}
-                      defaultValue={f.value ?? ''}
-                      className={cn('mt-0.5', mono && 'font-mono')}
-                      onBlur={(e) => save(f.key, e.target.value, f.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                        if (e.key === 'Escape') setEdit(null);
-                      }}
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={locked}
-                      onClick={() => setEdit(f.key)}
-                      aria-label={`Edit ${f.label}`}
-                      className={cn('block max-w-full truncate text-left', f.value ? 'text-ink' : 'text-ink-faint', !locked && 'hover:text-brand-text hover:underline')}
-                    >
-                      {f.value ?? '-'}
-                    </button>
-                  )}
-                </dd>
-              </div>
+              <KvRow key={f.key} k={f.label} first={!facts.length && i === 0}>
+                {locked ? (
+                  <b className={cn('font-medium', f.value ? 'text-ink' : 'font-normal text-ink-faint', mono && 'font-mono text-[13.5px]')}>{f.value ?? '-'}</b>
+                ) : (
+                  <Input
+                    key={f.value ?? ''}
+                    aria-label={f.label}
+                    defaultValue={f.value ?? ''}
+                    placeholder="-"
+                    className={cn(mono && 'font-mono')}
+                    onBlur={(e) => save(f.key, e.target.value, f.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    }}
+                  />
+                )}
+              </KvRow>
             );
           })}
         </dl>

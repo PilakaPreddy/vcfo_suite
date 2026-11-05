@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CARD_HEAD_ICONS } from '@/components/common/CardHeadTile';
 import { cardHeadIcon } from '@/lib/ui/card-head-icon';
@@ -212,7 +212,7 @@ export function SuperFilterChips({
             trigger={
               <button
                 type="button"
-                className="inline-flex h-7 items-center gap-1 whitespace-nowrap rounded-md border-1.5 border-line-strong px-2.5 text-[13px] font-medium text-ink-2 hover:bg-surface-sunken"
+                className="inline-flex h-7 items-center gap-1 whitespace-nowrap rounded-md border-1.5 border-dashed border-line-strong px-2.5 text-[13px] font-medium text-ink-2 hover:bg-surface-sunken"
               >
                 <Plus size={13} strokeWidth={1.6} aria-hidden />
                 {filter.label}
@@ -247,6 +247,8 @@ export interface SuperStat {
   bad?: boolean;
   /** Done number: green. */
   good?: boolean;
+  /** A word-specific glyph; by default the label picks one. */
+  icon?: LucideIcon;
 }
 
 /** KP1 tiles on a plain page: 13px label with a 15px icon from the label, a 26px number. */
@@ -254,7 +256,7 @@ export function SuperNumberStrip({ items }: { items: SuperStat[] }) {
   return (
     <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-[repeat(auto-fit,minmax(180px,1fr))]">
       {items.map((stat) => {
-        const Icon = CARD_HEAD_ICONS[cardHeadIcon(stat.label).icon];
+        const Icon = stat.icon ?? CARD_HEAD_ICONS[cardHeadIcon(stat.label).icon];
         const body = (
           <span className="flex min-w-0 flex-col gap-1.5">
             <span className="flex items-start gap-1.5 text-[13px] font-medium leading-[18px] text-ink-2">
@@ -336,21 +338,30 @@ export interface SuperSegment {
   tone: ChipTone;
 }
 
-/** One stacked bar with its legend (C1 in a line). */
+/**
+ * One stacked bar with its legend (C1 in a line). `total` prints a 26px figure at the right above
+ * the bar and `rows` stacks the legend, one part a line with its count at the right (prototype
+ * `StackedBar`).
+ */
 export function StackedBar({
   segments,
   height = 10,
   legend = true,
+  total: figure,
+  rows = false,
   className,
 }: {
   segments: SuperSegment[];
   height?: number;
   legend?: boolean;
+  total?: ReactNode;
+  rows?: boolean;
   className?: string;
 }) {
   const total = segments.reduce((sum, s) => sum + s.value, 0);
   return (
     <div className={cn('min-w-0', className)}>
+      {figure !== undefined ? <b className="mb-2.5 block text-right text-[26px] font-medium leading-none tabular-nums text-ink">{figure}</b> : null}
       <span
         className="flex w-full gap-0.5 overflow-hidden rounded-bar bg-surface-sunken"
         style={{ height }}
@@ -365,7 +376,17 @@ export function StackedBar({
               ))
           : null}
       </span>
-      {legend ? (
+      {legend && rows ? (
+        <ul className="mt-2.5 grid gap-1">
+          {segments.map((s) => (
+            <li key={s.label} className="flex items-center gap-2 text-[13px] text-ink-2">
+              <i className={cn('h-2 w-2 flex-none rounded-[2px]', FILL[s.tone])} aria-hidden />
+              {s.label}
+              <b className="ml-auto font-medium tabular-nums text-ink">{s.value}</b>
+            </li>
+          ))}
+        </ul>
+      ) : legend ? (
         <ul className="mt-2.5 flex flex-wrap gap-x-3.5 gap-y-1 text-[12.5px] text-ink-2">
           {segments.map((s) => (
             <li key={s.label} className="inline-flex items-center gap-1.5">
@@ -377,6 +398,58 @@ export function StackedBar({
         </ul>
       ) : null}
     </div>
+  );
+}
+
+/* ---------- Admin feed ---------- */
+
+/** "Today 11:20", "Yesterday", "Wed 14 Oct" (prototype `when`). */
+export function feedWhen(iso: string, now: Date = new Date()): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return '';
+  const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const gap = Math.round((day(now) - day(at)) / 86_400_000);
+  if (gap === 0) return `Today ${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
+  if (gap === 1) return 'Yesterday';
+  return `${WEEKDAYS[at.getDay()]} ${at.getDate()} ${MONTHS[at.getMonth()]}`;
+}
+
+/** "What admins did": the person, the full sentence, and when. */
+export function AdminFeedList({
+  rows,
+}: {
+  rows: Array<{ id: string; at: string; actor: string | null; label: string; href: string | null }>;
+}) {
+  return (
+    <ul>
+      {rows.map((f) => {
+        const body = (
+          <>
+            <span className="mt-0.5 flex-none">
+              <PersonAvatar name={f.actor ?? 'System'} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[13.5px] leading-snug text-ink">{f.label}</span>
+              <span className="block text-[12.5px] text-ink-muted">
+                {f.actor ?? 'System'} · {feedWhen(f.at)}
+              </span>
+            </span>
+          </>
+        );
+        const cls = 'flex items-start gap-3 border-t border-line-soft px-4 py-3 md:px-5';
+        return (
+          <li key={f.id} className="[&:first-child>*]:border-t-0">
+            {f.href ? (
+              <Link href={f.href} className={cn(cls, 'transition-colors hover:bg-hover')}>
+                {body}
+              </Link>
+            ) : (
+              <div className={cls}>{body}</div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

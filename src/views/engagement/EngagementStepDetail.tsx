@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { HexgridLoader } from '@/components/common/HexgridLoader';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { PageBackButton } from '@/components/shell/PageBackButton';
+import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { ClientChangeRequestButton } from '@/components/client/ClientChangeRequestButton';
 import { ClientStepApproveButton } from '@/components/client/ClientStepApproveButton';
 import { SEO } from '@/components/SEO';
@@ -15,8 +16,8 @@ import { DashSection } from '@/components/dash/DashSection';
 import { EmptyState, SkeletonRows } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { StepAboutPanel } from '@/views/client-record/StepAboutPanel';
+import { recordStepPlace } from '@/views/client-record/RecordHeadParts';
 import { StepWindowBar } from '@/views/engagement/step/StepWindowBar';
-import { StepDaysMeta } from '@/components/metrics/step-days-meta';
 import { setEngagementWindowInDb } from '@/lib/projects/engagements-db';
 import { canSetScheduleWindows, windowForStep } from '@/lib/projects/schedule-windows';
 import { ChecklistJourneyRail } from '@/components/incorporation/ChecklistJourneyRail';
@@ -25,13 +26,28 @@ import { StepMark } from '@/components/ui/step-track';
 import { ChecklistStatusPill } from '@/components/incorporation/ChecklistStatusBadge';
 import { DocPackHeaderButton } from '@/components/doc-pack/DocPackHeaderButton';
 import { DocPackRailCard } from '@/components/doc-pack/DocPackRailCard';
-import { DocSourceStrip } from '@/components/doc-pack/DocSourceStrip';
 import { CopyForAssist } from '@/components/assist-profile/CopyForAssist';
 import { ReopenStepButton } from '@/components/incorporation/ReopenStepButton';
 import { ASSIST_PROFILE_STEP_IDS } from '@/lib/assist-profile/paths';
+import { useState } from 'react';
+import { shortDate } from '@/components/timeline/timeline-model';
 import { docPackStepPath } from '@/lib/doc-pack/paths';
 import { useEngagementStepDetail } from '@/views/engagement/step-detail/use-engagement-step-detail';
 import { createStepView } from '@/views/engagement/step-detail/create-step-view';
+
+/** The record's names for the phases (prototype `PHASES`), for the staff step head and rail. */
+const PHASE_SHORT: Record<string, string> = {
+  'pre-inc-phase-1': 'Name application',
+  'pre-inc-phase-2': 'Incorporation',
+  'post-inc-phase-3': 'Post-incorporation',
+  'registration-phase-4': 'Registrations',
+};
+const PHASE_RAIL: Record<string, string> = {
+  'pre-inc-phase-1': 'Phase 1 · Name application',
+  'pre-inc-phase-2': 'SPICe+ Part B',
+  'post-inc-phase-3': 'Phase 3 · Post-incorporation',
+  'registration-phase-4': 'Registrations',
+};
 
 /**
  * Shared checklist step detail for admin projects, intern engagements, and the
@@ -41,6 +57,7 @@ import { createStepView } from '@/views/engagement/step-detail/create-step-view'
  */
 export default function EngagementStepDetail() {
   const state = useEngagementStepDetail();
+  const [stepTab, setStepTab] = useState('forms');
   const {
     router,
     queryClient,
@@ -139,6 +156,13 @@ export default function EngagementStepDetail() {
   /* Plain step head (VCFO Spectrum, prototype `StepView`): the ST5 mark, the 28px title, a muted
      line with the step code, company and phase, then the status chip. No back link on staff
      screens (R-09): the rail and the record already lead back. */
+  const staffCode = isClientRoute ? null : recordStepPlace(item.id)?.code ?? null;
+  const headCode = staffCode ?? (selfRow ? `Step ${selfRow.stepNumber}` : null);
+  /* Activity on this step, as `StepDetailContent` filters it: the tab beside Forms (prototype `StepView`). */
+  const activityNeedle = item.title.toLowerCase().split(' ').slice(0, 2).join(' ');
+  const stepActivity = eActivity.filter(
+    (a) => a.target?.toLowerCase().includes(activityNeedle) || item.forms.some((f) => a.target?.toLowerCase().includes(f.toLowerCase())),
+  );
   const stepTitleRow = (
     <header className="mb-4 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
       {isClientRoute ? <PageBackButton className="-ml-1.5" /> : null}
@@ -148,26 +172,22 @@ export default function EngagementStepDetail() {
           {item.title}
         </h1>
         <p className="flex min-w-0 flex-wrap items-center gap-x-2 text-[13.5px] text-ink-muted">
-          {selfRow ? <span className="font-mono text-[13px]">Step {selfRow.stepNumber}</span> : null}
-          {selfRow ? <span aria-hidden>·</span> : null}
+          {headCode ? <span className="font-mono text-[13px]">{headCode}</span> : null}
+          {headCode ? <span aria-hidden>·</span> : null}
           <span className="min-w-0 truncate">{eng.companyName}</span>
           {internPhase ? (
             <>
               <span aria-hidden>·</span>
-              <span>{internPhase.title}</span>
+              <span>{isClientRoute ? internPhase.title : PHASE_SHORT[internPhase.id] ?? internPhase.title}</span>
             </>
-          ) : null}
-          {/* Staff only: opened, days in step and the window's end (G-13). */}
-          {!isClientRoute ? (
-            <StepDaysMeta engagementId={eng.id} stepId={item.id} dueOn={windowForStep(eng.schedule, item.id)?.to ?? null} />
           ) : null}
         </p>
       </div>
-      {selfStatus && !directFlow && showHeadStatus ? <ChecklistStatusPill status={selfStatus} /> : null}
+      {selfStatus && showHeadStatus ? <ChecklistStatusPill status={selfStatus} /> : null}
       {isClientRoute ? (
         <WhatsThisButton kind="step" refId={item.id} label={item.title} />
       ) : (
-        <WhatsThisButton kind="step" refId={item.id} label={item.title} variant="outline" onOpen={() => setAboutOpen(true)} />
+        <WhatsThisButton kind="step" refId={item.id} label={item.title} variant="outline" className="h-control-md px-3.5 text-[14px]" onOpen={() => setAboutOpen(true)} />
       )}
       {/* Narrow screens lose the rail (and its card); this stands in, never both. */}
       {docPackHref ? (
@@ -200,8 +220,6 @@ export default function EngagementStepDetail() {
       loading={docPack.isPending}
       error={docPack.isError}
       packHref={docPackHref}
-      currentStepId={item.id}
-      hrefForMissing={(input) => docPackStepPath(eng, docPackShell, input.stepId, input.tabId)}
     />
   ) : null;
 
@@ -210,9 +228,18 @@ export default function EngagementStepDetail() {
       className="mb-3.5"
       value={stepWindowValue}
       canEdit={canSetScheduleWindows(user?.role)}
-      editSub={`${selfRow ? `Step ${selfRow.stepNumber} · ` : ''}${eng.companyName}`}
+      editSub={`${headCode ? `${headCode} · ` : ''}${eng.companyName}`}
       scopeLabel={stepWindowTarget.kind === 'incorporation' ? 'SPICe+ Part A and Part B' : undefined}
       docPackHref={docPackHref}
+      trailing={
+        ASSIST_PROFILE_STEP_IDS.has(item.id) ? (
+          <CopyForAssist
+            engagementId={eng.id}
+            className="mb-0 border-0 bg-transparent p-0"
+            hrefForMissing={(input) => docPackStepPath(eng, docPackShell, input.stepId, input.tabId)}
+          />
+        ) : undefined
+      }
       onSave={async (window) => {
         await setEngagementWindowInDb(eng.id, stepWindowTarget, window);
         await queryClient.invalidateQueries({ queryKey: ['engagements'] });
@@ -220,18 +247,8 @@ export default function EngagementStepDetail() {
     />
   ) : null;
 
-  const stepForm = (
+  const stepFormBody = (
     <>
-      {docPackHref && docPack.data ? (
-        <DocSourceStrip summary={docPack.data} stepId={item.id} packHref={docPackHref} />
-      ) : null}
-      {/* Staff shell only: the client never sees the Assist profile. */}
-      {!isClientRoute && ASSIST_PROFILE_STEP_IDS.has(item.id) ? (
-        <CopyForAssist
-          engagementId={eng.id}
-          hrefForMissing={(input) => docPackStepPath(eng, docPackShell, input.stepId, input.tabId)}
-        />
-      ) : null}
       <StepDetailContent
         item={item}
         task={task}
@@ -299,14 +316,54 @@ export default function EngagementStepDetail() {
     </>
   );
 
+  /* R-11: Forms and Activity are views of one step, so underline tabs. The client keeps the form alone. */
+  const stepForm = isClientRoute ? (
+    stepFormBody
+  ) : (
+    <div className="grid gap-3.5">
+      <SpectrumTabs
+        variant="underline"
+        label="Step views"
+        items={[
+          { key: 'forms', label: 'Forms' },
+          { key: 'activity', label: 'Activity', count: stepActivity.length },
+        ]}
+        value={stepTab}
+        onChange={setStepTab}
+      />
+      {stepTab === 'forms' ? (
+        <div className="min-w-0">{stepFormBody}</div>
+      ) : (
+        <DashSection title="Activity" meta={String(stepActivity.length)} flush>
+          {stepActivity.length === 0 ? (
+            <div className="p-4">
+              <EmptyState title="No activity yet" />
+            </div>
+          ) : (
+            <ul>
+              {stepActivity.map((a) => (
+                <li key={a.id} className="flex min-h-row items-center gap-3 border-b border-line-soft px-4 py-2 text-[13.5px] last:border-0 md:px-5">
+                  <span className="min-w-0 flex-1 truncate text-ink">
+                    {a.actor} {a.verb}
+                  </span>
+                  <span className="flex-none text-[12.5px] tabular-nums text-ink-muted">{shortDate(a.at.slice(0, 10))}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </DashSection>
+      )}
+    </div>
+  );
+
   /* S-506, S-512: the phase rail is a section card (icon tile, phase name, "x of y"); below lg it
      stacks under the main card instead of hiding. */
   const internPhaseRail = internWorkspace && internPhase ? (
     <aside className="min-w-0 lg:sticky lg:top-[var(--shell-sticky-top)] lg:self-start">
       <DashSection
-        title={internPhase.title}
+        title={isClientRoute ? internPhase.title : PHASE_RAIL[internPhase.id] ?? internPhase.title}
         meta={`${railDone} of ${internPhaseRailItems.length}`}
-        bodyClassName="px-2 py-2"
+        bodyClassName={isClientRoute ? 'px-2 py-2' : 'px-4 py-3 md:px-4'}
       >
         {internPhase.id === 'registration-phase-4' ? (
           <div className="space-y-4">
@@ -320,7 +377,7 @@ export default function EngagementStepDetail() {
                   selectedId={item.id}
                   allowLockedOpen
                   hideStatus
-                  showAttachmentMenu
+                  showAttachmentMenu={isClientRoute}
                   showStepCode={!isClientRoute}
                   onSelect={openStep}
                 />
@@ -333,7 +390,7 @@ export default function EngagementStepDetail() {
             selectedId={item.id}
             allowLockedOpen
             hideStatus
-            showAttachmentMenu
+            showAttachmentMenu={isClientRoute}
             showStepCode={!isClientRoute}
             onSelect={openStep}
           />
@@ -403,7 +460,7 @@ export default function EngagementStepDetail() {
       {!isClientRoute ? (
         <StepAboutPanel
           stepId={aboutOpen ? item.id : null}
-          stepLabel={selfRow ? `Step ${selfRow.stepNumber}` : undefined}
+          stepLabel={headCode ?? undefined}
           engagementId={eng.id}
           onClose={() => setAboutOpen(false)}
         />

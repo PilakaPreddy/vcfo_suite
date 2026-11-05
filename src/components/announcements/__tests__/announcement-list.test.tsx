@@ -42,7 +42,7 @@ describe('AnnouncementList', () => {
   it('shows the message, the author, the source host and an unread dot, and opens on Enter', () => {
     const onActivate = vi.fn();
     render(<AnnouncementRow item={item} unread onActivate={onActivate} />);
-    expect(screen.getByText(item.body)).toBeTruthy();
+    expect(screen.getByText(item.title)).toBeTruthy();
     expect(screen.getByText('From Pranay')).toBeTruthy();
     expect(screen.getByLabelText('Unread')).toBeTruthy();
     expect(screen.getByLabelText('Open source on gst.gov.in').getAttribute('href')).toBe(item.sourceUrl);

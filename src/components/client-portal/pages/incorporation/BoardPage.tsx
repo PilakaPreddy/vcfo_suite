@@ -14,7 +14,7 @@
  * (`GET /api/engagements/:id/board-resolution/noc`, docs/ui-port/BR-NOC-API.md) and
  * `GET /api/client/incorporation` for names. The shared parts come from `@/components/board-doc`.
  */
-import { CircleHelp, Download, Maximize2, Minus, Plus, RotateCcw, Upload } from 'lucide-react';
+import { CircleHelp, Download, Info, ListChecks, Maximize2, Minus, Plus, Upload } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApp } from '@/context/AppContext';
@@ -29,7 +29,6 @@ import { BoardResolutionDocPreview } from '@/components/board-resolution/BoardRe
 import {
   DocFiles,
   DocPaper,
-  DocPreviewCard,
   DocTodo,
   DocTrack,
   EvidenceTable,
@@ -52,11 +51,12 @@ import { triggerDownload } from '../documents/file-types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/spectrum-chip';
+import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { SkeletonRows } from '@/components/ui/empty-state';
 import { toastSaved } from '@/components/ui/toast-saved';
 import { IncFrame, istDay } from './ui';
 import { INC_EXTRAS_KEY, firstName, signedUrlFor, stepHrefOf, useIncData } from './data';
-import { Col, Cols, Dot, DropZone, Empty, Island, PageHead, SCard, type PageHeadLink } from './spectrum';
+import { Cols, Dot, DropZone, Empty, Island, PageHead, SCard, type PageHeadLink } from './spectrum';
 import { NOC_CLIENT_FILENAME, known, nocMainAction, nocPhase, nocRecords, nocTrackVariant, nocVariantLabel } from './board/noc';
 
 const DOCX_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -79,10 +79,10 @@ function inr(raw: unknown): string {
 /** C3: one row of the Key facts card. A missing value is "Not given yet" in faint ink. */
 function Fact({ label, value }: { label: string; value?: string }) {
   return (
-    <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-3 border-t border-line-soft px-4 py-2.5 text-[13px] first:border-t-0 md:px-5">
-      <dt className="text-ink-muted">{label}</dt>
-      <dd className={cn('m-0 min-w-0 break-words', value ? 'font-medium text-ink' : 'text-ink-faint')}>{value || 'Not given yet'}</dd>
-    </div>
+    <>
+      <dt className="text-[13px] text-ink-muted">{label}</dt>
+      <dd className={cn('m-0 min-w-0 break-words font-medium', value ? 'text-ink' : 'font-normal text-ink-faint')}>{value || 'Not given yet'}</dd>
+    </>
   );
 }
 
@@ -280,7 +280,19 @@ export default function BoardPage() {
     ...(prevStep ? [{ href: stepHrefOf(prevStep), label: 'Previous step', dir: 'prev' as const }] : []),
     ...(nextStep ? [{ href: stepHrefOf(nextStep), label: 'Next step', dir: 'next' as const }] : []),
   ];
-  const headChip = accepted ? <Chip tone="ok">Done</Chip> : phase === 'sent' ? <Chip tone="prog">In progress</Chip> : visible ? <Chip tone="teal">Waiting</Chip> : null;
+  const headChip = accepted ? (
+    <Chip tone="ok" fixed>
+      Done
+    </Chip>
+  ) : phase === 'sent' || !visible ? (
+    <Chip tone="prog" fixed>
+      In progress
+    </Chip>
+  ) : (
+    <Chip tone="teal" fixed>
+      Waiting
+    </Chip>
+  );
   const zoomBtn = 'h-[30px] w-[30px] min-w-0';
   const shownTab: DocPreviewTab = tab ?? (visible ? 'draft' : 'signed');
 
@@ -405,42 +417,12 @@ export default function BoardPage() {
                 label="Progress of the board resolution"
               />
 
-              <Cols>
-                <Col>
-                  <DocPreviewCard
-                    tab={shownTab}
-                    onTab={setTab}
-                    meta={shownTab === 'draft' && visible ? `${Math.round(zoom * 100)}%` : undefined}
-                    right={
-                      <>
-                        {shownTab === 'draft' && visible ? (
-                          <>
-                            <Button size="icon" variant="quiet" className={zoomBtn} aria-label="Zoom out" disabled={zoom <= 0.6} onClick={() => setZoom((z) => Math.max(0.6, Math.round((z - 0.1) * 10) / 10))}>
-                              <Minus size={16} strokeWidth={1.6} aria-hidden />
-                            </Button>
-                            <Button size="icon" variant="quiet" className={zoomBtn} aria-label="Zoom in" disabled={zoom >= 1.6} onClick={() => setZoom((z) => Math.min(1.6, Math.round((z + 0.1) * 10) / 10))}>
-                              <Plus size={16} strokeWidth={1.6} aria-hidden />
-                            </Button>
-                          </>
-                        ) : null}
-                        <Button size="icon" variant="quiet" className={zoomBtn} aria-label="Open full screen" onClick={shownTab === 'signed' ? openSigned : openFull}>
-                          <Maximize2 size={16} strokeWidth={1.6} aria-hidden />
-                        </Button>
-                      </>
-                    }
-                    draft={draftBody}
-                    signed={
-                      <SignedCopyView
-                        file={signedUrl ? { name: signedName, url: signedUrl, contentType: signedType, uploadedAt: records.signed?.at, uploadedBy: records.signed?.by } : null}
-                        onOpenFull={signedUrl ? openSigned : undefined}
-                      />
-                    }
-                  />
-                </Col>
-                <Col>
+              {/* The facts on the left and the document on the right, as in the prototype. */}
+              <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
+                <div className="grid min-w-0 gap-5">
                   {/* C3: values only, from the project and the Pre-1 answers. */}
-                  <SCard title="Key facts" flush>
-                    <dl className="m-0">
+                  <SCard title="Key facts" meta="From the engagement" headIcon={{ icon: Info, tone: 'blue' }} flush>
+                    <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 px-4 py-3 text-[14px] md:px-5">
                       <Fact label="New company" value={known(mergeFields?.PROPOSED_NAME_1) || d.companyName} />
                       <Fact label="Capital" value={capital} />
                       <Fact label="Shares" value={shares} />
@@ -451,7 +433,7 @@ export default function BoardPage() {
                   </SCard>
 
                   {/* C4: the numbered list with one main button. */}
-                  <SCard title="What you do" meta={headChip} flush>
+                  <SCard title="What you do" right={headChip} headIcon={{ icon: ListChecks, tone: 'teal' }} flush>
                     <DocTodo
                       items={todo}
                       action={
@@ -522,8 +504,51 @@ export default function BoardPage() {
                       }
                     />
                   </SCard>
-                </Col>
-              </Cols>
+                </div>
+                <div className="grid min-w-0 gap-5">
+                  {/* Underline tabs, as in the prototype's DocPreview: views of one record (R-11). */}
+                  <section aria-label="Preview" className="min-w-0 overflow-hidden rounded-md border-1.5 border-line bg-surface-raised">
+                    <div className="flex items-end justify-between gap-3 px-4 md:px-5">
+                      <SpectrumTabs
+                        variant="underline"
+                        items={[
+                          { key: 'draft', label: 'Draft' },
+                          { key: 'signed', label: 'Signed copy' },
+                        ]}
+                        value={shownTab}
+                        onChange={(k) => setTab(k as DocPreviewTab)}
+                        label="Preview"
+                        className="border-b-0"
+                      />
+                      <div className="flex items-center gap-1.5 pb-1.5 text-[12.5px] text-ink-muted">
+                        {noc?.version ? <span>Version {noc.version}</span> : null}
+                        {shownTab === 'draft' && visible ? (
+                          <>
+                            <Button size="icon" variant="quiet" className={zoomBtn} aria-label="Zoom out" disabled={zoom <= 0.6} onClick={() => setZoom((z) => Math.max(0.6, Math.round((z - 0.1) * 10) / 10))}>
+                              <Minus size={16} strokeWidth={1.6} aria-hidden />
+                            </Button>
+                            <Button size="icon" variant="quiet" className={zoomBtn} aria-label="Zoom in" disabled={zoom >= 1.6} onClick={() => setZoom((z) => Math.min(1.6, Math.round((z + 0.1) * 10) / 10))}>
+                              <Plus size={16} strokeWidth={1.6} aria-hidden />
+                            </Button>
+                          </>
+                        ) : null}
+                        <Button size="icon" variant="quiet" className={zoomBtn} aria-label="Open full screen" onClick={shownTab === 'signed' ? openSigned : openFull}>
+                          <Maximize2 size={16} strokeWidth={1.6} aria-hidden />
+                        </Button>
+                      </div>
+                    </div>
+                    <div role="tabpanel" aria-label="Draft" hidden={shownTab !== 'draft'} className="min-w-0 border-t-1.5 border-line bg-surface-sunken p-3 md:p-5">
+                      {draftBody}
+                    </div>
+                    <div role="tabpanel" aria-label="Signed copy" hidden={shownTab !== 'signed'} className="min-w-0 border-t-1.5 border-line bg-surface-sunken p-3 md:p-5">
+                      <SignedCopyView
+                        file={signedUrl ? { name: signedName, url: signedUrl, contentType: signedType, uploadedAt: records.signed?.at, uploadedBy: records.signed?.by } : null}
+                        onOpenFull={signedUrl ? openSigned : undefined}
+                      />
+                    </div>
+                  </section>
+                </div>
+              </div>
             </>
           )}
 
@@ -531,11 +556,10 @@ export default function BoardPage() {
           {!d.pending && loaded ? (
             <SCard
               title="Why VCFO chose this template"
-              meta={<span className="text-[13px] text-ink-muted">VCFO checked {whyRows.length === 1 ? '1 answer' : `${whyRows.length} answers`} on the project</span>}
+              meta={<span className="text-[13px] text-ink-muted">{whyRows.length === 1 ? '1 project answer' : `${whyRows.length} project answers`}</span>}
               flush
               right={
-                <Button variant="quiet" size="sm" onClick={() => setReplayKey((k) => k + 1)} aria-label="Replay the chosen path">
-                  <RotateCcw size={15} strokeWidth={1.6} aria-hidden />
+                <Button variant="secondary" size="sm" onClick={() => setReplayKey((k) => k + 1)} aria-label="Replay the chosen path">
                   Replay
                 </Button>
               }

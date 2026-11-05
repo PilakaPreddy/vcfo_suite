@@ -13,7 +13,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from '@/components/ui/select';
-import { ArrowUpRight, Download, EyeOff, Search, Upload } from 'lucide-react';
+import { Download, EyeOff, Search, Upload } from 'lucide-react';
 import { DangerConfirm } from '@/components/ui/danger-confirm';
 import { cn } from '@/lib/utils';
 import { VaultPreviewPane } from '@/views/vault/vault-explorer-parts';
@@ -42,7 +42,7 @@ import { renderTreeBody } from '@/views/vault/document-vault/tree-body';
 /** R-10 toggle filter: on is the soft blurple fill, off is a plain edge (R-56). */
 const FILTER = 'inline-flex h-[30px] flex-none items-center gap-2 rounded-md border-1.5 px-2.5 text-[13px] font-medium';
 const FILTER_ON = 'border-brand-line bg-brand-soft text-brand-text';
-const FILTER_OFF = 'border-line-strong text-ink-2 hover:bg-surface-sunken';
+const FILTER_OFF = 'border-dashed border-line-strong text-ink-2 hover:bg-surface-sunken';
 
 export default function DocumentVaultPage() {
   return (
@@ -202,7 +202,7 @@ function DocumentVaultPageContent() {
                     className="h-full min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-faint"
                   />
                   <span className="flex-none text-[12.5px] tabular-nums text-ink-muted">
-                    {isSearching ? `${searchHits.length}/${notReplaced(searchDocs).length}` : selectedEntity?.docCount ?? 0}
+                    {isSearching ? `${searchHits.length}/${notReplaced(searchDocs).length}` : `${selectedEntity?.docCount ?? 0}/${selectedEntity?.docCount ?? 0}`}
                   </span>
                 </label>
 
@@ -274,23 +274,9 @@ function DocumentVaultPageContent() {
                     </Button>
                   </span>
                 ) : null}
+
               </>
             )}
-
-            {selectedEntity && !isSearching ? (
-              <Button asChild size="sm" variant="secondary">
-                <Link
-                  href={projectHref(
-                    selectedEntity.engagementId,
-                    selectedEntity.slug ??
-                      engagements.find((e) => e.id === selectedEntity.engagementId)?.slug,
-                  )}
-                >
-                  {isIntern ? 'Open client' : 'Open project'}
-                  <ArrowUpRight aria-hidden />
-                </Link>
-              </Button>
-            ) : null}
           </div>
 
           {clientView && selectedEntity ? (

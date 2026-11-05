@@ -17,7 +17,7 @@ import { todayIST } from '@/lib/compliance/filings';
  *
  *   stage   — Incorporating until the company is incorporated (`isIncorporated`), then Compliance.
  *   now     — the current step of the client step model (`buildIncorporationModel`): its code
- *             ("Pre-8", "Post-3", "Reg-12"), its title and who holds it (client, SBC or MCA).
+ *             ("Step 13", "Reg-12"), its title and who holds it (client, SBC or MCA).
  *   next    — the earliest manager-set window end still ahead (or the latest one if all passed).
  *   health  — one of the prototype's six words, plus Done when every step is finished.
  */
@@ -69,11 +69,9 @@ export interface ClientRowFacts {
   total: number;
 }
 
-/** "Pre-8", "Post-3" from the step id; "Reg-n" for the registration phase. */
-function stepCode(step: Pick<PortalStep, 'id' | 'phaseNo' | 'phaseId'>, indexInPhase: number): string {
-  const m = /^(pre|post)-(\d+)$/i.exec(step.id);
-  if (m) return `${m[1]!.toLowerCase() === 'pre' ? 'Pre' : 'Post'}-${m[2]}`;
-  return step.phaseNo === 4 ? `Reg-${indexInPhase + 1}` : `Step ${indexInPhase + 1}`;
+/** "Step 13", counted across the phases, and "Reg-n" for the registration phase (prototype K-27). */
+export function stepCode(step: Pick<PortalStep, 'phaseNo'>, indexInPhase: number, stepsBefore = 0): string {
+  return step.phaseNo === 4 ? `Reg-${indexInPhase + 1}` : `Step ${stepsBefore + indexInPhase + 1}`;
 }
 
 /** The earliest window end that is still ahead (or the latest one if all have passed). */
@@ -125,8 +123,9 @@ export function clientRowFacts(
   if (cur) {
     const phase = model.phases.find((p) => p.id === cur.phaseId);
     const idx = phase ? phase.steps.findIndex((s) => s.id === cur.id) : 0;
+    const before = model.phases.filter((p) => p.no < cur.phaseNo).reduce((n, p) => n + p.steps.length, 0);
     current = {
-      code: stepCode(cur, Math.max(0, idx)),
+      code: stepCode(cur, Math.max(0, idx), before),
       title: cur.title,
       holder: cur.owner === 'mca' ? 'mca' : cur.kind === 'you' || cur.kind === 'prog' ? 'client' : 'sbc',
     };
@@ -175,7 +174,7 @@ export function NowCell({ now, className }: { now: ClientNow | null; className?:
     <span className={cn('flex min-w-0 items-center gap-2', className)} title={`${now.code} · ${now.title}`}>
       <HolderSquare holder={now.holder} />
       <span className="min-w-0 truncate">
-        <span className="font-mono text-[12px] text-ink-muted">{now.code}</span> <span className="text-ink-2">{now.title}</span>
+        <span className="font-mono text-[12px] text-ink-muted">{now.code}</span> · <span className="text-ink-2">{now.title}</span>
       </span>
     </span>
   );
@@ -185,15 +184,15 @@ export function NowCell({ now, className }: { now: ClientNow | null; className?:
  * Footer legend of the Clients lists (lg and up): the phase bar colours and the holder squares.
  */
 export function ClientsLegend({ className }: { className?: string }) {
-  const sw = 'inline-block h-2 w-3 flex-none rounded-bar';
+  const sw = 'inline-block h-2 w-2 flex-none rounded-[2px]';
   return (
-    <div className={cn('hidden flex-wrap items-center gap-x-4 gap-y-1 px-2 pt-2 text-[12px] text-ink-muted lg:flex', className)} aria-hidden>
+    <div className={cn('hidden flex-wrap items-center gap-x-4 gap-y-1 px-4 pt-2 text-[12.5px] text-ink-muted md:px-5 lg:flex', className)} aria-hidden>
       <span className="flex items-center gap-1.5">
         <i className={cn(sw, 'bg-positive-mid')} />
         Done
       </span>
       <span className="flex items-center gap-1.5">
-        <i className={cn(sw, 'bg-brand ring-[1.5px] ring-brand-line')} />
+        <i className={cn(sw, 'bg-brand')} />
         Current phase
       </span>
       <span className="flex items-center gap-1.5">

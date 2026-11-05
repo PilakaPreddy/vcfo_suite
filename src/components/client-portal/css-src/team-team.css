@@ -7,9 +7,12 @@
 .tb-team .tb-sbc{min-height:60px;flex-wrap:wrap}
 .tb-team .tb-contact{display:flex;gap:8px;flex:none}
 .tb-team .tb-people td{font-size:14px}
+/* The prototype's ghost icon button is a soft grey box. */
+.tb-team .ibtn.ghost{background:oklch(var(--ink) / .06)}
+.tb-team .ibtn.ghost:hover{background:oklch(var(--ink) / .1)}
 .tb-team .ibtn[aria-disabled="true"],.tb-team .btn[aria-disabled="true"]{opacity:.5;cursor:not-allowed}
 .tb-err{color:oklch(var(--danger));font-size:13px;font-weight:500}
-@media (max-width:767px){.tb-team .tb-contact{width:100%;padding-left:48px}.tb-team .tb-contact .ibtn{width:40px;height:40px}.tb-team .sx-head .sx-right{margin-left:0;width:100%}}
+@media (max-width:767px){.tb-team .tb-contact{box-sizing:border-box;width:100%;padding-left:48px}.tb-team .tb-contact .ibtn{width:40px;height:40px}.tb-team .sx-head .sx-right{margin-left:0;width:100%}}
 /* the empty filter: one faint centred line (prototype DataGrid empty cell) */
 .tb-team .tb-faint{padding:28px 16px;text-align:center;font-size:13px;color:oklch(var(--ink-faint))}
 /* seat dialog: one raised box, from › to */

@@ -26,7 +26,7 @@ export default async function MeetingReplyPage({ searchParams }: Props) {
         </span>
         VCFO Suite <span className="font-normal text-ink-muted">for SBC</span>
       </div>
-      <section className="w-full max-w-lg rounded-md border-2 border-line bg-surface p-7">
+      <section className="w-full max-w-lg rounded-md border border-line bg-surface p-7">
         {!summary ? (
           <>
             <h1 className="text-xl font-medium">This link does not work</h1>

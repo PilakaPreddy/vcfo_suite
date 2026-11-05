@@ -202,7 +202,7 @@ export default function ManagersPage() {
     <PageTransition>
       <SEO title="Managers — VCFO Suite" description="Managers, their clients and leads, escalations and clients to assign." path="/app/admin/managers" />
       <div className="grid grid-cols-1 gap-5">
-        <DashSection title="Managers" meta={managers.length || undefined} bodyClassName="px-2 pb-3 pt-1">
+        <DashSection title="Managers" meta={managers.length || undefined} flush>
           <EFilingGrid
             caption="Managers"
             columns={columns}
@@ -265,7 +265,7 @@ export default function ManagersPage() {
               <WorkAreaCard items={mine.items} loading={engagementsLoading} />
             </div>
 
-            <DashSection title={`${first}'s clients`} meta={clients.length} bodyClassName="px-2 pb-3 pt-1">
+            <DashSection title={`${first}'s clients`} meta={clients.length} flush>
               <EFilingGrid
                 caption={`${first}'s clients`}
                 rows={clientRows}

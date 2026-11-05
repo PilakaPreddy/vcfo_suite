@@ -13,20 +13,24 @@ import {
 } from '@/components/staff/today/today-rows';
 import { cn } from '@/lib/utils';
 
+const CHART_ORDER: TodayStatus[] = ['Done', 'In progress', 'Due soon', 'Overdue', 'Waiting', 'Not started'];
+
 /** Task status (C1, R-25): a donut in the status colours with the total in the centre and a legend. */
 export function TaskStatusCard({ rows, title = 'Task status' }: { rows: Array<{ status: TodayStatus }>; title?: string }) {
   const counts = countByStatus(rows);
+  // The prototype's chart order: Done first.
+  const order = [...TODAY_STATUS_ORDER].sort((a, b) => CHART_ORDER.indexOf(a.status) - CHART_ORDER.indexOf(b.status));
   return (
     <DashSection title={title}>
       <div className="flex min-w-0 items-center gap-6">
         <DashDonut
-          size={120}
-          segments={TODAY_STATUS_ORDER.map((s) => ({ n: counts[s.status], color: s.stroke }))}
+          size={96}
+          segments={order.map((s) => ({ n: counts[s.status], color: s.stroke }))}
           centerLabel={rows.length}
-          centerCaption="tasks"
+          centerCaption=""
         />
         <ul className="grid min-w-0 flex-1 gap-1">
-          {TODAY_STATUS_ORDER.map((s) => (
+          {order.map((s) => (
             <li key={s.status} className="flex items-center gap-2 text-[13px] text-ink-2">
               <i className={cn('h-2 w-2 flex-none rounded-[2px]', s.bar)} aria-hidden />
               {s.status}
@@ -39,7 +43,7 @@ export function TaskStatusCard({ rows, title = 'Task status' }: { rows: Array<{ 
   );
 }
 
-const LOAD_STATUSES: TodayStatus[] = ['Overdue', 'Due soon', 'In progress', 'Waiting', 'Not started'];
+const LOAD_STATUSES: TodayStatus[] = ['Overdue', 'Due soon', 'In progress', 'Not started'];
 
 /**
  * Workload by lead (C2, R-25): one stacked bar per person in the status colours, scaled to the

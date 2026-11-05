@@ -523,19 +523,14 @@ export function AreaCard({ h, className }: { h: HomeData; className?: string }) 
               return (
                 <tr key={a} className="cursor-pointer" onClick={() => h.portal.drill(areaDrill(h, a, 0))}>
                   <td>
-                    <AreaPill area={AREA_NAME[a]} reg={regOf(a)} />
+                    <span className="font-medium text-ink">{AREA_NAME[a]}</span>
                   </td>
                   <td className="num tabular-nums">{s.total}</td>
                   <td className="num tabular-nums">{s.c.filed}</td>
                   <td className="num tabular-nums">{s.c.dueSoon}</td>
                   <td className={cn('num tabular-nums', s.c.overdue > 0 && '!font-medium !text-danger')}>{s.c.overdue}</td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <StackedBar
-                      height={6}
-                      legend={false}
-                      segments={BUCKETS.map((b) => ({ label: BUCKET_LABEL[b], value: s.c[b], tone: BUCKET_BAR[b] }))}
-                      onSegment={(i) => h.portal.drill(areaDrill(h, a, i + 1))}
-                    />
+                  <td>
+                    <Bar pct={s.total ? Math.round(((s.c.filed + s.c.dueSoon) / s.total) * 100) : 0} tone={s.c.overdue ? 'bad' : s.c.dueSoon ? 'warn' : 'ok'} />
                   </td>
                   <td>
                     <Chip fixed>{s.status}</Chip>
@@ -598,9 +593,9 @@ export function RegCard({ h, onProof, className }: { h: HomeData; onProof: (r: R
                 <th>Number</th>
                 <th style={{ width: 130 }}>Date</th>
                 <th style={{ width: 124 }}>Status</th>
-                <th style={{ width: 120 }}>
-                  <span className="sr-only">Proof and portal</span>
-                </th>
+                {/* Not a sr-only span: it is absolute, its containing block sits outside this table's
+                    scroller, so it escapes the clipping and pushed the phone page out to 770 px. */}
+                <th style={{ width: 120 }} aria-label="Proof and portal" />
               </tr>
             </thead>
             <tbody>
@@ -635,7 +630,7 @@ export function RegCard({ h, onProof, className }: { h: HomeData; onProof: (r: R
                             <Paperclip size={13} strokeWidth={1.6} aria-hidden /> Proof
                           </button>
                         ) : (
-                          <Chip tone="warn">Proof pending</Chip>
+                          <span className="whitespace-nowrap text-[12.5px] text-ink-muted">Proof pending</span>
                         )
                       ) : null}
                       {r.portal ? (

@@ -219,7 +219,7 @@ export function StageDaysCard({ rows, loading }: { rows: StageRow[]; loading?: b
     },
   ];
   return (
-    <DashSection title="Days in each stage" meta="Last 12 months" loading={loading} bodyClassName="px-2 pb-2 pt-1">
+    <DashSection title="Days in each stage" meta="Last 12 months" loading={loading} flush>
       <EFilingGrid caption="Days in each stage" columns={columns} rows={rows} rowKey={(r) => r.phaseId} empty="No stage has started yet" minWidth={460} />
     </DashSection>
   );

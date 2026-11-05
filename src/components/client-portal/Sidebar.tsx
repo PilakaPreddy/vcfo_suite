@@ -196,9 +196,8 @@ export function portalNav({
     { k: 'documents', t: 'Documents', i: 'folder-open', badge: docs ? String(docs) : undefined },
     { k: 'knowledge-bank', t: 'Library', i: 'library' },
     { k: 'credentials', t: 'Credentials', i: 'key-round' },
+    /* Profile opens from the account row at the foot of the sidebar, as in the prototype. */
     { k: 'audit', t: 'Audit', i: 'history' },
-    /* C-0027: Team is a section inside Profile (settings#team); the /team route stays. */
-    { k: 'settings', t: 'Profile', i: 'settings' },
   ];
 }
 
@@ -450,7 +449,7 @@ function SidebarFull({ drawer, onPin }: { drawer?: boolean; onPin?: () => void }
                   className="vps-i vps-g"
                   data-group={n.g}
                   aria-expanded={o}
-                  data-holds={has && !o ? '1' : undefined}
+                  data-holds={has ? '1' : undefined}
                   onClick={() => toggleGroup(n.g!, !o)}
                 >
                   <span className="vps-ic">
@@ -541,6 +540,7 @@ function SidebarFull({ drawer, onPin }: { drawer?: boolean; onPin?: () => void }
             </svg>
           </span>
           <span className="vps-ask-t">Ask VCFO</span>
+          <kbd>/</kbd>
         </a>
       </div>
       <div className="vps-me">

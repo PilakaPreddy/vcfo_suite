@@ -24,9 +24,11 @@ export function SuperTeamLoadPanel({ insights }: { insights: SuperInsights }) {
   const managers = insights.team.managers;
 
   return (
-    <DashSection title="Team load" icon={Users} tone="violet" bodyClassName={managers.length ? 'p-0' : 'p-4'}>
+    <DashSection title="Team load" headIcon={{ icon: Users, tone: 'violet' }} flush>
       {managers.length === 0 ? (
-        <EmptyState title="None" />
+        <div className="p-4">
+          <EmptyState title="None" />
+        </div>
       ) : (
         <ul>
           {managers.map((m) => {

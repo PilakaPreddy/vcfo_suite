@@ -14,7 +14,7 @@ const s = StyleSheet.create({
   title: { fontSize: 20, fontFamily: 'Helvetica-Bold', marginTop: 2 },
   h: { fontSize: 11.5, fontFamily: 'Helvetica-Bold', marginTop: 14, marginBottom: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -3 },
-  tile: { width: '25%', paddingHorizontal: 3, marginBottom: 6 },
+  tile: { width: '33.33%', paddingHorizontal: 3, marginBottom: 6 },
   tileBox: { border: '1pt solid #d9dde6', borderRadius: 4, padding: 8 },
   tileKey: { fontSize: 8.5, color: '#3a4256' },
   tileValue: { fontSize: 16, fontFamily: 'Helvetica-Bold', marginTop: 4 },

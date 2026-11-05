@@ -2,10 +2,11 @@
 
 import { getSession } from 'next-auth/react';
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { Loader2, Pencil } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
 import { UserFace } from '@/components/common/UserFace';
+import { initialsOf } from '@/components/ui/avatar-stack';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -89,16 +90,16 @@ export default function AccountSettings({ path }: Props) {
     submittingPassword,
     editingSecurity,
     setEditingSecurity,
-    startEditProfile,
     cancelEditProfile,
     saveProfile,
     onPasswordSubmit,
     display,
-    initials,
     roleLabel,
     isStaff,
     isDeveloper,
   } = useAccountSettings();
+  // Two letters on every screen ("BH"), the same as the sidebar's face.
+  const initials = display.name ? initialsOf(display.name) : '?';
   // Designation and membership number (P-617): staff and the developer; a client has neither.
   const hasTitle = isStaff || isDeveloper;
 
@@ -210,37 +211,8 @@ export default function AccountSettings({ path }: Props) {
     </div>
   );
 
-  const readRows = (
-    <>
-      <SettingsRow label="Full name">{display.name || '—'}</SettingsRow>
-      {hasTitle ? (
-        <>
-          <SettingsRow label="Designation">{display.designation || <span className="text-ink-muted">Not set</span>}</SettingsRow>
-          <SettingsRow label="Membership number" hint="ICAI or ICSI">
-            {display.membershipNo ? <span className="font-mono">{display.membershipNo}</span> : <span className="text-ink-muted">Not set</span>}
-          </SettingsRow>
-        </>
-      ) : null}
-      <SettingsRow label="Email" hint="Your sign-in address">
-        {display.email || '—'}
-      </SettingsRow>
-      <SettingsRow label="Phone">{display.phone || <span className="text-ink-muted">Not set</span>}</SettingsRow>
-      <SettingsRow label="WhatsApp" hint={hasTitle ? 'Alerts on WhatsApp' : 'Updates about your engagement'}>
-        {display.phoneE164 ? (
-          <span className="flex flex-wrap items-center gap-2">
-            <span className="tabular-nums">{display.phoneE164}</span>
-            <Chip tone={display.whatsappOptIn ? 'ok' : 'idle'}>{display.whatsappOptIn ? 'On' : 'Off'}</Chip>
-          </span>
-        ) : (
-          <span className="text-ink-muted">Not set</span>
-        )}
-      </SettingsRow>
-      <SettingsRow label="Role">{roleLabel}</SettingsRow>
-    </>
-  );
-
   /** The profile form. `inline` (Settings) keeps it open and shows no Cancel unless something changed. */
-  const profileForm = (inline: boolean) => {
+  const profileForm = (inline: boolean, photo?: ReactNode) => {
     const dirty =
       !!profile &&
       (draftName !== profile.name ||
@@ -252,7 +224,7 @@ export default function AccountSettings({ path }: Props) {
         draftMembershipNo !== profile.membershipNo);
     return (
       <form onSubmit={(e: FormEvent) => void saveProfile(e)}>
-        <SettingsRow label="Full name">
+        <SettingsRow label="Name">
           <Label htmlFor="profile-name" className="sr-only">
             Full name
           </Label>
@@ -268,7 +240,7 @@ export default function AccountSettings({ path }: Props) {
         </SettingsRow>
         {hasTitle ? (
           <>
-            <SettingsRow label="Designation" hint="Optional">
+            <SettingsRow label="Designation" hint="Shown on your emails and in the client portal">
               <Label htmlFor="profile-designation" className="sr-only">
                 Designation
               </Label>
@@ -280,7 +252,7 @@ export default function AccountSettings({ path }: Props) {
                 placeholder="Senior manager"
               />
             </SettingsRow>
-            <SettingsRow label="Membership number" hint="ICAI or ICSI, optional">
+            <SettingsRow label="Membership number" hint="ICAI or ICSI">
               <Label htmlFor="profile-membership" className="sr-only">
                 Membership number
               </Label>
@@ -309,7 +281,7 @@ export default function AccountSettings({ path }: Props) {
             required
           />
         </SettingsRow>
-        <SettingsRow label="Phone" hint="Optional">
+        <SettingsRow label="Mobile" hint="For sign-in codes and WhatsApp">
           <Label htmlFor="profile-phone" className="sr-only">
             Phone
           </Label>
@@ -377,9 +349,7 @@ export default function AccountSettings({ path }: Props) {
             />
           </SettingsRow>
         ) : null}
-        <SettingsRow label="Role">
-          <span className="text-ink-muted">{roleLabel}</span>
-        </SettingsRow>
+        {photo}
         <div className="flex justify-end gap-2 border-t border-line-soft px-4 py-3 md:px-5">
           {!inline || dirty ? (
             <Button type="button" variant="quiet" size="sm" onClick={cancelEditProfile} disabled={savingProfile}>
@@ -496,17 +466,8 @@ export default function AccountSettings({ path }: Props) {
         id="profile"
         title={SECTION_LABEL.profile}
         meta={savedChip}
-        action={
-          !editingProfile ? (
-            <Button type="button" variant="secondary" size="sm" disabled={loading || !profile} onClick={startEditProfile}>
-              <Pencil aria-hidden />
-              Edit
-            </Button>
-          ) : null
-        }
       >
-        {photoRow}
-        {loading ? loadingRows : !editingProfile ? readRows : profileForm(false)}
+        {loading ? loadingRows : profileForm(true, photoRow)}
       </ProfileCard>
     );
   } else if (active === 'security') {
@@ -555,8 +516,7 @@ export default function AccountSettings({ path }: Props) {
     body = (
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <ProfileCard id="settings-profile" title="Profile" meta={savedChip}>
-          {photoRow}
-          {loading ? loadingRows : profileForm(true)}
+          {loading ? loadingRows : profileForm(true, photoRow)}
         </ProfileCard>
         <div className="grid min-w-0 gap-4">
           <ProfileCard id="settings-security" title="Security">
@@ -574,7 +534,7 @@ export default function AccountSettings({ path }: Props) {
       {/* R-09: the sidebar and the menu card already name the page, so the heading is for screen readers. */}
       <h1 className="sr-only">Profile</h1>
 
-      <div className={cn('mx-auto', active === 'settings' ? 'max-w-[1240px]' : 'max-w-[1080px]')}>
+      <div>
         <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[220px_minmax(0,1fr)]">
           <nav
             aria-label="Profile sections"

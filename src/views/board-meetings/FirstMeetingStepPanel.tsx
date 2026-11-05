@@ -24,7 +24,7 @@ export function FirstMeetingStepPanel({ engagementId, companyName }: { engagemen
   const first = (q.data ?? []).find((m) => m.postInc && m.status !== 'cancelled') ?? (q.data ?? []).find((m) => m.meetingType === 'first' && m.status !== 'cancelled');
   if (q.isPending) return null;
   return (
-    <section aria-label="First board meeting" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border-2 border-line bg-surface px-4 py-3">
+    <section aria-label="First board meeting" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-line bg-surface px-4 py-3">
       {first ? (
         <>
           <div className="min-w-0 text-[14px]">

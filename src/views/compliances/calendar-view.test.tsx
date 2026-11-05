@@ -155,21 +155,13 @@ describe('ComplianceCalendarView bar', () => {
     expect(screen.getByRole('button', { name: 'Choose month' })).toHaveTextContent('December');
   });
 
-  it('puts the filings of a day on the staff calendar, locked, and opens the record', () => {
+  it('opens the day on the month grid with links to each filing record', () => {
     search = new URLSearchParams('date=2099-10-20');
-    const { container } = render(<ComplianceCalendarView basePath="/app/manager/compliances" scope={scope} />);
-    const cell = container.querySelector('.fc-daygrid-day[data-date="2099-10-20"]')!;
-    const filings = [...cell.querySelectorAll<HTMLElement>('.vc-ev')];
-    expect(filings).toHaveLength(2);
-    // Statutory due dates never move: no drag handle, regulator colour edge, a lock mark.
-    for (const ev of filings) {
-      expect(ev.classList.contains('fc-event-draggable')).toBe(false);
-      expect(ev.classList.contains('vc-reg--gst')).toBe(true);
-    }
-    expect(filings.some((ev) => ev.classList.contains('vc-ev--done'))).toBe(true);
-    // A filing opens the statutory detail page of that client's period.
-    act(() => filings.find((ev) => !ev.classList.contains('vc-ev--done'))!.click());
-    expect(push).toHaveBeenCalledWith('/app/manager/compliances/obligations/gst-3b/b');
+    render(<ComplianceCalendarView basePath="/app/manager/compliances" scope={scope} />);
+    // The date in the URL opens that day's popover; a filing opens its period's statutory page.
+    expect(screen.getByRole('button', { name: /^20 October/, hidden: true })).toHaveAttribute('aria-pressed', 'true');
+    expect(document.querySelector('a[href="/app/manager/compliances/obligations/gst-3b/b"]')).not.toBeNull();
+    expect(document.querySelector('a[href="/app/manager/compliances/obligations/gst-3b/a"]')).not.toBeNull();
   });
 
   it('groups one filing for several clients in Coming up', () => {
@@ -241,27 +233,13 @@ describe('Statutory and non-statutory filter (C-1 to C-4)', () => {
     expect(screen.getByRole('tab', { name: /^Non-statutory\s*1$/ })).toBeInTheDocument();
   });
 
-  it('shows a task from its start to its end with a hollow square and the start and urgency on hover', () => {
+  it('shows a task with a hollow square, its start and urgency on hover, and a link to the task', () => {
     taskList = [boardPack];
     search = new URLSearchParams('date=2099-10-22');
-    const { container } = render(<ComplianceCalendarView basePath="/app/manager/compliances" scope={scope} />);
-    const task = [...container.querySelectorAll<HTMLElement>('.vc-ev')].find((ev) => ev.textContent?.includes('Board pack'))!;
-    expect(task.querySelector('.vc-ev__hollow')).not.toBeNull();
-    expect(task.querySelector('[title="Board pack · Starts 12 Oct 2099 · High"]')).not.toBeNull();
-    // Planned work dates move freely for a manager.
-    expect(task.classList.contains('fc-event-draggable')).toBe(true);
-    act(() => task.click());
-    expect(push).toHaveBeenCalledWith('/app/manager/compliances/obligations/tasks/t1');
-  });
-
-  it('keeps tasks still for a project lead and offers no New task on an empty day', () => {
-    mayWrite = false;
-    taskList = [boardPack];
-    search = new URLSearchParams('date=2099-10-22');
-    const { container } = render(<ComplianceCalendarView basePath="/app/manager/compliances" scope={scope} />);
-    const task = [...container.querySelectorAll<HTMLElement>('.vc-ev')].find((ev) => ev.textContent?.includes('Board pack'))!;
-    expect(task.classList.contains('fc-event-draggable')).toBe(false);
-    expect(newTaskPrefill).not.toHaveBeenCalled();
+    render(<ComplianceCalendarView basePath="/app/manager/compliances" scope={scope} />);
+    const mark = document.querySelector('[title="Board pack · Starts 12 Oct 2099 · High"]')!;
+    expect(mark.querySelector('[data-hollow]')).not.toBeNull();
+    expect(document.querySelector('a[href="/app/manager/compliances/obligations/tasks/t1"]')).not.toBeNull();
   });
 
   it('applies the filter to the grid and the rail', () => {
@@ -269,7 +247,7 @@ describe('Statutory and non-statutory filter (C-1 to C-4)', () => {
     search = new URLSearchParams('date=2099-10-20');
     render(<ComplianceCalendarView basePath="/app/manager/compliances" scope={scope} />);
     const container = document.body;
-    const titles = () => [...container.querySelectorAll('.vc-ev')].map((ev) => ev.textContent ?? '');
+    const titles = () => [...container.querySelectorAll('[title]')].map((ev) => ev.getAttribute('title') ?? '');
     act(() => screen.getByRole('tab', { name: /^Non-statutory/ }).click());
     expect(titles().some((t) => t.includes('GSTR-3B'))).toBe(false);
     const coming = screen.getByRole('region', { name: 'Coming up' });

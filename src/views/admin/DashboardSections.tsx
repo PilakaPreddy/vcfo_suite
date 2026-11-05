@@ -4,7 +4,8 @@ import { BoardMeetingsCard } from '@/views/board-meetings/BoardMeetingsCard';
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { AlertTriangle, Briefcase, CalendarDays, Inbox, ListPlus, Plus, ShieldCheck, User } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CheckCheck, ListChecks, Plus, User } from 'lucide-react';
+import { ymdFromIsoInIst, ymdInIst } from '@/lib/intern/intern-work';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { DashHero, type DashHeroStat } from '@/components/dash/DashHero';
 import { PhaseTimeline, type Phase } from '@/components/admin/PhaseTimeline';
@@ -176,26 +177,17 @@ export function AdminDashboardView({
     { activeProjects: scoped.length, overdue, waitingClients: waitingOnClients, dueWeek },
     scope === 'all' && !engagementsLoading && isAdminOrManager(user?.role),
   );
+  const todayYmd = ymdInIst(now);
+  const doneToday = team.items.filter((i) => i.kind === 'done' && ymdFromIsoInIst(i.completedAt) === todayYmd).length;
+  /* The prototype's five numbers. Approvals have their own card in the rail. */
   const heroStats: DashHeroStat[] = [
     {
-      label: 'Active projects',
-      icon: Briefcase,
-      value: scoped.length,
-      href: `${projectBase}/projects`,
-      trend: trendWithLive(trends, 'activeProjects', scoped.length),
-      note: blockers > 0 && scope === 'all' ? `${blockers} at risk` : `${open.length} open tasks`,
-      how: 'Your projects that are still being set up, in the clients shown.',
-    },
-    {
-      label: 'Needs your approval',
-      icon: ShieldCheck,
-      value: approvalsReceived,
-      href: `${projectBase}/approvals`,
-      hot: approvalsReceived > 0,
-      trend: trendWithLive(trends, 'approvals', approvalsReceived),
-      trendTone: 'warn',
-      note: approvalClients > 0 ? `${approvalClients} ${approvalClients === 1 ? 'client' : 'clients'}` : undefined,
-      how: 'Steps a lead or a client sent you to approve before they move on.',
+      label: 'Needs action',
+      icon: ListChecks,
+      value: open.length,
+      href: tasksHref('open'),
+      note: `${new Set(open.map((r) => r.engagementId)).size} clients`,
+      how: 'Open team tasks in the clients shown.',
     },
     {
       label: 'Overdue',
@@ -227,6 +219,13 @@ export function AdminDashboardView({
       note: dueInTwoDays > 0 ? `${dueInTwoDays} filings in 2 days` : undefined,
       how: 'Open team tasks due in the next seven days.',
     },
+    {
+      label: 'Done today',
+      icon: CheckCheck,
+      value: doneToday,
+      good: doneToday > 0,
+      how: 'Team tasks finished today.',
+    },
   ];
   const tools = useTeamTaskTools({
     storageScope: user?.id ?? 'manager',
@@ -251,22 +250,10 @@ export function AdminDashboardView({
           stats={heroStats}
           scope={<TodayScopeTabs value={scope} onChange={setScope} counts={scopeCounts} />}
         >
-          {/* M-30: on a phone the actions are 36px icon buttons, so they fit beside the switch. */}
-          <Button variant="secondary" asChild className={PHONE_ICON}>
-            <Link href={`${projectBase}/approvals`} title="Approvals">
-              <Inbox aria-hidden />
-              <span className="max-sm:sr-only">Approvals</span>
-            </Link>
-          </Button>
-          <Button variant="secondary" onClick={() => setAssignOpen(true)} className={PHONE_ICON} title="Assign task">
-            <ListPlus aria-hidden />
+          {/* M-30: on a phone the action is a 36px icon button, so it fits beside the switch. */}
+          <Button onClick={() => setAssignOpen(true)} className={PHONE_ICON} title="Assign task">
+            <Plus aria-hidden />
             <span className="max-sm:sr-only">Assign task</span>
-          </Button>
-          <Button asChild className={PHONE_ICON}>
-            <Link href={newProjectHref} title="New project">
-              <Plus aria-hidden />
-              <span className="max-sm:sr-only">New project</span>
-            </Link>
           </Button>
         </DashHero>
 
@@ -276,58 +263,36 @@ export function AdminDashboardView({
           </div>
           <div className="flex min-w-0 flex-col gap-5">
             <DashboardApprovalsPanel />
-            <BoardMeetingsCard />
             <TaskStatusCard rows={teamRows} />
             <WorkloadByLeadCard rows={teamRows} rebalanceHref={`${projectBase}/team`} />
           </div>
         </div>
 
         <div className={GRID}>
-          <LeadActionQueue
-            userId={user?.id ?? ''}
-            items={teamItems}
-            now={now}
-            statusOf={(i) => team.byId.get(i.id)?.status ?? 'In progress'}
-            stuck={stuck}
-            loading={engagementsLoading}
-            workHref={projectBase === '/app/manager' ? '/app/manager/work' : `${projectBase}/projects?tab=leads`}
-            companyHref={(id) => {
-              const e = engById.get(id);
-              return e ? adminProjectPath(e, projectBase) : `${projectBase}/projects`;
-            }}
-          />
+          <div className="flex min-w-0 flex-col gap-5">
+            <LeadActionQueue
+              userId={user?.id ?? ''}
+              items={teamItems}
+              now={now}
+              statusOf={(i) => team.byId.get(i.id)?.status ?? 'In progress'}
+              stuck={stuck}
+              loading={engagementsLoading}
+              workHref={projectBase === '/app/manager' ? '/app/manager/work' : `${projectBase}/projects?tab=leads`}
+              companyHref={(id) => {
+                const e = engById.get(id);
+                return e ? adminProjectPath(e, projectBase) : `${projectBase}/projects`;
+              }}
+            />
+            {scope !== 'compliance' && phaseRows.length > 0 ? <PhaseProgressGrid rows={phaseRows} meta={`${phaseRows.length} incorporating`} /> : null}
+            {scope !== 'incorporating' ? <FilingsMatrix filings={scopedFilings} engagements={scoped} now={now} /> : null}
+          </div>
           <div className="flex min-w-0 flex-col gap-5">
             {userId ? <LeadInboxCard userId={userId} items={teamItems} engagementIds={scopedIds} /> : null}
-            <LeadSideRail items={teamItems} title="Waiting on client" mailHref={`${staffBase}/mail`} />
-          </div>
-        </div>
-
-        <div className={GRID}>
-          <PhaseProgressGrid
-            rows={phaseRows}
-            meta={`${completionRate}% tasks complete`}
-            href={`${projectBase}/projects`}
-            hrefLabel="All projects"
-            before={<PhaseTimeline phases={portfolioPhases} variant="journey" />}
-            extraColumns={[
-              {
-                key: 'lead',
-                header: 'Lead',
-                width: '120px',
-                render: (r) => {
-                  const lead = teamMembers.find((t) => t.id === r.leadId);
-                  return lead ? <PersonCell name={lead.name} /> : <span className="text-ink-faint">—</span>;
-                },
-              },
-            ]}
-          />
-          <div className="flex min-w-0 flex-col gap-5">
-            <AdminDashboardFilingsPanel engagements={engagements} dueSoon={scopedDueSoon} />
+            <LeadSideRail items={teamItems} mailHref={`${staffBase}/mail`} />
+            <BoardMeetingsCard />
             {userId ? <TeamTodosPanel userId={userId} /> : null}
           </div>
         </div>
-
-        {scope !== 'incorporating' ? <FilingsMatrix filings={scopedFilings} engagements={scoped} now={now} /> : null}
       </div>
       <AssignTaskDialog open={assignOpen} onOpenChange={setAssignOpen} engagements={active} teamMembers={teamMembers} />
     </PageTransition>

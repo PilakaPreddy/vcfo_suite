@@ -4,7 +4,6 @@ import type { ChecklistItem } from '@/data/checklist';
 import { getChecklistStepTimelineLabel } from '@/data/checklist';
 import type { Engagement } from '@/data/engagements';
 import type { ChecklistStepGate } from '@/lib/checklist/checklist-step-gate';
-import type { ChecklistItemResponses } from '@/lib/checklist/checklist-responses';
 import type { PortalStep } from '@/lib/client-portal/step-model';
 import { StepLink, StepMark, type StepTone } from '@/components/ui/step-track';
 import { Chip } from '@/components/ui/spectrum-chip';
@@ -12,7 +11,6 @@ import { UserFace } from '@/components/common/UserFace';
 import { initialsOf } from '@/components/ui/avatar-stack';
 import { stepMarkForGate } from '@/components/incorporation/step-mark-for-gate';
 import { BoardResolutionStepLink } from '@/components/incorporation/BoardResolutionStepLink';
-import { MilestoneResponseRowSummary } from '@/views/incorporation/MilestoneResponseRowSummary';
 import { shortDate, daysBetween } from '@/components/timeline/timeline-model';
 import { cn } from '@/lib/utils';
 
@@ -33,11 +31,11 @@ import { cn } from '@/lib/utils';
 export function ChecklistPhaseStepRow({
   item,
   gate,
-  responses,
   engagement,
   onOpen,
   showBoardResolutionLink = true,
   stepNumber,
+  stepLabel,
   facts,
   leadName,
   onAbout,
@@ -47,13 +45,14 @@ export function ChecklistPhaseStepRow({
 }: {
   item: ChecklistItem;
   gate: ChecklistStepGate;
-  responses?: ChecklistItemResponses;
   engagement: Engagement;
   onOpen: (item: ChecklistItem) => void;
   /** pre-2 carries a link into the board-resolution editor on the lead side. */
   showBoardResolutionLink?: boolean;
-  /** Step number inside its phase, shown as a mono "Step n" before the title. */
+  /** Step number, shown as a mono "Step n" before the title. */
   stepNumber?: number;
+  /** The mono code before the title when it is not "Step n" ("Reg-3"). */
+  stepLabel?: string;
   /** The step's dates and holder from `buildIncorporationModel`. */
   facts?: PortalStep;
   /** The project lead's name, shown with a face on the live row. */
@@ -101,7 +100,7 @@ export function ChecklistPhaseStepRow({
   return (
     <div
       className={cn(
-        'group relative mx-1.5 flex items-center gap-3 rounded-md px-2.5 py-2 transition-colors',
+        'group relative -mx-2.5 flex items-center gap-3 rounded-md px-2.5 py-2 transition-colors',
         live ? 'bg-surface-sunken' : 'hover:bg-surface-sunken/60',
       )}
       data-ask-focus={item.id}
@@ -110,8 +109,8 @@ export function ChecklistPhaseStepRow({
       <StepMark state={state} tone={tone} label={sentBack ? 'Sent back' : base.label} className="relative z-[1]" />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex min-w-0 items-baseline gap-2">
-          {stepNumber !== undefined ? (
-            <span className="flex-none font-mono text-[12px] text-ink-muted">Step {stepNumber}</span>
+          {stepLabel || stepNumber !== undefined ? (
+            <span className="flex-none font-mono text-[12px] text-ink-muted">{stepLabel ?? `Step ${stepNumber}`}</span>
           ) : null}
           <button
             type="button"
@@ -134,7 +133,6 @@ export function ChecklistPhaseStepRow({
           ) : null}
         </span>
         {sub ? <span className={cn('truncate text-[12.5px]', subTone)}>{sub}</span> : null}
-        <MilestoneResponseRowSummary item={item} responses={responses} variant="admin" hideStatus className="mt-0.5" />
         {showBoardResolutionLink && item.id === 'pre-2' ? (
           <span className="relative z-[1] mt-1.5 block">
             <BoardResolutionStepLink engagement={engagement} />

@@ -117,14 +117,6 @@ export function AnnouncementsBell() {
         >
           <Megaphone className="h-4 w-4 shrink-0" strokeWidth={1.6} aria-hidden />
         </m.span>
-        {unread > 0 && (
-          <span
-            className="absolute right-[5px] top-[5px] flex h-4 min-w-4 items-center justify-center rounded-sm bg-danger-mid px-1 text-[10.5px] font-medium leading-none text-white ring-2 ring-surface-raised"
-            aria-hidden
-          >
-            {unread > 9 ? "9+" : unread}
-          </span>
-        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"

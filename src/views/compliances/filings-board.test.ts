@@ -60,7 +60,7 @@ describe('filings board', () => {
     expect(parseRegulator('gst')).toBe('gst');
     expect(parseRegulator('all')).toBe('');
     const counts = regulatorCounts(rows, now);
-    expect(counts.map((c) => c.label)).toEqual(['GST', 'Income tax', 'MCA', 'FEMA', 'Payroll', 'Labour']);
+    expect(counts.map((c) => c.label)).toEqual(['MCA', 'GST', 'Income tax', 'Payroll', 'FEMA', 'Labour']);
     expect(counts.find((c) => c.key === 'gst')).toMatchObject({ filed: 1, total: 2 });
     expect(counts.find((c) => c.key === 'labour')).toMatchObject({ filed: 0, total: 0 });
   });

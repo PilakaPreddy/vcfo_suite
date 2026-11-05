@@ -1,21 +1,18 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Plus, TrendingUp } from 'lucide-react';
+import { Gauge, Plus, Sparkles, TrendingUp, Trophy } from 'lucide-react';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
 import { DashSection } from '@/components/dash/DashSection';
-import { CHART_STATUS, ChartLegend, DashBarChart, type ChartRow, type ChartSeries } from '@/components/charts';
-import { PhaseBar } from '@/components/ui/step-track';
 import {
-  StackedBar,
   SuperNumberStrip,
   SuperPageError,
   SuperPageHead,
   SuperPageSkeleton,
 } from '@/components/super/parts/super-parts';
 import { useSuperInsights } from '@/views/super/use-super-insights';
-import { SuperCapacityCard } from '@/components/super/overview/SuperCapacityCard';
+import { SuperCapacityLines } from '@/components/super/overview/SuperCapacityCard';
 import { roomAcross } from '@/lib/super/super-insights-model';
 import { indexPeople, usePeopleMetrics } from '@/components/metrics/use-metrics';
 import { Button } from '@/components/ui/button';
@@ -32,26 +29,22 @@ import {
   openCount,
   PROSPECT_STAGE_LABEL,
   winRate,
-  WIN_RATE_WINDOW_LABEL,
-  WIN_RATE_WINDOWS,
   type Prospect,
   type ProspectStage,
-  type WinRateWindow,
 } from '@/lib/growth/pipeline';
 import { useDemoRequests, useProspectMutations, useProspects } from '@/views/super/growth/use-growth-data';
 
 /**
- * GROWTH (prototype `GrowthScreen`), counts only.
- *
- * New engagements by the month they started (`created_at`) and certificates by the month they
- * were issued, over the last twelve months, plus how much of the current book is incorporated.
+ * GROWTH (prototype `GrowthScreen`), counts only: four number tiles, the sales pipeline and
+ * "Capacity · can the team take more?".
  *
  * The sales pipeline (G-21) reads `prospects` through `/api/super/growth/prospects`: a board by
  * stage and a list, add and edit, stage moves, and "Convert to client", which links a won
- * prospect to an engagement the super admin picks. The win rate is won / (won + lost) over
- * prospects closed in the chosen window, from stored rows only. Demo requests from the public
- * "Book a demo" form (G-30) sit below with "Add as prospect". Per-manager capacity is still
- * left out. No money (R-37).
+ * prospect to an engagement the super admin picks. Add prospect and the List view stay in the
+ * card head because they are the only way to add a prospect and to see a lost one. Proposals won
+ * is won / (won + lost) over prospects closed in the last 90 days, from stored rows only. Demo
+ * requests from the public "Book a demo" form (G-30) sit below with "Add as prospect", their only
+ * home. No money (R-37).
  */
 const SUPER_GROWTH_HREF = '/app/super/growth';
 
@@ -67,7 +60,6 @@ export default function SuperGrowth() {
   const demoRequests = useDemoRequests();
   const { create, update, convert, fromDemoRequest } = useProspectMutations();
   const [view, setView] = useState<PipelineView>('board');
-  const [rateWindow, setRateWindow] = useState<WinRateWindow>('90');
   const [editing, setEditing] = useState<Prospect | 'new' | null>(null);
   const [converting, setConverting] = useState<Prospect | null>(null);
 
@@ -113,29 +105,9 @@ export default function SuperGrowth() {
   const months = insights.months;
   const current = months[months.length - 1];
   const previous = months[months.length - 2];
-  const yearStarted = months.reduce((sum, m) => sum + m.engagementsStarted, 0);
-  const yearCertificates = months.reduce((sum, m) => sum + m.certificatesIssued, 0);
-  const incorporating = insights.clients.filter((c) => !c.summary.incorporated).length;
-
-  const data: ChartRow[] = months.map((m) => ({
-    month: m.label,
-    started: m.engagementsStarted,
-    certificates: m.certificatesIssued,
-  }));
-  const series: ChartSeries[] = [
-    { key: 'started', label: 'New engagements', color: CHART_STATUS.active },
-    { key: 'certificates', label: 'Certificates issued', color: CHART_STATUS.done },
-  ];
-
-  const phaseTotals = insights.clients[0]?.summary.phases.map((p) => p.total) ?? [];
-  const phaseNames = insights.clients[0]?.summary.phases.map((p) => p.label) ?? [];
-  const phaseDone = phaseTotals.map((_, i) =>
-    insights.clients.reduce((sum, c) => sum + (c.summary.phases[i]?.done ?? 0), 0),
-  );
-  const phaseAll = phaseTotals.map((t) => t * insights.clients.length);
-
-  const rate = winRate(prospects, rateWindow, new Date());
+  const rate = winRate(prospects, '90', new Date());
   const room = roomAcross(insights.team.managers, people.byProfileId);
+  const waiting = prospects.filter((p) => p.stage === 'won' && !p.engagementId).map((p) => p.company || p.name);
 
   function move(p: Prospect, stage: ProspectStage) {
     if (p.stage === stage) return;
@@ -152,12 +124,7 @@ export default function SuperGrowth() {
     <PageTransition>
       {seo}
       <div className="flex flex-col gap-5">
-        <SuperPageHead title="Growth" meta="Last 12 months">
-          <Button onClick={() => setEditing('new')} disabled={!pipeline.data}>
-            <Plus aria-hidden />
-            Add prospect
-          </Button>
-        </SuperPageHead>
+        <SuperPageHead title="Growth" meta="Last 12 months" />
 
         <SuperNumberStrip
           items={[
@@ -165,43 +132,26 @@ export default function SuperGrowth() {
               label: `New engagements in ${current?.longLabel.split(' ')[0] ?? 'this month'}`,
               value: current?.engagementsStarted ?? 0,
               sub: previous ? `${previous.engagementsStarted} in ${previous.longLabel.split(' ')[0]}` : undefined,
+              icon: Sparkles,
             },
-            { label: 'New engagements · 12 months', value: yearStarted },
-            {
-              label: 'Certificates · 12 months',
-              value: yearCertificates,
-              sub: current ? `${current.certificatesIssued} this month` : undefined,
-              good: yearCertificates > 0,
-            },
-            { label: 'Clients in incorporation', value: incorporating },
-            { label: 'Prospects in the pipeline', value: pipeline.data ? openCount(prospects) : '–' },
-            {
-              label: `Win rate · ${WIN_RATE_WINDOW_LABEL[rateWindow].toLowerCase()}`,
-              value: rate.pct === null ? '–' : `${rate.pct}%`,
-              sub: `${rate.won} won · ${rate.lost} lost`,
-            },
+            { label: 'Prospects in the pipeline', value: pipeline.data ? openCount(prospects) : '–', icon: TrendingUp },
+            { label: 'Proposals won this quarter', value: rate.pct === null ? '–' : `${rate.pct}%`, icon: Trophy },
             {
               // Open items left under the managers' capacities (prototype "Room across the managers").
               label: 'Room across the managers',
               value: room ?? '–',
-              sub: room === null ? 'No capacity set' : 'open items',
+              of: room === null ? undefined : 'open items',
               good: room !== null && room > 0,
+              icon: Gauge,
             },
           ]}
         />
 
         <DashSection
           title="Sales pipeline"
-          icon={TrendingUp}
-          tone="info"
-          meta={
-            <span className="flex flex-wrap items-center gap-2">
-              <SpectrumTabs
-                label="Win rate window"
-                items={WIN_RATE_WINDOWS.map((w) => ({ key: w, label: WIN_RATE_WINDOW_LABEL[w] }))}
-                value={rateWindow}
-                onChange={(k) => setRateWindow(k as WinRateWindow)}
-              />
+          headIcon={{ icon: TrendingUp, tone: 'blue' }}
+          right={
+            <>
               <SpectrumTabs
                 label="Pipeline view"
                 items={[
@@ -211,7 +161,11 @@ export default function SuperGrowth() {
                 value={view}
                 onChange={(k) => setView(k as PipelineView)}
               />
-            </span>
+              <Button size="sm" onClick={() => setEditing('new')} disabled={!pipeline.data}>
+                <Plus aria-hidden />
+                Add prospect
+              </Button>
+            </>
           }
         >
           {pipeline.isPending ? (
@@ -232,7 +186,7 @@ export default function SuperGrowth() {
           )}
         </DashSection>
 
-        <SuperCapacityCard title="Capacity · can the team take more?" managers={insights.team.managers} people={people.byProfileId} />
+        <SuperCapacityLines managers={insights.team.managers} people={people.byProfileId} waiting={waiting} />
 
         <DemoRequestsCard
           requests={demoRequests.data ?? []}
@@ -246,39 +200,6 @@ export default function SuperGrowth() {
             })
           }
         />
-
-        <DashSection title="New engagements and certificates" meta={`${yearStarted} started · ${yearCertificates} certificates`}>
-          <DashBarChart data={data} categoryKey="month" series={series} height={220} emptyLabel="No engagements yet" />
-          <ChartLegend className="mt-2" items={series.map((s) => ({ label: s.label, color: s.color }))} />
-        </DashSection>
-
-        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
-          <DashSection title="Clients by incorporation" meta={String(insights.clients.length)}>
-            <StackedBar
-              segments={[
-                { label: 'Incorporated', value: insights.clients.length - incorporating, tone: 'ok' },
-                { label: 'In incorporation', value: incorporating, tone: 'prog' },
-              ]}
-            />
-          </DashSection>
-          <DashSection title="Steps done across the book" meta={`${phaseDone.reduce((a, b) => a + b, 0)} steps`}>
-            {phaseTotals.length === 0 ? null : (
-              <>
-                <PhaseBar done={phaseDone} totals={phaseAll} names={phaseNames} tall />
-                <ul className="mt-2.5 grid grid-cols-2 gap-x-4 gap-y-1 text-[12.5px] text-ink-2 sm:grid-cols-4">
-                  {phaseNames.map((name, i) => (
-                    <li key={name} className="flex items-baseline gap-1.5">
-                      <span className="truncate">{name}</span>
-                      <b className="font-medium tabular-nums text-ink">
-                        {phaseDone[i]}/{phaseAll[i]}
-                      </b>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </DashSection>
-        </div>
       </div>
 
       <ProspectDialog

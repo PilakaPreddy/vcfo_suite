@@ -15,6 +15,7 @@ import { shellDesktopNavExpanded } from "@/components/shell/intern-sidebar";
 import { useSidebarNarrow } from "@/components/shell/use-sidebar-peek";
 import { cn } from "@/lib/utils";
 import { AuthBootScreen } from "@/components/common/AuthBootScreen";
+import { roleHomePath } from "@/lib/auth-routes";
 import { useShellAppearance } from "@/hooks/use-shell-appearance";
 import { AskPushColumn, AskShellMount } from "@/components/ask/AskShellMount";
 
@@ -46,14 +47,20 @@ export function AppShell({
     document.documentElement.setAttribute("data-reduce-motion", reduceMotion ? "true" : "false");
   }, [reduceMotion]);
 
+  const wrongRole = !!user && !!requireRole && user.role !== requireRole && user.role !== "super_admin";
+
+  // The loading screen is for loading only. With the session settled and no user, or the wrong
+  // role, go to the right page. The short wait rides out the tick where `user` is briefly null
+  // across a soft navigation.
+  useEffect(() => {
+    if (authLoading || (user && !wrongRole)) return;
+    const target = user ? roleHomePath(user.role) : "/login";
+    const timer = window.setTimeout(() => window.location.replace(target), 600);
+    return () => window.clearTimeout(timer);
+  }, [authLoading, user, wrongRole]);
+
   if (authLoading || !user) return <AuthBootScreen />;
-  if (
-    requireRole &&
-    user.role !== requireRole &&
-    user.role !== "super_admin"
-  ) {
-    return <AuthBootScreen label="Opening your workspace…" />;
-  }
+  if (wrongRole) return <AuthBootScreen label="Opening your workspace…" />;
 
   /* Client used to cap at 1200px, which left a visible gutter beside every
      client page on a normal laptop. It now matches the lead dashboard. */

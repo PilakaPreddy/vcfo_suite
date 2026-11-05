@@ -77,7 +77,6 @@ describe('TeamTasksCard with tools', () => {
     const table = screen.getByRole('table');
     expect(within(table).queryByText('Name approval')).not.toBeInTheDocument();
     expect(within(table).getByText('GSTR-3B · Jul')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Waiting on clients' })).toHaveAttribute('aria-selected', 'true');
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Pick row 1' }));
     const bar = screen.getByRole('toolbar', { name: 'Bulk actions' });

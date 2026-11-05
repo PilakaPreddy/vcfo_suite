@@ -58,6 +58,8 @@ export interface JourneyRailItem {
   attachments?: StepAttachmentRequirement[];
   /** Manager-set window (`formatWindow`), shown as quiet mono metadata. */
   windowLabel?: string;
+  /** The staff rail's mono code ("Step 13", "Reg-3"); "Step n" from `stepNumber` when absent. */
+  stepCode?: string;
 }
 
 interface ChecklistJourneyRailProps {
@@ -71,7 +73,7 @@ interface ChecklistJourneyRailProps {
   hideStatus?: boolean;
   /** Kebab → Attachments required (intern step rail). */
   showAttachmentMenu?: boolean;
-  /** Staff step rail (prototype `StepView`): "Step n" in a 50px mono column after the mark. */
+  /** Staff step rail (prototype `StepView`): one compact row with the mark, "Step n" in a 50px mono column, the title and the holder icon. */
   showStepCode?: boolean;
   className?: string;
 }
@@ -86,7 +88,7 @@ function HolderIcon({ role }: { role: ChecklistItem['responsibleRole'] }) {
     <User
       size={14}
       strokeWidth={1.6}
-      className={cn('mt-[3px] shrink-0', role === 'client' ? 'text-ink-faint' : 'text-ink-2')}
+      className={cn('shrink-0', role === 'client' ? 'text-ink-faint' : 'text-ink-2')}
       role="img"
       aria-label={RESPONSIBLE_ROLE_LABEL[role]}
     />
@@ -160,7 +162,7 @@ export function ChecklistJourneyRail({
       <LayoutGroup id="intern-journey-rail">
       <ol className="list-none space-y-0">
         {items.map((row, index) => {
-          const { item, gate, status, stepNumber, attachments = [], windowLabel } = row;
+          const { item, gate, status, stepNumber, attachments = [], windowLabel, stepCode } = row;
           const selected = selectedId === item.id;
           const next = items[index + 1];
           const isLast = index === items.length - 1;
@@ -202,7 +204,9 @@ export function ChecklistJourneyRail({
                 >
                   {item.title}
                 </p>
-                <HolderIcon role={item.responsibleRole} />
+                <span className="mt-[3px] shrink-0">
+                  <HolderIcon role={item.responsibleRole} />
+                </span>
               </div>
               {!visuallyLocked && (
                 <div className="mt-1 flex flex-wrap items-center gap-1.5 empty:hidden">
@@ -256,6 +260,36 @@ export function ChecklistJourneyRail({
               {labelBlock}
             </>
           );
+
+          if (showStepCode) {
+            return (
+              <li
+                key={item.id}
+                data-ask-focus={item.id}
+                className={cn('relative -mx-2 flex items-center gap-2.5 rounded-md px-2 py-1.5', !animateSelected && selected && 'bg-surface-sunken')}
+              >
+                {selectedPill}
+                <StepLink x={18} up={prev && (prevSolid ? 'done' : 'todo')} down={!isLast && (connectorSolid ? 'done' : 'todo')} />
+                <span className="relative z-[1] flex-none">{node}</span>
+                <span className="relative z-[1] w-[50px] flex-none font-mono text-[12px] text-ink-muted">{stepCode ?? `Step ${stepNumber}`}</span>
+                <button
+                  type="button"
+                  aria-current={selected ? 'step' : undefined}
+                  onClick={() => (canSelect ? onSelect(item.id) : notifyChecklistStepLocked(gate.message))}
+                  className={cn(
+                    'relative min-w-0 flex-1 truncate text-left text-[13.5px] after:absolute after:inset-0 hover:underline',
+                    selected ? 'font-medium text-ink' : 'text-ink-2',
+                  )}
+                  title={item.title}
+                >
+                  {item.title}
+                </button>
+                <span className="relative z-[1] flex-none">
+                  <HolderIcon role={item.responsibleRole} />
+                </span>
+              </li>
+            );
+          }
 
           if (!canSelect) {
             return (

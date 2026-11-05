@@ -19,9 +19,10 @@ import { cn } from '@/lib/utils';
 import { daysSince, FIELD_SELECT_SM, STAGE_TONE } from './growth-ui';
 
 /**
- * The sales pipeline (G-21) as a board by stage and as a list. A card opens the edit dialog;
- * the stage picker on each card moves it. A won prospect shows "Convert to client" until it
- * is linked to an engagement, then the linked company. No fee amounts (R-37).
+ * The sales pipeline (G-21) as a board and as a list. The board has the prototype's three columns:
+ * Enquiry (lead and contacted), Proposal sent and Won; a lost prospect stays in the list. A card
+ * opens the edit dialog; the stage picker on each card moves it. A won prospect shows "Convert to
+ * client" until it is linked to an engagement, then the linked company. No fee amounts (R-37).
  */
 interface PipelineProps {
   prospects: Prospect[];
@@ -72,16 +73,22 @@ function WonLink({ prospect, linkedCompany, onConvert }: { prospect: Prospect; l
   );
 }
 
+const BOARD: Array<{ key: string; label: string; stages: ProspectStage[] }> = [
+  { key: 'enquiry', label: 'Enquiry', stages: ['lead', 'contacted'] },
+  { key: 'proposal', label: PROSPECT_STAGE_LABEL.proposal, stages: ['proposal'] },
+  { key: 'won', label: PROSPECT_STAGE_LABEL.won, stages: ['won'] },
+];
+
 export function PipelineBoard({ prospects, linkedCompany, onEdit, onMove, onConvert }: PipelineProps) {
   const grouped = byStage(prospects);
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-      {PROSPECT_STAGES.map((stage) => {
-        const items = grouped[stage];
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      {BOARD.map((col) => {
+        const items = col.stages.flatMap((stage) => grouped[stage]);
         return (
-          <div key={stage} className="min-w-0 rounded-md border-1.5 border-line bg-surface-sunken p-2.5">
+          <div key={col.key} className="min-w-0 rounded-md border-1.5 border-line bg-surface-sunken p-2.5">
             <h3 className="flex items-center gap-2 px-1 pb-2.5 text-[13px] font-medium text-ink-2">
-              {PROSPECT_STAGE_LABEL[stage]}
+              {col.label}
               <span className="rounded-sm bg-surface-raised px-1.5 text-[12px] font-medium text-ink-muted">{items.length}</span>
             </h3>
             {items.length === 0 ? (

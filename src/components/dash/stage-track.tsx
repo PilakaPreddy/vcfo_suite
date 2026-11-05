@@ -23,7 +23,7 @@ export interface TrackNow {
 
 export function StageTrack({ stages, now, className }: { stages: TrackStage[]; now?: TrackNow; className?: string }) {
   return (
-    <section className={cn('min-w-0 overflow-hidden rounded-md border-2 border-line bg-surface-raised px-4 py-3.5 md:px-5', className)} aria-label="Progress">
+    <section className={cn('min-w-0 overflow-hidden rounded-md border border-line bg-surface-raised px-4 py-3.5 md:px-5', className)} aria-label="Progress">
       <ol className="flex flex-col gap-2 md:flex-row md:items-center md:gap-0">
         {stages.map((s, i) => {
           const last = i === stages.length - 1;

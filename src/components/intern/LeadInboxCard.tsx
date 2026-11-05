@@ -174,7 +174,8 @@ function TriageList({ engagementIds }: { engagementIds?: Set<string> }) {
       <div className="px-4 pb-2 pt-3">
         <SpectrumTabs
           label="Triage"
-          items={MESSAGE_TRIAGE.map((t) => ({ key: t, label: MESSAGE_TRIAGE_LABEL[t], count: count(t) }))}
+          className="gap-1 [&>button]:px-2"
+          items={MESSAGE_TRIAGE.map((t) => ({ key: t, label: MESSAGE_TRIAGE_LABEL[t], ...(count(t) ? { count: count(t) } : {}) }))}
           value={state}
           onChange={(k) => {
             setState(k as MessageTriage);
@@ -282,8 +283,8 @@ export function LeadInboxCard({
         <SpectrumTabs
           label="Inbox"
           items={[
-            { key: 'triage', label: 'Triage', ...(newCount ? { count: newCount } : {}) },
-            { key: 'todos', label: 'My to-dos', ...(openTodos ? { count: openTodos } : {}) },
+            { key: 'triage', label: 'Triage', count: newCount ?? 0 },
+            { key: 'todos', label: 'My to-dos', count: openTodos },
           ]}
           value={tab}
           onChange={setTab}

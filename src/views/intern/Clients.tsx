@@ -9,6 +9,7 @@ import { useInternPortfolio } from '@/hooks/use-intern-portfolio';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
 import { CardHeadTile } from '@/components/common/CardHeadTile';
+import { shortCompany } from '@/components/super/parts/super-text';
 import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
 import { FilterChip } from '@/components/ui/filter-chip';
 import { ClientIdentityTile } from '@/views/client-record/client-identity';
@@ -241,7 +242,7 @@ function InternClientsInner() {
           <ClientIdentityTile id={r.e.id} name={r.e.companyName} size={30} />
           <span className="grid min-w-0">
             <Link href={internEngagementPath(r.e)} onClick={(ev) => ev.stopPropagation()} className="min-w-0 truncate font-medium text-ink hover:underline" title={r.e.companyName}>
-              {r.e.companyName}
+              {shortCompany(r.e.companyName)}
             </Link>
             {r.e.clientDisplayName ? (
               <span className="grid-sub truncate text-[12px] leading-4 text-ink-muted">
@@ -255,7 +256,7 @@ function InternClientsInner() {
     {
       key: 'stage',
       header: 'Stage',
-      width: '120px',
+      width: '124px',
       render: (r) => (
         <Chip tone={STAGE_CHIP_TONE[r.facts.stage]} fixed dot={false}>
           {STAGE_WORD[r.facts.stage]}
@@ -265,13 +266,15 @@ function InternClientsInner() {
     {
       key: 'phases',
       header: 'Phases',
-      width: '180px',
+      width: '210px',
       render: (r) => (
         <PhaseBar
           done={r.progress.phases.map((p) => p.done)}
           totals={r.progress.phases.map((p) => p.total)}
           names={r.progress.phases.map((p) => p.title)}
           className="w-full"
+          stuck={r.progress.stuck}
+          hrefFor={(i) => `${internEngagementPath(r.e)}?phase=${i + 1}`}
         />
       ),
     },
@@ -289,18 +292,18 @@ function InternClientsInner() {
     {
       key: 'steps',
       header: 'Steps',
-      width: '72px',
+      width: '64px',
       align: 'right',
       render: (r) => (
         <span className="text-[13px] tabular-nums text-ink-muted" title={`${r.pct}% done`}>
-          {r.facts.done}/{r.facts.total}
+          {r.progress.phases.slice(0, 3).reduce((n, p) => n + p.done, 0)}/{r.progress.phases.slice(0, 3).reduce((n, p) => n + p.total, 0)}
         </span>
       ),
     },
     {
       key: 'status',
       header: 'Status',
-      width: '128px',
+      width: '172px',
       render: (r) => {
         const st = rowStatus(r);
         return (
@@ -334,13 +337,13 @@ function InternClientsInner() {
         <EmptyState title="No clients assigned yet" />
       ) : (
         <section className="surface min-w-0 overflow-hidden">
-          <div className="flex min-h-[52px] min-w-0 flex-wrap items-center gap-x-2.5 gap-y-2 border-b border-line-soft px-4 py-2">
+          <div className="flex min-h-[52px] min-w-0 flex-wrap items-center gap-x-2.5 gap-y-2 border-b border-line-soft px-4 py-2 md:px-5">
             <CardHeadTile title="Clients" />
-            <h2 className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">Clients</h2>
-            <span className="shrink-0 text-[12.5px] tabular-nums text-ink-muted">
-              {rows.length === all.length ? all.length : `${rows.length} of ${all.length}`}
+            <h2 className="whitespace-nowrap text-[15px] font-medium text-ink">Clients</h2>
+            <span className="truncate text-[13px] tabular-nums text-ink-muted">
+              {rows.length} of {all.length}
             </span>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               {tabs}
               <FilterChip
                 label="Health"
@@ -352,13 +355,13 @@ function InternClientsInner() {
             </div>
           </div>
           {/* Saved views sit in their own row under the head (prototype `ClientsGrid`). */}
-          <div className="flex min-w-0 flex-wrap items-center gap-2 border-b border-line-soft px-4 py-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 border-b border-line-soft px-4 py-2.5 md:px-5">
             <SavedViews storageKey={`${scope}:clients`} views={CLIENT_VIEWS} current={current} onApply={(f) => {
               setStage(f.stage ?? '');
               setShow(f.show ?? '');
             }} />
           </div>
-          <div className="hidden px-2 pb-2 md:block">
+          <div className="hidden md:block">
             <EFilingGrid
               caption="Clients"
               columns={columns}
@@ -377,6 +380,8 @@ function InternClientsInner() {
               onSelectedChange={setPicked}
               bulkActions={bulkActions}
               bulkNoun={['client', 'clients']}
+              actionsColumn="now"
+              footer={<ClientsLegend className="p-0 md:px-0" />}
               rowActions={(r) => (
                 <RowQuickActions
                   onOpen={() => router.push(internEngagementPath(r.e))}
@@ -393,7 +398,6 @@ function InternClientsInner() {
               changedAt={(r) => r.changedAt}
               visitKey={`${scope}:clients`}
             />
-            <ClientsLegend />
           </div>
           <ul className="md:hidden">
             {rows.length === 0 ? (
@@ -409,7 +413,7 @@ function InternClientsInner() {
                     <ClientIdentityTile id={r.e.id} name={r.e.companyName} size={30} />
                     <span className="grid min-w-0 flex-1 gap-1.5">
                       <span className="flex min-w-0 items-center gap-2">
-                        <b className="min-w-0 truncate font-medium text-ink">{r.e.companyName}</b>
+                        <b className="min-w-0 truncate font-medium text-ink">{shortCompany(r.e.companyName)}</b>
                         <Chip tone={st.tone} className="ml-auto flex-none">
                           {st.word}
                         </Chip>
@@ -423,7 +427,7 @@ function InternClientsInner() {
                           className="flex-1"
                         />
                         <span className="flex-none text-[12px] tabular-nums text-ink-muted">
-                          {r.facts.done}/{r.facts.total}
+                          {r.progress.phases.slice(0, 3).reduce((n, p) => n + p.done, 0)}/{r.progress.phases.slice(0, 3).reduce((n, p) => n + p.total, 0)}
                         </span>
                       </span>
                       <span className="flex min-w-0 items-center gap-2 text-[12.5px] text-ink-muted">

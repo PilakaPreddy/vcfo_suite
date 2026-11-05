@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
 import { ChevronRight, Plus, MapPin, Trash2 } from 'lucide-react';
+import { shortCompany } from '@/components/super/parts/super-text';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
@@ -176,7 +177,7 @@ export function ProjectsView(props: ProjectsViewProps) {
           <ClientIdentityTile id={item.e.id} name={item.e.companyName} size={30} />
           <span className="min-w-0">
             <Link href={adminProjectPath(item.e, projectBase)} className="block truncate font-medium text-ink hover:underline" title={item.e.companyName}>
-              {item.e.companyName}
+              {shortCompany(item.e.companyName)}
             </Link>
             {item.e.clientDisplayName ? (
               <span className={cn('block truncate text-[12px] text-ink-muted', GRID_SUB)}>{item.e.clientDisplayName}</span>
@@ -188,7 +189,7 @@ export function ProjectsView(props: ProjectsViewProps) {
     {
       key: 'stage',
       header: 'Stage',
-      width: '120px',
+      width: '132px',
       render: (item) => (
         <Chip tone={STAGE_CHIP_TONE[item.facts.stage]} fixed dot={false}>
           {STAGE_WORD[item.facts.stage]}
@@ -249,7 +250,7 @@ export function ProjectsView(props: ProjectsViewProps) {
     {
       key: 'actions',
       header: <span className="sr-only">Actions</span>,
-      width: '56px',
+      width: '72px',
       align: 'right',
       render: (item) => (
         <span data-grid-ctl className="inline-flex">
@@ -400,7 +401,7 @@ export function ProjectsView(props: ProjectsViewProps) {
                   </li>
                 ))}
               </ul>
-              <div className="hidden px-2 pb-2 md:block">
+              <div className="hidden md:block">
                 <EFilingGrid
                   caption="GCC setup projects"
                   columns={columns}
@@ -416,9 +417,10 @@ export function ProjectsView(props: ProjectsViewProps) {
                   densityScope={`${user?.id ?? 'staff'}:projects`}
                   changedAt={(item) => item.changedAt}
                   visitKey={`${user?.id ?? 'staff'}:projects`}
+                  actionsColumn="now"
                   {...tools.gridProps}
                 />
-                <ClientsLegend />
+                <ClientsLegend className="px-4 py-2 md:px-5" />
               </div>
             </>
           ) : null}

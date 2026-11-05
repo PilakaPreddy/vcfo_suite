@@ -5,12 +5,11 @@ import { useMemo, useRef } from 'react';
 import { AlertCircle, AlertTriangle, CalendarClock, Check, CircleCheck, CircleDashed, Clock, MoreHorizontal, User } from 'lucide-react';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
-import { CompanyPicker } from '@/components/admin/CompanyPicker';
+import { FilterSelect } from '@/components/ui/native-select';
 import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
 import { Button } from '@/components/ui/button';
-import { Chip, OwnerChip } from '@/components/ui/spectrum-chip';
+import { Chip } from '@/components/ui/spectrum-chip';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
-import { PreIncorporationPortfolioNote } from '@/components/compliances/PreIncorporationNotice';
 import { useApp } from '@/context/AppContext';
 import type { Engagement } from '@/data/engagements';
 import { REG_SHORT } from '@/lib/client-portal/credentials';
@@ -19,14 +18,12 @@ import { ALL_COMPANIES, normaliseCompanyParam, soleCompany, type ComplianceScope
 import { isIdentifier, plainDate } from '@/lib/compliance/spectrum-status';
 import { FilterStrip, FlowCard, RailCard, WordChip, type StripItem } from '@/views/compliances/spectrum-parts';
 import { useViewParams } from '@/views/compliances/view-params';
-import { RenewByCell } from '@/views/compliances/registration-renewal';
 import { useRegistrationFacts, type RegistrationFacts } from '@/hooks/use-registration-facts';
 import { renewalOf } from '@/lib/registrations/registration-facts';
 import { GroupedGrid, HeadCard, KeyHint, useListKeys, type GridColumn, type GridGroup } from '@/views/compliances/grouped-grid';
 import {
   REG_CATEGORIES,
   regDateLabel,
-  regDueSoon,
   regFlow,
   registrationRows,
   workbookRowKey,
@@ -52,7 +49,6 @@ const CAT_DOT: Record<string, string> = {
   FEMA: 'bg-reg-fema',
   na: 'bg-ink-faint',
 };
-const OWNER_LABEL = { client: 'Client', sbc: 'SBC', mca: 'Authority', manager: 'Manager' } as const;
 
 /** Grid cell look per word: done green tick, working blue dots, waiting teal mark, not started grey, not needed hatched. */
 const CELL: Record<'done' | 'run' | 'wait' | 'late' | 'none' | 'na', { cls: string; Icon?: typeof Check; label: string }> = {
@@ -128,15 +124,13 @@ export function RegistrationsView({ shellBase, scope, embedded = false }: { shel
   const setParams = params.set;
   const hrefOf = (r: RegistrationRow) => `${basePath}/${encodeURIComponent(r.key)}`;
 
-  // Prototype strip: Granted, In progress, Waiting, Not started, Renewals in 60 days. Overdue
-  // stays as a sixth tile, because the real tool tracks registration due dates.
+  // Prototype strip: Granted, In progress, Waiting, Not started, Renewals in 60 days.
   const strip: StripItem[] = [
     { key: 'done', label: 'Granted', value: count('done'), Icon: CircleCheck, valueClass: 'text-positive' },
     { key: 'progress', label: 'In progress', value: count('progress'), Icon: Clock },
     { key: 'waiting', label: 'Waiting on client', value: count('waiting'), Icon: User },
     { key: 'none', label: 'Not started', value: count('none'), Icon: CircleDashed },
     { key: 'renewals', label: 'Renewals in 60 days', value: count('renewals'), Icon: CalendarClock, valueClass: 'text-warning' },
-    { key: 'overdue', label: 'Overdue', value: count('overdue'), Icon: AlertTriangle, valueClass: 'text-danger' },
   ];
 
   const groups: GridGroup<RegistrationRow>[] = REG_CATEGORIES.map((c) => ({
@@ -188,26 +182,12 @@ export function RegistrationsView({ shellBase, scope, embedded = false }: { shel
         ),
     },
     {
-      key: 'owner',
-      label: 'With',
-      width: 128,
-      className: 'hidden lg:table-cell',
-      render: (r) => (r.owner ? <OwnerChip owner={r.owner} label={OWNER_LABEL[r.owner]} /> : <span className="text-ink-faint">—</span>),
-    },
-    {
-      key: 'renew',
-      label: 'Renew by',
-      width: 150,
-      className: 'hidden lg:table-cell',
-      render: (r) => <RenewByCell facts={factOf(r)} now={now} />,
-    },
-    {
       key: 'date',
       label: 'Date',
       width: 120,
       render: (r) => {
         const d = regDateLabel(r, now);
-        return <span className={d.className ?? 'text-ink-muted'}>{d.text}</span>;
+        return <span className={cn('whitespace-nowrap', d.className ?? 'text-ink-muted')}>{d.text}</span>;
       },
     },
   ];
@@ -240,10 +220,6 @@ export function RegistrationsView({ shellBase, scope, embedded = false }: { shel
   ];
 
   const flow = regFlow(items);
-  const soon = live
-    .filter((r) => regDueSoon(r, now))
-    .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''))
-    .slice(0, 5);
   const waiting = live.filter((r) => r.word === 'Waiting').slice(0, 5);
   // Renewals: registrations with a stored expiry within 60 days or past (amber within 30, red past).
   const renewals = live
@@ -265,12 +241,11 @@ export function RegistrationsView({ shellBase, scope, embedded = false }: { shel
   const head = (
     <span ref={filterRef} className="contents">
       {sole ? null : (
-        <CompanyPicker
-          engagements={engagements}
+        <FilterSelect
+          aria-label="Client"
+          options={[{ value: ALL_COMPANIES, label: 'All my clients' }, ...engagements.map((e) => ({ value: e.id, label: e.companyName }))]}
           value={companyId}
-          allLabel="All my clients"
-          allHint="Every client in view"
-          onChange={(id) => setParams({ company: id === ALL_COMPANIES ? null : id })}
+          onChange={(e) => setParams({ company: e.target.value === ALL_COMPANIES ? null : e.target.value })}
         />
       )}
       <SpectrumTabs
@@ -296,7 +271,6 @@ export function RegistrationsView({ shellBase, scope, embedded = false }: { shel
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4">
         {embedded ? null : <h1 className="sr-only">Registrations</h1>}
         <FilterStrip items={strip} value={filter} onChange={(k) => setParams({ state: k || null })} />
-        {scope.preIncorporationIds.size ? <PreIncorporationPortfolioNote count={scope.preIncorporationIds.size} /> : null}
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div ref={embedded ? undefined : listRef} className="min-w-0">
@@ -351,7 +325,7 @@ export function RegistrationsView({ shellBase, scope, embedded = false }: { shel
                 { label: 'Documents', value: flow.documents },
                 { label: 'Application', value: flow.application },
                 { label: 'Authority review', value: flow.review },
-                { label: 'Done', value: flow.granted },
+                { label: 'Granted', value: flow.granted },
               ]}
             />
             <RailCard
@@ -396,13 +370,6 @@ export function RegistrationsView({ shellBase, scope, embedded = false }: { shel
                 right: regDateLabel(r, now).text,
                 href: hrefOf(r),
               }))}
-            />
-            <RailCard
-              title="Due in the next 15 days"
-              items={soon.map((r) => {
-                const d = regDateLabel(r, now);
-                return { key: r.key, title: r.name, sub: r.engagement.companyName, right: d.text, rightClass: d.className, href: hrefOf(r) };
-              })}
             />
           </div>
         </div>

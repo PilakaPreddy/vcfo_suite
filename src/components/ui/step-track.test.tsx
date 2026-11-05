@@ -27,10 +27,10 @@ describe('StepLink (R-58)', () => {
 });
 
 describe('StepMark (R-56, R-57)', () => {
-  it('draws an upcoming step as a solid empty square, never dashed', () => {
+  it('draws an upcoming step as a dashed empty square', () => {
     const { container } = render(<StepMark state="next" />);
     const mark = container.firstElementChild as HTMLElement;
     expect(mark).toHaveClass('border-line-strong', 'bg-surface-raised', 'relative');
-    expect(mark).not.toHaveClass('border-dashed');
+    expect(mark).toHaveClass('border-dashed');
   });
 });

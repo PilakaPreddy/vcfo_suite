@@ -9,6 +9,7 @@
  * pending invites from `/api/client/team`; hand-off and substitute through the
  * existing `/api/engagements/:id/clients/substitute`.
  */
+import { MessageCircle, RefreshCw, UserRoundCog, Video, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApp } from '@/context/AppContext';
@@ -253,8 +254,10 @@ export function TeamSection() {
                   <th scope="col" className="tb-d">
                     Since
                   </th>
-                  <th scope="col">Access</th>
-                  <th scope="col" aria-label="Actions" />
+                  <th scope="col" style={{ width: 124 }}>
+                    Access
+                  </th>
+                  <th scope="col" style={{ width: 150 }} aria-label="Actions" />
                 </tr>
               </thead>
               <tbody>
@@ -270,7 +273,7 @@ export function TeamSection() {
                       <td>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 160 }}>
                           <span className="av" style={{ width: 24, height: 24, fontSize: 10, ...av }}>
-                            {initialsOf(r.name)}
+                            {initialsOf(r.name).slice(0, 1)}
                           </span>
                           <span style={{ minWidth: 0 }}>
                             <span style={{ fontWeight: 500 }}>{r.name}</span>
@@ -286,11 +289,11 @@ export function TeamSection() {
                         {r.email}
                       </td>
                       <td className="tb-d" style={{ width: 110, whiteSpace: 'nowrap', fontSize: 12.5, color: 'oklch(var(--ink-muted))' }}>
-                        {r.date}
+                        {r.when}
                       </td>
-                      <td style={{ width: 120 }}>{access(r)}</td>
-                      <td style={{ width: 120, textAlign: 'right' }}>
-                        <span style={{ display: 'inline-flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <td style={{ width: 124 }}>{access(r)}</td>
+                      <td style={{ width: 150 }}>
+                        <span style={{ display: 'inline-flex', gap: 8 }}>
                           {r.k === 'i' ? (
                             isPrimary ? (
                               <>
@@ -302,7 +305,7 @@ export function TeamSection() {
                                   disabled={act.isPending}
                                   onClick={() => resend(r)}
                                 >
-                                  <Svg d={P.resend} sw={1.8} />
+                                  <RefreshCw size={15} strokeWidth={1.6} aria-hidden />
                                 </button>
                                 <button
                                   type="button"
@@ -312,7 +315,7 @@ export function TeamSection() {
                                   disabled={act.isPending}
                                   onClick={() => cancel(r)}
                                 >
-                                  <Svg d={P.x} sw={1.8} join={false} />
+                                  <X size={15} strokeWidth={1.6} aria-hidden />
                                 </button>
                               </>
                             ) : null
@@ -328,7 +331,7 @@ export function TeamSection() {
                               data-tip={`Substitute ${r.name}`}
                               onClick={() => setSubFor(r)}
                             >
-                              <Svg d={P.swap} sw={1.8} />
+                              <UserRoundCog size={15} strokeWidth={1.6} aria-hidden />
                             </button>
                           ) : null}
                         </span>
@@ -431,10 +434,8 @@ function SbcRow({ p }: { p: ClientPortalContact }) {
         {p.avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={p.avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
-        ) : support ? (
-          initialsOf(name).slice(0, 1)
         ) : (
-          p.initials
+          initialsOf(name).slice(0, 1)
         )}
       </span>
       <span style={{ minWidth: 0, flex: 1 }}>
@@ -448,7 +449,7 @@ function SbcRow({ p }: { p: ClientPortalContact }) {
       </span>
       <span className="tb-contact">
         <a className="ibtn wa" {...btn('wa', 'WhatsApp')}>
-          <Svg d={P.wa} size={15} sw={1.8} />
+          <MessageCircle size={15} strokeWidth={1.6} aria-hidden />
         </a>
         <a className="ibtn" {...btn('call', 'Call')}>
           <Svg d={P.call} size={15} sw={1.8} />
@@ -457,7 +458,7 @@ function SbcRow({ p }: { p: ClientPortalContact }) {
           <Svg d={P.mail} size={15} sw={1.8} />
         </a>
         <a className="ibtn" {...btn('teams', 'Teams')}>
-          <Svg d={P.teams} size={15} sw={1.8} />
+          <Video size={15} strokeWidth={1.6} aria-hidden />
         </a>
       </span>
     </div>

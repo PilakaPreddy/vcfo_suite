@@ -6,8 +6,8 @@
 .tp-audit .tb-srch .inp{height:30px;padding-left:30px;font-size:13px}
 .tp-audit .tb-srch-i{position:absolute;left:10px;top:8px;color:oklch(var(--ink-faint));display:flex}
 .tp-audit .tb-events th,.tp-audit .tb-events td{padding-left:10px;padding-right:10px}
-.tp-audit .tb-events th:first-child,.tp-audit .tb-events td:first-child{padding-left:16px}
-.tp-audit .tb-events th:last-child,.tp-audit .tb-events td:last-child{padding-right:16px}
+/* 44 px rows, as in the prototype's grid: two lines fit with 2 px above and below. */
+.tp-audit .tb-events td{padding-top:2px;padding-bottom:2px;line-height:1.3}
 /* the head sticks under the 60 px top bar and the 3 px ribbon */
 @media (min-width:768px){
   .tp-audit .tb-tw{overflow:visible}

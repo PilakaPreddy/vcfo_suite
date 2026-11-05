@@ -106,7 +106,6 @@ function CredentialsInner() {
                 <Ic n="history" s={14} />
                 Access log
               </button>
-              {data ? modeBtns('page', '', true) : null}
             </div>
 
             {q.isError ? (

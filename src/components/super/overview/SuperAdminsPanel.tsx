@@ -16,7 +16,7 @@ import { cn } from '@/lib/utils';
  * the project managers who report to them (`profiles.reports_to_admin_id`) and the clients those
  * managers own; this month's assignments and accepted reviews (insights, when loaded); the open
  * escalations sent to the admin; and the median time to resolve this month's escalations.
- * Managers with no admin set are grouped in one "No admin" row so nobody drops out of the table.
+ * A manager with no admin set says "No admin" on the Managers grid below.
  */
 
 interface AdminRow {
@@ -30,8 +30,6 @@ interface AdminRow {
   response: string;
 }
 
-const NO_ADMIN = '__none';
-
 export function SuperAdminsPanel({
   staff,
   engagements,
@@ -43,7 +41,7 @@ export function SuperAdminsPanel({
   admins?: SuperTeamAdmin[];
 }) {
   const escalations = useEscalations({ status: 'all' });
-  const head = { title: 'Admins · this month', icon: UserCog, tone: 'violet' as const, href: '/app/super/team', hrefLabel: 'Open team' };
+  const head = { title: 'Admins · this month', headIcon: { icon: UserCog, tone: 'violet' as const }, href: '/app/super/team', hrefLabel: 'Open team' };
 
   if (staff.isPending) {
     return (
@@ -59,13 +57,10 @@ export function SuperAdminsPanel({
   }
   for (const manager of staff.managers) {
     const admin = staff.adminOfManager.get(manager.id);
-    const key = admin?.id ?? NO_ADMIN;
-    const group =
-      groups.get(key) ??
-      { name: admin?.name ?? 'No admin', managerIds: new Set<string>(), managers: [] as string[] };
+    const group = admin ? groups.get(admin.id) : undefined;
+    if (!group) continue;
     group.managerIds.add(manager.id);
     group.managers.push(manager.name);
-    groups.set(key, group);
   }
 
   const now = new Date();
@@ -97,7 +92,7 @@ export function SuperAdminsPanel({
       response: medianResponse(resolveMs.get(id) ?? []),
     };
   });
-  rows.sort((a, b) => (a.id === NO_ADMIN ? 1 : b.id === NO_ADMIN ? -1 : b.clients - a.clients));
+  rows.sort((a, b) => b.clients - a.clients);
 
   const num = (n: number | null) => <span className="tabular-nums">{n ?? '–'}</span>;
   const columns: EFilingColumn<AdminRow>[] = [
@@ -113,20 +108,20 @@ export function SuperAdminsPanel({
       ),
     },
     { key: 'clients', header: 'Clients', width: '80px', align: 'right', render: (r) => num(r.clients) },
-    { key: 'assigned', header: 'Assigned', width: '90px', align: 'right', render: (r) => (r.id === NO_ADMIN ? '–' : num(r.assigned)) },
-    { key: 'approvals', header: 'Approvals', width: '96px', align: 'right', render: (r) => (r.id === NO_ADMIN ? '–' : num(r.approvals)) },
+    { key: 'assigned', header: 'Assigned', width: '90px', align: 'right', render: (r) => num(r.assigned) },
+    { key: 'approvals', header: 'Approvals', width: '96px', align: 'right', render: (r) => num(r.approvals) },
     {
       key: 'esc',
       header: 'Open esc.',
       width: '90px',
       align: 'right',
-      render: (r) => <span className={cn('tabular-nums', r.escalations > 0 && 'font-medium text-danger')}>{r.id === NO_ADMIN ? '–' : r.escalations}</span>,
+      render: (r) => <span className={cn('tabular-nums', r.escalations > 0 && 'font-medium text-danger')}>{r.escalations}</span>,
     },
-    { key: 'response', header: 'Response', width: '96px', align: 'right', render: (r) => (r.id === NO_ADMIN ? '–' : r.response) },
+    { key: 'response', header: 'Response', width: '96px', align: 'right', render: (r) => r.response },
   ];
 
   return (
-    <DashSection {...head} meta={rows.filter((r) => r.id !== NO_ADMIN).length} bodyClassName="px-2 pb-2 pt-1">
+    <DashSection {...head} flush>
       <EFilingGrid caption="Admins" columns={columns} rows={rows} rowKey={(r) => r.id} minWidth={640} empty="No admins yet" />
     </DashSection>
   );

@@ -18,7 +18,7 @@ import { useIndexedDocuments } from '@/hooks/use-vault-documents';
 import { adminProjectPath, internEngagementPath } from '@/lib/projects/project-step-path';
 import { useStaffBasePath } from '@/hooks/use-staff-base-path';
 import { toastError } from '@/lib/toast-errors';
-import { buildVaultTree, type VaultTreeView } from '@/views/vault/vault-tree';
+import { buildVaultTree, withStepPhases, type VaultTreeView } from '@/views/vault/vault-tree';
 import {
   entityDocs as allEntityDocs,
   factsFor,
@@ -162,13 +162,12 @@ export function useDocumentVault() {
     [index, showReplaced],
   );
 
-  const selectedEntity = useMemo(
-    () =>
-      selectedEngagement
-        ? groupVaultDocuments(notReplaced(serverDocs), [selectedEngagement], { includeEmpty: true })[0] ?? null
-        : null,
-    [notReplaced, serverDocs, selectedEngagement],
-  );
+  const selectedEntity = useMemo(() => {
+    const group = selectedEngagement
+      ? groupVaultDocuments(notReplaced(serverDocs), [selectedEngagement], { includeEmpty: true })[0] ?? null
+      : null;
+    return group ? withStepPhases(group) : null;
+  }, [notReplaced, serverDocs, selectedEngagement]);
 
   const searchHits = useMemo(() => vaultSearchHits(notReplaced(searchDocs), q), [notReplaced, searchDocs, q]);
   const searchClientCount = new Set(searchHits.map((h) => h.doc.engagementId)).size;

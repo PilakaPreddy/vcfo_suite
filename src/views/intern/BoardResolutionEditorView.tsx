@@ -5,7 +5,8 @@
 
 import { useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { CheckCircle2, Send, Undo2, Upload } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -33,9 +34,9 @@ import { SEO } from '@/components/SEO';
 
 
 import { Chip } from '@/components/ui/spectrum-chip';
-import { StepLink, StepMark } from '@/components/ui/step-track';
-import { CardHeadTile } from '@/components/common/CardHeadTile';
-import { RecordTile } from '@/components/incorporation/RecordHead';
+import { DashSection } from '@/components/dash/DashSection';
+import { AuditLines, DocFiles, DocTodo, nocDocType, todoStates, type AuditLine, type DocFile } from '@/components/board-doc';
+import { internOverviewPhases } from '@/lib/intern/intern-overview-progress';
 import { cn } from '@/lib/utils';
 
 
@@ -82,6 +83,7 @@ import {
   type BoardResolutionEditorProps,
 } from '@/views/intern/BoardResolutionEditorDocPanel';
 import { useNocState } from '@/views/intern/board-resolution-noc/useNocState';
+import { nocRecords } from '@/views/intern/board-resolution-noc/useNocState';
 import {
   NocReceiveCard,
   NocTemplateCard,
@@ -100,58 +102,20 @@ function dayMonth(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }).replace(/\bSept\b/, 'Sep');
 }
 
-type BrStage = { key: string; label: string; done: boolean };
-
-/**
- * The five stages of a board resolution (prototype `BoardResolutionScreen` stepper), from the
- * stored document only: a Word file exists, the draft left the lead (with the manager or
- * finalized), it is finalized for the client, and the client uploaded the signed copy. The real
- * tool does not record a separate "sent to the client" moment: finalizing makes the file visible
- * on the client portal; "Sent to client" is the staff record of sending it for signing
- * (`sent_to_client_at`, S-573).
- */
-function brStages(
-  doc: BoardResolutionEditorProps['doc'],
-  withManager: boolean,
-  isFinalized: boolean,
-  sentToClientAt: string | null,
-): BrStage[] {
-  const generated = Boolean(doc?.storagePath?.trim() || doc?.content?.trim());
-  const signed = Boolean(doc?.signedStoragePath?.trim());
-  return [
-    { key: 'generated', label: 'Generated from Pre-1', done: generated },
-    { key: 'draft', label: 'Draft · editing', done: withManager || isFinalized },
-    { key: 'finalized', label: 'Finalized · client visible', done: isFinalized },
-    { key: 'sent', label: 'Sent to client', done: isFinalized && (Boolean(sentToClientAt) || signed) },
-    { key: 'signed', label: 'Signed copy uploaded', done: signed },
-  ];
+/** One row of the Key facts card (prototype `BoardResolutionPage` C3); a missing value is "Not given yet". */
+function Fact({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <>
+      <dt className="text-[13px] text-ink-muted">{label}</dt>
+      <dd className={cn('min-w-0 break-words', value ? 'font-medium text-ink' : 'text-ink-faint')}>{value || 'Not given yet'}</dd>
+    </>
+  );
 }
 
-function BrStageList({ stages }: { stages: BrStage[] }) {
-  const cur = stages.findIndex((x) => !x.done);
-  return (
-    <ol className="grid">
-      {stages.map((x, i) => (
-        <li
-          key={x.key}
-          className={cn('relative flex items-center gap-2.5 rounded-md px-2 py-2 text-[13.5px]', i === cur && 'bg-surface-sunken')}
-        >
-          <StepLink
-            x={18}
-            up={i > 0 && (stages[i - 1].done ? 'done' : 'todo')}
-            down={i < stages.length - 1 && (x.done ? 'done' : 'todo')}
-          />
-          <StepMark
-            state={x.done ? 'done' : i === cur ? 'now' : 'next'}
-            size={20}
-            label={x.done ? 'Done' : i === cur ? 'Current' : 'Not started'}
-            className="relative z-[1]"
-          />
-          <span className={cn(x.done || i === cur ? 'text-ink' : 'text-ink-muted', i === cur && 'font-medium')}>{x.label}</span>
-        </li>
-      ))}
-    </ol>
-  );
+/** A merge field that still holds its template placeholder counts as not given. */
+function given(raw: string | undefined): string {
+  const v = raw?.trim() ?? '';
+  return v && !/^\[.*\]$/.test(v) ? v : '';
 }
 
 export function BoardResolutionEditorView(p: BoardResolutionEditorProps) {
@@ -181,6 +145,8 @@ export function BoardResolutionEditorView(p: BoardResolutionEditorProps) {
     withManager,
     sentBackNote,
     handleGenerate,
+    mergeFields,
+    downloadHref,
   } = p;
   const signed = Boolean(doc?.signedStoragePath?.trim());
   // R-52 (T1 to T6): the board resolution (NOC) state, reloaded when the document changes.
@@ -227,6 +193,49 @@ export function BoardResolutionEditorView(p: BoardResolutionEditorProps) {
   };
   const stageWord = signed ? 'Signed' : isFinalized && sentToClientAt ? 'Sent' : isFinalized ? 'Finalized' : withManager ? 'With manager' : 'Draft';
   const stageTone = signed || isFinalized ? 'ok' : withManager ? 'teal' : 'warn';
+  const records = noc ? nocRecords(noc) : {};
+  const docType = noc ? nocDocType(noc.variant, { notary: noc.foreignParent && !noc.notaryStepsOff }) : null;
+  const phaseOne = internOverviewPhases()[0]?.items ?? [];
+  const prevStep = phaseOne[0];
+  const nextStep = phaseOne[3];
+  const signer = [given(mergeFields?.SIGNATORY_NAME), given(mergeFields?.SIGNATORY_DESIGNATION)].filter(Boolean).join(', ');
+  const files: DocFile[] = [
+    ...(isFinalized
+      ? [
+          {
+            id: 'br-draft',
+            title: 'Board resolution (NOC) · Word',
+            type: 'DOCX' as const,
+            name: noc?.staff?.templateFileName,
+            status: 'Released',
+            by: records.released?.by,
+            at: records.released?.at,
+          },
+        ]
+      : []),
+    ...(signed
+      ? [
+          {
+            id: 'br-signed',
+            title: 'Signed copy',
+            type: 'PDF' as const,
+            status: noc?.accepted ? 'Accepted' : 'Uploaded',
+            by: records.signed?.by,
+            at: doc?.signedUploadedAt ?? records.signed?.at,
+          },
+        ]
+      : []),
+  ];
+  // The audit lines come from the one record: each finished track step, the override and a send back.
+  const audit: AuditLine[] = [
+    ...(noc?.track ?? [])
+      .filter((t) => t.done && t.at)
+      .map((t) => ({ id: t.key, at: t.at!, who: t.byName ?? 'SBC', text: t.label })),
+    ...(noc?.staff?.override
+      ? [{ id: 'override', at: noc.staff.override.at, who: noc.staff.override.byName ?? 'SBC', text: `Changed the template. Reason: ${noc.staff.override.reason}` }]
+      : []),
+    ...(noc?.sentBack ? [{ id: 'sent-back', at: noc.sentBack.at, who: noc.sentBack.byName ?? 'SBC', text: `Sent the signed copy back. Reason: ${noc.sentBack.reason}` }] : []),
+  ];
   return (
 
     <PageTransition>
@@ -241,36 +250,145 @@ export function BoardResolutionEditorView(p: BoardResolutionEditorProps) {
 
       />
 
-      {/* Plain head (prototype `BoardResolutionScreen`): the 44px client tile, the 28px title and
-          the stage chip, then the client and the step code. No back link (R-09). */}
-      <header className="mb-5 flex min-w-0 items-start gap-3">
-        <RecordTile name={eng.companyName} identityId={eng.id} />
-        <div className="min-w-0">
+      {/* Plain head (prototype `BoardResolutionPage` C1): the 28px title and the stage chip, the
+          template, the client and the parent, then Previous and Next step. No back link (R-09). */}
+      <header className="mb-5 flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
+        <div className="min-w-0 flex-[1_1_320px]">
           <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
             <h1 className="min-w-0 text-[28px] font-medium leading-9 tracking-[-0.01em] text-ink">Board resolution (NOC)</h1>
             <Chip tone={stageTone} fixed>
               {stageWord}
             </Chip>
           </div>
-          {noc ? <p className="text-[14px] text-ink-2">{noc.variantLabel}</p> : null}
+          {noc ? <p className="text-[13.5px] font-medium text-ink-2">{noc.variantLabel}</p> : null}
           <p className="text-[13.5px] text-ink-muted">
-            {parentName ? `Passed by: Board of ${parentName} (the parent) · ` : ''}
-            {eng.companyName} · Phase 1 · Steps 2–3 · <span className="font-mono text-[13px]">Pre-2</span>
+            {eng.companyName}
+            {parentName ? (
+              <>
+                {' · Passed by: '}
+                <b className="font-medium text-ink">Board of {parentName} (the parent)</b>
+              </>
+            ) : null}
+            {' · Phase 1 · Steps 2–3'}
           </p>
+        </div>
+        <div className="flex flex-none items-center gap-2">
+          {prevStep ? (
+            <Button size="sm" variant="outline" asChild>
+              <Link href={docPackStepPath(eng, staffShell, prevStep.id)}>
+                <ChevronLeft size={14} strokeWidth={1.6} aria-hidden />
+                Previous step
+              </Link>
+            </Button>
+          ) : null}
+          {nextStep ? (
+            <Button size="sm" variant="outline" asChild>
+              <Link href={docPackStepPath(eng, staffShell, nextStep.id)}>
+                Next step
+                <ChevronRight size={14} strokeWidth={1.6} aria-hidden />
+              </Link>
+            </Button>
+          ) : null}
         </div>
       </header>
 
       {noc ? <NocTrackStrip noc={noc} nowLabel={signed && !noc.accepted ? 'With SBC' : undefined} /> : null}
 
-      <div className={cn('grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start', noc && 'mt-5')}>
+      <div className={cn('grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]', noc && 'mt-5')}>
+      <div className="grid min-w-0 gap-5">
+        <DashSection title="Key facts" meta="From the engagement" flush>
+          <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 px-4 py-3 text-[14px] md:px-5">
+            <Fact label="New company" value={given(mergeFields?.PROPOSED_NAME_1) || eng.companyName} />
+            <Fact label="Capital" value={given(mergeFields?.AUTHORISED_CAPITAL)} />
+            <Fact label="Shares" value={parentName ? `${parentName} (parent)` : null} />
+            <Fact label="Signs the forms" value={signer} />
+            <Fact label="Files the forms" value="SBC" />
+            <Fact label="Template" value={noc?.variantLabel} />
+          </dl>
+        </DashSection>
+
+        {docType ? (
+          <DashSection
+            title="What the client does"
+            right={
+              <Chip tone={stageTone} fixed>
+                {stageWord}
+              </Chip>
+            }
+            flush
+          >
+            <DocTodo
+              items={todoStates(docType, records)}
+              action={
+                isFinalized && !signed ? (
+                  <>
+                    <span className="mr-auto self-center text-[13px] text-ink-muted">
+                      {sentToClientAt ? `Sent to client ${dayMonth(sentToClientAt)}` : 'Next: send to client'}
+                    </span>
+                    <Button size="sm" variant={sentToClientAt ? 'outline' : 'default'} disabled={sending} onClick={() => void sendToClient()}>
+                      {sentToClientAt ? 'Send again' : 'Send to client'}
+                    </Button>
+                  </>
+                ) : undefined
+              }
+            />
+          </DashSection>
+        ) : null}
+
+        <DashSection title="Files" meta={`${files.length} ${files.length === 1 ? 'file' : 'files'}`} flush>
+          <DocFiles
+            files={files}
+            showInternalName
+            onDownload={(f) => {
+              const href = f.id === 'br-signed' ? signedDownloadHref : downloadHref;
+              if (href) window.open(href, '_blank', 'noopener');
+            }}
+            footer={
+              isFinalized && !noc?.accepted ? (
+                <div className="px-4 py-3 md:px-5">
+                  {/* S-574: staff upload the signed copy the client returned by mail or by hand. */}
+                  <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => signedInputRef.current?.click()}>
+                    {busy === 'upload-signed' ? 'Uploading…' : signed ? 'Replace signed copy' : 'Upload signed copy'}
+                  </Button>
+                  <input
+                    ref={signedInputRef}
+                    type="file"
+                    accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    className="hidden"
+                    aria-label="Signed board resolution file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (file) void handleUploadSigned(file);
+                    }}
+                  />
+                </div>
+              ) : undefined
+            }
+          />
+        </DashSection>
+      </div>
+      <div className="grid min-w-0 gap-5">
       <div className="min-w-0">
 
         {withManager && !isFinalized ? (
-          <p role="status" className="mb-4 rounded-md border-1.5 border-brand-line bg-brand-soft px-3 py-2 text-[13.5px] text-ink">
-            {isLead
-              ? 'The board resolution is with your manager. You can edit it again if they send it back.'
-              : 'The project lead sent this for approval.'}
-          </p>
+          <div role="status" className="mb-4 flex flex-wrap items-center gap-2 rounded-md border-1.5 border-brand-line bg-brand-soft px-3 py-2 text-[13.5px] text-ink">
+            <span className="min-w-0 flex-1">
+              {isLead
+                ? 'The board resolution is with your manager. You can edit it again if they send it back.'
+                : 'The project lead sent this for approval.'}
+            </span>
+            {!isLead ? (
+              <>
+                <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => setBackOpen(true)}>
+                  Send back
+                </Button>
+                <Button size="sm" disabled={busy !== null} onClick={() => void handleApprove()}>
+                  {busy === 'finalize' ? 'Approving…' : 'Approve and send to client'}
+                </Button>
+              </>
+            ) : null}
+          </div>
         ) : null}
 
         {sentBackNote && !withManager && !isFinalized ? (
@@ -433,90 +551,37 @@ export function BoardResolutionEditorView(p: BoardResolutionEditorProps) {
 
         )}
 
-        {noc && signed ? (
-          <div className="mb-4">
-          <NocReceiveCard
-            noc={noc}
-            busy={nocState.busy}
-            act={nocState.act}
-            hasSignedCopy={signed}
-            onAccepted={() => toastSuccess('Signed copy accepted', 'Filed in Documents › Vault')}
-            onError={nocError}
-          />
-          </div>
-        ) : null}
-
         <BoardResolutionEditorDocPanel {...p} />
       </div>
-      <aside className="surface min-w-0 overflow-hidden lg:sticky lg:top-[var(--shell-sticky-top)]" aria-label="Stage">
-        <div className="flex min-h-[52px] items-center gap-2.5 border-b border-line-soft px-4 py-2">
-          <CardHeadTile title="Stage" />
-          <h2 className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">Stage</h2>
-        </div>
-        <div className="p-2">
-          <BrStageList stages={brStages(doc, Boolean(withManager), Boolean(isFinalized), sentToClientAt)} />
-          {!isLead && !isFinalized && withManager ? (
-            <div className="mt-1 grid gap-2 border-t border-line-soft px-2 pb-1 pt-3">
-              <Button size="sm" disabled={busy !== null} onClick={() => void handleApprove()}>
-                <CheckCircle2 size={14} strokeWidth={1.6} aria-hidden />
-                {busy === 'finalize' ? 'Approving…' : 'Approve and send to client'}
-              </Button>
-              <Button size="sm" variant="outline" disabled={busy !== null} onClick={() => setBackOpen(true)}>
-                <Undo2 size={14} strokeWidth={1.6} aria-hidden />
-                Send back
-              </Button>
-            </div>
-          ) : null}
-          {isFinalized && !signed ? (
-            <div className="mt-1 grid gap-2 border-t border-line-soft px-2 pb-1 pt-3">
-              <p className="text-[13px] text-ink-muted">
-                {sentToClientAt ? `Sent to client ${dayMonth(sentToClientAt)}` : 'Next: send to client'}
-              </p>
-              <Button size="sm" variant={sentToClientAt ? 'outline' : 'default'} disabled={sending} onClick={() => void sendToClient()}>
-                <Send size={14} strokeWidth={1.6} aria-hidden />
-                {sentToClientAt ? 'Send again' : 'Send to client'}
-              </Button>
-              {/* S-574: staff upload the signed copy the client returned by mail or by hand. */}
-              <Button
-                size="sm"
-                variant={sentToClientAt ? 'default' : 'outline'}
-                disabled={busy !== null}
-                onClick={() => signedInputRef.current?.click()}
-              >
-                <Upload size={14} strokeWidth={1.6} aria-hidden />
-                {busy === 'upload-signed' ? 'Uploading…' : 'Upload signed copy'}
-              </Button>
-              <input
-                ref={signedInputRef}
-                type="file"
-                accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                className="hidden"
-                aria-label="Signed board resolution file"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = '';
-                  if (file) void handleUploadSigned(file);
-                }}
-              />
-            </div>
-          ) : null}
-        </div>
-      </aside>
-      </div>
       {noc ? (
-        <div className="mt-5 grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
-          <NocTemplateCard
-            noc={noc}
-            busy={nocState.busy}
-            act={nocState.act}
-            onMakeAgain={makeAgain}
-            makingAgain={makingAgain}
-            loadVersions={nocState.loadVersions}
-            onError={nocError}
-          />
-          <NocWhyCard noc={noc} />
-        </div>
+        <NocTemplateCard
+          noc={noc}
+          busy={nocState.busy}
+          act={nocState.act}
+          onMakeAgain={makeAgain}
+          makingAgain={makingAgain}
+          loadVersions={nocState.loadVersions}
+          onError={nocError}
+        />
       ) : null}
+      {noc && signed ? (
+        <NocReceiveCard
+          noc={noc}
+          busy={nocState.busy}
+          act={nocState.act}
+          hasSignedCopy={signed}
+          onAccepted={() => toastSuccess('Signed copy accepted', 'Filed in Documents › Vault')}
+          onError={nocError}
+        />
+      ) : null}
+      {noc?.staff ? (
+        <DashSection title="Audit" meta={String(audit.length)} flush>
+          <AuditLines lines={audit} />
+        </DashSection>
+      ) : null}
+      </div>
+      </div>
+      {noc ? <NocWhyCard noc={noc} className="mt-5" /> : null}
       <Dialog open={backOpen} onOpenChange={setBackOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

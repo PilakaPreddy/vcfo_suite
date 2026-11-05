@@ -6,6 +6,8 @@ import { createElement } from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import type { AuthContext } from '@/auth/guards';
 import { getSuperFirmInsights } from '@/db/repositories/super-overview';
+import { listProspects } from '@/db/repositories/prospects';
+import { getFirmSettings } from '@/db/repositories/firm-settings';
 import { firmDisplayName } from '@/lib/shell/brand';
 import { plainDay } from '@/lib/date-format';
 import {
@@ -13,6 +15,7 @@ import {
   partnerReportFilename,
   pickReportMonth,
   type PartnerReportParams,
+  type ReportExtras,
   type ReportSchedule,
 } from './partner-report';
 import { PartnerReportDocument } from './partner-report-document';
@@ -34,6 +37,12 @@ function loadLogo(): string | null {
   }
 }
 
+/** The prospects and the COI target behind the six numbers, read as the page reads them. */
+async function loadReportExtras(ctx: AuthContext): Promise<ReportExtras> {
+  const [prospects, settings] = await Promise.all([listProspects(ctx), getFirmSettings(ctx)]);
+  return { prospects, targetDays: settings.serviceTargets.daysToCoi };
+}
+
 export async function renderPartnerReportPdf(
   ctx: AuthContext,
   params: PartnerReportParams,
@@ -43,7 +52,7 @@ export async function renderPartnerReportPdf(
   const insights = await getSuperFirmInsights(ctx, now);
   const month = pickReportMonth(insights, params, { schedule: opts.schedule });
   if (!month) return null;
-  const data = buildPartnerReport(insights, month, now);
+  const data = buildPartnerReport(insights, month, now, await loadReportExtras(ctx));
   const pdf = await renderToBuffer(
     createElement(PartnerReportDocument, {
       data,
@@ -68,7 +77,7 @@ export async function renderPartnerReportCsv(
   const insights = await getSuperFirmInsights(ctx, now);
   const month = pickReportMonth(insights, params, { schedule: opts.schedule });
   if (!month) return null;
-  const data = buildPartnerReport(insights, month, now);
+  const data = buildPartnerReport(insights, month, now, await loadReportExtras(ctx));
   const csv = partnerReportCsv(data, { firmName: firmDisplayName(), preparedOn: plainDay(insights.generatedAt) });
   return { csv: Buffer.from(csv, 'utf8'), filename: partnerReportCsvFilename(data.monthLabel), monthLabel: data.monthLabel };
 }

@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Draggable } from '@fullcalendar/interaction';
 import { Lock, UserRoundPlus, X } from 'lucide-react';
-import { Chip, Tag } from '@/components/ui/spectrum-chip';
+import { DashSection } from '@/components/dash/DashSection';
+import { Chip } from '@/components/ui/spectrum-chip';
+import { ClientDot } from '@/components/staff/today/today-parts';
+import { shortCompany } from '@/components/super/parts/super-text';
 import { RemindClientButton } from '@/components/reminders/RemindClientButton';
 import { remindableItemKey } from '@/lib/reminders/reminder-rules';
 import { dayMonth } from '@/components/staff/today/today-rows';
@@ -10,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { WorkField } from '@/components/work/WorkField';
-import { EmptyState } from '@/components/ui/empty-state';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -49,6 +52,7 @@ export interface TodoHandOff {
  * Planner to-dos card (prototype `TodoCard`): the user's personal to-dos, the same list as
  * the Today to-do card (`useOwnFocusTodos`, `/api/todos`). A typed to-do shows its title;
  * a pinned work item opens the task drawer. The quick-add line at the top adds a typed to-do.
+ * The rows are what drags onto the calendar; there is no separate card for it.
  * With `hand` (manager Work) a pinned row shows its lead and a person-plus menu to hand it on,
  * and the head counts the to-dos with project leads.
  */
@@ -57,10 +61,10 @@ export function PlannerTodos({
   byId,
   persist,
   onOpenItem,
-  onNew,
   hand,
   assigned = [],
   waiting = [],
+  planKeyOf,
 }: {
   /** "Assigned by manager": open tasks a manager gave the user (they show a lock and their due date). */
   assigned?: InternWorkItem[];
@@ -70,34 +74,50 @@ export function PlannerTodos({
   byId: Map<string, InternWorkItem>;
   persist: (next: InternFocusEntry[]) => void;
   onOpenItem: (id: string) => void;
-  onNew: () => void;
+  /** Kept for callers; the page's New to-do button opens the form. */
+  onNew?: () => void;
   hand?: TodoHandOff;
+  /** The planner key of a work item. With it, the rows drag onto the calendar. */
+  planKeyOf?: (item: InternWorkItem) => string | undefined;
 }) {
   const [quick, setQuick] = useState('');
   const open = focus.filter((f) => !f.done).length + assigned.length + waiting.length;
+  const mine = focus.filter((f) => !f.done).length;
   const withLeads = hand
     ? focus.filter((f) => {
         const item = isCustomInternFocus(f) ? undefined : byId.get(f.id);
         return !f.done && item && hand.ownerOf(item);
       }).length
     : 0;
+  // The to-do rows are what drags onto the calendar (FullCalendar's external Draggable).
+  const listRef = useRef<HTMLDivElement>(null);
+  const canDrag = Boolean(planKeyOf);
+  useEffect(() => {
+    if (!listRef.current || !canDrag) return;
+    const drag = new Draggable(listRef.current, {
+      itemSelector: '[data-plan-key]',
+      eventData: (el) => ({ title: el.dataset.planTitle ?? '', duration: '01:00', create: false }),
+    });
+    return () => drag.destroy();
+  }, [canDrag]);
+  const dragOf = (key: string | undefined, title: string) =>
+    planKeyOf && key ? { 'data-plan-key': key, 'data-plan-title': title, title: `${title}. Drag onto the calendar to plan it.` } : {};
+
   return (
-    <section className="surface min-w-0 overflow-hidden">
-      <div className="flex min-h-[52px] items-center gap-2 border-b border-line-soft px-4">
-        <h2 className="flex min-w-0 flex-1 items-baseline gap-2 truncate text-[15px] font-medium text-ink">
-          To-do <span className="text-[13px] font-normal text-ink-muted tabular-nums">{open}</span>
-        </h2>
-        {withLeads > 0 ? (
-          <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[12px] font-medium text-brand-text tabular-nums">
-            {withLeads} with project leads
-          </span>
-        ) : null}
-        <Button size="sm" variant="secondary" onClick={onNew}>
-          New to-do
-        </Button>
-      </div>
+    <DashSection
+      title="To-do"
+      meta={
+        <>
+          {open}
+          {withLeads > 0 ? (
+            <span className="ml-2 rounded-sm bg-brand-soft px-1.5 py-0.5 text-[11.5px] font-medium text-brand-text tabular-nums">{withLeads} with project leads</span>
+          ) : null}
+        </>
+      }
+      flush
+    >
       <form
-        className="flex items-center gap-2 border-b border-line-soft px-4 py-2.5"
+        className="px-4 py-3 md:px-5"
         onSubmit={(e) => {
           e.preventDefault();
           const title = quick.trim();
@@ -112,66 +132,62 @@ export function PlannerTodos({
           placeholder="Add a to-do"
           aria-label="Add a to-do"
           maxLength={INTERN_FOCUS_TITLE_MAX}
-          className="h-9"
         />
-        <Button type="submit" size="sm" variant="secondary" disabled={!quick.trim()}>
-          Add
-        </Button>
       </form>
-      {assigned.length > 0 ? (
+      <div ref={listRef}>
         <TodoGroup title="Assigned by manager" count={assigned.length}>
           {assigned.map((item) => (
-            <li key={item.id} className="flex min-h-11 items-center gap-3 border-b border-line-soft px-4 py-2 text-[13.5px] last:border-b-0">
-              <Lock className="h-3.5 w-3.5 flex-none text-ink-faint" strokeWidth={1.6} aria-label="Set by a manager" />
+            <li key={item.id} {...dragOf(planKeyOf?.(item), item.title)} className={ROW}>
+              <ClientDot name={item.companyName} />
               <button type="button" onClick={() => onOpenItem(item.id)} className="min-w-0 flex-1 text-left">
-                <span className="block truncate font-medium text-ink hover:underline">{item.title}</span>
-                <span className="block truncate text-[12px] text-ink-muted">{item.companyName}</span>
+                <b className="block truncate font-medium text-ink hover:underline">{item.title}</b>
+                <span className="block truncate text-[12px] text-ink-muted">
+                  {[shortCompany(item.companyName), item.catalogLabel].filter(Boolean).join(' · ')}
+                </span>
               </button>
+              <Lock className="h-[13px] w-[13px] flex-none text-ink-muted" strokeWidth={1.6} aria-label="Due date set by manager" />
               {item.dueAt ? (
                 <Chip tone={item.isOverdue ? 'bad' : 'idle'} fixed>
-                  {dayMonth(item.dueAt)}
+                  {item.isOverdue ? 'Overdue' : dayMonth(item.dueAt)}
                 </Chip>
               ) : null}
             </li>
           ))}
         </TodoGroup>
-      ) : null}
-      {assigned.length > 0 || waiting.length > 0 ? (
-        <h3 className="px-4 pb-1 pt-3 text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted">My to-dos</h3>
-      ) : null}
-      {focus.length === 0 ? (
-        <div className="p-4">
-          <EmptyState title="No to-dos" />
-        </div>
-      ) : (
-        <ul>
+        <TodoGroup title="My to-dos" count={mine}>
           {focus.map((entry) => {
             const item = isCustomInternFocus(entry) ? undefined : byId.get(entry.id);
             const title = item?.title ?? entry.title ?? 'To-do';
             const owner = item && hand ? hand.ownerOf(item) : undefined;
+            const planKey = entry.done ? undefined : item ? planKeyOf?.(item) : `todo:${entry.id}`;
             return (
-              <li key={entry.id} className="group flex min-h-11 items-center gap-3 border-b border-line-soft px-4 py-2 text-[13.5px] last:border-b-0">
+              <li key={entry.id} {...dragOf(planKey, title)} className={cn('group', ROW)}>
                 <Checkbox
                   checked={entry.done}
                   aria-label={title}
                   onCheckedChange={() => persist(focus.map((f) => (f.id === entry.id ? { ...f, done: !f.done } : f)))}
                 />
+                {item ? <ClientDot name={item.companyName} /> : null}
                 <span className="min-w-0 flex-1">
                   {item ? (
                     <button
                       type="button"
                       onClick={() => onOpenItem(item.id)}
-                      className={cn('block max-w-full truncate text-left font-medium text-ink hover:underline', entry.done && 'text-ink-muted')}
+                      className={cn('block max-w-full truncate text-left font-medium text-ink hover:underline', entry.done && 'font-normal text-ink-muted')}
                     >
                       {title}
                     </button>
                   ) : (
-                    <span className={cn('block truncate text-ink', entry.done && 'text-ink-muted')}>{title}</span>
+                    <span className={cn('block truncate font-medium text-ink', entry.done && 'font-normal text-ink-muted')}>{title}</span>
                   )}
-                  {item ? <span className="block truncate text-[12px] text-ink-muted">{item.companyName}</span> : null}
+                  {item ? <span className="block truncate text-[12px] text-ink-muted">{shortCompany(item.companyName)}</span> : null}
                 </span>
-                {entry.done ? <Tag tone="ok">Done</Tag> : null}
                 {item && hand ? <HandMenu item={item} owner={owner} hand={hand} /> : null}
+                {entry.done ? (
+                  <Chip tone="ok" fixed>
+                    Done
+                  </Chip>
+                ) : null}
                 <Button
                   size="icon"
                   variant="quiet"
@@ -184,19 +200,18 @@ export function PlannerTodos({
               </li>
             );
           })}
-        </ul>
-      )}
-      {waiting.length > 0 ? (
+        </TodoGroup>
         <TodoGroup title="Waiting on client" count={waiting.length}>
           {waiting.map((item) => {
             const key = remindableItemKey(item);
             return (
-              <li key={item.id} className="flex min-h-11 items-center gap-3 border-b border-line-soft px-4 py-2 text-[13.5px] last:border-b-0">
+              <li key={item.id} className={ROW}>
+                <ClientDot name={item.companyName} />
                 <button type="button" onClick={() => onOpenItem(item.id)} className="min-w-0 flex-1 text-left">
-                  <span className="block truncate font-medium text-ink hover:underline">{item.title}</span>
+                  <b className="block truncate font-medium text-ink hover:underline">{item.title}</b>
                   <span className="block truncate text-[12px] text-ink-muted">
-                    {item.companyName}
-                    {item.ageLabel ? ` · ${item.ageLabel} waiting` : ''}
+                    {shortCompany(item.companyName)}
+                    {item.dueAt ? ` · due ${dayMonth(item.dueAt)}` : ''}
                   </span>
                 </button>
                 {key ? <RemindClientButton engagementId={item.engagementId} itemKey={key} title={item.title} /> : null}
@@ -204,19 +219,22 @@ export function PlannerTodos({
             );
           })}
         </TodoGroup>
-      ) : null}
-    </section>
+      </div>
+    </DashSection>
   );
 }
 
+const ROW = 'flex items-center gap-2.5 border-t border-line-soft px-4 py-2.5 text-[13px] md:px-5';
+
 function TodoGroup({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
   return (
-    <div className="border-b border-line-soft">
-      <h3 className="flex items-center gap-2 px-4 pb-1 pt-3 text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted">
-        {title} <span className="tabular-nums">{count}</span>
-      </h3>
+    <>
+      <div className="flex h-8 items-center gap-2 border-t border-line-soft bg-surface-sunken px-4 text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted md:px-5">
+        {title}
+        <span className="tracking-normal text-ink-faint tabular-nums">{count}</span>
+      </div>
       <ul>{children}</ul>
-    </div>
+    </>
   );
 }
 

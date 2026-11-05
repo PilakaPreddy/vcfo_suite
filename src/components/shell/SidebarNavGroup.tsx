@@ -243,18 +243,12 @@ function SidebarNavTriggerFace({
   return (
     <>
       {hoverFollow ? <SidebarHoverGlass itemId={hoverKey} follow={hoverFollow} /> : null}
-      {sectionActive ? (
+      {/* Open sidebar: only the picked child is filled, the parent's text goes bold. The rail has no children to fill. */}
+      {sectionActive && !sidebarExpanded ? (
         <MotionActivePill
           layoutId={`${layoutIdPrefix}-active`}
           reduced={reduceMotion}
           className={sidebarPillClass(ink)}
-        />
-      ) : null}
-      {sectionActive && sidebarExpanded ? (
-        <MotionActivePill
-          layoutId={`${layoutIdPrefix}-rail`}
-          reduced={reduceMotion}
-          className={sidebarRailClass(ink)}
         />
       ) : null}
       <Icon

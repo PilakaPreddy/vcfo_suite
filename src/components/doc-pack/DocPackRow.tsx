@@ -1,7 +1,6 @@
 'use client';
 
 import { sep } from '@/lib/date-format';
-import Link from 'next/link';
 import { Download, Eye } from 'lucide-react';
 
 import { getItem } from '@/data/checklist';
@@ -10,16 +9,13 @@ import { Button } from '@/components/ui/button';
 import { FileBadge, fileType, type FileType } from '@/components/ui/file-badge';
 import { Tip } from '@/components/ui/tip';
 import { docPackRowName } from '@/lib/doc-pack/labels';
-import type { DocPackItem, DocPackMissingInput } from '@/lib/doc-pack/types';
-import { missingInputLabel } from '@/lib/doc-pack/unblock';
+import type { DocPackItem } from '@/lib/doc-pack/types';
 import { toastSuccess } from '@/lib/toast-errors';
 import { cn } from '@/lib/utils';
 
 export type DocPackRowProps = {
   item: DocPackItem;
   downloadUrl: string;
-  hrefForMissing: (input: DocPackMissingInput) => string;
-  hrefForStep: (stepId: string) => string;
   onPreview: (item: DocPackItem) => void;
   /** The row shown in the preview panel gets a soft blurple fill. */
   picked?: boolean;
@@ -55,22 +51,25 @@ function docPackProvenance(item: DocPackItem): string | null {
   return when ? `Attached to Pre-7 · ${when}` : 'Attached to Pre-7';
 }
 
-/** The sub line: the source step codes, then the count of missing fields or the source step names. */
+/** The sub line: one source step code, then the count of missing fields, what releases it, or its source steps. */
 function subLine(item: DocPackItem): string {
-  const codes = item.sourceStepIds.map(docPackStepCode).join(', ');
+  const stepId = item.missing[0]?.stepId ?? item.blockedBy?.stepId ?? item.sourceStepIds[0];
+  const code = stepId ? docPackStepCode(stepId) : '';
   const note =
     item.missing.length > 0
       ? `${item.missing.length} ${item.missing.length === 1 ? 'field' : 'fields'} missing`
-      : item.sourceStepIds.map(stepTitle).join(' · ');
-  return codes ? `${codes} · ${note}` : note;
+      : item.blockedBy
+        ? `released after ${stepTitle(item.blockedBy.stepId)}`
+        : item.sourceStepIds.map(stepTitle).join(' · ');
+  return code ? `${code} · ${note}` : note;
 }
 
 /**
  * One document of the pack (prototype `DocumentPackScreen` row): file badge, name and sub line,
- * the provenance, the status chip, and two icon buttons. The missing-input links and the note on
- * what releases the document are the real tool's own and stay under the name.
+ * the provenance, the status chip, and two icon buttons. What a document waits for is in the
+ * preview card, whose "Open step" goes to the first missing input.
  */
-export function DocPackRow({ item, downloadUrl, hrefForMissing, hrefForStep, onPreview, picked = false }: DocPackRowProps) {
+export function DocPackRow({ item, downloadUrl, onPreview, picked = false }: DocPackRowProps) {
   const ready = item.status === 'ready';
   const name = docPackRowName(item);
   const provenance = docPackProvenance(item);
@@ -92,45 +91,9 @@ export function DocPackRow({ item, downloadUrl, hrefForMissing, hrefForStep, onP
         <span className="mt-1 block md:hidden">
           <DocStatusChip status={item.status} />
         </span>
-        {item.missing.length > 0 ? (
-          <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Missing inputs">
-            {item.missing.map((input) => (
-              <li key={input.key}>
-                <Link
-                  href={hrefForMissing(input)}
-                  className="inline-flex h-6 items-center gap-1 rounded-md border-1.5 border-warning-mid bg-surface-raised px-2 text-[12.5px] text-ink hover:bg-warning-soft"
-                >
-                  {missingInputLabel(input)}
-                  <span className="text-ink-muted">in {stepTitle(input.stepId)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {item.blockedBy ? (
-          <p className="mt-1.5 text-[12.5px] text-ink-muted">
-            {item.blockedBy.gate === 'br-finalized' ? (
-              <>
-                Opens once the board resolution is finalized in{' '}
-                <Link href={hrefForStep(item.blockedBy.stepId)} className="font-medium text-brand-text hover:underline">
-                  {stepTitle(item.blockedBy.stepId)}
-                </Link>
-                .
-              </>
-            ) : (
-              <>
-                {item.blockedBy.label} in{' '}
-                <Link href={hrefForStep(item.blockedBy.stepId)} className="font-medium text-brand-text hover:underline">
-                  {stepTitle(item.blockedBy.stepId)}
-                </Link>
-                .
-              </>
-            )}
-          </p>
-        ) : null}
       </div>
 
-      <span className="hidden truncate text-[13px] text-ink-muted md:block">{provenance ?? ''}</span>
+      <span className="hidden truncate text-[13px] text-ink-muted md:block">{provenance ?? '-'}</span>
       <span className="hidden md:block">
         <DocStatusChip status={item.status} />
       </span>

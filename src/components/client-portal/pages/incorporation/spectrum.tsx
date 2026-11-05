@@ -73,7 +73,8 @@ export function SCard({
       headIcon={headIcon}
       loading={loading}
       className={className}
-      bodyClassName={cn(flush ? 'p-0' : 'px-4 py-4 md:px-5', bodyClassName)}
+      flush={flush}
+      bodyClassName={bodyClassName}
     >
       {children}
     </DashSection>

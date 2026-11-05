@@ -33,6 +33,8 @@ import {
 import { errorMessage, toastError, toastSuccess } from '@/lib/toast-errors';
 import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { shortCompany } from '@/components/super/parts/super-text';
 import { cn } from '@/lib/utils';
 import { ProjectActionsMenu } from '@/components/admin/ProjectActionsMenu';
 import { deriveStuckReason, STUCK_LABEL, type StuckReason } from '@/lib/projects/project-stuck';
@@ -74,6 +76,7 @@ const HOME_VIEWS: Record<string, ViewFilters> = {
   incorporating: { scope: 'incorporating' },
   compliance: { scope: 'compliance' },
   stuck: { show: 'stuck' },
+  overdue: { show: 'overdue' },
 };
 const SCOPE_LABEL: Record<string, string> = { incorporating: 'Incorporating', compliance: 'In compliance' };
 const SHOW_LABEL: Record<string, string> = { overdue: 'Overdue', week: 'Due this week', waiting: 'Waiting on client', stuck: 'Stuck' };
@@ -194,18 +197,17 @@ export function FirmProjectsPanel({
     {
       key: 'client',
       header: 'Client',
-      width: '22%',
+      width: '210px',
       render: (r) => (
         <span className="flex min-w-0 items-center gap-2.5">
           <ClientIdentityTile id={r.eng.id} name={r.eng.companyName} size={30} />
-          <span className="truncate font-medium text-ink">{r.eng.companyName}</span>
+          <b className="truncate font-medium text-ink">{shortCompany(r.eng.companyName)}</b>
         </span>
       ),
     },
     {
       key: 'step',
       header: 'Now at',
-      width: '20%',
       render: (r) =>
         r.facts.now ? (
           <span className="grid min-w-0" title={`${r.facts.now.code} · ${r.facts.now.title}`}>
@@ -213,7 +215,10 @@ export function FirmProjectsPanel({
               <HolderSquare holder={r.facts.now.holder} />
               <span className="truncate font-medium text-ink">{r.facts.now.title}</span>
             </span>
-            <span className="grid-sub truncate pl-4 font-mono text-[11.5px] text-ink-muted">{r.facts.now.code}</span>
+            <span className="grid-sub truncate pl-4 text-[12px] text-ink-muted">
+              <span className="font-mono">{r.facts.now.code}</span>
+              {r.leadNames[0] ? ` · ${r.leadNames[0]}` : ''}
+            </span>
           </span>
         ) : (
           '—'
@@ -222,7 +227,7 @@ export function FirmProjectsPanel({
     {
       key: 'progress',
       header: 'Progress',
-      width: '17%',
+      width: '170px',
       render: (r) => (
         <span className="flex items-center gap-2">
           <PhaseBar done={r.phaseDone} totals={r.phaseTotals} names={r.phaseNames} className="min-w-[80px] flex-1" />
@@ -230,17 +235,11 @@ export function FirmProjectsPanel({
         </span>
       ),
     },
-    { key: 'manager', header: 'Manager', width: '12%', render: (r) => managerName(r.eng.managerId ?? r.eng.adminId) },
-    {
-      key: 'team',
-      header: 'Leads',
-      width: '84px',
-      render: (r) => <AvatarStack people={r.leadNames} label={r.leadNames.length ? `Leads: ${r.leadNames.join(', ')}` : undefined} />,
-    },
+    { key: 'manager', header: 'Manager', width: '92px', render: (r) => <span title={managerName(r.eng.managerId ?? r.eng.adminId)}>{managerName(r.eng.managerId ?? r.eng.adminId).split(/\s+/)[0]}</span> },
     {
       key: 'stage',
       header: 'Stage',
-      width: '12%',
+      width: '132px',
       render: (r) => (
         <Chip tone={STAGE_CHIP_TONE[r.facts.stage]} fixed dot={false}>
           {STAGE_WORD[r.facts.stage]}
@@ -250,7 +249,7 @@ export function FirmProjectsPanel({
     {
       key: 'next',
       header: 'Next',
-      width: '72px',
+      width: '76px',
       render: (r) => {
         const d = nextScheduleDate(r.eng.schedule, todayIso);
         return d ? <span className={cn('tabular-nums', d < todayIso && 'font-medium text-danger')}>{shortDate(d)}</span> : '—';
@@ -259,18 +258,22 @@ export function FirmProjectsPanel({
     {
       key: 'health',
       header: 'Health',
-      width: '124px',
+      width: '172px',
       render: (r) => (
         <Chip fixed tone={HEALTH_TONE[r.facts.health]} title={STUCK_LABEL[r.reason]}>
           {r.facts.health}
         </Chip>
       ),
     },
+    // The Today card reads only; the row menu is on the Projects list.
+    ...(title
+      ? []
+      : [
     {
       key: 'actions',
       header: <span className="sr-only">Actions</span>,
-      width: '56px',
-      align: 'center',
+      width: '72px',
+      align: 'center' as const,
       wrap: true,
       render: (r) => (
         <span data-grid-ctl onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()} role="presentation">
@@ -278,6 +281,7 @@ export function FirmProjectsPanel({
         </span>
       ),
     },
+      ]),
   ];
 
   const current: ViewFilters = { phase: phase === 'all' ? '' : phase, stuck, manager, show, scope, health };
@@ -376,6 +380,35 @@ export function FirmProjectsPanel({
     </div>
   );
 
+  // The Today card's two selects (prototype FirmClientsGrid): manager and stage.
+  const todayFilters = (
+    <span className="flex flex-wrap items-center gap-2">
+      <Select value={manager || 'all'} onValueChange={(v) => setManager(v === 'all' ? '' : v)}>
+        <SelectTrigger aria-label="Manager" className="h-8 w-auto min-w-[130px] gap-2 text-[13px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All managers</SelectItem>
+          {managerOptions.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select value={scope || 'all'} onValueChange={(v) => setScope(v === 'all' ? '' : v)}>
+        <SelectTrigger aria-label="Stage" className="h-8 w-auto min-w-[120px] gap-2 text-[13px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All stages</SelectItem>
+          <SelectItem value="incorporating">Incorporating</SelectItem>
+          <SelectItem value="compliance">Compliance</SelectItem>
+        </SelectContent>
+      </Select>
+    </span>
+  );
+
   // Clients, where each one is (K-37, audit 81/82/109/121): a T1 grid with the step, the
   // phase track, manager, stage, next date and health (C-0034).
   const grid = (
@@ -386,16 +419,21 @@ export function FirmProjectsPanel({
       onRowClick={(r) => router.push(adminProjectPath(r.eng, '/app/admin'))}
       empty="No clients match these filters"
       minWidth={1000}
+      actionsColumn="step"
       pageSize={title ? Math.max(1, rows.length) : 10}
       columns={projectColumns}
       loading={engagementsLoading}
       onClearFilters={anyFilter ? clear : undefined}
       stickyHead
       stickyFirstColumn
-      densityScope={`${user?.id ?? 'admin'}:clients`}
-      changedAt={(r) => r.changedAt}
-      visitKey={`${user?.id ?? 'admin'}:clients`}
-      {...tools.gridProps}
+      {...(title
+        ? {}
+        : {
+            densityScope: `${user?.id ?? 'admin'}:clients`,
+            changedAt: (r: (typeof rows)[number]) => r.changedAt,
+            visitKey: `${user?.id ?? 'admin'}:clients`,
+            ...tools.gridProps,
+          })}
     />
   );
 
@@ -451,11 +489,9 @@ export function FirmProjectsPanel({
 
   if (title) {
     return (
-      <DashSection title={title} meta={String(rows.length)} bodyClassName="px-2 pb-3 pt-0">
-        <div className="px-2 py-3">{filters}</div>
+      <DashSection title={title} meta={String(rows.length)} right={todayFilters} flush>
         {grid}
-        {tools.dialog}
-        {assignDialog}
+        <ClientsLegend className="px-4 py-2 md:px-5" />
       </DashSection>
     );
   }
@@ -472,11 +508,6 @@ export function FirmProjectsPanel({
       )}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="min-w-0 flex-1">{filters}</div>
-        {firmAdmin ? (
-          <Button size="sm" onClick={() => setAssignOpen(true)}>
-            Assign client
-          </Button>
-        ) : null}
       </div>
       {rows.length === 0 && !engagementsLoading ? (
         <div className="md:hidden">

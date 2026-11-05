@@ -29,7 +29,7 @@ a:focus-visible,button:focus-visible{outline:2px solid oklch(var(--focus-ring) /
 /* ---------- v7 responsive (phone <=767 · tablet 768-1279 · desktop >=1280) ---------- */
 .vrd{position:relative;width:100%;min-height:calc(100dvh - var(--cp-top-h,63px) - var(--vp-launch-h,0px));display:flex;background:var(--bg);font-family:var(--font-sans),system-ui,sans-serif;color:var(--fg);font-size:13px}
 .vrd-col{flex:1;min-width:0}
-.vrd-main{width:100%;max-width:1600px;margin-inline:auto;box-sizing:border-box;padding:clamp(12px,1.8vw,24px) clamp(12px,1.8vw,24px) 96px;display:grid;grid-template-columns:minmax(0,780px) minmax(260px,340px);justify-content:center;gap:20px;align-items:start}
+.vrd-main{width:100%;max-width:1440px;margin-inline:auto;box-sizing:border-box;padding:var(--cp-gut-t) var(--cp-gut) var(--cp-gut-b);display:grid;grid-template-columns:minmax(0,780px) minmax(260px,340px);justify-content:center;gap:20px;align-items:start}
 .vrd-art{min-width:0;display:flex;flex-direction:column;gap:16px}
 .vrd-side{min-width:0;display:flex;flex-direction:column;gap:16px}
 .vrd-hero h1{margin:12px 0 0;font:500 clamp(22px,1.2vw + 14px,28px)/1.2 var(--font-sans),sans-serif!important;letter-spacing:-.01em;color:oklch(var(--ink))}

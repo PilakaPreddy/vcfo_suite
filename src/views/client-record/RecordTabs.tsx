@@ -9,6 +9,7 @@ import { useApp } from '@/context/AppContext';
 import type { Engagement } from '@/data/engagements';
 import { ObligationsView } from '@/views/compliances/ObligationsView';
 import { RegistrationsView } from '@/views/compliances/RegistrationsView';
+import { useRegister } from '@/views/compliances/use-register';
 import { preIncorporationIdsOf, type ComplianceScope } from '@/views/compliances/compliance-scope';
 import { registrationRows } from '@/views/compliances/registration-rows';
 import { RecordDocumentsPanel, useRecordDocuments } from '@/views/client-record/RecordDocuments';
@@ -74,6 +75,8 @@ export function RecordTabBar({
   const { getStateForEngagement } = useApp();
   const notes = useEngagementNotes(engagement.id);
   const docs = useRecordDocuments(engagement.id);
+  const register = useRegister(useMemo(() => new Date(), []));
+  const obligationCount = register.rows.filter((r) => r.engagementId === engagement.id).length;
   const regCount = useMemo(() => {
     const rows = registrationRows([engagement], getStateForEngagement, new Date());
     return rows.filter((r) => r.word !== 'Not needed').length;
@@ -87,7 +90,7 @@ export function RecordTabBar({
       items={[
         { key: 'overview', label: overviewLabel, count: overviewCount },
         { key: 'registrations', label: 'Registrations', count: regCount },
-        { key: 'obligations', label: 'Obligations' },
+        { key: 'obligations', label: 'Obligations', count: obligationCount || undefined },
         { key: 'directors', label: 'Directors' },
         { key: 'documents', label: 'Documents', count: docs.data ? docs.data.length : undefined },
         { key: 'team', label: 'Team' },

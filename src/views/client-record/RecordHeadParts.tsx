@@ -2,7 +2,6 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { FileText } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/spectrum-chip';
@@ -14,7 +13,8 @@ import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-ke
 import type { ChecklistStepGate } from '@/lib/checklist/checklist-step-gate';
 import { isAdminOrManager, isFirmWideAdmin } from '@/lib/auth';
 import { buildIncorporationModel } from '@/lib/client-portal/step-model';
-import { internOverviewNow } from '@/lib/intern/intern-overview-progress';
+import { isIncorporated } from '@/lib/compliance/incorporation-state';
+import { internOverviewNow, internOverviewPhases } from '@/lib/intern/intern-overview-progress';
 import { daysBetween } from '@/components/timeline/timeline-model';
 import { ReassignDialog } from '@/views/admin/work/ReassignDialog';
 import { AssignClientDialog } from '@/views/admin/clients/AssignClientDialog';
@@ -103,11 +103,14 @@ export function RecordMetaLine({ engagement }: { engagement: Engagement }) {
       </span>,
     );
   }
-  parts.push(
-    <span key="lead">
-      Project lead <b className="font-medium text-ink">{lead?.name ?? 'Unassigned'}</b>
-    </span>,
-  );
+  // A lead's own record names only the client (prototype: `portal !== "lead"`).
+  if (staffLead) {
+    parts.push(
+      <span key="lead">
+        Project lead <b className="font-medium text-ink">{lead?.name ?? 'Unassigned'}</b>
+      </span>,
+    );
+  }
 
   return (
     <>
@@ -153,10 +156,50 @@ export function RecordMetaLine({ engagement }: { engagement: Engagement }) {
 }
 
 const HOLDER_CHIP = { client: 'Waiting on client', mca: 'With MCA', sbc: 'With SBC' } as const;
+const HOLDER_TONE = { client: 'teal', mca: 'violet', sbc: 'prog' } as const;
 
-/** "pre-8" gives "Pre-8": the step code the lists and the step page show in mono. */
-function stepCode(id: string): string {
-  return id.charAt(0).toUpperCase() + id.slice(1);
+const REG_PHASE = 'registration-phase-4';
+
+/**
+ * A step's place on the record, counted across the phases as the prototype counts them: "Step 13"
+ * of the 14 steps before the certificate or of all 25, and "Reg-n" for a registration.
+ */
+export function recordStepPlace(id: string): { n: number; code: string; of: number; registration: boolean } | null {
+  const phases = internOverviewPhases();
+  const pre = phases.filter((p) => p.id.startsWith('pre-inc')).reduce((n, p) => n + p.items.length, 0);
+  const steps = phases.filter((p) => p.id !== REG_PHASE).reduce((n, p) => n + p.items.length, 0);
+  let before = 0;
+  for (const p of phases) {
+    const i = p.items.findIndex((it) => it.id === id);
+    if (i >= 0) {
+      if (p.id === REG_PHASE) return { n: i + 1, code: `Reg-${i + 1}`, of: p.items.length, registration: true };
+      const n = before + i + 1;
+      return { n, code: `Step ${n}`, of: n <= pre ? pre : steps, registration: false };
+    }
+    before += p.items.length;
+  }
+  return null;
+}
+
+/** The count on the record's first tab: "13/14" while the steps run, "21/25" once incorporated. */
+export function recordOverviewCount(gates: Record<string, ChecklistStepGate>): string {
+  const now = internOverviewNow(gates);
+  const place = now ? recordStepPlace(now.item.id) : null;
+  const pre = internOverviewPhases().filter((p) => p.id.startsWith('pre-inc')).reduce((n, p) => n + p.items.length, 0);
+  if (place && !place.registration && place.n <= pre) return `${place.n}/${pre}`;
+  const phases = internOverviewPhases().filter((p) => p.id !== REG_PHASE);
+  const items = phases.flatMap((p) => p.items);
+  return `${items.filter((it) => gates[it.id]?.kind === 'done').length}/${items.length}`;
+}
+
+/** Incorporating or Compliance, the record head's stage chip. A category, so it has no dot. */
+export function RecordStageChip({ engagement, state }: { engagement: Engagement; state: Parameters<typeof isIncorporated>[1] }) {
+  const inc = !isIncorporated(engagement, state);
+  return (
+    <Chip tone={inc ? 'violet' : 'teal'} dot={false} fixed>
+      {inc ? 'Incorporating' : 'Compliance'}
+    </Chip>
+  );
 }
 
 export function RecordNumbers({
@@ -181,10 +224,15 @@ export function RecordNumbers({
       ? daysBetween(today, engagement.expectedCoiOn.slice(0, 10))
       : null;
   const holderWord = holder === 'client' ? 'client' : holder === 'mca' ? 'MCA' : 'SBC';
+  const place = now ? recordStepPlace(now.item.id) : null;
+  const regDone = internOverviewPhases()
+    .find((p) => p.id === REG_PHASE)
+    ?.items.filter((it) => gates[it.id]?.kind === 'done').length;
 
   return (
     <>
-      {now ? <RecordStat value={`Step ${now.stepNumber}`} label={`of ${now.stepTotal}`} /> : null}
+      {place && !place.registration ? <RecordStat value={place.code} label={`of ${place.of}`} /> : null}
+      {place?.registration ? <RecordStat value="Incorporated" label={`${regDone ?? 0} of ${place.of} registrations`} /> : null}
       {coiDays !== null ? (
         <RecordStat
           value={Math.abs(coiDays)}
@@ -195,9 +243,12 @@ export function RecordNumbers({
       {now ? (
         <Link href={hrefFor(now.item)} className="flex min-w-0 flex-wrap items-center gap-2 text-[14px] hover:underline">
           <span className="text-ink-muted">Now</span>
-          <span className="font-mono text-[13px] text-ink-muted">{stepCode(now.item.id)}</span>
-          <b className="min-w-0 truncate font-medium text-ink">{now.stepTitle}</b>
-          <Chip fixed>{facts?.late ? 'Overdue' : HOLDER_CHIP[holder]}</Chip>
+          <b className="min-w-0 truncate font-medium text-ink">
+            <span className="font-mono text-[13px]">{place?.code}</span> · {now.stepTitle}
+          </b>
+          <Chip tone={HOLDER_TONE[holder]} fixed>
+            {HOLDER_CHIP[holder]}
+          </Chip>
         </Link>
       ) : null}
     </>
@@ -207,9 +258,8 @@ export function RecordNumbers({
 export function RecordDocumentsButton({ engagement, onOpen }: { engagement: Engagement; onOpen: () => void }) {
   const docs = useRecordDocuments(engagement.id);
   return (
-    <Button size="sm" variant="outline" onClick={onOpen} className="flex-none">
-      <FileText size={14} strokeWidth={1.6} aria-hidden />
-      Documents{docs.data ? <span className="tabular-nums text-ink-muted">{docs.data.length}</span> : null}
+    <Button variant="outline" onClick={onOpen} className="flex-none">
+      Documents {docs.data ? docs.data.length : ''}
     </Button>
   );
 }

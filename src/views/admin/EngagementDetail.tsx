@@ -70,7 +70,7 @@ import {
 import { notifyChecklistStepLocked } from '@/components/incorporation/ChecklistJourneyRail';
 import { RecordTabBar, RecordTabPanel, useRecordTab } from '@/views/client-record/RecordTabs';
 import { RecordStepsCard } from '@/views/client-record/RecordStepsCard';
-import { RecordDocumentsButton, RecordMetaLine, RecordNumbers } from '@/views/client-record/RecordHeadParts';
+import { RecordDocumentsButton, RecordMetaLine, RecordNumbers, RecordStageChip, recordOverviewCount } from '@/views/client-record/RecordHeadParts';
 import { RecordTimelineCard } from '@/components/timeline';
 import { SpiceAttachmentsCard } from '@/components/incorporation/SpiceAttachmentsCard';
 
@@ -245,7 +245,6 @@ export default function EngagementDetail() {
           key={it.id}
           item={it}
           gate={gate}
-          responses={responses}
           engagement={eng}
           onOpen={openStep}
           stepNumber={displayOrder}
@@ -339,7 +338,7 @@ export default function EngagementDetail() {
           companyName={eng.companyName}
           clientEmail={eng.clientEmail}
           engagementId={eng.id}
-          badge={<StageChip stage={eng.stage} />}
+          badge={<RecordStageChip engagement={eng} state={checklistState} />}
           meta={<RecordMetaLine engagement={eng} />}
           actions={<RecordDocumentsButton engagement={eng} onOpen={() => setRecordTab('documents')} />}
           stats={
@@ -357,7 +356,7 @@ export default function EngagementDetail() {
             engagement={eng}
             value={recordTab}
             onChange={setRecordTab}
-            overviewCount={internNow ? `${internNow.stepNumber}/${internNow.stepTotal}` : undefined}
+            overviewCount={recordOverviewCount(gates)}
           />
 
           {recordTab !== 'overview' ? (
@@ -389,8 +388,6 @@ export default function EngagementDetail() {
                   hrefFor={(item) => internEngagementStepPath(eng, item)}
                   onOpen={(item) => router.push(internEngagementStepPath(eng, item))}
                   leadName={intern?.name ?? (user?.id === eng.internId ? user?.name : null)}
-                  metaForPhase={phaseWindowMeta(eng.schedule)}
-                  trailingForPhase={docPackPill}
                   onOpenRegistrations={() => setRecordTab('registrations')}
                 />
               ) : (
@@ -538,7 +535,7 @@ export default function EngagementDetail() {
 
           {/* Spec T6: the SPICe+ Part B attachments, under the Pre-Incorporation steps. */}
           {activeBucket === 'pre-inc' ? (
-            <SpiceAttachmentsCard engagementId={eng.id} shellBase={shellRootOf(pathname)} />
+            <SpiceAttachmentsCard engagementId={eng.id} shellBase={shellRootOf(pathname)} className="mt-4" />
           ) : null}
         </>
       )}

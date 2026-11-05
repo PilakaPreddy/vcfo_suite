@@ -2,15 +2,12 @@
 
 /**
  * INCORPORATION LANDING (VCFO Spectrum, prototype src/screens/client/IncorporationScreen.tsx).
- * A plain page head, then one row of stat cards (D3: Days to COI or the COI date, SPICe+
- * steps, all steps), then the phase timeline (R-21, D2: at the top) whose rows open the step
- * tables, then the ST5 card beside "This week" and one "Incorporation status" card with four
- * stacked bars (R-25). Phases 1 to 3 only (D1: no Registration section). Wired to the real
- * step model; every drill, the status brief, the board resolution link and the timeline
- * editor are kept.
+ * A plain page head with the days to the COI, then the ST5 card beside "This week" and one
+ * "Incorporation status" card with four stacked bars (R-25), then the phase timeline (R-21) whose
+ * rows open the step tables. Phases 1 to 3 only (D1: no Registration section). Wired to the real
+ * step model; every drill, the board resolution link and the timeline editor are kept.
  */
 import { sep } from '@/lib/date-format';
-import { CalendarClock, CheckCheck, Download, ListChecks } from 'lucide-react';
 import { useHomeQuery } from '../home/useHome';
 import { PendingRequestChip } from '../home/PendingRequest';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -23,7 +20,6 @@ import { clientBoardResolutionPath } from '@/lib/projects/project-step-path';
 import type { PortalPhase, PortalStep } from '@/lib/client-portal/step-model';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { StatCard } from '@/components/dash/StatCard';
 import { Chip, OwnerChip } from '@/components/ui/spectrum-chip';
 import { StepMark } from '@/components/ui/step-track';
 import { SkeletonRows } from '@/components/ui/empty-state';
@@ -33,7 +29,6 @@ import { useDocViewer, type ViewerDoc } from '../documents/DocViewer';
 import { IncFrame, addD, days, fmt, fmtY, pd, wd } from './ui';
 import { PHL, firstName, idx, kd, ownKey, phDoneEnd, phPlan, stRow, stepHrefOf, tabsFor, signedUrlFor, useIncData, withoutRegistration, type IncData } from './data';
 import { StepTable } from './StepTable';
-import { StatusBrief } from './StatusBrief';
 import { BoardResolutionLink } from './BoardLink';
 import { TimelineEdit } from './TimelineEdit';
 import { BAR_FILL, Chevron, Col, Dot, Empty, Island, PageHead, Row, SCard, St5Card, currentPhaseNo, useGo, type BarTone } from './spectrum';
@@ -310,7 +305,6 @@ export default function IncorporationLanding() {
   const viewer = useDocViewer();
   const { model, short, today } = d;
   const [openPh, setOpenPh] = useState<number | null>(null);
-  const [briefOpen, setBriefOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const narrow = useNarrow();
   const pendingTl = useHomeQuery(portal.shell?.engagementId).data?.timeline?.pending;
@@ -320,20 +314,7 @@ export default function IncorporationLanding() {
   const coiEnd = d.coiExpected;
   const daysLeft = coiEnd ? Math.max(0, days(today, coiEnd)) : null;
   const you = model.steps.find((x) => kd(x) === 'you') ?? model.steps.find((x) => x.owner === 'client' && x.late && kd(x) !== 'done');
-  const spice = model.spice;
   const all = model.all;
-
-  const drillRing = useCallback(() => {
-    const sp = model.steps.filter((x) => x.phaseNo <= 2);
-    const tabs = tabsFor(sp, d.coiExpected);
-    drill({
-      title: 'SPICe+ progress',
-      sub: `Phases 1 and 2 · ${spice.done} of ${spice.total} steps done`,
-      tabs,
-      active: idx(tabs, 'you'),
-      link: { lead: 'SPICe+ ends with the Certificate of Incorporation', text: 'Open Phase 2 →', href: phaseHref(2), where: 'the phase pages' },
-    });
-  }, [model.steps, spice, drill, d.coiExpected]);
 
   const drillAll = useCallback(() => {
     const tabs = tabsFor(model.steps, d.coiExpected);
@@ -362,49 +343,8 @@ export default function IncorporationLanding() {
     viewer.open([{ id: `cert:${c.storagePath}`, name: c.name, url: () => signedUrlFor(c.storagePath), meta: 'Certificate of Incorporation' }], 0);
   };
 
-  // D3: the days to the COI (or the COI date) is a stat card in the top row, not head text.
-  const headTitle = 'Incorporation';
-  const early = showAfter && coiEnd ? days(d.coiDate!, coiEnd) : null;
-  const statCards = (
-    <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-3">
-      <button
-        type="button"
-        onClick={drillRing}
-        className="flex min-w-0 flex-col rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring [&>*]:flex-1"
-        aria-label={
-          showAfter
-            ? `Incorporated ${wd(d.coiDate!)} ${fmtY(d.coiDate)}`
-            : coiEnd
-              ? `${daysLeft} days to COI · expected ${wd(coiEnd)} ${fmtY(coiEnd)}`
-              : 'Days to COI not set'
-        }
-      >
-        {showAfter ? (
-          <StatCard
-            label="Incorporated"
-            value={fmt(d.coiDate)}
-            hint={early == null ? fmtY(d.coiDate) : early > 0 ? `${early} days early` : early < 0 ? `${-early} days late` : 'On the day'}
-            tone="positive"
-            icon={CheckCheck}
-          />
-        ) : (
-          <StatCard
-            label="Days to COI"
-            value={coiEnd ? daysLeft : 'Not set'}
-            hint={coiEnd ? `Expected ${wd(coiEnd)} ${fmt(coiEnd)}${d.extras?.windowSetByName ? ` · set by ${d.extras.windowSetByName}` : ''}` : 'No window yet'}
-            tone="brand"
-            icon={CalendarClock}
-          />
-        )}
-      </button>
-      <button type="button" onClick={drillRing} className="flex min-w-0 flex-col rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring [&>*]:flex-1" aria-label={`SPICe+ · ${spice.done} of ${spice.total} steps`}>
-        <StatCard label="SPICe+ steps" value={`${spice.done} / ${spice.total}`} hint={`${spice.pct}%`} tone="info" icon={ListChecks} />
-      </button>
-      <button type="button" onClick={drillAll} className="flex min-w-0 flex-col rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring [&>*]:flex-1" aria-label={`All steps · ${all.done} of ${all.total}`}>
-        <StatCard label="All steps" value={`${all.done} / ${all.total}`} hint={`${all.pct}%`} tone="neutral" icon={ListChecks} />
-      </button>
-    </div>
-  );
+  // The head says what the client asks first: the days to the COI, or the day it came.
+  const headTitle = showAfter ? `Incorporated ${fmt(d.coiDate)}` : coiEnd ? `${daysLeft} days to COI` : 'Incorporation';
 
   const headMeta = showAfter ? (
     <>
@@ -423,6 +363,14 @@ export default function IncorporationLanding() {
   ) : (
     <>
       <span>{d.companyName}</span>
+      {coiEnd ? (
+        <>
+          <Dot />
+          <span>
+            expected {wd(coiEnd)} {fmt(coiEnd)}
+          </span>
+        </>
+      ) : null}
       <Dot />
       <button type="button" onClick={drillAll} className="text-brand-text hover:underline">
         {all.done} / {all.total} steps · {all.pct}%
@@ -432,10 +380,6 @@ export default function IncorporationLanding() {
 
   const headActions = (
     <>
-      <Button variant="secondary" aria-haspopup="dialog" aria-expanded={briefOpen} onClick={() => setBriefOpen(true)}>
-        <Download size={16} strokeWidth={1.6} aria-hidden />
-        Status brief
-      </Button>
       <BoardResolutionLink br={d.extras?.boardResolution ?? null} />
       {showAfter ? (
         <>
@@ -697,9 +641,6 @@ export default function IncorporationLanding() {
           ) : (
             <>
               <PageHead label="Certificate of Incorporation" title={headTitle} meta={headMeta} actions={headActions} />
-              {statCards}
-              {/* D2: the timeline sits at the top, under the page head and above the steps. */}
-              {timelineCard}
               <Row>
                 <St5Card
                   model={model}
@@ -713,11 +654,11 @@ export default function IncorporationLanding() {
                   <SplitCard rows={split} />
                 </Col>
               </Row>
+              {timelineCard}
             </>
           )}
         </Island>
       </div>
-      {briefOpen ? <StatusBrief d={full} onClose={() => setBriefOpen(false)} /> : null}
       {editOpen ? <TimelineEdit onClose={() => setEditOpen(false)} /> : null}
       {viewer.node}
     </IncFrame>

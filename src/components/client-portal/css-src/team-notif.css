@@ -3,7 +3,8 @@
    type tiles, status chips, day groups in caps, "This month" as a total, a stacked bar and rows. */
 .tp-notif .tb-g12{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
 .tp-notif .tb-s3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:20px;align-items:start}
-@media (min-width:1024px){.tp-notif .tb-g12{grid-template-columns:minmax(0,1fr) 272px}.tp-notif .tb-s3{display:flex;flex-direction:column}}
+/* The rail is one 272 px column of equal cards. Without align-items:stretch the rule above (start) shrinks each card to its own content in the flex column. */
+@media (min-width:1024px){.tp-notif .tb-g12{grid-template-columns:minmax(0,1fr) 272px}.tp-notif .tb-s3{display:flex;flex-direction:column;align-items:stretch}}
 .tp-notif .tb-hd{flex-wrap:nowrap;min-width:0}
 .tp-notif .tb-tl{display:flex;align-items:center;gap:4px 8px;flex-wrap:wrap;min-width:0}
 .tp-notif .tb-glbl{display:flex;align-items:flex-end;gap:8px;height:36px;padding:0 16px 8px;box-sizing:border-box;border-top:1px solid oklch(var(--line-soft))}
@@ -12,7 +13,7 @@
 .tp-notif .tb-nrow:hover{background:oklch(var(--surface-sunken))}
 .nic{position:relative;flex:none;display:grid;place-items:center}
 .tp-notif .nt{text-decoration:none}.tp-notif .nt:hover{text-decoration:underline;text-underline-offset:2px}
-.tp-notif .nb{display:block;font-size:12.5px;color:oklch(var(--ink-2));margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tp-notif .nb{display:block;font-size:12.5px;color:oklch(var(--ink-2));margin-top:2px;overflow-wrap:anywhere}
 .tp-notif .nb a{color:oklch(var(--brand-text));font-weight:500;text-decoration:none}.tp-notif .nb a:hover{text-decoration:underline;text-underline-offset:2px}
 .tp-notif .nwho{color:inherit;font-weight:400;text-decoration:none}.tp-notif .nwho:hover{text-decoration:underline}
 .tp-notif .nkind{flex:none;width:104px;display:flex;align-items:center}
