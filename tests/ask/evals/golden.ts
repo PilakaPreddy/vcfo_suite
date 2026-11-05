@@ -20,7 +20,7 @@ export interface GoldenCase {
   context?: { kind: 'step' | 'field' | 'compliance'; ref: string; label: string };
   /** Mock-mode model replies, in order (guard first for free text). */
   mock?: {
-    guard?: { intent: string; topicSlug?: string };
+    guard?: { intent: string; topicSlug?: string; metric?: string; rewrittenQuery?: string };
     answers?: Array<Record<string, unknown> | { toolCall: string; input: Record<string, unknown> }>;
     retrieved?: Array<{ id: string; kind: 'chunk' | 'topic'; label: string; text: string }>;
   };
@@ -476,7 +476,7 @@ export const GOLDEN: GoldenCase[] = [
     role: 'client',
     shell: 'client',
     snapshot: 'foreignCompany',
-    message: 'Hello!',
+    message: 'Hello, hope you are well today!',
     mock: { guard: { intent: 'greeting' } },
     expect: { providerCalls: 1, origin: 'deterministic', lineIncludes: 'Hello' },
     live: { intents: ['greeting'] },
@@ -501,11 +501,30 @@ export const GOLDEN: GoldenCase[] = [
     expect: { providerCalls: 2, lineIncludes: 'director identification number', origin: 'generated' },
   },
   {
+    id: 'route-fact-local',
+    category: 'routing',
+    role: 'admin',
+    shell: 'admin',
+    message: 'How many companies are incorporated this year?',
+    mock: {},
+    expect: { providerCalls: 0, origin: 'deterministic', lineIncludes: 'across the firm' },
+  },
+  {
+    id: 'route-fact-router',
+    category: 'routing',
+    role: 'admin',
+    shell: 'admin',
+    message: 'Roughly how many businesses have we set up during this fiscal year?',
+    mock: { guard: { intent: 'fact', metric: 'companies.incorporated', rewrittenQuery: 'How many companies were incorporated this financial year?' } },
+    expect: { providerCalls: 1, origin: 'deterministic', lineIncludes: 'across the firm' },
+    live: { intents: ['fact'] },
+  },
+  {
     id: 'route-staff-ops',
     category: 'routing',
     role: 'admin',
     shell: 'admin',
-    message: 'How many approvals are pending?',
+    message: 'Which approvals have been waiting the longest?',
     mock: {
       guard: { intent: 'ops_query' },
       answers: [

@@ -6,6 +6,7 @@ import {
   ANSWER_DEPTHS,
   ASK_SHELLS,
   type AnswerEnvelope,
+  type AnswerLink,
   type AskShell,
   type ProjectSnapshot,
   type Visual,
@@ -24,6 +25,8 @@ import { sanitizeLinks, type DestinationScope } from '@/lib/ask/destinations';
 import { gateActiveCatalog } from '@/lib/checklist/checklist-step-gate';
 import { generateAnswer, SNAPSHOT_SOURCE_ID } from '@/lib/ask/generate';
 import { expectsData, runGuard, type GuardResult } from '@/lib/ask/guard';
+import { localMatch, metricByName } from '@/lib/ask/local-match';
+import { metricsForRole } from '@/lib/ask/metrics/match';
 import { maskIdentityNumbers } from '@/lib/ask/mask';
 import type { AskPath } from '@/lib/ask/paths';
 import { addLlmUsage, getAskProvider, NO_LLM_USAGE } from '@/lib/ask/provider';
@@ -177,12 +180,14 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
   let staffData: StaffData | null = null;
   const loadStaff = async () => (staffData ??= await loadStaffData(ctx, now));
 
-  const linkScope = async (): Promise<DestinationScope> => {
+  const linkScope = async (links: readonly AnswerLink[]): Promise<DestinationScope> => {
     if (shell === 'client') {
       const gates = gateActiveCatalog(clientTools?.state ?? {}, 'client');
       const locked = new Set(Object.entries(gates).filter(([, g]) => g.kind === 'locked').map(([id]) => id));
       return { shell, lockedStepIds: locked };
     }
+    // A list link names no project, so a plain metric answer skips this read.
+    if (!links.some((link) => 'engagementId' in link.dest)) return { shell };
     const data = await loadStaff();
     return {
       shell,
@@ -205,7 +210,7 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
     let final = actionsForShell(answer, shell, preview);
     // Every link, templated or model-written, is scope-checked here (§7.7).
     if (final.links && final.links.length > 0) {
-      const links = sanitizeLinks(final.links, await linkScope());
+      const links = sanitizeLinks(final.links, await linkScope(final.links));
       final = links.length > 0 ? { ...final, links } : { ...final, links: undefined };
     }
     const spend = metered?.spend() ?? [];
@@ -269,7 +274,20 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
     }
   }
 
-  // ---- 3. Free text: budget → router → topic or generation ----
+  // ---- 3. Free text the code can answer alone: no model, so no budget or rate limit applies ----
+  const metricRole = shell === 'client' ? 'client' : ctx.role;
+  const metricEnv = { ctx, shell, engagementId, now };
+  const topicContext = { depth: request.depth, snapshot };
+  if (typed) {
+    const local = await localMatch(typed, { env: metricEnv, role: metricRole, ...topicContext });
+    if (local) {
+      if (await stopIfKilled(local.path)) return;
+      await finish(local.answer, { path: local.path });
+      return;
+    }
+  }
+
+  // ---- 4. Free text: budget → router → metric, topic or generation ----
   const budgets = askBudgets();
   if ((await systemTodayTokenTotal(now)) >= budgets.dailyTokens) {
     await finish(limitAnswer(shell, 'budgetReached'), { path: null });
@@ -298,7 +316,8 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
     // A follow-up rarely names its subject, so the previous question helps to pick the topics.
     const lastAsked = history.findLast((m) => m.sender === 'user')?.text ?? '';
     const topics = shortlistTopics(`${message} ${lastAsked}`, audience).map((t) => ({ slug: t.slug, question: t.question }));
-    guard = (await runGuard(provider, { model: config.models.guard, shell, message, history, topics })).result;
+    const metrics = metricsForRole(metricRole).map((m) => m.name);
+    guard = (await runGuard(provider, { model: config.models.guard, shell, message, history, topics, metrics })).result;
   } catch (error) {
     console.error('[ask-vcfo] guard failed', error);
     await finish(unavailableAnswer(shell), { path: null });
@@ -316,6 +335,15 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
   if (guard.intent === 'do_work') {
     await finish(limitAnswer(shell, 'doWork'), { path: 'router_refusal', guard, startedAt });
     return;
+  }
+
+  if (guard.intent === 'fact' && guard.metric) {
+    const answer = await metricByName(guard.metric, guard.company, guard.rewrittenQuery, metricEnv);
+    if (answer) {
+      if (await stopIfKilled('router_metric', { guard, startedAt })) return;
+      await finish(answer, { path: 'router_metric', guard, startedAt });
+      return;
+    }
   }
 
   const decision = guard.intent === 'decision_request';

@@ -46,6 +46,14 @@ export function shortlistTopics(query: string, audience: 'client' | 'staff', lim
   return ranked(listTopics().filter((t) => forAudience(t, audience)), query, limit);
 }
 
+const asKey = (text: string) => text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+
+/** The topic whose question is exactly this question, apart from case and punctuation. */
+export function exactTopic(query: string, audience: 'client' | 'staff'): Topic | null {
+  const key = asKey(query);
+  return listTopics().find((t) => forAudience(t, audience) && asKey(t.question) === key) ?? null;
+}
+
 export function matchTopics(
   query: string,
   ctx: ApplicabilityContext | null,

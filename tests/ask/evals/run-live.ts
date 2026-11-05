@@ -24,6 +24,7 @@ import { SNAPSHOTS, GOLDEN, type EvalSnapshot } from './golden';
 import { askBudgets, askConfig } from '@/lib/ask/config';
 import { generateAnswer, SNAPSHOT_SOURCE_ID } from '@/lib/ask/generate';
 import { expectsData, runGuard } from '@/lib/ask/guard';
+import { metricsForRole } from '@/lib/ask/metrics/match';
 import { addLlmUsage, getAskProvider, NO_LLM_USAGE, type LlmProvider, type LlmUsage } from '@/lib/ask/provider';
 import { estimateCostUsd, totalTokens } from '@/lib/ask/provider/pricing';
 import { CLIENT_TOOLS, type ClientToolContext } from '@/lib/ask/tools/client';
@@ -109,6 +110,7 @@ async function main() {
         message: c.message!,
         history,
         topics: topics.map((t) => ({ slug: t.slug, question: t.question })),
+        metrics: metricsForRole(c.shell === 'client' ? 'client' : 'admin').map((m) => m.name),
       });
       guardModel = guard.model;
       models.add(guardModel);

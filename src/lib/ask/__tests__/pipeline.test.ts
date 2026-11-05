@@ -41,7 +41,10 @@ const defaultSnapshotLoad = () => ({
     filings: [],
 });
 vi.mock('@/lib/ask/retrieve', () => ({ retrieveSources: vi.fn(async () => []) }));
-vi.mock('@/lib/ask/tools/staff-data', () => ({ loadStaffData: (...a: unknown[]) => loadStaffData(...a) }));
+vi.mock('@/lib/ask/tools/staff-data', () => ({
+  loadStaffData: (...a: unknown[]) => loadStaffData(...a),
+  loadStaffEngagements: vi.fn(async () => []),
+}));
 
 const { runAskChat } = await import('@/lib/ask/pipeline');
 const { setAskProviderForTests } = await import('@/lib/ask/provider');
@@ -487,7 +490,7 @@ describe('path, usage and limits', () => {
       result([toolUse('render_answer', { line: 'No approvals are pending.', citations: [], actions: [] })]),
     ]);
     setAskProviderForTests(provider);
-    const { answer } = await run('admin', { shell: 'admin', message: 'What approvals are pending?' });
+    const { answer } = await run('admin', { shell: 'admin', message: 'Which approvals have waited the longest?' });
     expect(answer?.visual).toBeUndefined();
   });
 

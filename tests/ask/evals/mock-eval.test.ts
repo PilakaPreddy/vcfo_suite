@@ -36,6 +36,11 @@ vi.mock('@/lib/ask/snapshot', () => ({
 vi.mock('@/lib/ask/retrieve', () => ({ retrieveSources: (...a: unknown[]) => retrieveSources(...a) }));
 vi.mock('@/lib/ask/tools/staff-data', () => ({
   loadStaffData: vi.fn(async () => ({ engagements: [], filings: [], now: new Date() })),
+  loadStaffEngagements: vi.fn(async () => []),
+}));
+vi.mock('@/db/repositories/engagements', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/db/repositories/engagements')>()),
+  listEngagements: vi.fn(async () => []),
 }));
 
 const { runAskChat } = await import('@/lib/ask/pipeline');
@@ -74,7 +79,7 @@ function providerFor(c: GoldenCase): LlmProvider & { calls: LlmRequest[] } {
       content: [
         {
           type: 'text',
-          text: JSON.stringify({ intent: c.mock.guard.intent, rewrittenQuery: c.message ?? 'q', topicSlug: c.mock.guard.topicSlug ?? '', language: 'en' }),
+          text: JSON.stringify({ rewrittenQuery: c.message ?? 'q', topicSlug: '', language: 'en', ...c.mock.guard }),
         } as never,
       ],
     });
