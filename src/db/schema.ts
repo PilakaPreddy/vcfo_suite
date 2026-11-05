@@ -373,7 +373,10 @@ export const documentTemplates = pgTable('document_templates', {
     .references(() => profiles.id, { onDelete: 'restrict' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => ({
+  // Deleting a profile hands its rows to the deleter (profiles.ts).
+  uploadedByIdx: index('document_templates_uploaded_by_idx').on(t.uploadedBy),
+}));
 
 /**
  * Per-engagement documents (certificates, filings, milestone attachments).
@@ -418,6 +421,8 @@ export const documents = pgTable(
   },
   (t) => ({
     engIdx: index('documents_engagement_idx').on(t.engagementId),
+    // Deleting a profile nulls this column (profiles.ts).
+    uploadedByIdx: index('documents_uploaded_by_idx').on(t.uploadedBy),
   }),
 );
 
@@ -444,6 +449,7 @@ export const knowledgeBankFolders = pgTable(
   },
   (t) => ({
     parentIdx: index('knowledge_bank_folders_parent_idx').on(t.parentId),
+    createdByIdx: index('knowledge_bank_folders_created_by_idx').on(t.createdBy),
   }),
 );
 
@@ -476,6 +482,7 @@ export const knowledgeBankFiles = pgTable(
   },
   (t) => ({
     folderIdx: index('knowledge_bank_files_folder_idx').on(t.folderId),
+    uploadedByIdx: index('knowledge_bank_files_uploaded_by_idx').on(t.uploadedBy),
   }),
 );
 
@@ -541,7 +548,11 @@ export const emailTemplates = pgTable('email_templates', {
     .references(() => profiles.id, { onDelete: 'restrict' }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => ({
+  // Deleting a profile hands its rows to the deleter (profiles.ts).
+  createdByIdx: index('email_templates_created_by_idx').on(t.createdBy),
+  updatedByIdx: index('email_templates_updated_by_idx').on(t.updatedBy),
+}));
 
 /**
  * Binds a template to (checklist item, lifecycle trigger). `checklist_item_id`
@@ -780,7 +791,10 @@ export const documentRequests = pgTable('document_requests', {
   /** When the request was fulfilled or cancelled; null while pending (home trend lines). */
   closedAt: timestamp('closed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => ({
+  // Deleting a profile nulls this column (profiles.ts).
+  requestedByIdx: index('document_requests_requested_by_idx').on(t.requestedBy),
+}));
 
 /**
  * The demo-era client invites. Nothing reads or writes this table since audit 2026-11-04 finding 5
