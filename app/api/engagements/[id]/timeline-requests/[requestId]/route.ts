@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/auth/guards';
 import { decideTimelineRequest } from '@/db/repositories/client-change-requests';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type Ctx = { params: Promise<{ id: string; requestId: string }> };
 const body = z.object({ decision: z.enum(['approve', 'reject']), note: z.string().max(2000).optional() });
@@ -18,6 +19,6 @@ export async function POST(request: Request, ctx: Ctx) {
     if (!ok) return NextResponse.json({ error: 'Request not found or already decided' }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: (e as Error).message }, { status: 403 });
+    return NextResponse.json({ error: publicErrorMessage(e, 'request_failed') }, { status: 403 });
   }
 }

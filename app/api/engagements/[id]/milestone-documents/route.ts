@@ -20,6 +20,7 @@ import {
 } from '@/lib/upload-limits';
 import { bucketKey, putObject } from '@/storage/s3';
 import { checklistItemForFieldId, vaultPhaseForItem } from '@/lib/documents/vault-documents';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -107,7 +108,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     await putObject(bucketKey(MILESTONE_DOCUMENTS_BUCKET, storagePath), bytes, contentType);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'upload_failed';
+    const message = publicErrorMessage(err, 'upload_failed');
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 

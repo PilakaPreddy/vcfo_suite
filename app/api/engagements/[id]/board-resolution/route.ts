@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import {
@@ -44,7 +45,7 @@ export async function GET(_request: Request, context: RouteContext) {
     }
     return NextResponse.json({ boardResolution });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'load_failed';
+    const message = publicErrorMessage(err, 'load_failed');
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
@@ -95,7 +96,7 @@ export async function PUT(request: Request, context: RouteContext) {
     );
     return NextResponse.json({ boardResolution });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'save_failed';
+    const message = publicErrorMessage(err, 'save_failed');
     const status = message === BOARD_RESOLUTION_WITH_MANAGER ? 409 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }

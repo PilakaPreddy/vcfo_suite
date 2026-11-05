@@ -13,6 +13,7 @@ import {
 import { getEngagementById, toAppEngagement } from '@/db/repositories/engagements';
 import { engagementDbId } from '@/lib/projects/legacy-engagement-ids';
 import { emptyEmailDispatch } from '@/lib/email/email-dispatch';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -41,7 +42,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const leads = await listEngagementLeads(guard.ctx, id);
     return NextResponse.json({ leads });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     const status =
       message.includes('not found') || message.includes('not permitted') ? 404 : 400;
     return NextResponse.json({ error: message }, { status });
@@ -155,7 +156,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
     return NextResponse.json({ leads, email });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'update_failed';
+    const message = publicErrorMessage(err, 'update_failed');
     const status =
       message.includes('not found') || message.includes('not permitted')
         ? 404
@@ -207,7 +208,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     }
     return NextResponse.json({ leads, email });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'delete_failed';
+    const message = publicErrorMessage(err, 'delete_failed');
     const status =
       message.includes('not found') || message.includes('not permitted') ? 404 : 400;
     return NextResponse.json({ error: message }, { status });

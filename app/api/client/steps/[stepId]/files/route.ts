@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import {
@@ -53,7 +54,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json(out);
   } catch (err) {
     if (err instanceof FileRequestError) return NextResponse.json({ error: err.message }, { status: err.status });
-    const message = err instanceof Error ? err.message : 'attach_failed';
+    const message = publicErrorMessage(err, 'attach_failed');
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

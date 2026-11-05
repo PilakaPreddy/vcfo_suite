@@ -1,4 +1,4 @@
-import { daysUntil, type SixWord } from '@/views/compliances/spectrum-status';
+import { daysUntil, type SixWord } from '@/lib/compliance/spectrum-status';
 
 /**
  * VIEW MODEL of the statutory and non-statutory split on the staff screens

@@ -6,6 +6,7 @@ import {
   toAppEngagement,
 } from '@/db/repositories/engagements';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -39,7 +40,7 @@ export async function POST(_request: Request, context: RouteContext) {
 
     return NextResponse.json({ engagement: toAppEngagement(row) });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'restore_failed';
+    const message = publicErrorMessage(err, 'restore_failed');
     const status = message.includes('not found')
       ? 404
       : message.includes('Only firm admins')

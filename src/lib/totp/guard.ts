@@ -1,38 +1,37 @@
+import 'server-only';
+
+import { systemClearRateLimit, systemPeekRateLimit, systemTakeRateLimit } from '@/db/repositories/rate-limits';
+
 /**
- * Per-person limits on two-step codes (G-25), kept in process memory.
+ * Per-person limits on two-step codes (G-25).
  *
  * - Failed codes: ten wrong codes in ten minutes locks the code step for that
  *   person for the rest of the window. A wrong code is only reachable after the
  *   password was accepted, so this slows guessing without a lockout anyone can
- *   trigger from the email address alone.
+ *   trigger from the email address alone. The count lives in the Postgres
+ *   rate-limit store (migration 0042), so it holds across App Runner instances.
  * - Replays: a code whose step counter was already used for that person is
- *   refused, so a code read over someone's shoulder cannot be used twice.
- *
- * Like `src/lib/api/rate-limit.ts`, this is per instance: with several App
- * Runner instances each keeps its own count. That is acceptable for a 10^6
- * code space and three valid codes at a time; a shared store would be the next
- * step if the instance count grows.
+ *   refused, so a code read over someone's shoulder cannot be used twice. This
+ *   one is kept in process memory per instance.
  */
 
 const FAIL_WINDOW_MS = 10 * 60 * 1000;
 const MAX_FAILS = 10;
 
-const fails = new Map<string, { count: number; resetAt: number }>();
+const failKey = (userId: string) => `totp-fail:${userId}`;
 const lastCounter = new Map<string, number>();
 
-export function isTotpLocked(userId: string, now = Date.now()): boolean {
-  const entry = fails.get(userId);
-  if (!entry || now >= entry.resetAt) return false;
-  return entry.count >= MAX_FAILS;
+export async function isTotpLocked(userId: string): Promise<boolean> {
+  return (await systemPeekRateLimit(failKey(userId))) >= MAX_FAILS;
 }
 
-export function recordTotpFailure(userId: string, now = Date.now()): void {
-  const entry = fails.get(userId);
-  if (!entry || now >= entry.resetAt) {
-    fails.set(userId, { count: 1, resetAt: now + FAIL_WINDOW_MS });
-    return;
-  }
-  entry.count += 1;
+export async function recordTotpFailure(userId: string): Promise<void> {
+  await systemTakeRateLimit(failKey(userId), MAX_FAILS, FAIL_WINDOW_MS);
+}
+
+/** Forgets this person's failed codes after a correct one. */
+export async function clearTotpFailures(userId: string): Promise<void> {
+  await systemClearRateLimit(failKey(userId));
 }
 
 /**
@@ -43,12 +42,10 @@ export function acceptTotpCounter(userId: string, counter: number): boolean {
   const prev = lastCounter.get(userId);
   if (prev !== undefined && counter <= prev) return false;
   lastCounter.set(userId, counter);
-  fails.delete(userId);
   return true;
 }
 
-/** Test helper: forget every count. */
+/** Test helper: forget every used step counter. */
 export function resetTotpGuard(): void {
-  fails.clear();
   lastCounter.clear();
 }

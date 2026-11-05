@@ -15,7 +15,7 @@ import { renderRegisterPdf } from '@/lib/labour-registers/pdf/render-register';
 import { renderForForm } from '@/lib/labour-registers/xlsx/renderers';
 import { templateVersionFor } from '@/lib/labour-registers/xlsx/version';
 import { resolveVerification, verificationIndex } from '@/lib/labour-registers/verification';
-import { loadBatchDataset } from '@/views/labour-registers/load-dataset';
+import { loadBatchDataset } from '@/lib/labour-registers/load-dataset';
 import { EXTENSION_TO_MIME } from '@/lib/upload-limits';
 import { putObject } from '@/storage/s3';
 

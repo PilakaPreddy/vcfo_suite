@@ -11,6 +11,7 @@ import {
   clientRequestStepChange,
 } from '@/db/repositories/engagements';
 import { isDirectFlowStep } from '@/lib/incorporation/pre-inc-direct-flow';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /**
  * POST /api/client/change-requests — the client asks the firm to change
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
       }).catch(() => null);
       return NextResponse.json({ request: created, email }, { status: 201 });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Could not send the request';
+      const message = publicErrorMessage(error, 'Could not send the request');
       return NextResponse.json({ error: message }, { status: 400 });
     }
   }
@@ -132,7 +133,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ request: created, checklistState, email }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Could not send the request';
+    const message = publicErrorMessage(error, 'Could not send the request');
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

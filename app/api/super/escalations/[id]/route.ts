@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { EscalationForbiddenError, resolveEscalation } from '@/db/repositories/escalations';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -33,7 +34,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (err instanceof EscalationForbiddenError) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
-    const message = err instanceof Error ? err.message : 'resolve_failed';
+    const message = publicErrorMessage(err, 'resolve_failed');
     return NextResponse.json({ error: message }, { status: message === 'already_resolved' ? 409 : 500 });
   }
 }

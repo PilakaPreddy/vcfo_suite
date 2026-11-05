@@ -4,6 +4,7 @@ import { knowledgeBankCreateFolderBodySchema } from '@/lib/api/schemas';
 import { parseJsonBody } from '@/lib/api/validate';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { createKnowledgeBankFolder } from '@/db/repositories/knowledge-bank';
+import { publicErrorMessage } from '@/lib/api-error';
 
 export async function POST(request: Request) {
   const auth = await requireAnyRole('admin', 'manager', 'intern');
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, folder }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'save_failed';
+    const message = publicErrorMessage(err, 'save_failed');
     if (message.startsWith('Not permitted')) {
       return NextResponse.json({ ok: false, error: message }, { status: 403 });
     }

@@ -9,6 +9,7 @@ import {
   type ChangeRequestStatus,
 } from '@/db/repositories/engagement-change-requests';
 import { parseChangeRequestPayload } from '@/lib/projects/project-change-requests';
+import { publicErrorMessage } from '@/lib/api-error';
 
 const STATUSES = ['pending', 'approved', 'rejected', 'cancelled'] as const;
 
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ request: created }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     const status = message === 'not_found' ? 404 : message === 'not_permitted' ? 403 : 400;
     return NextResponse.json({ error: message }, { status });
   }

@@ -7,6 +7,7 @@ import { checklistStateForViewer, reviewChecklistItem } from '@/db/repositories/
 import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 import { approveBoardResolution } from '@/db/repositories/board-resolution';
 import { MANAGER_APPROVAL_STEP_ID } from '@/lib/incorporation/pre-inc-direct-flow';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -73,7 +74,7 @@ export async function POST(request: Request, context: RouteContext) {
       clientApprovalEmail,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'review_failed';
+    const message = publicErrorMessage(err, 'review_failed');
     if (message === 'step_has_no_approval') {
       return NextResponse.json(
         { error: 'The client and the project lead submit this step directly. There is nothing to approve.' },
@@ -120,7 +121,7 @@ async function reviewBoardResolution(
     });
     return NextResponse.json({ checklistState: checklistStateForViewer(ctx, checklistState), email });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'review_failed';
+    const message = publicErrorMessage(err, 'review_failed');
     if (message === 'board_resolution_not_pending') {
       return NextResponse.json(
         { error: 'The project lead has not sent the board resolution for approval.' },

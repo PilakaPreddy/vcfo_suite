@@ -16,7 +16,7 @@ import type { AuthContext } from '@/auth/guards';
  * see all staff, clients none; only the owner may mutate.
  */
 
-type Call = { op: string; where?: SQL; values?: unknown; set?: unknown };
+type Call = { op: string; where?: SQL; values?: unknown; set?: unknown; limit?: number };
 const calls: Call[] = [];
 let results: unknown[][] = [];
 
@@ -25,7 +25,10 @@ function chain(call: Call): unknown {
     from: () => c,
     innerJoin: () => c,
     orderBy: () => c,
-    limit: () => c,
+    limit: (n: number) => {
+      call.limit = n;
+      return c;
+    },
     returning: () => c,
     where: (w: SQL) => {
       call.where = w;
@@ -137,6 +140,7 @@ describe('listTasks', () => {
       const w = q(calls[0]);
       expect(w.sql).toContain('"tasks"."engagement_id" in');
       expect(w.params).toEqual([OWN, 'todo:%']);
+      expect(calls[0].limit).toBe(repo.TASK_LIST_LIMIT);
     },
   );
 

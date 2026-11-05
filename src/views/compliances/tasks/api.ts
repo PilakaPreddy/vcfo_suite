@@ -8,7 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SubjectInputsDto } from '@/components/compliances/use-compliance-records';
 import type { FilingProof } from '@/db/repositories/client-compliances';
-import type { SixWord } from '@/views/compliances/spectrum-status';
+import type { SixWord } from '@/lib/compliance/spectrum-status';
 import type {
   TaskRepeats,
   TaskUrgency,

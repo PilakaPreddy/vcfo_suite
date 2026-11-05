@@ -12,6 +12,7 @@ import {
 import { requireAnyRole } from '@/auth/guards';
 import { getNocTemplateOverride } from '@/db/repositories/board-resolution-noc';
 import { withNocVariantOverride } from '@/lib/noc/receive';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -82,7 +83,7 @@ export async function GET(_request: Request, context: RouteContext) {
       rootSourceNewerThanTemplate,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'status_failed';
+    const message = publicErrorMessage(err, 'status_failed');
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { requireSuperAdmin } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { convertProspect } from '@/db/repositories/prospects';
 import { prospectConvertSchema } from '@/lib/growth/prospect-schema';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /**
  * POST /api/super/growth/prospects/:id/convert — "Convert to client" (G-21).
@@ -33,7 +34,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (!prospect) return NextResponse.json({ error: 'Prospect not found' }, { status: 404 });
     return NextResponse.json({ prospect });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'convert_failed';
+    const message = publicErrorMessage(err, 'convert_failed');
     if (message === 'not_won') return NextResponse.json({ error: 'Only a won prospect can be converted' }, { status: 400 });
     if (message === 'engagement_not_found') return NextResponse.json({ error: 'Engagement not found' }, { status: 404 });
     return NextResponse.json({ error: message }, { status: message.includes('super admin') ? 403 : 500 });

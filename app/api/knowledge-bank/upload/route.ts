@@ -5,6 +5,7 @@ import { knowledgeBankObjectPath } from '@/lib/knowledge-bank/knowledge-bank-sto
 import { resolveUploadContentType } from '@/lib/upload-limits';
 import { KNOWLEDGE_BANK_EXTENSIONS } from '@/lib/upload-limits';
 import { bucketKey, putObject } from '@/storage/s3';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /** POST /api/knowledge-bank/upload — browser uploads bytes; returns storage path + file id. */
 export async function POST(request: Request) {
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
     await putObject(bucketKey('knowledge-bank', path), bytes, contentType);
     return NextResponse.json({ path, fileId });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'upload_failed';
+    const message = publicErrorMessage(err, 'upload_failed');
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

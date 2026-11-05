@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   base32Decode,
   base32Encode,
@@ -9,7 +9,18 @@ import {
   verifyTotp,
 } from './totp';
 import { groupSecret } from './format';
-import { acceptTotpCounter, isTotpLocked, recordTotpFailure, resetTotpGuard } from './guard';
+import { acceptTotpCounter, clearTotpFailures, isTotpLocked, recordTotpFailure, resetTotpGuard } from './guard';
+
+// The failure count lives in the Postgres rate-limit store; a map stands in for it here.
+const counts = new Map<string, number>();
+vi.mock('@/db/repositories/rate-limits', () => ({
+  systemTakeRateLimit: async (key: string, limit: number) => {
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+    return counts.get(key)! <= limit;
+  },
+  systemPeekRateLimit: async (key: string) => counts.get(key) ?? 0,
+  systemClearRateLimit: async (key: string) => void counts.delete(key),
+}));
 
 /** The shared secret from RFC 4226 Appendix D and RFC 6238 Appendix B (SHA-1). */
 const RFC_KEY = Buffer.from('12345678901234567890', 'ascii');
@@ -98,7 +109,7 @@ describe('otpauthUri', () => {
 });
 
 describe('code guard', () => {
-  it('refuses a replayed step and locks after ten failures', () => {
+  it('refuses a replayed step and locks after ten failures', async () => {
     resetTotpGuard();
     expect(acceptTotpCounter('u1', 100)).toBe(true);
     expect(acceptTotpCounter('u1', 100)).toBe(false);
@@ -106,11 +117,12 @@ describe('code guard', () => {
     expect(acceptTotpCounter('u1', 101)).toBe(true);
     expect(acceptTotpCounter('u2', 100)).toBe(true);
 
-    const t = 1_000_000;
-    for (let i = 0; i < 9; i++) recordTotpFailure('u3', t);
-    expect(isTotpLocked('u3', t)).toBe(false);
-    recordTotpFailure('u3', t);
-    expect(isTotpLocked('u3', t)).toBe(true);
-    expect(isTotpLocked('u3', t + 10 * 60 * 1000)).toBe(false);
+    for (let i = 0; i < 9; i++) await recordTotpFailure('u3');
+    expect(await isTotpLocked('u3')).toBe(false);
+    await recordTotpFailure('u3');
+    expect(await isTotpLocked('u3')).toBe(true);
+    expect(counts.has('totp-fail:u3')).toBe(true);
+    await clearTotpFailures('u3');
+    expect(await isTotpLocked('u3')).toBe(false);
   });
 });

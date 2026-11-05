@@ -3,12 +3,13 @@ import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { createMailGroup, listMailGroups, MailGroupError } from '@/db/repositories/mail-groups';
 import { createMailGroupSchema } from './schema';
+import { publicErrorMessage } from '@/lib/api-error';
 
 function fail(err: unknown) {
   if (err instanceof MailGroupError) {
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
-  const message = err instanceof Error ? err.message : 'groups_failed';
+  const message = publicErrorMessage(err, 'groups_failed');
   return NextResponse.json({ error: message }, { status: 500 });
 }
 

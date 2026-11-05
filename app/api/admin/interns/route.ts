@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { requireAdminOrManager } from '@/auth/guards';
@@ -22,7 +23,7 @@ export async function GET() {
     const interns = await listInternOptions(auth.ctx);
     return NextResponse.json({ interns });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -49,7 +50,7 @@ export async function POST(request: Request) {
   try {
     created = await createInternUser(auth.ctx, { email, password, fullName, phone });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     if (message === 'email_already_registered') {
       return NextResponse.json({ ok: false, error: message }, { status: 409 });
     }

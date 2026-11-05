@@ -9,6 +9,7 @@ import { upsertOutlookConnection } from '@/db/repositories/outlook-connections';
 import { siteUrl } from '@/lib/site-url';
 import { roleSettingsPath } from '@/lib/auth-routes';
 import { OUTLOOK_RETURN_PATHS } from '@/lib/outlook/return-path';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /** GET /api/outlook/callback — Microsoft OAuth redirect. */
 export async function GET(request: Request) {
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
       expiresInSec: tokens.expires_in ?? 3600,
     });
   } catch (e) {
-    const message = e instanceof Error ? e.message : 'connect_failed';
+    const message = publicErrorMessage(e, 'connect_failed');
     return fail(message.slice(0, 120));
   }
 

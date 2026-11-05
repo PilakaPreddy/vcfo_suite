@@ -4,6 +4,7 @@ import { requireAuth } from '@/auth/guards';
 import { listPersonalTodos, upsertPersonalTodo } from '@/db/repositories/tasks';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { canAccessPersonalTodos, INTERN_FOCUS_TITLE_MAX } from '@/lib/intern/personal-todos';
+import { publicErrorMessage } from '@/lib/api-error';
 
 const createSchema = z.object({
   entryId: z.string().trim().min(1).max(240).optional(),
@@ -25,7 +26,7 @@ export async function GET() {
     const todos = await listPersonalTodos(guard.ctx);
     return NextResponse.json({ todos });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ todo }, { status: 200 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     const status =
       message.includes('not permitted') || message === 'forbidden'
         ? 403

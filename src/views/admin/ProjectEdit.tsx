@@ -21,14 +21,16 @@ export default function ProjectEdit() {
   const pathname = usePathname();
   const staffBase = useStaffBasePath();
   const projectBase = staffProjectBaseFromPathname(pathname, staffBase);
-  const { engagements, engagementsLoading } = useApp();
+  const { engagements, engagementsSettled } = useApp();
 
   const eng = useMemo(
     () => resolveEngagementFromRouteParam(engagements, slugParam),
     [engagements, slugParam],
   );
 
-  if (engagementsLoading && !eng) {
+  // `engagementsLoading` is false while the session hydrates (the query is still idle), so a
+  // fresh page load would bounce; wait until the engagements query has settled.
+  if (!eng && !engagementsSettled) {
     return (
       <PageTransition>
         <HexgridLoader />

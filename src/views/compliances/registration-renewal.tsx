@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { openRegistrationCertificate, useSetRegistrationDates, type RegistrationFacts } from '@/hooks/use-registration-facts';
 import { renewalOf } from '@/lib/registrations/registration-facts';
 import { errorMessage, toastError, toastSuccess } from '@/lib/toast-errors';
-import { plainDate } from '@/views/compliances/spectrum-status';
+import { plainDate } from '@/lib/compliance/spectrum-status';
 
 /**
  * Renewal and certificate parts for the Registrations list and record (G-05), shared by

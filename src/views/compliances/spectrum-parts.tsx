@@ -16,7 +16,7 @@ import {
   STATUS_TILE,
   tileParts,
   type SixWord,
-} from '@/views/compliances/spectrum-status';
+} from '@/lib/compliance/spectrum-status';
 import { exactDate } from '@/lib/relative-due';
 
 /**

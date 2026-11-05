@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminOrManager } from '@/auth/guards';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { deleteAnnouncementSource } from '@/db/repositories/announcements';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /** DELETE /api/announcements/sources/[id] */
 export async function DELETE(
@@ -28,7 +29,7 @@ export async function DELETE(
     });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'delete_failed';
+    const message = publicErrorMessage(err, 'delete_failed');
     const status = message.includes('not permitted') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }

@@ -4,6 +4,7 @@ import { requireAuth } from '@/auth/guards';
 import { checklistStateForViewer, clientApproveStep } from '@/db/repositories/engagements';
 import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 import { openFileRequestsForStep } from '@/db/repositories/client-incorporation';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ stepId: string }> };
 
@@ -78,7 +79,7 @@ export async function POST(request: Request, context: RouteContext) {
       email,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'approve_failed';
+    const message = publicErrorMessage(err, 'approve_failed');
     const friendly: Record<string, string> = {
       step_not_awaiting_client_approval: 'This step is not waiting for your approval yet.',
       step_has_no_approval: 'You submit this step yourself. There is nothing to approve.',

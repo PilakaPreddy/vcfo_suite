@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { publicErrorMessage } from '@/lib/api-error';
 
 import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ batchId: batch.id, status: batch.status, markedReadyAt: batch.markedReadyAt });
   } catch (e) {
     /* Already closed, or a tick that was not given. Both are the caller's state, not a fault. */
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'could_not_close' }, { status: 409 });
+    return NextResponse.json({ error: publicErrorMessage(e, 'could_not_close') }, { status: 409 });
   }
 }
 
@@ -71,6 +72,6 @@ export async function PATCH(request: Request) {
     if (!batch) return NextResponse.json({ error: 'not_found' }, { status: 404 });
     return NextResponse.json({ batchId: batch.id, status: batch.status, reopenCount: batch.reopenCount });
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'could_not_reopen' }, { status: 409 });
+    return NextResponse.json({ error: publicErrorMessage(e, 'could_not_reopen') }, { status: 409 });
   }
 }

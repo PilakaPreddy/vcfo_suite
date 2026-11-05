@@ -19,6 +19,7 @@ import {
 } from '@/lib/outlook/mail-extras';
 import type { GraphFileAttachment } from '@/lib/outlook/oauth';
 import { getObjectBuffer } from '@/storage/s3';
+import { publicErrorMessage } from '@/lib/api-error';
 
 const emailList = z.union([z.string().email(), z.array(z.string().email())]);
 
@@ -179,7 +180,7 @@ export async function POST(request: Request) {
     groupAddresses = await expandMailGroups(guard.ctx, data.groupIds ?? []);
   } catch (err) {
     const status = err instanceof MailGroupError ? err.status : 400;
-    return NextResponse.json({ error: err instanceof Error ? err.message : 'groups_failed' }, { status });
+    return NextResponse.json({ error: publicErrorMessage(err, 'groups_failed') }, { status });
   }
   if ((data.groupIds?.length ?? 0) > 0 && groupAddresses.length === 0) {
     return NextResponse.json({ error: 'group_not_found' }, { status: 400 });
@@ -203,7 +204,7 @@ export async function POST(request: Request) {
       }
       branding = template.branding;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'template_failed';
+      const message = publicErrorMessage(err, 'template_failed');
       const status = message.includes('not permitted') ? 403 : 400;
       return NextResponse.json({ error: message }, { status });
     }
@@ -251,7 +252,7 @@ export async function POST(request: Request) {
       signature: Boolean(signature?.trim()),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'send_failed';
+    const message = publicErrorMessage(err, 'send_failed');
     const status =
       message === 'outlook_not_connected'
         ? 409

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import type { FilingStatus, FilingsMonth } from '@/lib/compliance/filings';
-import { FILING_WORD, STATUS_FILL, STATUS_TILE, worstStatus } from '@/views/compliances/spectrum-status';
+import { FILING_WORD, STATUS_FILL, STATUS_TILE, worstStatus } from '@/lib/compliance/spectrum-status';
 
 /**
  * The register calendar grids (prototype MonthCalendar and YearGrid), drawn on

@@ -7,7 +7,7 @@ import { computeDueDate } from '@/lib/projects/deadlines';
 import { windowForStep } from '@/lib/projects/schedule-windows';
 import { REG_ROWS } from '@/lib/client-portal/credentials';
 import type { Owner } from '@/components/ui/spectrum-chip';
-import { daysUntil, plainDate, type SixWord } from '@/views/compliances/spectrum-status';
+import { daysUntil, plainDate, type SixWord } from '@/lib/compliance/spectrum-status';
 
 /**
  * REGISTRATIONS for the staff portals — pure logic over data already in hand.

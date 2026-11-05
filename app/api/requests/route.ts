@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
@@ -16,7 +17,7 @@ export async function GET() {
     const requests = await listDocumentRequests(guard.ctx);
     return NextResponse.json({ requests });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ request: docRequest, email }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     const status = message.includes('not permitted') || message.includes('may not') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }

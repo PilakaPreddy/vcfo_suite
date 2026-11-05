@@ -33,7 +33,7 @@ import {
   fmtLongComma,
   fmtWDM,
   fyLabelOf,
-  fyMonths,
+  FILING_OF,
   fyStartOfMonth,
   mondayMonthGrid,
   monthLabel,
@@ -43,7 +43,6 @@ import {
   portalFor,
   sortByDue,
   statusOf,
-  stepMonth,
   todayIso,
   worstStatus,
   type AreaFilter,
@@ -60,9 +59,10 @@ import { Empty, Island, PortalLink, STROKE, StatusChip, TINT } from './spectrum'
 import { CompProvider, useComp } from './ctx';
 import { DetailModal } from './Detail';
 import { DonutCard } from './DonutCard';
-import { MonthNav } from './MonthNav';
+import { MonthNav } from '@/components/compliances/month-nav';
 import { TimelineView } from './TimelineView';
-import { YearView } from './YearView';
+import { YearGrid } from '@/components/compliances/calendar-grids';
+import { financialYearMonths } from '@/lib/compliance/filings';
 import { CalendarMobile } from './CalendarMobile';
 import { CategoryTabs, RowArea } from './task-marks';
 import { taskHref, useTaskRows } from './task-api';
@@ -258,7 +258,9 @@ function CalendarDesktop({ st, onOpenFilings }: { st: ReturnType<typeof useCalen
       ) : null}
       <div className="row-wrap" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div data-calnav="" className="calbar">
-          <MonthNav month={month} nowKey={nowKey} hidden={view !== 'month'} onMonth={(k) => set({ date: k })} onStep={(k) => set({ date: stepMonth(month, k) })} />
+          <div data-calnavr="" className="cp-tw" style={view !== 'month' ? { visibility: 'hidden' } : undefined}>
+            <MonthNav value={month} now={nowKey} onChange={(k) => set({ date: k })} />
+          </div>
           <span className="mono fy-tag" data-tip={`Financial year ${fyLabelOf(fy).slice(3)}`}>
             {fyLabelOf(fy)}
           </span>
@@ -322,7 +324,14 @@ function CalendarDesktop({ st, onOpenFilings }: { st: ReturnType<typeof useCalen
             ) : loading ? (
               <GridSkeleton />
             ) : view === 'year' ? (
-              <YearView months={fyMonths(fy)} rows={[...filterArea(fyRows, area), ...fyTasks]} today={today} onMonth={(k) => set({ date: k, view: 'month' })} />
+              <Island>
+                <YearGrid
+                  months={financialYearMonths(fy)}
+                  marks={[...filterArea(fyRows, area), ...fyTasks].map((r) => ({ id: r.id, date: r.dueDate.slice(0, 10), label: r.name, status: FILING_OF[statusOf(r, today)] }))}
+                  todayIso={today}
+                  onPick={(k) => set({ date: k, view: 'month' })}
+                />
+              </Island>
             ) : (
               <TimelineView fyStart={fy} rows={[...filterArea(fyRows, area), ...fyTasks]} today={today} onOpen={openDetail} />
             )}

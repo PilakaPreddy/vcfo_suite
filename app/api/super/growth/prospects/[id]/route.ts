@@ -4,6 +4,7 @@ import { requireSuperAdmin } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { updateProspect } from '@/db/repositories/prospects';
 import { prospectPatchSchema } from '@/lib/growth/prospect-schema';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /**
  * PATCH /api/super/growth/prospects/:id — edit a prospect or move its stage (G-21).
@@ -31,7 +32,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (!prospect) return NextResponse.json({ error: 'Prospect not found' }, { status: 404 });
     return NextResponse.json({ prospect });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'update_failed';
+    const message = publicErrorMessage(err, 'update_failed');
     const status = message === 'invalid_owner' ? 400 : message.includes('super admin') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }

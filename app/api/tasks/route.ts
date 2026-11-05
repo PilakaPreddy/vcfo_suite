@@ -3,6 +3,7 @@ import { requireAuth } from '@/auth/guards';
 import { createTask, listTasks } from '@/db/repositories/tasks';
 import type { StatusCode } from '@/data/checklist';
 import { assignTaskSchema, handleAssignTask } from '@/lib/work/assign-task';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /** GET /api/tasks — list tasks scoped by role. */
 export async function GET() {
@@ -14,7 +15,7 @@ export async function GET() {
     const tasks = await listTasks(guard.ctx);
     return NextResponse.json({ tasks });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ task }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     const status = message.includes('not permitted') || message.includes('may not') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }

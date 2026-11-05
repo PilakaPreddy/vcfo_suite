@@ -14,6 +14,7 @@ import { setSignedBoardResolution } from '@/db/repositories/board-resolution';
 import { putSignedBoardResolution } from '@/storage/board-resolution';
 import { bucketKey, deleteObject } from '@/storage/s3';
 import { ENGAGEMENT_DOCUMENTS_BUCKET } from '@/lib/board-resolution/board-resolution-storage';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -88,7 +89,7 @@ export async function POST(request: Request, context: RouteContext) {
       contentType,
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'upload_failed';
+    const message = publicErrorMessage(err, 'upload_failed');
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 
@@ -128,7 +129,7 @@ export async function POST(request: Request, context: RouteContext) {
     } catch {
       /* best-effort */
     }
-    const message = err instanceof Error ? err.message : 'save_failed';
+    const message = publicErrorMessage(err, 'save_failed');
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

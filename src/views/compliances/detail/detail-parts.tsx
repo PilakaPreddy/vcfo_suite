@@ -10,7 +10,7 @@ import { StepLink, StepMark, type StepState } from '@/components/ui/step-track';
 import { cn } from '@/lib/utils';
 import { ClientTile } from '@/views/compliances/identity';
 import { DateTile, WordChip } from '@/views/compliances/spectrum-parts';
-import { daysUntil, isIdentifier, plainDate, type SixWord } from '@/views/compliances/spectrum-status';
+import { daysUntil, isIdentifier, plainDate, type SixWord } from '@/lib/compliance/spectrum-status';
 
 /**
  * Shared parts of the statutory (COMPLIANCE-MODEL.md 4.2) and non-statutory (4.3) detail pages

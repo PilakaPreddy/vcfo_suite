@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { TimelineSaveError, saveEngagementTimeline } from '@/db/repositories/engagement-timeline';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -30,7 +31,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json({ windows });
   } catch (err) {
     if (err instanceof TimelineSaveError) return NextResponse.json({ error: err.message }, { status: err.status });
-    const message = err instanceof Error ? err.message : 'timeline_failed';
+    const message = publicErrorMessage(err, 'timeline_failed');
     const status = message.includes('not found') || message.includes('not permitted') ? 404 : message.includes('Only') ? 403 : 400;
     return NextResponse.json({ error: message }, { status });
   }

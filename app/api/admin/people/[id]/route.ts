@@ -5,6 +5,7 @@ import { deleteProfileAccount, updatePersonEmail } from '@/db/repositories/profi
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { emailSchema } from '@/lib/api/schemas';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -42,7 +43,7 @@ export async function PATCH(request: Request, ctx: Ctx) {
     });
     return NextResponse.json({ ok: true, ...updated });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'update_failed';
+    const message = publicErrorMessage(err, 'update_failed');
     const status =
       message === 'not_found'
         ? 404
@@ -89,7 +90,7 @@ export async function DELETE(_request: Request, ctx: Ctx) {
     });
     return NextResponse.json({ ok: true, ...deleted });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'delete_failed';
+    const message = publicErrorMessage(err, 'delete_failed');
     const status =
       message === 'not_found'
         ? 404

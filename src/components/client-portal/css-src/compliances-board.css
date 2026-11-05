@@ -4,33 +4,7 @@
    designer notes are left out (the shell is the shared portal chrome).
    `html.comp-live X` rules are applied unprefixed: the portal routes ARE the live boards. */
 
-/* --- month / year picker + one-line calendar header (I:2-40) --- */
-.mpk-lbl{display:flex;align-items:center;justify-content:center;min-width:150px}
-.mpk-b{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 8px;border:0;border-radius:6px;background:none;font:500 14px var(--font-sans),sans-serif;color:var(--fg);cursor:pointer}
-.mpk-b svg{color:var(--muted)}
-.mpk-b:hover,.mpk-b[aria-expanded=true]{background:var(--raised)}
-.mpk-b:focus-visible{outline:2px solid var(--navy);outline-offset:1px}
-[data-calnavr]{position:relative}
-.mpk-pop{position:absolute;top:calc(100% + 8px);right:0;z-index:40;width:304px;background:var(--panel);border:1px solid var(--border);border-radius:6px;box-shadow:var(--pop);padding:12px;box-sizing:border-box}
-.mpk-hd{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:10px}
-.mpk-mid{display:flex;align-items:center;gap:4px}
-.mpk-ar{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--navy-ink,var(--navy));display:grid;place-items:center;cursor:pointer;flex:none}
-.mpk-ar:hover{background:var(--raised)}
-.mpk-hb{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border:0;border-radius:6px;background:none;font:500 14px var(--font-sans),sans-serif;color:var(--fg);cursor:pointer}
-.mpk-hb svg{color:var(--muted)}
-.mpk-hb.on,.mpk-hb:hover{background:var(--raised)}
-.mpk-g{display:grid;gap:4px}
-.mpk-g.m{grid-template-columns:repeat(3,minmax(0,1fr))}
-.mpk-g.y{grid-template-columns:repeat(4,minmax(0,1fr));max-height:240px;overflow:auto;scrollbar-width:thin}
-.mpk-g button{height:42px;border:0;border-radius:6px;background:none;color:var(--navy-ink,var(--navy));font:500 14px var(--font-sans),sans-serif;cursor:pointer}
-.mpk-g.y button{font:500 13.5px var(--font-sans),sans-serif}
-.mpk-g button:hover{background:var(--raised)}
-.mpk-g button.now{box-shadow:inset 0 0 0 1px var(--navy)}
-.mpk-g button.on{background:var(--navy);color:#fff;box-shadow:none}
-.mpk-g button:focus-visible,.mpk-ar:focus-visible,.mpk-hb:focus-visible{outline:2px solid var(--navy);outline-offset:1px}
-.mpk-ft{display:flex;justify-content:flex-end;border-top:1px solid var(--hair);margin-top:10px;padding-top:9px}
-.mpk-ft button{border:0;background:none;color:var(--navy-ink,var(--navy));font:500 13px var(--font-sans),system-ui,sans-serif;cursor:pointer;padding:2px 4px;border-radius:5px}
-/* calendar header: navigator, FY and filters on one compact line */
+/* --- one-line calendar header (I:2-40); the month picker is the shared MonthNav island --- */
 .row-wrap:has(.calbar){flex-wrap:nowrap!important;position:relative;z-index:6}
 .row-wrap:has(.calbar)>.end{flex:none}
 .calbar{display:flex;align-items:center;gap:8px;flex:1 1 auto;min-width:0}
@@ -39,11 +13,6 @@
 .calbar>.seg-scroll{flex:0 1 auto;min-width:0}
 .row-wrap:has(.calbar) .seg button{height:28px;padding:0 9px;font-size:12px;gap:4px}
 .row-wrap:has(.calbar) .seg .cnt{font-size:10px}
-.calbar [data-calnavr] .ibtn{width:24px!important;height:28px!important}
-.calbar .mpk-lbl{min-width:0}
-.calbar .mpk-b{height:28px;padding:0 6px;font-size:13px}
-/* the picker opens from a left-hand control, so it hangs to the right */
-.mpk-pop{left:0;right:auto}
 /* --- page base (I:61-64, I:110) --- */
 *{box-sizing:border-box}
 body{font-family:var(--font-sans),system-ui,sans-serif;color:var(--fg);font-size:13px;-webkit-font-smoothing:antialiased}
@@ -277,19 +246,6 @@ circle[data-dd]{transition:stroke-width .15s}circle[data-dd]:hover{stroke-width:
 .cal .ev .a{display:none}
 /* year view: each month a small table with the same lines */
 /* --- cal-views.js: year view + timeline (CV:44-91) --- */
-.yv{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,196px),1fr));gap:12px}
-.ym{border:1px solid var(--border);border-radius:6px;padding:10px 10px 8px;background:var(--panel);cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s;text-align:left;font:inherit;color:inherit}
-.ym:hover{border-color:oklch(var(--brand-line));box-shadow:var(--pop);transform:translateY(-1px)}
-.ym.now{box-shadow:inset 0 0 0 2px var(--navy)}
-.ym-h{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-.ym-h b{font:500 12.5px var(--font-sans);color:var(--navy-ink,var(--navy));flex:1}
-.ym-h .n{font:500 11px var(--font-sans),sans-serif;color:var(--muted)}
-.ym-g{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.ym-g span{height:20px;display:grid;place-items:center;font:500 11px var(--font-sans),sans-serif;letter-spacing:-.03em;color:var(--subtle);border-radius:4px;min-width:0}
-.ym-g span.f{font-weight:500}
-.ym-g span.t{box-shadow:inset 0 0 0 1.5px var(--navy);color:var(--navy-ink,var(--navy));font-weight:500}
-.ym-s{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:7px;font:500 11px var(--font-sans);color:var(--muted)}
-.ym-s i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:3px;vertical-align:0}
 .tlv{display:flex;flex-direction:column;gap:10px}
 .tlv-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tlv-tools .hint{font-size:11.5px;color:var(--muted);flex:1 1 200px;min-width:0}
@@ -323,7 +279,6 @@ circle[data-dd]{transition:stroke-width .15s}circle[data-dd]:hover{stroke-width:
 .tlv-today{position:absolute;top:40px;bottom:0;width:2px;margin-left:-1px;background:oklch(var(--highlight-bright));pointer-events:none;z-index:4}
 
 .tlv-read{position:fixed;z-index:2147483002;pointer-events:none;background:var(--navy);color:#fff;font:500 11.5px var(--font-sans);padding:4px 8px;border-radius:6px;white-space:nowrap;transform:translate(-50%,-130%)}
-@media (prefers-reduced-motion: reduce){.ym{transition:none}}
 
 /* ======================================================================
    Portal build additions (not in the board): the live app's overlays are
@@ -423,23 +378,11 @@ circle[data-dd]{transition:stroke-width .15s}circle[data-dd]:hover{stroke-width:
 
 /* --- Round 2: Spectrum parity with the prototype (PROTOTYPE-DIFF C-258 to C-340) --- */
 @media (max-width:1279px){.row-wrap:has(.calbar){flex-wrap:wrap!important;row-gap:8px}}
-.calbar .mpk-b{font-weight:700}
-.mpk-pop{border-width:1.5px}
-.mpk-hb{font-weight:700}
-.mpk-g button.on{background:oklch(var(--brand));color:oklch(var(--on-brand))}
-.mpk-ft button{font-weight:600;color:oklch(var(--brand-text))}
 .calbar>.mono.fy-tag{height:32px;align-self:center;font:500 12px var(--font-sans),sans-serif!important;background:oklch(var(--warning-soft));color:oklch(var(--warning))}
 .cal .dow{font-weight:700;letter-spacing:.08em}
 .cal .dt{font-weight:700}
 .cal .day.today:not(.out){box-shadow:inset 0 0 0 2px oklch(var(--brand))}
 .cal .ev{font-weight:600}
-.yv{grid-template-columns:minmax(0,1fr);gap:12px;padding:4px}
-@media (min-width:420px){.yv{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media (min-width:1024px){.yv{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media (min-width:1536px){.yv{grid-template-columns:repeat(4,minmax(0,1fr))}}
-.ym-g span{font:500 10.5px var(--font-mono),ui-monospace,monospace;letter-spacing:0}
-.ym-g span.f{color:oklch(var(--surface-raised))}
-.ym-g span.t{box-shadow:0 0 0 1.5px var(--navy)}
 
 /* C-3 (COMPLIANCE-MODEL.md 4.4): a non-statutory task on its end date carries a hollow 8px
    square in ink-2 in place of the status stripe; statutory events keep the solid stripe (C-2). */

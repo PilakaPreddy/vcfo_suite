@@ -148,6 +148,8 @@ export const itemWindowRequests = pgTable(
   },
   (t) => ({
     engIdx: index('item_window_requests_engagement_idx').on(t.engagementId),
+    // A lead's own requests (item-window-requests.ts).
+    requestedByIdx: index('item_window_requests_requested_by_idx').on(t.requestedBy),
   }),
 );
 

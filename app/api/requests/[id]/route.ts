@@ -7,6 +7,7 @@ import {
 } from '@/db/repositories/document-requests';
 import type { DocRequest } from '@/data/engagements';
 import { emptyEmailDispatch } from '@/lib/email/email-dispatch';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -56,7 +57,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       : emptyEmailDispatch();
     return NextResponse.json({ request: docRequest, email });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'update_failed';
+    const message = publicErrorMessage(err, 'update_failed');
     const status = message.includes('may only') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }

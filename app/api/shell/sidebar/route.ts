@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import { getSidebarFolds } from '@/db/repositories/sidebar-folds';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /**
  * GET /api/shell/sidebar — the staff sidebar's people folds: project leads with their open
@@ -15,7 +16,7 @@ export async function GET() {
     const folds = await getSidebarFolds(guard.ctx);
     return NextResponse.json(folds, { headers: { 'cache-control': 'no-store' } });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'sidebar_failed';
+    const message = publicErrorMessage(err, 'sidebar_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

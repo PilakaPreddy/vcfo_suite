@@ -30,7 +30,7 @@ import {
   type DocWord,
   type SubjectDoc,
 } from '@/components/compliances/use-compliance-records';
-import { isIdentifier, plainDate } from '@/views/compliances/spectrum-status';
+import { isIdentifier, plainDate } from '@/lib/compliance/spectrum-status';
 
 /** Focus a field when it appears (the inline forms open on a click). */
 const focusOnMount = (el: HTMLInputElement | null) => el?.focus();

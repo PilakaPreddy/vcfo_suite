@@ -8,7 +8,8 @@
  * `src/lib/compliance/filings.ts`, so client and staff screens agree.
  */
 import { complianceGroupForAuthority } from '@/lib/client/client-overview';
-import { DUE_SOON_DAYS, todayIST } from '@/lib/compliance/filings';
+import { DUE_SOON_DAYS, filingStatus, todayIST, type FilingStatus } from '@/lib/compliance/filings';
+import { FILING_WORD, worstStatus as worstFiling } from '@/lib/compliance/spectrum-status';
 import {
   EPFO,
   ESIC,
@@ -88,19 +89,21 @@ export const AREA_FULL: Record<AreaCode, string> = {
   FEMA: 'FEMA · RBI & STPI',
 };
 
-const ST: Record<CompStatus, { l: string; c: string; v: string }> = {
-  ok: { l: 'Filed', c: 'c-ok', v: '--ok' },
-  due: { l: 'Due soon', c: 'c-due', v: '--due' },
-  over: { l: 'Overdue', c: 'c-over', v: '--over' },
-  up: { l: 'Upcoming', c: 'c-up', v: '--up' },
-};
+/** The portal's short status keys for the shared register status (`filingStatus`). */
+export const COMP_OF: Record<FilingStatus, CompStatus> = { filed: 'ok', 'due-soon': 'due', overdue: 'over', upcoming: 'up' };
+/** The shared register status for a portal key. */
+export const FILING_OF: Record<CompStatus, FilingStatus> = { ok: 'filed', due: 'due-soon', over: 'overdue', up: 'upcoming' };
+/** Re-key a map of the shared register statuses by the portal's short keys. */
+export function byComp<T>(map: Record<FilingStatus, T>): Record<CompStatus, T> {
+  return { ok: map.filed, due: map['due-soon'], over: map.overdue, up: map.upcoming };
+}
+const ST_VAR: Record<CompStatus, string> = { ok: '--ok', due: '--due', over: '--over', up: '--up' };
 export const ST_TIP: Record<CompStatus, string> = {
   ok: 'Filed',
   due: `Due within ${DUE_SOON_DAYS} days`,
   over: 'Late · past the due date',
   up: 'Upcoming',
 };
-const RANK: Record<CompStatus, number> = { over: 3, due: 2, up: 1, ok: 0 };
 
 /* ------------------------------------------------------------------ dates */
 
@@ -184,15 +187,13 @@ export function fyMonths(startYear: number): string[] {
 
 /* ---------------------------------------------------------------- status */
 
+/** The shared register status (`filingStatus` in `src/lib/compliance/filings.ts`) on the IST day `today`. */
 export function statusOf(f: Pick<PortalFiling, 'filedOn' | 'dueDate'>, today: string): CompStatus {
-  if (f.filedOn) return 'ok';
-  const d = daysBetween(today, f.dueDate);
-  if (d < 0) return 'over';
-  if (d <= DUE_SOON_DAYS) return 'due';
-  return 'up';
+  return COMP_OF[filingStatus(f, D(today))];
 }
+/** The worst status of a set (`worstStatus` in spectrum-status.ts); an empty set reads as filed. */
 export function worstStatus(rows: Pick<PortalFiling, 'filedOn' | 'dueDate'>[], today: string): CompStatus {
-  return rows.reduce<CompStatus>((w, r) => (RANK[statusOf(r, today)] > RANK[w] ? statusOf(r, today) : w), 'ok');
+  return rows.length ? COMP_OF[worstFiling(rows.map((r) => filingStatus(r, D(today))))] : 'ok';
 }
 export function countByStatus(rows: PortalFiling[], today: string): Record<CompStatus, number> {
   const c: Record<CompStatus, number> = { ok: 0, due: 0, over: 0, up: 0 };
@@ -201,11 +202,11 @@ export function countByStatus(rows: PortalFiling[], today: string): Record<CompS
 }
 /** Date tile ground (K-30, audit 162): a soft tint of the status, never a solid block. */
 export function tileVar(s: CompStatus): string {
-  return `var(${ST[s].v}-light)`;
+  return `var(${ST_VAR[s]}-light)`;
 }
 /** Date tile text: the status's text-safe colour, paired with tileVar. */
 export function tileInk(s: CompStatus): string {
-  return `var(${ST[s].v}-text)`;
+  return `var(${ST_VAR[s]}-text)`;
 }
 export function sortByDue<T extends { dueDate: string; name?: string }>(rows: T[]): T[] {
   return [...rows].sort((a, b) => a.dueDate.localeCompare(b.dueDate) || (a.name ?? '').localeCompare(b.name ?? ''));
@@ -404,12 +405,23 @@ export interface TrackNode {
   tip: string;
   icon?: 'gear' | 'person' | 'check' | 'file';
 }
+/**
+ * Which of the four workflow steps is live: 0 send data, 1 SBC preparing, 2 client approves,
+ * 3 filing, 4 when filed. Steps 0 and 2 are the client's move.
+ */
+export function workflowStep(f: Pick<PortalFiling, 'filedOn' | 'dataReceivedOn' | 'preparingSince' | 'approvedOn' | 'draftDueOn' | 'rawStatus'>, today: string): number {
+  if (f.filedOn) return 4;
+  if (!f.dataReceivedOn && !f.preparingSince && !f.approvedOn) return 0;
+  if (f.approvedOn) return 3;
+  return f.draftDueOn && f.draftDueOn < today && f.rawStatus !== 'in-progress' ? 2 : 1;
+}
 /** The four workflow steps; dates come only from data (never invented). */
 export function focusNodes(f: PortalFiling, companyShort: string, today: string): TrackNode[] {
   const filed = Boolean(f.filedOn);
-  const dataDone = filed || Boolean(f.dataReceivedOn) || Boolean(f.preparingSince) || Boolean(f.approvedOn);
-  const prepDone = filed || Boolean(f.approvedOn) || (Boolean(f.draftDueOn) && f.draftDueOn! < today && f.rawStatus !== 'in-progress');
-  const apprDone = filed || Boolean(f.approvedOn);
+  const live = workflowStep(f, today);
+  const dataDone = live > 0;
+  const prepDone = live > 1;
+  const apprDone = live > 2;
   const steps: { done: boolean; label: string; doneLabel: string; at: string | null; pending: string; tip: string; icon: TrackNode['icon']; you?: boolean }[] = [
     // While pending this is the client's move: 'Send data', not a done-sounding 'Data received' (TL-21).
     { done: dataDone, label: 'Send data', doneLabel: filed ? 'Data' : 'Data received', at: f.dataReceivedOn, pending: 'waiting on you', tip: 'Waiting on you · send the data', icon: 'file', you: true },
@@ -457,7 +469,7 @@ function csvEscape(v: string | number | null | undefined): string {
 export function filingsCsv(rows: PortalFiling[], today: string): string {
   const head = ['Due date', 'Area', 'Filing', 'Period', 'Frequency', 'Authority', 'Status', 'Filed on', 'ARN', 'Tax paid (INR)', 'Proof files'];
   const lines = sortByDue(rows).map((r) =>
-    [r.dueDate, AREA_LABEL[r.area], r.name, r.period, r.freqLabel, r.authorityName, ST[statusOf(r, today)].l, r.filedOn ?? '', r.acknowledgementNo ?? '', r.amountPaid ?? '', r.proofCount]
+    [r.dueDate, AREA_LABEL[r.area], r.name, r.period, r.freqLabel, r.authorityName, FILING_WORD[FILING_OF[statusOf(r, today)]], r.filedOn ?? '', r.acknowledgementNo ?? '', r.amountPaid ?? '', r.proofCount]
       .map(csvEscape)
       .join(','),
   );

@@ -4,6 +4,7 @@ import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { getOutlookStatus, updateOutlookSignature } from '@/db/repositories/outlook-connections';
 import { outlookConfigured } from '@/lib/outlook/oauth';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /** GET /api/outlook — connection status for the signed-in staff user. */
 export async function GET() {
@@ -18,7 +19,7 @@ export async function GET() {
       ...status,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'status_failed';
+    const message = publicErrorMessage(err, 'status_failed');
     const status = message.includes('not permitted') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }
@@ -50,7 +51,7 @@ export async function PATCH(request: Request) {
     const status = await updateOutlookSignature(guard.ctx, body.data);
     return NextResponse.json({ configured: outlookConfigured(), ...status });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'save_failed';
+    const message = publicErrorMessage(err, 'save_failed');
     const status =
       message === 'outlook_not_connected' ? 409 : message.includes('not permitted') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });

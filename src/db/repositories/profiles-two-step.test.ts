@@ -50,6 +50,11 @@ const recordAuditEvent = vi.fn();
 vi.mock('@/db/repositories/audit-events', () => ({
   recordAuditEvent: (...a: unknown[]) => recordAuditEvent(...a),
 }));
+vi.mock('@/db/repositories/rate-limits', () => ({
+  systemTakeRateLimit: vi.fn(async () => true),
+  systemPeekRateLimit: vi.fn(async () => 0),
+  systemClearRateLimit: vi.fn(async () => undefined),
+}));
 vi.mock('@/db/repositories/notification-prefs', () => ({ systemGetWhatsAppGatePrefs: vi.fn() }));
 
 const repo = await import('@/db/repositories/profiles');

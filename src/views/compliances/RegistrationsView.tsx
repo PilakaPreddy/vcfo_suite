@@ -16,7 +16,7 @@ import type { Engagement } from '@/data/engagements';
 import { REG_SHORT } from '@/lib/client-portal/credentials';
 import { cn } from '@/lib/utils';
 import { ALL_COMPANIES, normaliseCompanyParam, soleCompany, type ComplianceScope } from '@/views/compliances/compliance-scope';
-import { isIdentifier, plainDate } from '@/views/compliances/spectrum-status';
+import { isIdentifier, plainDate } from '@/lib/compliance/spectrum-status';
 import { FilterStrip, FlowCard, RailCard, WordChip, type StripItem } from '@/views/compliances/spectrum-parts';
 import { useViewParams } from '@/views/compliances/view-params';
 import { RenewByCell } from '@/views/compliances/registration-renewal';

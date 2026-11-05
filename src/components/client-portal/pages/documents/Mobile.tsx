@@ -53,7 +53,8 @@ export function DocsMobile({
   onOpenFile: (n: DocNode, list: DocNode[]) => void;
   onUpload: (requestId?: string, file?: File) => void;
 }) {
-  const { go } = usePortal();
+  // Staff see this inside a card that clips, so the controls wrap there instead of scrolling past its edge.
+  const { go, engagementId: staffView } = usePortal();
   const [statusOn, setStatusOn] = useState(true);
   const [hid, setHid] = useState(false);
   const entries = useMemo(() => buildEntries(data.nodes, model, view).filter((e) => e.kind === 'folder' || hid || !e.node.replaced), [data.nodes, model, view, hid]);
@@ -230,7 +231,7 @@ export function DocsMobile({
             </svg>
           </button>
         </div>
-        <div className="vdm-tools" role="toolbar" aria-label="Document controls">
+        <div className={staffView ? 'vdm-tools wrap' : 'vdm-tools'} role="toolbar" aria-label="Document controls">
           <button type="button" className="sx-filter" aria-pressed={statusOn} onClick={() => setStatusOn((v) => !v)}>
             <span className="vdm-dots" aria-hidden="true">
               <i style={{ background: 'oklch(var(--positive-mid))' }} />

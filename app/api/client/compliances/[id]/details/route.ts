@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { complianceErrorStatus, upsertFilingDetails } from '@/db/repositories/client-compliances';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -31,6 +32,6 @@ export async function PATCH(request: Request, ctx: Ctx) {
   } catch (e) {
     const status = complianceErrorStatus(e);
     if (status == null) throw e;
-    return NextResponse.json({ error: (e as Error).message }, { status });
+    return NextResponse.json({ error: publicErrorMessage(e, 'request_failed') }, { status });
   }
 }

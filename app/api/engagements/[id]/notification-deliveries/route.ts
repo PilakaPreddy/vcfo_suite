@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdminOrManager } from '@/auth/guards';
 import { listDeliveriesByEngagement } from '@/db/repositories/notification-deliveries';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -23,7 +24,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const deliveries = await listDeliveriesByEngagement(guard.ctx, id);
     return NextResponse.json({ deliveries });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

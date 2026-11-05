@@ -34,6 +34,7 @@ import {
 import { engagementDbId } from '@/lib/projects/legacy-engagement-ids';
 import { isFirmWideAdmin } from '@/lib/auth';
 import { emptyEmailDispatch } from '@/lib/email/email-dispatch';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -168,10 +169,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       };
 
       if (prevId && prevId !== nextId) {
+        // The engagement already moved, so a failure here is logged rather than undoing it.
         await removeEngagementManager({
           engagementDbId: row.id,
           managerId: prevId,
-        }).catch(() => undefined);
+        }).catch((e) => console.error('[engagements/:id] previous manager membership not removed', e));
         const prev = await systemGetProfileParty(prevId);
         if (prev) {
           const part = await notifyTeamAssignmentSoon({
@@ -223,7 +225,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     return NextResponse.json({ engagement, email });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'update_failed';
+    const message = publicErrorMessage(err, 'update_failed');
     const status = message.includes('not found') ? 404 : 400;
     return NextResponse.json({ error: message }, { status });
   }
@@ -260,7 +262,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
     return NextResponse.json({ ok: true, deletedId: toAppEngagement(row).id });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'delete_failed';
+    const message = publicErrorMessage(err, 'delete_failed');
     const status = message.includes('not found') ? 404 : message.includes('Only firm admins') ? 403 : 400;
     return NextResponse.json({ error: message }, { status });
   }

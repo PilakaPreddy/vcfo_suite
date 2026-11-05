@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import { getClientHome } from '@/db/repositories/client-home';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /**
  * GET /api/client/home?engagementId= — the Home page aggregate (client portal
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     if (!home) return NextResponse.json({ error: 'No engagement found' }, { status: 404 });
     return NextResponse.json({ home });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'fetch_failed';
+    const message = publicErrorMessage(err, 'fetch_failed');
     return NextResponse.json(
       { error: 'fetch_failed', detail: process.env.NODE_ENV === 'development' ? message : undefined },
       { status: 500 },

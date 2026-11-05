@@ -3,6 +3,7 @@ import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { deleteMailGroup, MailGroupError, updateMailGroup } from '@/db/repositories/mail-groups';
 import { groupIdSchema, updateMailGroupSchema } from '../schema';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -10,7 +11,7 @@ function fail(err: unknown) {
   if (err instanceof MailGroupError) {
     return NextResponse.json({ error: err.message }, { status: err.status });
   }
-  const message = err instanceof Error ? err.message : 'groups_failed';
+  const message = publicErrorMessage(err, 'groups_failed');
   return NextResponse.json({ error: message }, { status: 500 });
 }
 

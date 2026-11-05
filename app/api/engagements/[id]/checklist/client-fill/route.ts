@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -85,7 +86,7 @@ export async function POST(request: Request, context: RouteContext) {
       email,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'client_fill_failed';
+    const message = publicErrorMessage(err, 'client_fill_failed');
     const friendly: Record<string, string> = {
       client_fill_already_pending: 'This step is already waiting on manager approval.',
       client_fill_already_with_client: 'The client has already been asked to fill this step.',

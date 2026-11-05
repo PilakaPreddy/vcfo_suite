@@ -8,6 +8,7 @@ import {
   listProspects,
 } from '@/db/repositories/prospects';
 import { prospectCreateSchema } from '@/lib/growth/prospect-schema';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /**
  * GET  /api/super/growth/prospects — the sales pipeline and the owner picker (G-21).
@@ -57,7 +58,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ prospect }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     return NextResponse.json({ error: message }, { status: errorStatus(message) });
   }
 }

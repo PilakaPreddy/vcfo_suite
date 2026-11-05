@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { setDocumentReview } from '@/db/repositories/documents';
+import { publicErrorMessage } from '@/lib/api-error';
 
 const bodySchema = z
   .object({
@@ -40,7 +41,7 @@ export async function PATCH(request: Request) {
     if (!document) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
     return NextResponse.json({ ok: true, document });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'review_failed';
+    const message = publicErrorMessage(err, 'review_failed');
     if (message === 'review_note_required') return NextResponse.json({ ok: false, error: message }, { status: 400 });
     if (message.includes('not permitted')) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     return NextResponse.json({ ok: false, error: 'review_failed' }, { status: 500 });

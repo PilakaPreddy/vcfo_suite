@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import {
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
     const notifications = await listNotifications(guard.ctx, { includeDismissed });
     return NextResponse.json({ notifications });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -102,7 +103,7 @@ export async function POST(request: Request) {
       const notifications = await dismissNotifications(guard.ctx, ids);
       return NextResponse.json({ notifications });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'dismiss_failed';
+      const message = publicErrorMessage(err, 'dismiss_failed');
       return NextResponse.json({ error: message }, { status: 500 });
     }
   }
@@ -117,7 +118,7 @@ export async function POST(request: Request) {
       const notifications = await restoreNotifications(guard.ctx, ids);
       return NextResponse.json({ notifications });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'restore_failed';
+      const message = publicErrorMessage(err, 'restore_failed');
       return NextResponse.json({ error: message }, { status: 500 });
     }
   }

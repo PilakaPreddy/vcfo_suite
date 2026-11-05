@@ -3,6 +3,7 @@ import { rejectLargeBody } from '@/lib/api/body-limit';
 import { requireAuth } from '@/auth/guards';
 import { needUploadTarget, recordNeedUploads, undoNeedUpload } from '@/db/repositories/client-home';
 import { bucketKey, deleteObject, putObject } from '@/storage/s3';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -93,7 +94,7 @@ export async function POST(request: Request, context: RouteContext) {
     );
   } catch (err) {
     await cleanUp();
-    const message = err instanceof Error ? err.message : 'upload_failed';
+    const message = publicErrorMessage(err, 'upload_failed');
     return NextResponse.json({ error: message === 'request_closed' ? 'This request is already closed' : 'upload_failed' }, { status: 400 });
   }
 }

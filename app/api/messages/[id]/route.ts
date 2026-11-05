@@ -5,6 +5,7 @@ import { setMessageTriage } from '@/db/repositories/client-messages';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { MESSAGE_TRIAGE_LABEL } from '@/lib/messages/types';
 import { triagePatchSchema } from '@/lib/messages/schemas';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -29,7 +30,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
     return NextResponse.json({ message });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'triage_failed';
+    const msg = publicErrorMessage(err, 'triage_failed');
     if (msg.startsWith('Only client messages')) return NextResponse.json({ error: msg }, { status: 400 });
     console.error('[api/messages/:id] triage failed', err);
     return NextResponse.json({ error: 'Could not update the message' }, { status: 500 });

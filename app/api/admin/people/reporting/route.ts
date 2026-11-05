@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/auth/guards';
@@ -47,7 +48,7 @@ export async function PATCH(request: Request) {
     if (err instanceof FirmOrgForbiddenError) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
-    const message = err instanceof Error ? err.message : 'update_failed';
+    const message = publicErrorMessage(err, 'update_failed');
     const status = message === 'manager_not_found' || message === 'admin_not_found' ? 400 : 500;
     return NextResponse.json({ error: message }, { status });
   }

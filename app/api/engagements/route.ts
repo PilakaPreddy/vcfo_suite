@@ -17,6 +17,7 @@ import { fetchEngagementProgressCcEmails } from '@/lib/email/fetch-engagement-pr
 import { resolvePortalUrl, sendWelcomeEmail } from '@/lib/email/welcome-email';
 import { queueWhatsAppSend } from '@/lib/notify/send-whatsapp';
 import { firstNameOf } from '@/lib/notify/templates';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /**
  * GET /api/engagements — role-scoped list.
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
   try {
     created = await createProjectWithClient(auth.ctx, data);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     if (message === 'email_already_registered') {
       return NextResponse.json({ error: message }, { status: 409 });
     }
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
       portalUrl: resolvePortalUrl(),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'welcome_email_failed';
+    const message = publicErrorMessage(err, 'welcome_email_failed');
     emailResult = { ok: false, error: message };
   }
 

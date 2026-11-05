@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/auth/guards';
 import { listAuditEvents } from '@/db/repositories/audit-events';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /**
  * GET /api/audit-logs — role-scoped audit feed (Path A in listAuditEvents).
@@ -56,7 +57,7 @@ export async function GET(request: Request) {
       scope: engagementId ? 'project' : 'global',
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'fetch_failed';
+    const message = publicErrorMessage(err, 'fetch_failed');
     return NextResponse.json(
       {
         ok: false,

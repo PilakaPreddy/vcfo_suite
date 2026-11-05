@@ -4,6 +4,7 @@ import { requireOwnAccount } from '@/auth/guards';
 import { getOwnProfile, updateOwnProfile } from '@/db/repositories/profiles';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { emailSchema } from '@/lib/api/schemas';
+import { publicErrorMessage } from '@/lib/api-error';
 
 const patchSchema = z.object({
   name: z.string().trim().min(1, 'name_required').max(120),
@@ -73,7 +74,7 @@ export async function PATCH(request: Request) {
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'update_failed';
+    const message = publicErrorMessage(err, 'update_failed');
     return NextResponse.json({ ok: false, error: message }, { status: 400 });
   }
 }
