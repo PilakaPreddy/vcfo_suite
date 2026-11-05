@@ -4,14 +4,17 @@ import { z } from 'zod';
 
 import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
-import { findByCacheKey, recordDocument } from '@/db/repositories/labour-registers';
+import { findByCacheKey, listVerifications, recordDocument } from '@/db/repositories/labour-registers';
 import { draftKey, GENERATOR_REVISION, hashRows, type AssumptionSet, type DocumentIdentity } from '@/lib/labour-registers/cache-key';
+import { signatoriesFor } from '@/data/labour-registers/signatories';
 import { retentionYears } from '@/lib/labour-registers/catalogue';
 import { ProjectionError, projectForm, type ProjectedTable } from '@/lib/labour-registers/project';
 import { documentFileName, documentObjectKey, periodLabel } from '@/lib/labour-registers/storage';
 import { isBuilt } from '@/lib/labour-registers/xlsx/layouts';
+import { renderRegisterPdf } from '@/lib/labour-registers/pdf/render-register';
 import { renderForForm } from '@/lib/labour-registers/xlsx/renderers';
 import { templateVersionFor } from '@/lib/labour-registers/xlsx/version';
+import { resolveVerification, verificationIndex } from '@/lib/labour-registers/verification';
 import { loadBatchDataset } from '@/views/labour-registers/load-dataset';
 import { EXTENSION_TO_MIME } from '@/lib/upload-limits';
 import { putObject } from '@/storage/s3';
@@ -39,8 +42,13 @@ import { putObject } from '@/storage/s3';
  * Nothing is generated before the period is closed: `recordDocument` refuses on an unlocked
  * batch, and this route refuses earlier with a clearer message.
  *
- * POST /api/labour-registers/generate  { batchId, formIds?, companyName? }
- *   → { documents: [...], blocked: [...], deferred: [...] }
+ * `formats` decides what comes out. The default is the workbook alone, because that is what a
+ * preparer works from. Asking for the PDF as well produces the printout that gets signed: it
+ * is content-addressed under the same key with a different extension, so the two formats are
+ * two files of one document rather than two documents.
+ *
+ * POST /api/labour-registers/generate  { batchId, formIds?, companyName?, formats? }
+ *   → { documents: [...], blocked: [...], deferred: [...], suppressed: [...] }
  */
 export const maxDuration = 300;
 
@@ -50,6 +58,8 @@ const bodySchema = z.object({
   formIds: z.array(z.string().min(1).max(64)).max(64).optional(),
   /** The establishment name to print, where the caller knows it. */
   companyName: z.string().max(200).optional(),
+  /** Which files to produce. The workbook alone, by default. */
+  formats: z.array(z.enum(['xlsx', 'pdf'])).min(1).max(2).optional(),
 });
 
 export async function POST(request: Request) {
@@ -71,18 +81,36 @@ export async function POST(request: Request) {
   }
 
   const wanted = body.data.formIds ? new Set(body.data.formIds) : null;
+  const formats = body.data.formats ?? ['xlsx'];
   const assumptions = (batch.assumptions ?? { fullAttendanceAssumed: false }) as AssumptionSet;
   const generatedAt = new Date().toISOString();
   const label = periodLabel(period);
 
-  const documents: Array<{ formId: string; documentId: string; fileName: string; built: boolean }> = [];
+  /* The firm's own verdicts, read once for the whole batch. A form with no row keeps the
+     catalogue's claim, which is the common case and costs nothing. */
+  const verdicts = verificationIndex(await listVerifications(guard.ctx));
+
+  const documents: Array<{ formId: string; documentId: string; fileName: string; format: string; built: boolean }> = [];
   const blocked: Array<{ formId: string; reason: string }> = [];
   const deferred: Array<{ formId: string; reason: string }> = [];
+  const suppressed: Array<{ formId: string; reason: string }> = [];
 
   for (const form of forms) {
     if (wanted && !wanted.has(form.id)) continue;
     if (!isBuilt(form.archetype)) {
       deferred.push({ formId: form.id, reason: `The ${form.archetype} archetype is not built yet.` });
+      continue;
+    }
+
+    /* The firm has decided this register is not one it owes. Reported rather than skipped
+       silently: a gap in an act's folder that nobody can account for is worse than a line
+       saying who decided it was not needed and why. */
+    const verdict = resolveVerification(form, verdicts);
+    if (verdict.suppressed) {
+      suppressed.push({
+        formId: form.id,
+        reason: verdict.suppressedReason || 'The firm has recorded that this register does not apply.',
+      });
       continue;
     }
 
@@ -110,68 +138,89 @@ export async function POST(request: Request) {
       formId: form.id,
       period: period.from.slice(0, 7) === period.to.slice(0, 7) ? period.from.slice(0, 7) : `${period.from}..${period.to}`,
       inputsHash: hashRows(rowObjects, fields),
-      templateVersion: templateVersionFor(form),
+      templateVersion: templateVersionFor(form, verdict.fromFirm ? verdict : undefined),
       assumptions,
       locale: batch.locale,
       timeZone: batch.timeZone,
     };
     const cacheKey = draftKey(identity);
 
-    const hit = await findByCacheKey(guard.ctx, batch.id, form.id, cacheKey, 'xlsx');
-    if (hit) {
-      documents.push({ formId: form.id, documentId: hit.id, fileName: documentFileName(form, period), built: false });
-      continue;
-    }
-
-    const buffer = await renderForForm(table, {
+    const meta = {
       establishment: dataset.master,
       periodLabel: label,
       generatedAt,
       generatorRevision: GENERATOR_REVISION,
       cacheKey,
-    });
+      verification: verdict.fromFirm ? verdict : undefined,
+    };
 
-    const objectKey = documentObjectKey({
-      engagementId: batch.engagementId,
-      batchId: batch.id,
-      formId: form.id,
-      cacheKey,
-      format: 'xlsx',
-    });
-    await putObject(objectKey, buffer, EXTENSION_TO_MIME.xlsx);
+    for (const format of formats) {
+      const hit = await findByCacheKey(guard.ctx, batch.id, form.id, cacheKey, format);
+      if (hit) {
+        documents.push({
+          formId: form.id,
+          documentId: hit.id,
+          fileName: documentFileName(form, period, format),
+          format,
+          built: false,
+        });
+        continue;
+      }
 
-    /* Everything an evidence certificate needs, recorded at the moment it was true: what went
-       in, what came out, under which mapping and which assumptions, and what printed nil. */
-    const row = await recordDocument(guard.ctx, {
-      batchId: batch.id,
-      formId: form.id,
-      cacheKey,
-      objectKey,
-      artifactSha256: createHash('sha256').update(buffer).digest('hex'),
-      byteLength: buffer.byteLength,
-      format: 'xlsx',
-      templateVersion: identity.templateVersion,
-      generatorRevision: GENERATOR_REVISION,
-      manifest: {
-        identity,
-        mapping: dataset.mapping,
-        sources,
-        employees: dataset.employees.length,
-        nilColumns: table.nil,
-        notes: table.notes,
-        orphanRows: dataset.orphans.length,
-      },
-      retainUntil: String(new Date(period.to).getUTCFullYear() + retentionYears([form])),
-    });
-    if (!row) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+      const buffer = format === 'pdf' ? await renderRegisterPdf(table, meta) : await renderForForm(table, meta);
 
-    documents.push({ formId: form.id, documentId: row.id, fileName: documentFileName(form, period), built: true });
+      const objectKey = documentObjectKey({
+        engagementId: batch.engagementId,
+        batchId: batch.id,
+        formId: form.id,
+        cacheKey,
+        format,
+      });
+      await putObject(objectKey, buffer, format === 'pdf' ? EXTENSION_TO_MIME.pdf : EXTENSION_TO_MIME.xlsx);
+
+      /* Everything an evidence certificate needs, recorded at the moment it was true: what
+         went in, what came out, under which mapping and which assumptions, and what printed
+         nil. */
+      const row = await recordDocument(guard.ctx, {
+        batchId: batch.id,
+        formId: form.id,
+        cacheKey,
+        objectKey,
+        artifactSha256: createHash('sha256').update(buffer).digest('hex'),
+        byteLength: buffer.byteLength,
+        format,
+        templateVersion: identity.templateVersion,
+        generatorRevision: GENERATOR_REVISION,
+        manifest: {
+          identity,
+          mapping: dataset.mapping,
+          sources,
+          employees: dataset.employees.length,
+          nilColumns: table.nil,
+          notes: table.notes,
+          orphanRows: dataset.orphans.length,
+          verification: verdict,
+          signatories: signatoriesFor(form).map((b) => b.label),
+        },
+        retainUntil: String(new Date(period.to).getUTCFullYear() + retentionYears([form])),
+      });
+      if (!row) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+
+      documents.push({
+        formId: form.id,
+        documentId: row.id,
+        fileName: documentFileName(form, period, format),
+        format,
+        built: true,
+      });
+    }
   }
 
   return NextResponse.json({
     documents,
     blocked,
     deferred,
+    suppressed,
     builtCount: documents.filter((d) => d.built).length,
     fromStorage: documents.filter((d) => !d.built).length,
   });

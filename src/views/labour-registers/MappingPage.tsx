@@ -81,6 +81,7 @@ const SLOT_LABEL: Record<UploadSlot, string> = {
   attendance: 'Attendance',
   overtime: 'Overtime',
   employees: 'Employee details',
+  leave: 'Leave',
 };
 
 /** The one place a bucket becomes a word. Never a number. */

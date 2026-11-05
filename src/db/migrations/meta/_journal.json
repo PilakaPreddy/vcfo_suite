@@ -316,6 +316,13 @@
       "when": 1793819323847,
       "tag": "0044_engagement_partner_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793840206514,
+      "tag": "0045_labour_registers_second_pass",
+      "breakpoints": true
     }
   ]
 }

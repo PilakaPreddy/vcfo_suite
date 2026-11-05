@@ -195,7 +195,7 @@ export function buildDataset(input: BuildDatasetInput): Dataset {
   /* One mapping across every slot, for the manifest. A field mapped in two sheets keeps the
      paysheet's heading, because that is the sheet the roll is built from. */
   const mapping: Record<string, string> = {};
-  for (const slot of ['employees', 'overtime', 'attendance', 'paysheet'] as const) {
+  for (const slot of ['leave', 'employees', 'overtime', 'attendance', 'paysheet'] as const) {
     const s = input.slots[slot];
     if (s) Object.assign(mapping, s.mapping);
   }
@@ -231,8 +231,8 @@ export function buildDataset(input: BuildDatasetInput): Dataset {
     order.push(key);
   }
 
-  /* The three that left-join onto it. */
-  for (const slot of ['attendance', 'overtime', 'employees'] as const) {
+  /* The four that left-join onto it. */
+  for (const slot of ['attendance', 'overtime', 'employees', 'leave'] as const) {
     const s = input.slots[slot];
     if (!s) continue;
 

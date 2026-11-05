@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { UPLOAD_SLOTS } from '@/lib/labour-registers/parse';
+
 import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { getBatch, listUploads, saveColumnMap } from '@/db/repositories/labour-registers';
@@ -32,7 +34,7 @@ import type { UploadSlot } from '@/lib/labour-registers/parse';
  */
 const bodySchema = z.object({
   batchId: z.string().min(1).max(64),
-  slot: z.enum(['paysheet', 'attendance', 'overtime', 'employees']),
+  slot: z.enum(UPLOAD_SLOTS),
   /** Canonical field to the heading it is taken from, as the client's file spells it. */
   mapping: z.record(z.string().min(1).max(80), z.string().min(1).max(300)),
   /** Per field, the client's own values to ours. */

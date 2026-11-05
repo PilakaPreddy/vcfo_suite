@@ -20,6 +20,7 @@ import { fieldByKey, type FieldKind } from '@/data/labour-registers/fields';
 import type { ColumnSource, FormColumn, FormSpec } from '@/data/labour-registers/types';
 import { nilColumns } from './catalogue';
 import type { Dataset, DatasetEmployee } from './dataset';
+import { AGGREGATORS, headCountNote } from './aggregate';
 import { DERIVERS, DerivationBlocked, deriveValue, num, type DeriveContext } from './derive';
 
 /** One column of the table, after the day grid has been expanded. */
@@ -103,16 +104,50 @@ function format(kind: FieldKind, raw: string | number | null | undefined): strin
  * muster roll that contradicts itself. So the week-off rule recorded with the assumption is
  * applied, and only the remaining days read as present.
  */
+export type WeekOffRule = 'none' | 'sun' | 'sat-sun' | 'alt-sat-sun';
+
+const WEEK_OFF_RULES: WeekOffRule[] = ['none', 'sun', 'sat-sun', 'alt-sat-sun'];
+
+/**
+ * The week-off rule a stated-present month is printed under.
+ *
+ * Unrecognised and absent both mean `none`, and that is the whole reason this function exists
+ * rather than two `if` chains. The grid and the footnote used to read the raw value separately:
+ * the grid fell through to `P` for anything it did not know, while the footnote fell through to
+ * "Sundays are shown as the weekly off". A value of `'Sunday'` — the word rather than the key —
+ * produced a muster roll with `P` on every Sunday and a note underneath saying those Sundays
+ * were off. A register contradicting itself in its own footnote is worse than one that says
+ * plainly that every day is marked present.
+ */
+export function weekOffRule(weekOff: string | undefined): WeekOffRule {
+  return WEEK_OFF_RULES.includes(weekOff as WeekOffRule) ? (weekOff as WeekOffRule) : 'none';
+}
+
+/** What the footnote says about that rule. One wording, derived from the same value. */
+export function weekOffNote(weekOff: string | undefined): string {
+  switch (weekOffRule(weekOff)) {
+    case 'sun':
+      return ' Sundays are shown as the weekly off.';
+    case 'sat-sun':
+      return ' Saturdays and Sundays are shown as the weekly off.';
+    case 'alt-sat-sun':
+      return ' Sundays and alternate Saturdays are shown as the weekly off.';
+    default:
+      return ' No weekly off was recorded, so every day is marked present.';
+  }
+}
+
 export function assumedCode(period: { from: string }, day: number, weekOff: string | undefined): string {
-  if (!weekOff || weekOff === 'none') return 'P';
+  const rule = weekOffRule(weekOff);
+  if (rule === 'none') return 'P';
 
   const date = new Date(`${period.from.slice(0, 8)}${String(day).padStart(2, '0')}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return 'P';
   const dow = date.getUTCDay();
 
-  if (weekOff === 'sun') return dow === 0 ? 'WO' : 'P';
-  if (weekOff === 'sat-sun') return dow === 0 || dow === 6 ? 'WO' : 'P';
-  if (weekOff === 'alt-sat-sun') {
+  if (rule === 'sun') return dow === 0 ? 'WO' : 'P';
+  if (rule === 'sat-sun') return dow === 0 || dow === 6 ? 'WO' : 'P';
+  if (rule === 'alt-sat-sun') {
     if (dow === 0) return 'WO';
     /* The second and fourth Saturday, which is the common Indian office rule. */
     if (dow === 6) return Math.ceil(day / 7) % 2 === 0 ? 'WO' : 'P';
@@ -148,6 +183,15 @@ function expandGrid(col: FormColumn, dataset: Dataset, ordinal: number): Project
 }
 
 export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
+  /* A layout nobody has seen cannot be produced. Telangana Form XXVII is the case: its
+     columns are recorded as `[1]` to `[7]`, and a sheet with seven columns headed that way is
+     worse than no sheet — it looks filed and says nothing. */
+  if (form.layoutPlaceholder) {
+    throw new ProjectionError(form.id, [], [
+      'the prescribed column layout is not known, so the form is not produced; record it on the verification screen',
+    ]);
+  }
+
   const mapped = new Set(Object.keys(dataset.mapping));
   const nilFields = new Set(nilColumns(form, mapped).map((c) => c.field));
 
@@ -182,6 +226,20 @@ export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
      * so a column with a deriver behind it is derived instead, and blocks if it cannot be.
      * A column with no deriver — a night shift allowance — still prints nil.
      */
+    /* An aggregate is a figure about the establishment, not a column of anybody's row, so
+       none of the mapping rules below apply to it. */
+    if (col.source === 'aggregate') {
+      columns.push({
+        field: col.field,
+        heading: col.heading,
+        ordinal,
+        source: 'aggregate',
+        kind: col.field.startsWith('count') ? 'number' : 'money',
+        nil: false,
+      });
+      continue;
+    }
+
     const derivable = col.source === 'input' && !mapped.has(col.field) && DERIVERS[col.field] !== undefined;
     const isNil = nilFields.has(col.field) && !derivable;
 
@@ -212,6 +270,42 @@ export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
 
   const blocked = new Set<string>();
   const rows: ProjectedTable['rows'] = [];
+
+  /*
+   * A return is one row about an establishment; a register is many rows about people.
+   *
+   * So a periodic return does not iterate the roll at all. Its aggregate columns are figures
+   * over the whole dataset, and its non-aggregate columns — Form D's "category of workers" —
+   * take the first row's value, because a return filed per category is filed once per
+   * category and this product produces one.
+   */
+  if (form.archetype === 'periodicReturn') {
+    const aggCtx = { period: dataset.period, days: dataset.days };
+    const first = dataset.employees[0];
+    rows.push(
+      columns.map((col) => {
+        if (col.source === 'aggregate') {
+          const fn = AGGREGATORS[col.field];
+          return fn ? fn(dataset.employees, aggCtx) : null;
+        }
+        if (col.source === 'signature') return null;
+        if (!first) return null;
+        if (col.source === 'master') return format(col.kind, masterValue(col.field, first, dataset));
+        return format(col.kind, first.values[col.field]);
+      }),
+    );
+
+    const notes = noteLines(columns, dataset);
+    const count = headCountNote(dataset.employees);
+    if (count) notes.push(count);
+    return {
+      form,
+      columns,
+      rows,
+      nil: columns.filter((c) => c.nil).map((c) => ({ heading: c.heading, field: c.field })),
+      notes,
+    };
+  }
 
   for (const [index, employee] of dataset.employees.entries()) {
     const row: Array<string | number | null> = [];
@@ -276,26 +370,29 @@ export function projectForm(form: FormSpec, dataset: Dataset): ProjectedTable {
     .filter((c) => c.nil)
     .map((c) => ({ heading: c.heading, field: c.field }));
 
+  return { form, columns, rows, nil, notes: noteLines(columns, dataset) };
+}
+
+/**
+ * What is printed under the table, whatever shape the form is.
+ *
+ * Shared by the register path and the return path, because a return printed under an assumed
+ * month should say so exactly as a muster roll does.
+ */
+function noteLines(columns: ProjectedColumn[], dataset: Dataset): string[] {
   const notes: string[] = [];
+  const nil = columns.filter((c) => c.nil);
   if (nil.length > 0) {
     notes.push(
       `Printed nil for this period: ${nil.map((c) => c.heading).join(', ')}. The column is prescribed and is not removed.`,
     );
   }
   if (dataset.assumptions.fullAttendanceAssumed) {
-    const off = dataset.assumptions.weekOff;
-    const rule =
-      off === 'sat-sun'
-        ? ' Saturdays and Sundays are shown as the weekly off.'
-        : off === 'alt-sat-sun'
-          ? ' Sundays and alternate Saturdays are shown as the weekly off.'
-          : off === 'none'
-            ? ''
-            : ' Sundays are shown as the weekly off.';
-    notes.push(`Attendance was stated fully present for the period rather than uploaded.${rule}`);
+    notes.push(
+      `Attendance was stated fully present for the period rather than uploaded.${weekOffNote(dataset.assumptions.weekOff)}`,
+    );
   }
-
-  return { form, columns, rows, nil, notes };
+  return notes;
 }
 
 /** Project every form, keeping what succeeded and reporting what could not be produced. */

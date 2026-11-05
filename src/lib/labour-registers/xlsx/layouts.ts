@@ -57,7 +57,7 @@ export class ArchetypeNotBuilt extends Error {
   readonly archetype: FormArchetype;
   constructor(archetype: FormArchetype) {
     super(
-      `The ${archetype} archetype is not built yet. A wage slip is one small document per employee and a periodic return is an aggregate, so neither fits the one-row-per-employee shape the other five share.`,
+      `The ${archetype} archetype has no layout. Every archetype in the catalogue now has one; reaching this means a new archetype was added without an entry in ARCHETYPE_LAYOUT.`,
     );
     this.name = 'ArchetypeNotBuilt';
     this.archetype = archetype;
@@ -86,8 +86,24 @@ const ARCHETYPE_LAYOUT: Record<FormArchetype, ArchetypeLayout | null> = {
     widths: { ...COMMON.widths, text: 30 },
   },
 
-  wageSlip: null,
-  periodicReturn: null,
+  /* Two columns on a portrait page, one slip per employee. The widths here are the labels
+     and the figures; the slip writer does not use a day width or a signature width. */
+  wageSlip: {
+    ...COMMON,
+    orientation: 'portrait',
+    freezeAfterField: 'name',
+    widths: { ...COMMON.widths, text: 42, number: 24 },
+  },
+
+  /* One row of figures about an establishment. Upright, and wide enough for a heading like
+     "No. of women employed" to sit above a number. */
+  periodicReturn: {
+    ...COMMON,
+    orientation: 'portrait',
+    freezeAfterField: 'name',
+    widths: { ...COMMON.widths, text: 28, number: 18 },
+    rowHeight: 22,
+  },
 };
 
 export function layoutFor(archetype: FormArchetype): ArchetypeLayout {

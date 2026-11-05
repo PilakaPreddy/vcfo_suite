@@ -4,7 +4,7 @@ import { assessReadiness, closeSentence, type ReadinessInput } from './readiness
 import { formsFor, monthPeriod } from './catalogue';
 
 const SEPTEMBER = monthPeriod(2026, 9);
-const FORMS = formsFor('TG', SEPTEMBER);
+const FORMS = formsFor('TG', SEPTEMBER, 'central');
 
 function input(over: Partial<ReadinessInput> = {}): ReadinessInput {
   return {

@@ -12,6 +12,7 @@
 import type { ProjectedTable } from '../project';
 import { ArchetypeNotBuilt } from './layouts';
 import { writeRegisterWorkbook, type WorkbookMeta } from './scaffold';
+import { writeWageSlipWorkbook } from './wage-slip';
 
 export type RegisterRenderer = (table: ProjectedTable, meta: WorkbookMeta) => Promise<Buffer>;
 
@@ -30,12 +31,32 @@ const renderLeave: RegisterRenderer = (table, meta) => writeRegisterWorkbook(tab
 /** Who is employed, with hours, shift and rest interval. */
 const renderEmployment: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
 
+/**
+ * One slip per employee, transposed: labels down, values beside them.
+ *
+ * The one archetype that does not delegate to the scaffold, and the reason the renderers were
+ * kept as five named functions rather than one branch. A slip is handed to the person it is
+ * about, so it is a document per employee rather than a row in a table of everybody.
+ */
+export const renderWageSlip: RegisterRenderer = (table, meta) => writeWageSlipWorkbook(table, meta);
+
+/**
+ * One row of figures about an establishment.
+ *
+ * It does delegate to the scaffold, because a one-row table is still a table — the work that
+ * made returns possible was in the projection, where the aggregate columns are computed over
+ * the whole roll instead of per employee.
+ */
+export const renderPeriodicReturn: RegisterRenderer = (table, meta) => writeRegisterWorkbook(table, meta);
+
 const RENDERERS: Partial<Record<ProjectedTable['form']['archetype'], RegisterRenderer>> = {
   wages: renderWages,
   musterRoll: renderMusterRoll,
   combinedWages: renderCombinedWages,
   leave: renderLeave,
   employment: renderEmployment,
+  wageSlip: renderWageSlip,
+  periodicReturn: renderPeriodicReturn,
 };
 
 /** Render a projected table as the .xlsx bytes of its register. */

@@ -206,3 +206,33 @@ export function labourRegisterContentType(file: Pick<File, 'name' | 'type'>): st
 /** What to tell somebody who tried to upload something else. */
 export const LABOUR_REGISTER_FILE_ERROR =
   'Upload a spreadsheet: .xlsx, .xlsm or .csv. A legacy .xls cannot be read — open it in Excel and save as .xlsx.';
+
+/**
+ * What a labour-register verification may rest on.
+ *
+ * Not the same set as a register input. The evidence behind "this layout is checked" is a
+ * gazette page, a scan of a filed form, a photograph of a page in an inspector's file or a
+ * downloaded notification — a document or an image, never a spreadsheet. Accepting a workbook
+ * here would invite somebody to attach the paysheet, which proves nothing about the layout.
+ */
+export const LABOUR_REGISTER_EVIDENCE_MIME_TYPES = new Set<string>([
+  EXTENSION_TO_MIME.pdf,
+  EXTENSION_TO_MIME.docx,
+  EXTENSION_TO_MIME.png,
+  EXTENSION_TO_MIME.jpg,
+  EXTENSION_TO_MIME.webp,
+]);
+
+/** Extensions allowed as verification evidence. */
+export const LABOUR_REGISTER_EVIDENCE_EXTENSIONS = new Set<string>([
+  'pdf',
+  'docx',
+  'png',
+  'jpg',
+  'jpeg',
+  'webp',
+]);
+
+/** What to tell somebody who attached the wrong kind of file. */
+export const LABOUR_REGISTER_EVIDENCE_FILE_ERROR =
+  'Attach the gazette page, the prescribed form or a scan of a filed one: .pdf, .docx, .png, .jpg or .webp.';

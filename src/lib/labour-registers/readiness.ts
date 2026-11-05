@@ -15,7 +15,7 @@
  */
 import { fieldByKey } from '@/data/labour-registers/fields';
 import type { FormSpec } from '@/data/labour-registers/types';
-import { formsNeedingAttendance } from './catalogue';
+import { formsNeedingAttendance, formsNeedingLeave } from './catalogue';
 import type { UploadSlot } from './parse';
 
 /** One line of the readiness summary. */
@@ -115,6 +115,20 @@ export function assessReadiness(input: ReadinessInput): ReadinessSummary {
   }
   if (!input.uploads.paysheet) {
     lines.push({ kind: 'blocked', text: 'No paysheet — every wage register needs one', fix: { label: 'Upload', to: 'uploads' } });
+  }
+
+  /* Leave is kept in an HR system, never in a payroll run. Reported as short rather than
+     blocked: a leave register with its three columns blank is still the prescribed form, and
+     an establishment where nobody took leave in the period legitimately has nothing to
+     upload. The preparer decides; the line makes sure it is a decision. */
+  const needsLeave = formsNeedingLeave(input.forms);
+  if (needsLeave.length > 0 && !input.uploads.leave) {
+    lines.push({
+      kind: 'short',
+      count: needsLeave.length,
+      text: `No leave sheet for ${needsLeave.length} forms that print a leave balance — ${names(needsLeave.map((f) => `Form ${f.formNumber}`))}`,
+      fix: { label: 'Upload', to: 'uploads' },
+    });
   }
 
   /* Mapping. */

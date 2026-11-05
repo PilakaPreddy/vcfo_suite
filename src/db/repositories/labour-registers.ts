@@ -8,6 +8,8 @@ import {
   labourRegisterColumnMaps,
   labourRegisterDocuments,
   labourRegisterUploads,
+  labourRegisterCodeRules,
+  labourRegisterVerifications,
 } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
 import { isAdminOrManager, isFirmWideAdmin } from '@/lib/auth';
@@ -31,12 +33,15 @@ import type { UploadSlot } from '@/lib/labour-registers/parse';
  *    correction is a new row that supersedes the old one. Rule 72 of the OSH (Central) Rules
  *    forbids destroying a register after its retention period unless it has been properly
  *    transferred, and the research found that an electronic register may change its layout but
- *    not its integrity, serial number or column contents.
+ *    not its integrity, serial numbering or column contents. That last principle is the
+ *    product’s own: a November 2026 research pass could not source it to a rule.
  */
 
 export type BatchRow = typeof labourRegisterBatches.$inferSelect;
 export type UploadRow = typeof labourRegisterUploads.$inferSelect;
 export type DocumentRow = typeof labourRegisterDocuments.$inferSelect;
+export type VerificationRow = typeof labourRegisterVerifications.$inferSelect;
+export type CodeRuleOverrideRow = typeof labourRegisterCodeRules.$inferSelect;
 
 function assertStaff(ctx: AuthContext) {
   if (!isAdminOrManager(ctx.role) && ctx.role !== 'intern') {
@@ -455,7 +460,6 @@ export async function recordDocument(
   return row ?? null;
 }
 
-/** Count a download, so the saving from not regenerating is observable rather than claimed. */
 /**
  * One produced document, scoped the way everything else here is.
  *
@@ -473,6 +477,7 @@ export async function getDocument(ctx: AuthContext, documentId: string): Promise
   return batch ? doc : null;
 }
 
+/** Count a download, so the saving from not regenerating is observable rather than claimed. */
 export async function countDownload(ctx: AuthContext, documentId: string): Promise<void> {
   const [doc] = await db.select().from(labourRegisterDocuments).where(eq(labourRegisterDocuments.id, documentId)).limit(1);
   if (!doc) return;
@@ -492,7 +497,16 @@ export async function countDownload(ctx: AuthContext, documentId: string): Promi
  */
 export async function attestDocument(
   ctx: AuthContext,
-  input: { documentId: string; method: 'printed-wet-signature' | 'dsc' | 'aadhaar-esign' },
+  input: {
+    documentId: string;
+    method: 'printed-wet-signature' | 'dsc' | 'aadhaar-esign';
+    /** The signed scan. Required for the printed method, which is the one the firm uses. */
+    signedObjectKey?: string;
+    signedFileName?: string;
+    signedSha256?: string;
+    /** Who signed the paper. Not necessarily a user of this product. */
+    signedByName?: string;
+  },
 ): Promise<DocumentRow | null> {
   assertFirmAdmin(ctx);
   const [doc] = await db
@@ -505,13 +519,30 @@ export async function attestDocument(
   if (!batch) return null;
   if (doc.attestedAt) throw new Error('already attested — issue a superseding document instead');
 
+  /* The firm attests by signing a printout. Recording that without the scan would leave a row
+     claiming a signature nobody can produce, which is the one thing an attestation must not
+     be: the record exists so that somebody can be shown what was signed. */
+  if (input.method === 'printed-wet-signature' && !input.signedObjectKey) {
+    throw new Error('upload the signed printout before recording the attestation');
+  }
+
   const [row] = await db
     .update(labourRegisterDocuments)
-    .set({ status: 'attested', attestedBy: ctx.userId, attestedAt: new Date(), attestationMethod: input.method })
+    .set({
+      status: 'attested',
+      attestedBy: ctx.userId,
+      attestedAt: new Date(),
+      attestationMethod: input.method,
+      signedObjectKey: input.signedObjectKey ?? null,
+      signedFileName: input.signedFileName ?? null,
+      signedSha256: input.signedSha256 ?? null,
+      signedByName: input.signedByName ?? '',
+    })
     .where(eq(labourRegisterDocuments.id, doc.id))
     .returning();
   return row ?? null;
 }
+
 
 /**
  * Mark an attested document as replaced by a later one. The file itself is untouched and
@@ -525,4 +556,127 @@ export async function supersedeDocument(ctx: AuthContext, oldId: string, newId: 
   if (!batch) return;
   await db.update(labourRegisterDocuments).set({ status: 'superseded' }).where(eq(labourRegisterDocuments.id, oldId));
   await db.update(labourRegisterDocuments).set({ supersedesId: oldId }).where(eq(labourRegisterDocuments.id, newId));
+}
+
+/* ── Verification ─────────────────────────────────────────────────────────── */
+
+/**
+ * The firm's own verdicts on the catalogue's layouts.
+ *
+ * Readable by anyone who can see a batch, because the notice printed on a register is
+ * something a client is entitled to understand. Writable only by staff: deciding that a
+ * statutory layout has been checked is the firm's professional judgement, and a client
+ * recording it would be the firm's liability with none of its knowledge.
+ */
+export async function listVerifications(ctx: AuthContext): Promise<VerificationRow[]> {
+  void ctx;
+  return db.select().from(labourRegisterVerifications);
+}
+
+/** Record, or revise, what the firm has found about one form's layout. */
+export async function saveVerification(
+  ctx: AuthContext,
+  input: {
+    formId: string;
+    status: 'unverified' | 'disputed' | 'checked-against-sample' | 'gazette-verified';
+    against?: string;
+    disputedBecause?: string;
+    openItems?: string[];
+    evidenceKey?: string | null;
+    evidenceFileName?: string | null;
+    suppressed?: boolean;
+    suppressedReason?: string;
+  },
+): Promise<VerificationRow | null> {
+  assertStaff(ctx);
+
+  const values = {
+    formId: input.formId,
+    status: input.status,
+    against: input.against ?? '',
+    disputedBecause: input.disputedBecause ?? '',
+    openItems: input.openItems ?? [],
+    evidenceKey: input.evidenceKey ?? null,
+    evidenceFileName: input.evidenceFileName ?? null,
+    suppressed: input.suppressed ?? false,
+    suppressedReason: input.suppressedReason ?? '',
+    verifiedBy: ctx.userId,
+  };
+
+  const [row] = await db
+    .insert(labourRegisterVerifications)
+    .values(values)
+    .onConflictDoUpdate({
+      target: labourRegisterVerifications.formId,
+      set: { ...values, verifiedAt: new Date(), updatedAt: new Date() },
+    })
+    .returning();
+  return row ?? null;
+}
+
+/**
+ * Undo a verdict, so the catalogue's own claim stands again.
+ *
+ * Not a delete of history — there is none to lose here, since the row holds the current
+ * verdict rather than a log — but it is the only way back from a verdict entered in error,
+ * and without it a mistyped "gazette-verified" would be permanent.
+ */
+export async function clearVerification(ctx: AuthContext, formId: string): Promise<void> {
+  assertStaff(ctx);
+  await db.delete(labourRegisterVerifications).where(eq(labourRegisterVerifications.formId, formId));
+}
+
+/* ── Where each state has got to ──────────────────────────────────────────── */
+
+/**
+ * The firm's own reading of which states have notified rules under which code.
+ *
+ * Readable by anyone who can see a batch, because which rules govern a client's registers is
+ * something that client is entitled to understand. Writable only by staff, for the same reason
+ * a verification verdict is: it is the firm's professional reading of a gazette.
+ */
+export async function listCodeRuleOverrides(ctx: AuthContext): Promise<CodeRuleOverrideRow[]> {
+  void ctx;
+  return db.select().from(labourRegisterCodeRules);
+}
+
+/** Record, or revise, how far one state has got under one code. */
+export async function saveCodeRuleOverride(
+  ctx: AuthContext,
+  input: {
+    stateCode: string;
+    code: string;
+    stage: 'notified' | 'draft' | 'none';
+    notifiedOn?: string;
+    source?: string;
+    note?: string;
+  },
+): Promise<CodeRuleOverrideRow | null> {
+  assertStaff(ctx);
+  const values = {
+    stateCode: input.stateCode,
+    code: input.code,
+    stage: input.stage,
+    notifiedOn: input.notifiedOn ?? '',
+    source: input.source ?? '',
+    note: input.note ?? '',
+    verifiedBy: ctx.userId,
+  };
+  const [row] = await db
+    .insert(labourRegisterCodeRules)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [labourRegisterCodeRules.stateCode, labourRegisterCodeRules.code],
+      set: { ...values, verifiedAt: new Date(), updatedAt: new Date() },
+    })
+    .returning();
+  return row ?? null;
+}
+
+/** Undo an entry, so the catalogue's own reading stands again. */
+export async function clearCodeRuleOverride(ctx: AuthContext, stateCode: string, code: string): Promise<void> {
+  assertStaff(ctx);
+  await db
+    .delete(labourRegisterCodeRules)
+    .where(and(eq(labourRegisterCodeRules.stateCode, stateCode), eq(labourRegisterCodeRules.code, code)));
 }

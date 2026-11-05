@@ -23,6 +23,8 @@ export interface GenerateOutcome {
   fromStorage: number;
   blocked: Array<{ formId: string; reason: string }>;
   deferred: Array<{ formId: string; reason: string }>;
+  /** Forms the firm has recorded as ones it does not owe, with the reason given. */
+  suppressed: Array<{ formId: string; reason: string }>;
 }
 
 export interface BatchActions {
@@ -30,12 +32,14 @@ export interface BatchActions {
   error: string;
   outcome: GenerateOutcome | null;
   /** Close the period, then build everything it calls for. */
-  closeAndGenerate: (summary: ReadinessSummary) => Promise<void>;
+  closeAndGenerate: (summary: ReadinessSummary, formats?: Array<'xlsx' | 'pdf'>) => Promise<void>;
   /** Build again without closing again — for a retry, or after a reopen. */
-  generate: () => Promise<void>;
+  generate: (formats?: Array<'xlsx' | 'pdf'>) => Promise<void>;
   reopen: (reason: string) => Promise<void>;
   /** State that the month was fully present, rather than uploading a sheet. */
   assumeAttendance: (weekOff: string) => Promise<void>;
+  /** Record whose rules this establishment is under. Changes which registers exist. */
+  setSphere: (sphere: 'state' | 'central') => Promise<void>;
   dismissOutcome: () => void;
 }
 
@@ -56,18 +60,19 @@ export function useBatchActions(batchId: string, companyName?: string): BatchAct
   const [error, setError] = useState('');
   const [outcome, setOutcome] = useState<GenerateOutcome | null>(null);
 
-  const runGenerate = useCallback(async () => {
-    const answer = await post('/api/labour-registers/generate', { batchId, companyName });
+  const runGenerate = useCallback(async (formats?: Array<'xlsx' | 'pdf'>) => {
+    const answer = await post('/api/labour-registers/generate', { batchId, companyName, formats });
     setOutcome({
       built: Number(answer.builtCount ?? 0),
       fromStorage: Number(answer.fromStorage ?? 0),
       blocked: (answer.blocked ?? []) as GenerateOutcome['blocked'],
       deferred: (answer.deferred ?? []) as GenerateOutcome['deferred'],
+      suppressed: (answer.suppressed ?? []) as GenerateOutcome['suppressed'],
     });
   }, [batchId, companyName]);
 
   const closeAndGenerate = useCallback(
-    async (summary: ReadinessSummary) => {
+    async (summary: ReadinessSummary, formats?: Array<'xlsx' | 'pdf'>) => {
       setError('');
       setBusy('closing');
       try {
@@ -77,7 +82,7 @@ export function useBatchActions(batchId: string, companyName?: string): BatchAct
           readiness: summary as unknown as Record<string, unknown>,
         });
         setBusy('generating');
-        await runGenerate();
+        await runGenerate(formats);
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : 'The period could not be closed.');
@@ -88,11 +93,11 @@ export function useBatchActions(batchId: string, companyName?: string): BatchAct
     [batchId, router, runGenerate],
   );
 
-  const generate = useCallback(async () => {
+  const generate = useCallback(async (formats?: Array<'xlsx' | 'pdf'>) => {
     setError('');
     setBusy('generating');
     try {
-      await runGenerate();
+      await runGenerate(formats);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The registers could not be built.');
@@ -138,6 +143,22 @@ export function useBatchActions(batchId: string, companyName?: string): BatchAct
     [batchId, router],
   );
 
+  const setSphere = useCallback(
+    async (sphere: 'state' | 'central') => {
+      setError('');
+      setBusy('generating');
+      try {
+        await post('/api/labour-registers/assumptions', { batchId, assumptions: { sphere } });
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'That could not be recorded.');
+      } finally {
+        setBusy(null);
+      }
+    },
+    [batchId, router],
+  );
+
   return {
     busy,
     error,
@@ -146,6 +167,7 @@ export function useBatchActions(batchId: string, companyName?: string): BatchAct
     generate,
     reopen,
     assumeAttendance,
+    setSphere,
     dismissOutcome: () => setOutcome(null),
   };
 }
