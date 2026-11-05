@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { requireAdmin, requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
@@ -28,7 +29,7 @@ export async function GET() {
     if (err instanceof FirmSettingsForbiddenError) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
-    const message = err instanceof Error ? err.message : 'read_failed';
+    const message = publicErrorMessage(err, 'read_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -50,7 +51,7 @@ export async function PATCH(request: Request) {
     if (err instanceof FirmSettingsForbiddenError) {
       return NextResponse.json({ error: err.message }, { status: 403 });
     }
-    const message = err instanceof Error ? err.message : 'update_failed';
+    const message = publicErrorMessage(err, 'update_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

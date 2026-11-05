@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { setComplianceInstanceWindow } from '@/db/repositories/schedule';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -34,7 +35,7 @@ export async function POST(request: Request, context: RouteContext) {
     const row = await setComplianceInstanceWindow(guard.ctx, id, from && to ? { from, to } : null);
     return NextResponse.json({ row });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'window_failed';
+    const message = publicErrorMessage(err, 'window_failed');
     const status =
       message.includes('Only a project manager') ? 403
       : message.includes('not found') || message.includes('not permitted') ? 404

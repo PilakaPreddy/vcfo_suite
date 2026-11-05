@@ -11,6 +11,7 @@ import {
 } from '@/lib/knowledge-bank/knowledge-bank-folders';
 import { isKnowledgeBankStoragePath } from '@/lib/knowledge-bank/knowledge-bank-storage';
 import { bucketKey, deleteObject } from '@/storage/s3';
+import { publicErrorMessage } from '@/lib/api-error';
 
 function knowledgeBankErrorStatus(message: string): number {
   if (message.startsWith('Not permitted') || message.startsWith('Only admins')) return 403;
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(payload);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'fetch_failed';
+    const message = publicErrorMessage(err, 'fetch_failed');
     return NextResponse.json(
       {
         ok: false,
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
     } catch {
       /* best-effort cleanup */
     }
-    const message = err instanceof Error ? err.message : 'save_failed';
+    const message = publicErrorMessage(err, 'save_failed');
     const status = knowledgeBankErrorStatus(message);
     return NextResponse.json(
       { ok: false, error: status === 500 ? 'save_failed' : message },

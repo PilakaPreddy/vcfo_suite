@@ -9,6 +9,7 @@ import {
   listAnnouncements,
 } from '@/db/repositories/announcements';
 import { canWriteAnnouncements } from '@/lib/notifications/announcements';
+import { publicErrorMessage } from '@/lib/api-error';
 
 const createSchema = z.object({
   title: z.string().trim().max(200).optional().default(''),
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
       const head = await getAnnouncementBoardHead(guard.ctx);
       return NextResponse.json(head);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'list_failed';
+      const message = publicErrorMessage(err, 'list_failed');
       return NextResponse.json({ error: message }, { status: 500 });
     }
   }
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
       canWrite: canWriteAnnouncements(guard.ctx.role),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ announcement }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     const status = message.includes('not permitted') ? 403 : message === 'invalid_body' ? 400 : 500;
     return NextResponse.json({ error: message }, { status });
   }

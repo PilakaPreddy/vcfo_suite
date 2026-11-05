@@ -12,6 +12,7 @@ import { engagementDbId } from '@/lib/projects/legacy-engagement-ids';
 import { emptyEmailDispatch, type EmailDispatchResult } from '@/lib/email/email-dispatch';
 import { sendClientEmailChangedEmail } from '@/lib/email/client-email-changed';
 import { clientPasswordSchema, emailSchema } from '@/lib/api/schemas';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -118,7 +119,7 @@ export async function POST(request: Request, context: RouteContext) {
       previousClientNotice,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'substitute_failed';
+    const message = publicErrorMessage(err, 'substitute_failed');
     const status =
       message === 'already_a_member' ||
       message === 'cannot_substitute_with_same_user' ||

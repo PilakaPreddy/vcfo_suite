@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import { createActivity, listActivity } from '@/db/repositories/activity';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /** GET /api/activity */
 export async function GET() {
@@ -12,7 +13,7 @@ export async function GET() {
     const activity = await listActivity(guard.ctx);
     return NextResponse.json({ activity });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ activity: event }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     const status = message.includes('not permitted') || message.includes('required') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAnyRole } from '@/auth/guards';
 import { restoreVaultDocument } from '@/db/repositories/documents';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -19,7 +20,7 @@ export async function POST(_request: Request, context: RouteContext) {
     if (!document) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
     return NextResponse.json({ ok: true, document });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'restore_failed';
+    const message = publicErrorMessage(err, 'restore_failed');
     if (message.includes('not permitted')) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     return NextResponse.json({ ok: false, error: 'restore_failed' }, { status: 500 });
   }

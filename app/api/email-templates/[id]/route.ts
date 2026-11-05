@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAnyRole } from '@/auth/guards';
@@ -44,7 +45,7 @@ export async function GET(_request: Request, context: RouteContext) {
     if (!template) return NextResponse.json({ error: 'not_found' }, { status: 404 });
     return NextResponse.json({ template });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'fetch_failed';
+    const message = publicErrorMessage(err, 'fetch_failed');
     return NextResponse.json({ error: message }, { status: mapRepoError(message) });
   }
 }
@@ -79,7 +80,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     });
     return NextResponse.json({ template });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'update_failed';
+    const message = publicErrorMessage(err, 'update_failed');
     return NextResponse.json({ error: message }, { status: mapRepoError(message) });
   }
 }
@@ -105,7 +106,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     });
     return NextResponse.json({ ok: true, id });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'delete_failed';
+    const message = publicErrorMessage(err, 'delete_failed');
     return NextResponse.json({ error: message }, { status: mapRepoError(message) });
   }
 }

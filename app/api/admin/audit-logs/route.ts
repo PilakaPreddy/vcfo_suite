@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdminOrManager } from '@/auth/guards';
 import { listAuditEvents } from '@/db/repositories/audit-events';
+import { publicErrorMessage } from '@/lib/api-error';
 
 export async function GET(request: Request) {
   const auth = await requireAdminOrManager();
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
       scope: engagementParam ? 'project' : 'global',
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'fetch_failed';
+    const message = publicErrorMessage(err, 'fetch_failed');
     return NextResponse.json(
       {
         ok: false,

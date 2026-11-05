@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAnyRole } from '@/auth/guards';
@@ -27,7 +28,7 @@ export async function GET() {
     const templates = await listEmailTemplates(guard.ctx);
     return NextResponse.json({ templates });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     const status = message.includes('not permitted') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ template }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     const status = message.includes('not permitted') ? 403 : message === 'invalid_body' ? 400 : 500;
     return NextResponse.json({ error: message }, { status });
   }

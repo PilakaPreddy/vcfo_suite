@@ -3,6 +3,7 @@ import { requireAnyRole } from '@/auth/guards';
 import { createDocumentBodySchema } from '@/lib/api/schemas';
 import { parseJsonBody } from '@/lib/api/validate';
 import { createDocument, listDocuments } from '@/db/repositories/documents';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /**
  * GET /api/documents?engagementId=…
@@ -28,7 +29,7 @@ export async function GET(request: Request) {
     const docs = await listDocuments(auth.ctx, engagementId);
     return NextResponse.json({ ok: true, documents: docs });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'fetch_failed';
+    const message = publicErrorMessage(err, 'fetch_failed');
     return NextResponse.json(
       {
         ok: false,
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     const doc = await createDocument(auth.ctx, parsed.data);
     return NextResponse.json({ ok: true, document: doc }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'save_failed';
+    const message = publicErrorMessage(err, 'save_failed');
     if (message.includes('not permitted') || message.includes('not found')) {
       return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     }

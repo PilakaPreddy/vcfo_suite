@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import { clientSaveStepDraft, FileRequestError } from '@/db/repositories/client-incorporation';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ stepId: string }> };
 
@@ -39,7 +40,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (err instanceof FileRequestError) {
       return NextResponse.json({ error: FRIENDLY[err.message] ?? err.message }, { status: err.status });
     }
-    const message = err instanceof Error ? err.message : 'draft_failed';
+    const message = publicErrorMessage(err, 'draft_failed');
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }

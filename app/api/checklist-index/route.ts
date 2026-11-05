@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import { listChecklistIndex } from '@/db/repositories/engagements';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /**
  * GET /api/checklist-index — role-scoped slim checklist maps.
@@ -15,7 +16,7 @@ export async function GET() {
     const byEngagement = await listChecklistIndex(guard.ctx);
     return NextResponse.json({ byEngagement });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

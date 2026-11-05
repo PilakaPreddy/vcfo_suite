@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/auth/guards';
@@ -15,7 +16,7 @@ const body = z.object({ channels: z.array(z.enum(['email', 'whatsapp'])).optiona
 function fail(e: unknown) {
   const status = complianceErrorStatus(e);
   if (status == null) throw e;
-  return NextResponse.json({ error: (e as Error).message }, { status });
+  return NextResponse.json({ error: publicErrorMessage(e, 'request_failed') }, { status });
 }
 
 /** POST /api/client/compliances/:id/reminder — "Remind me" (the caller's own reminder). */

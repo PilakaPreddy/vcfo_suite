@@ -8,6 +8,7 @@ import {
   sniffImageContentType,
 } from '@/lib/account-avatar';
 import { putObject } from '@/storage/s3';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /** POST /api/account/avatar/outlook — copy Graph `/me/photo` into the user’s avatar. */
 export async function POST() {
@@ -30,7 +31,7 @@ export async function POST() {
     const result = await setOwnAvatarObjectKey(guard.ctx, key);
     return NextResponse.json({ ok: true, avatarUrl: result.avatarUrl });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'outlook_photo_failed';
+    const message = publicErrorMessage(err, 'outlook_photo_failed');
     const status =
       message === 'outlook_not_connected'
         ? 409

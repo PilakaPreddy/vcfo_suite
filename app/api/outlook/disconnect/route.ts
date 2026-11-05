@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAnyRole } from '@/auth/guards';
 import { deleteOutlookConnection } from '@/db/repositories/outlook-connections';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /** DELETE /api/outlook — unlink Microsoft mailbox. */
 export async function DELETE() {
@@ -12,7 +13,7 @@ export async function DELETE() {
     await deleteOutlookConnection(guard.ctx);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'disconnect_failed';
+    const message = publicErrorMessage(err, 'disconnect_failed');
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
+import { publicErrorMessage } from '@/lib/api-error';
 
 import { requireAnyRole } from '@/auth/guards';
 import { rejectLargeBody } from '@/lib/api/body-limit';
@@ -87,7 +88,7 @@ export async function POST(request: Request) {
   } catch (e) {
     /* The reader's own message is the useful one — "The workbook has no sheet with any rows in
        it" tells a preparer more than a generic parse failure would. */
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'The file could not be read.' }, { status: 400 });
+    return NextResponse.json({ error: publicErrorMessage(e, 'The file could not be read.') }, { status: 400 });
   }
   if (parsed.headers.length === 0) {
     return NextResponse.json({ error: 'No column headings were found in that sheet.' }, { status: 400 });

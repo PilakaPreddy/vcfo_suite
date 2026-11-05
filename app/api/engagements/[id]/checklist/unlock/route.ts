@@ -5,6 +5,7 @@ import { requireAuth } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { checklistStateForViewer, unlockChecklistFields } from '@/db/repositories/engagements';
 import { isDirectFlowStep } from '@/lib/incorporation/pre-inc-direct-flow';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -49,7 +50,7 @@ export async function POST(request: Request, context: RouteContext) {
       email,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unlock_failed';
+    const message = publicErrorMessage(err, 'unlock_failed');
     const status =
       message.includes('may not unlock') ? 403
       : message.includes('not found') || message.includes('not permitted') ? 404

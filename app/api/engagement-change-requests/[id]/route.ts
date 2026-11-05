@@ -11,6 +11,7 @@ import {
 } from '@/db/repositories/engagement-change-requests';
 import { applyChangeRequest } from '@/lib/projects/project-change-requests';
 import { isFirmWideAdmin } from '@/lib/auth';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -87,7 +88,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       return NextResponse.json({ error: message, reopened: true }, { status: 400 });
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'decide_failed';
+    const message = publicErrorMessage(err, 'decide_failed');
     const status = message === 'not_permitted' ? 403 : 400;
     return NextResponse.json({ error: message }, { status });
   }

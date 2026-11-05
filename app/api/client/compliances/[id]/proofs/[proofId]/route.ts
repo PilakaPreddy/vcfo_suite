@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import {
@@ -11,7 +12,7 @@ type Ctx = { params: Promise<{ id: string; proofId: string }> };
 function fail(e: unknown) {
   const status = complianceErrorStatus(e);
   if (status == null) throw e;
-  return NextResponse.json({ error: (e as Error).message }, { status });
+  return NextResponse.json({ error: publicErrorMessage(e, 'request_failed') }, { status });
 }
 
 /**

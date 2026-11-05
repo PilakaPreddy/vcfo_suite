@@ -3,6 +3,7 @@ import { requireAnyRole } from '@/auth/guards';
 import { assertEngagementBoardResolutionAccess } from '@/lib/api/board-resolution-access';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { markBoardResolutionSentToClient } from '@/db/repositories/board-resolution';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -32,7 +33,7 @@ export async function POST(_request: Request, context: RouteContext) {
     });
     return NextResponse.json({ ok: true, boardResolution });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'send_failed';
+    const message = publicErrorMessage(err, 'send_failed');
     const status = message.includes('not found') ? 404 : message.includes('Only staff') ? 403 : 409;
     return NextResponse.json({ ok: false, error: message }, { status });
   }

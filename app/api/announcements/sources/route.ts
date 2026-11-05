@@ -8,6 +8,7 @@ import {
   listAnnouncementSources,
 } from '@/db/repositories/announcements';
 import { ingestAnnouncementSource } from '@/jobs/announcement-feeds';
+import { publicErrorMessage } from '@/lib/api-error';
 
 const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
@@ -25,7 +26,7 @@ export async function GET() {
     const sources = await listAnnouncementSources(guard.ctx);
     return NextResponse.json({ sources });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     const status = message.includes('not permitted') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ source, ingest }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     const status =
       message.includes('not permitted')
         ? 403

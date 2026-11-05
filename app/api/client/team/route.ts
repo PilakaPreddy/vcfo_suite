@@ -12,6 +12,7 @@ import {
 } from '@/db/repositories/client-team';
 import { resolvePortalUrl, sendWelcomeEmail } from '@/lib/email/welcome-email';
 import { siteUrl } from '@/lib/site-url';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /** C-899: the page where an invitee chooses a password. */
 function setPasswordUrl(token: string): string {
@@ -126,6 +127,6 @@ async function sendInviteEmail(
 
 function fail(e: unknown) {
   if (e instanceof ClientTeamError) return NextResponse.json({ error: e.message }, { status: e.status });
-  const message = e instanceof Error ? e.message : 'team_failed';
+  const message = publicErrorMessage(e, 'team_failed');
   return NextResponse.json({ error: message }, { status: 500 });
 }

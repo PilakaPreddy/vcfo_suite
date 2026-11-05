@@ -27,6 +27,7 @@ import {
   recordBoardResolutionVersion,
 } from '@/db/repositories/board-resolution-noc';
 import { withNocVariantOverride } from '@/lib/noc/receive';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -62,7 +63,7 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     assertLeadMayEdit(auth.ctx, checklistState);
   } catch (err) {
-    const message = err instanceof Error ? err.message : BOARD_RESOLUTION_WITH_MANAGER;
+    const message = publicErrorMessage(err, BOARD_RESOLUTION_WITH_MANAGER);
     return NextResponse.json({ ok: false, error: message, code: 'with_manager' }, { status: 409 });
   }
 

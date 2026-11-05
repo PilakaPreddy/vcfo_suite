@@ -4,6 +4,7 @@ import { requireAuth } from '@/auth/guards';
 import { deletePersonalTodo, updatePersonalTodo } from '@/db/repositories/tasks';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { canAccessPersonalTodos, INTERN_FOCUS_TITLE_MAX } from '@/lib/intern/personal-todos';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -43,7 +44,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
     return NextResponse.json({ todo });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'update_failed';
+    const message = publicErrorMessage(err, 'update_failed');
     return NextResponse.json({ error: message }, { status: mapError(message) });
   }
 }
@@ -68,7 +69,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     }
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'delete_failed';
+    const message = publicErrorMessage(err, 'delete_failed');
     return NextResponse.json({ error: message }, { status: mapError(message) });
   }
 }

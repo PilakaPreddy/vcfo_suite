@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAnyRole } from '@/auth/guards';
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
     if (err instanceof EscalationForbiddenError) {
       return NextResponse.json({ error: err.message }, { status: 404 });
     }
-    const message = err instanceof Error ? err.message : 'raise_failed';
+    const message = publicErrorMessage(err, 'raise_failed');
     const status = message === 'assignee_not_admin' || message === 'reason_required' ? 400 : 500;
     return NextResponse.json({ error: message }, { status });
   }

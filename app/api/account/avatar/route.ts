@@ -12,6 +12,7 @@ import {
 } from '@/lib/account-avatar';
 import { resolveUploadExtension } from '@/lib/upload-limits';
 import { deleteObject, getObjectBuffer, putObject } from '@/storage/s3';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /** GET /api/account/avatar — stream the signed-in user’s photo. */
 export async function GET() {
@@ -34,7 +35,7 @@ export async function GET() {
       },
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'avatar_failed';
+    const message = publicErrorMessage(err, 'avatar_failed');
     const status = message === 'account_not_found' ? 404 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }
@@ -80,7 +81,7 @@ export async function POST(request: Request) {
     const result = await setOwnAvatarObjectKey(auth.ctx, key);
     return NextResponse.json({ ok: true, avatarUrl: result.avatarUrl });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'upload_failed';
+    const message = publicErrorMessage(err, 'upload_failed');
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
@@ -100,7 +101,7 @@ export async function DELETE() {
     }
     return NextResponse.json({ ok: true, avatarUrl: result.avatarUrl });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'remove_failed';
+    const message = publicErrorMessage(err, 'remove_failed');
     const status = message === 'account_not_found' ? 404 : 500;
     return NextResponse.json({ ok: false, error: message }, { status });
   }

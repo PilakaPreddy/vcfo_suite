@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { setClientComplianceWindow } from '@/db/repositories/schedule';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -36,7 +37,7 @@ export async function POST(request: Request, context: RouteContext) {
     const row = await setClientComplianceWindow(guard.ctx, id, from && to ? { from, to } : null);
     return NextResponse.json({ row });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'window_failed';
+    const message = publicErrorMessage(err, 'window_failed');
     const status = message.includes('not found') ? 404 : message === 'filed_locked' || message === 'clear_not_permitted' ? 403 : 400;
     return NextResponse.json({ error: message }, { status });
   }

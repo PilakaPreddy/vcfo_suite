@@ -14,6 +14,7 @@ import {
   requestBoardResolutionApproval,
 } from '@/db/repositories/board-resolution';
 import { BoardResolutionError, boardResolutionErrorJson } from '@/lib/api/board-resolution-errors';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -118,7 +119,7 @@ export async function POST(request: Request, context: RouteContext) {
       email,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'submit_failed';
+    const message = publicErrorMessage(err, 'submit_failed');
     return NextResponse.json({ error: FRIENDLY[message] ?? message }, { status: errorStatus(message) });
   }
 }

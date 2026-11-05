@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAnyRole } from '@/auth/guards';
 import { deleteVaultDocument } from '@/db/repositories/documents';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -20,7 +21,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     if (!document) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
     return NextResponse.json({ ok: true, document });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'delete_failed';
+    const message = publicErrorMessage(err, 'delete_failed');
     if (message === 'in_use') return NextResponse.json({ ok: false, error: 'in_use' }, { status: 409 });
     if (message.includes('not permitted')) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
     return NextResponse.json({ ok: false, error: 'delete_failed' }, { status: 500 });

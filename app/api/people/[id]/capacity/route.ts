@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { MAX_CAPACITY, setPersonCapacity } from '@/db/repositories/metrics';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -33,7 +34,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const result = await setPersonCapacity(guard.ctx, params.data.id, body.data.capacity);
     return NextResponse.json(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'capacity_failed';
+    const message = publicErrorMessage(err, 'capacity_failed');
     const status = message.includes('Only an admin') ? 403 : message.includes('not found') ? 404 : 400;
     return NextResponse.json({ error: message }, { status });
   }

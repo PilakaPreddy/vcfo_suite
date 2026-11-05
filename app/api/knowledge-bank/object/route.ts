@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAnyRole } from '@/auth/guards';
 import { isKnowledgeBankStoragePath } from '@/lib/knowledge-bank/knowledge-bank-storage';
 import { bucketKey, deleteObject, signedDownloadUrl } from '@/storage/s3';
+import { publicErrorMessage } from '@/lib/api-error';
 
 /** GET /api/knowledge-bank/signed-url?path=&expiresIn= — short-lived download URL. */
 export async function GET(request: Request) {
@@ -46,7 +47,7 @@ export async function DELETE(request: Request) {
     await deleteObject(bucketKey('knowledge-bank', path));
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'delete_failed';
+    const message = publicErrorMessage(err, 'delete_failed');
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import { getTaskById, updateTask } from '@/db/repositories/tasks';
 import type { TaskInstance } from '@/data/engagements';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -39,7 +40,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
     return NextResponse.json({ task });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'update_failed';
+    const message = publicErrorMessage(err, 'update_failed');
     const status = message.includes('may not') ? 403 : 500;
     return NextResponse.json({ error: message }, { status });
   }

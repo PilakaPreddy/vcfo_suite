@@ -7,6 +7,7 @@ import {
   getKnowledgeBankFile,
 } from '@/db/repositories/knowledge-bank';
 import { bucketKey, deleteObject } from '@/storage/s3';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -33,7 +34,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       await deleteObject(bucketKey('knowledge-bank', storagePath));
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'delete_failed';
+    const message = publicErrorMessage(err, 'delete_failed');
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 

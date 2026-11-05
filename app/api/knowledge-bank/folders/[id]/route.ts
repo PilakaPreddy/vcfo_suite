@@ -1,3 +1,4 @@
+import { publicErrorMessage } from '@/lib/api-error';
 import { NextResponse } from 'next/server';
 import { requireAdminOrManager } from '@/auth/guards';
 import { knowledgeBankIdParamSchema } from '@/lib/api/schemas';
@@ -32,7 +33,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'delete_failed';
+    const message = publicErrorMessage(err, 'delete_failed');
     if (message.startsWith('Only admins')) {
       return NextResponse.json({ ok: false, error: message }, { status: 403 });
     }

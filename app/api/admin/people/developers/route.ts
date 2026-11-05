@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireSuperAdmin } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { createDeveloperProfile, FirmOrgForbiddenError } from '@/db/repositories/firm-org';
+import { publicErrorMessage } from '@/lib/api-error';
 
 const createSchema = z.object({
   email: z.string().trim().email(),
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     if (err instanceof FirmOrgForbiddenError) {
       return NextResponse.json({ ok: false, error: err.message }, { status: 403 });
     }
-    const message = err instanceof Error ? err.message : 'create_failed';
+    const message = publicErrorMessage(err, 'create_failed');
     return NextResponse.json({ ok: false, error: message }, { status: message === 'email_already_registered' ? 409 : 500 });
   }
 }

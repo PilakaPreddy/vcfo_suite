@@ -14,6 +14,7 @@ import {
 } from '@/db/repositories/board-resolution-noc';
 import { NOC_TEMPLATES } from '@/lib/noc/templates';
 import { parseNocVariant } from '@/lib/noc/state';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -32,7 +33,7 @@ export async function GET(_request: Request, context: RouteContext) {
     if (!noc) return NextResponse.json({ ok: false, error: 'not_found' }, { status: 404 });
     return NextResponse.json({ ok: true, noc });
   } catch (err) {
-    return NextResponse.json({ ok: false, error: err instanceof Error ? err.message : 'load_failed' }, { status: 500 });
+    return NextResponse.json({ ok: false, error: publicErrorMessage(err, 'load_failed') }, { status: 500 });
   }
 }
 
@@ -120,7 +121,7 @@ export async function POST(request: Request, context: RouteContext) {
       }
     }
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'action_failed';
+    const message = publicErrorMessage(err, 'action_failed');
     return NextResponse.json({ ok: false, error: message }, { status: statusFor(message) });
   }
 }

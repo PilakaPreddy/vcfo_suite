@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { setExpectedCoi } from '@/db/repositories/schedule';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -29,7 +30,7 @@ export async function PUT(request: Request, context: RouteContext) {
     const result = await setExpectedCoi(guard.ctx, id, body.data.on);
     return NextResponse.json(result);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'expected_coi_failed';
+    const message = publicErrorMessage(err, 'expected_coi_failed');
     const status =
       message.includes('Only a project manager') ? 403
       : message.includes('not found') || message.includes('not permitted') ? 404

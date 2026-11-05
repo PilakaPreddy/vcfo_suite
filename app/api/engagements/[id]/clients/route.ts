@@ -10,6 +10,7 @@ import { resolvePortalUrl, sendWelcomeEmail } from '@/lib/email/welcome-email';
 import { getEngagementById } from '@/db/repositories/engagements';
 import { engagementDbId } from '@/lib/projects/legacy-engagement-ids';
 import { emptyEmailDispatch, type EmailDispatchResult } from '@/lib/email/email-dispatch';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -31,7 +32,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const clients = await listEngagementClients(guard.ctx, id);
     return NextResponse.json({ clients });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'list_failed';
+    const message = publicErrorMessage(err, 'list_failed');
     const status =
       message.includes('not found') || message.includes('not permitted') ? 404 : 400;
     return NextResponse.json({ error: message }, { status });
@@ -102,7 +103,7 @@ export async function POST(request: Request, context: RouteContext) {
       { status: 201 },
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'invite_failed';
+    const message = publicErrorMessage(err, 'invite_failed');
     const status =
       message === 'already_a_member' || message === 'email_already_registered' || message === 'invite_existing_account_not_allowed'
         ? 409

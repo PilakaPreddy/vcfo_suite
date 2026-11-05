@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAnyRole } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { setEngagementWindow } from '@/db/repositories/schedule';
+import { publicErrorMessage } from '@/lib/api-error';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -52,7 +53,7 @@ export async function POST(request: Request, context: RouteContext) {
     );
     return NextResponse.json({ schedule });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'schedule_failed';
+    const message = publicErrorMessage(err, 'schedule_failed');
     const status =
       message.includes('Only a project manager') ? 403
       : message.includes('not found') || message.includes('not permitted') ? 404
