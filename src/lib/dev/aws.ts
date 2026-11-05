@@ -300,7 +300,7 @@ export async function readCostsByMonth(months = 6, now = new Date()): Promise<Re
 // ---------- S3 bucket ----------
 
 /** The most objects the bucket reader counts before it stops, so a page load stays quick. */
-export const BUCKET_COUNT_LIMIT = 20000;
+const BUCKET_COUNT_LIMIT = 20000;
 
 export async function readBucketStats(): Promise<Reach<BucketStat>> {
   const missing = missingEnv(['S3_BUCKET']);

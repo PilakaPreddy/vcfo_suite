@@ -39,7 +39,7 @@ function newToken(fromBrowser: string | null | undefined): string {
 }
 
 /** none: never invited; invited: waiting for the password; active: signed up; disabled: login off. */
-export function partnerLoginState(row: Pick<PartnerRow, 'profileId' | 'acceptedAt'>, profile: LoginProfile): PartnerLoginState {
+function partnerLoginState(row: Pick<PartnerRow, 'profileId' | 'acceptedAt'>, profile: LoginProfile): PartnerLoginState {
   if (!row.profileId) return 'none';
   if (!profile || profile.status !== 'active') return 'disabled';
   return row.acceptedAt ? 'active' : 'invited';

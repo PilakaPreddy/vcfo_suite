@@ -10,5 +10,23 @@
       "Bash(git diff *)",
       "Bash(git log *)"
     ]
+  },
+  "enabledPlugins": {
+    "ponytail@ponytail": true,
+    "codebase-cleanup@codebase-cleanup": true
+  },
+  "extraKnownMarketplaces": {
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    },
+    "codebase-cleanup": {
+      "source": {
+        "source": "github",
+        "repo": "CRangelP/codebase-cleanup"
+      }
+    }
   }
 }

@@ -25,7 +25,7 @@ export interface ResolutionDocInput {
 }
 
 
-export function resolutionParagraphs(input: ResolutionDocInput): P[] {
+function resolutionParagraphs(input: ResolutionDocInput): P[] {
   const out: P[] = [
     { text: input.companyName.toUpperCase(), bold: true, center: true, after: 0 },
     ...(input.cin ? [{ text: `CIN: ${input.cin}`, center: true, size: 18, after: 0 }] : []),

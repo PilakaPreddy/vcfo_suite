@@ -229,13 +229,13 @@ describe('statutoryStatus', () => {
     expect(statutoryStatus('2026-08-24', '2026-08-25')).toBe('overdue');
   });
 
-  it('reads today and the next week as due soon', () => {
+  it('reads today and the next 15 days as due soon', () => {
     expect(statutoryStatus('2026-08-25', '2026-08-25')).toBe('due-soon');
-    expect(statutoryStatus('2026-09-01', '2026-08-25')).toBe('due-soon');
+    expect(statutoryStatus('2026-09-09', '2026-08-25')).toBe('due-soon');
   });
 
   it('reads anything past the due-soon window as upcoming', () => {
-    expect(statutoryStatus('2026-09-02', '2026-08-25')).toBe('upcoming');
+    expect(statutoryStatus('2026-09-10', '2026-08-25')).toBe('upcoming');
   });
 });
 

@@ -24,7 +24,7 @@ logic, and API routes call these functions; they never import `db` directly.
 3. **Row scope.** Reuse the engagement scope instead of rebuilding it:
    - a list: `if (isFirmWideAdmin(ctx.role)) return all;` otherwise filter on
      `listScopedEngagementIds(ctx)` and return `[]` without a query when it is empty
-     (`invites.ts`, `document-requests.ts`, `activity.ts`);
+     (`document-requests.ts`, `activity.ts`);
    - one row or a write: load the row, then `assertEngagementAccess(ctx, row.engagementId)`
      and return `null` (or throw) when it is not `ok`; write against `access.dbId`, never the
      id the caller sent (`tasks.ts`, `documents.ts`);
@@ -130,7 +130,7 @@ Do not HTML-scrape homepages or login pages. System ingest:
 
 Implemented: `engagements`, `knowledge-bank`, `profiles`, `audit-events`,
 `board-resolution`, `compliance`, `documents`, `tasks`, `document-requests`,
-`invites`, `activity`, `notifications`, `outlook-connections`, `email-directory`,
+`activity`, `notifications`, `outlook-connections`, `email-directory`,
 `email-templates`, `announcements`.
 
 System jobs (Inngest): `systemGenerateComplianceInstances` /

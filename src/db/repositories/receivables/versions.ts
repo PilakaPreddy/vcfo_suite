@@ -1,4 +1,5 @@
 import 'server-only';
+import { after } from 'next/server';
 import { and, asc, desc, eq, gt, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { profiles, receivableChanges, receivableInvoices, receivablePartners, receivableSheets, receivableVersions } from '@/db/schema';
@@ -58,11 +59,11 @@ export async function publishSheet(ctx: AuthContext, sheetId: string, note?: str
     await tx.update(receivableSheets).set({ publishedVersionId: version.id, updatedAt: new Date() }).where(eq(receivableSheets.id, sheet.id));
     return { id: version.id, seq: version.seq, note: version.note, publishedAt: version.publishedAt, publishedByName: version.publishedByName };
   });
-  // Phase 8: the partner alerts go after the commit, fire-and-forget. A failure is logged and
-  // never blocks or fails the publish.
-  void sendPublishAlerts({ sheetId: sheet.id, clientOrgName: sheet.clientOrgName, previous: last?.snapshot ?? [], next: snapshot }).catch((e) =>
+  // Phase 8: the partner alerts go after the response (`after` from next/server), so the platform
+  // keeps them alive past the answer. A failure is logged and never blocks or fails the publish.
+  after(() => sendPublishAlerts({ sheetId: sheet.id, clientOrgName: sheet.clientOrgName, previous: last?.snapshot ?? [], next: snapshot }).catch((e) =>
     console.error('[receivables] publish alerts failed', e instanceof Error ? e.message : e),
-  );
+  ));
   return meta;
 }
 

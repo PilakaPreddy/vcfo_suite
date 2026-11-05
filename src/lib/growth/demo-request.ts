@@ -22,7 +22,7 @@ export interface DemoRequest {
 }
 
 /** The honeypot field. People never see it; a bot that fills it gets a quiet 200. */
-export const DEMO_HONEYPOT_FIELD = 'website';
+const DEMO_HONEYPOT_FIELD = 'website';
 
 export const demoRequestSchema = z.object({
   name: z.string().trim().min(1, 'Enter your name').max(120),
@@ -82,9 +82,14 @@ export function createRateLimiter({ limit, windowMs }: { limit: number; windowMs
   };
 }
 
-/** The caller's IP from the proxy headers App Runner and local dev set. */
+/**
+ * The caller's IP. App Runner's front proxy appends the address it saw to X-Forwarded-For, so
+ * the right-most entry is the one to trust; anything to its left was written by the caller and
+ * can be spoofed. If a CDN is ever put in front of App Runner, this must skip one more entry.
+ * Local dev has no proxy and falls back to X-Real-IP, then 'unknown'.
+ */
 export function clientIp(headers: Headers): string {
-  const forwarded = headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const forwarded = headers.get('x-forwarded-for')?.split(',').at(-1)?.trim();
   return forwarded || headers.get('x-real-ip')?.trim() || 'unknown';
 }
 

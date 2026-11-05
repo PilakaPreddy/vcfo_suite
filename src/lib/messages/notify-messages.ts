@@ -19,9 +19,9 @@ import type { Message } from '@/lib/messages/types';
  */
 
 /** Where the lead triages client messages (the Inbox card on Today). */
-export const LEAD_INBOX_PATH = '/app/intern/today';
+const LEAD_INBOX_PATH = '/app/intern/today';
 /** The client's messages page in the portal. */
-export const CLIENT_MESSAGES_PATH = '/app/client/messages';
+const CLIENT_MESSAGES_PATH = '/app/client/messages';
 
 function inboxPathFor(party: EngagementParty, leads: EngagementParty[]): string {
   return leads.some((l) => l.userId === party.userId) ? LEAD_INBOX_PATH : '/app/manager/dashboard';

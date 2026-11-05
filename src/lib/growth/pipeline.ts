@@ -73,7 +73,7 @@ export function asProspectService(value: string | null | undefined): ProspectSer
 }
 
 /** A won or lost prospect is closed; the repository stamps `closed_at` on that move. */
-export function isClosedStage(stage: ProspectStage): boolean {
+function isClosedStage(stage: ProspectStage): boolean {
   return stage === 'won' || stage === 'lost';
 }
 

@@ -20,11 +20,11 @@ export type ExportKind =
   | 'labour_registers_zip';
 
 /** The largest file kept in S3; a bigger one is logged without a copy. */
-export const EXPORT_COPY_MAX_BYTES = 50 * 1024 * 1024;
+const EXPORT_COPY_MAX_BYTES = 50 * 1024 * 1024;
 
 const TYPES: Record<string, string> = { csv: 'text/csv', zip: 'application/zip', pdf: 'application/pdf' };
 
-export function exportKey(fileName: string, now = new Date()): string {
+function exportKey(fileName: string, now = new Date()): string {
   const safe = fileName.replace(/[^\w.-]+/g, '_').slice(0, 120) || 'export';
   return `exports/${now.toISOString().slice(0, 7)}/${randomUUID()}-${safe}`;
 }

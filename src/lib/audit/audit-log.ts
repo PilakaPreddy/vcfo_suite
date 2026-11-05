@@ -57,12 +57,6 @@ export interface AuditEventRow {
 
 export type AuditResult = 'ok' | 'failed' | 'denied';
 
-export const AUDIT_RESULT_LABEL: Record<AuditResult, string> = {
-  ok: 'Done',
-  failed: 'Failed',
-  denied: 'Denied',
-};
-
 /** The stored result as one of the three words; anything unknown reads as ok. */
 export function auditResultOf(row: Pick<AuditEventRow, 'result'>): AuditResult {
   return row.result === 'failed' || row.result === 'denied' ? row.result : 'ok';

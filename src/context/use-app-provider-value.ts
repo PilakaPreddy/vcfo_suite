@@ -1,6 +1,6 @@
 /*
  * App provider value — Auth.js session + TanStack Query over API/repositories.
- * Tasks, requests, invites, activity, and notifications are Postgres-backed
+ * Tasks, requests, activity, and notifications are Postgres-backed
  * (Phase 2). Clients still use localStorage seeds until a clients API exists.
  *
  * The concerns live in `./app-provider/`:
@@ -9,7 +9,7 @@
  *   use-server-sync.ts      TanStack queries and the effects that copy them into state
  *   use-session-auth.ts     session user, sign in, sign out
  *   use-activity-feed.ts    activity rows and checklist-diff notifications
- *   use-record-actions.ts   projects, invites, tasks, document requests
+ *   use-record-actions.ts   projects, tasks, document requests
  *   use-checklist-state.ts  checklist read access, refresh and merge
  *   checklist-mutations.ts  checklist writes (save, submit, unlock, review)
  */
@@ -39,7 +39,6 @@ export function useAppProviderValue(): AppContextValue {
     engagements,
     tasks,
     requests,
-    invites,
     activity,
     notifications,
     sidebarMode,
@@ -52,7 +51,6 @@ export function useAppProviderValue(): AppContextValue {
     setEngagements,
     setTasks,
     setRequests,
-    setInvites,
     setActivity,
     setNotifications,
     setSidebarMode,
@@ -80,7 +78,6 @@ export function useAppProviderValue(): AppContextValue {
     setEngagements,
     setTasks,
     setRequests,
-    setInvites,
     setActivity,
     setDbChecklistState,
     setNotifications,
@@ -95,7 +92,6 @@ export function useAppProviderValue(): AppContextValue {
     setClients,
     setTasks,
     setRequests,
-    setInvites,
     setActivity,
     setDbChecklistState,
     dismissedIdsRef,
@@ -113,8 +109,6 @@ export function useAppProviderValue(): AppContextValue {
   const {
     createProjectWithClientFn,
     updateEngagementFn,
-    inviteClient,
-    acceptInvite,
     updateTask,
     uploadDoc,
     approveDoc,
@@ -122,14 +116,10 @@ export function useAppProviderValue(): AppContextValue {
   } = useRecordActions({
     user,
     queryClient,
-    engagements,
-    invites,
     requests,
-    signInAsClient,
     setClients,
     setEngagements,
     setTasks,
-    setInvites,
     setRequests,
     pushActivity,
   });
@@ -166,12 +156,12 @@ export function useAppProviderValue(): AppContextValue {
 
   const value = useMemo<AppContextValue>(() => ({
     user, authLoading, signIn, signInAsClient, signOut, refreshAuth: hydrateFromSession,
-    clients, engagements, tasks, requests, invites, activity, notifications,
+    clients, engagements, tasks, requests, activity, notifications,
     unreadNotificationCount, markNotificationRead, markAllNotificationsRead,
     dismissNotifications, restoreNotifications,
     suppressChecklistNotification, teamMembers,
     createProjectWithClient: createProjectWithClientFn, updateEngagement: updateEngagementFn,
-    inviteClient, acceptInvite, updateTask, uploadDoc, approveDoc, createRequest,
+    updateTask, uploadDoc, approveDoc, createRequest,
     internOptions, internsLoading, engagementsLoading, engagementsSettled,
     sidebarCollapsed, sidebarMode, setSidebarMode, toggleSidebar, setSidebarCollapsed: collapseSidebarTo,
     commandOpen, setCommandOpen,
@@ -201,7 +191,6 @@ export function useAppProviderValue(): AppContextValue {
     engagements,
     tasks,
     requests,
-    invites,
     activity,
     notifications,
     unreadNotificationCount,
@@ -225,8 +214,6 @@ export function useAppProviderValue(): AppContextValue {
     hydrateFromSession,
     createProjectWithClientFn,
     updateEngagementFn,
-    inviteClient,
-    acceptInvite,
     updateTask,
     uploadDoc,
     approveDoc,

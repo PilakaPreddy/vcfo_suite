@@ -26,8 +26,8 @@
  * should not depend on a third party's availability, and OneSchema's own AI tier ships off by
  * default for the same sort of reason.
  */
-import { FIELDS, fieldByKey, type FieldSpec } from '@/data/labour-registers/fields';
-import { dice, headerTokens, jaccard, normaliseHeader, tokenSet, trigrams } from './normalise';
+import { fieldByKey, type FieldSpec } from '@/data/labour-registers/fields';
+import { dice, jaccard, normaliseHeader, tokenSet, trigrams } from './normalise';
 
 /**
  * How sure the matcher is, in the three states the screen draws.
@@ -234,7 +234,3 @@ export function rememberable(matches: FieldMatch[]): Record<string, string> {
   return out;
 }
 
-/** Every canonical field key, for callers that want to match an entire sheet. */
-export function allFieldKeys(): string[] {
-  return FIELDS.map((f) => f.key);
-}

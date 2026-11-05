@@ -21,19 +21,8 @@
  */
 import type { FormSpec } from '@/data/labour-registers/types';
 import type { Period } from './catalogue';
-import type { UploadSlot } from './parse';
 
 const ROOT = 'labour-registers';
-
-/** Where one of a batch's four uploaded sheets lives. */
-export function uploadObjectKey(input: {
-  engagementId: string;
-  batchId: string;
-  slot: UploadSlot;
-  sha256: string;
-}): string {
-  return `${ROOT}/${input.engagementId}/${input.batchId}/${input.slot}-${input.sha256.slice(0, 12)}`;
-}
 
 /** Where a produced register lives. The cache key is in the path, so nothing is overwritten. */
 export function documentObjectKey(input: {
@@ -49,7 +38,7 @@ export function documentObjectKey(input: {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** "Sep-2026", or "Jul-2026 to Sep-2026" for a quarter. */
-export function periodStamp(period: Period): string {
+function periodStamp(period: Period): string {
   const from = new Date(`${period.from}T00:00:00Z`);
   const to = new Date(`${period.to}T00:00:00Z`);
   const stamp = (d: Date) => `${MONTHS[d.getUTCMonth()]}-${d.getUTCFullYear()}`;

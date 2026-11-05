@@ -168,7 +168,7 @@ export async function setTds(ctx: AuthContext, invoiceId: string, input: { tdsIn
  * the sheet's FIRAs are read, so a receipt marked by hand or through the bank feed always gets
  * its row; it is idempotent per invoice. `sheetId` must already be scoped by the caller.
  */
-export async function ensureAwaitedFiras(sheetId: string): Promise<number> {
+async function ensureAwaitedFiras(sheetId: string): Promise<number> {
   const received = await db
     .select()
     .from(receivableInvoices)
@@ -217,7 +217,7 @@ export async function createAwaitedFira(ctx: AuthContext, invoiceId: string, inp
   return firaDto(row, invoice);
 }
 
-export function firaDto(r: FiraRow, inv?: Pick<InvoiceRow, 'clientName' | 'invoiceNo'> | null): FiraDto {
+function firaDto(r: FiraRow, inv?: Pick<InvoiceRow, 'clientName' | 'invoiceNo'> | null): FiraDto {
   return {
     id: r.id,
     invoiceId: r.invoiceId,

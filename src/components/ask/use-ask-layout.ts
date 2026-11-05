@@ -22,10 +22,6 @@ export const ASK_PANEL_SIZES: Record<AskPanelSize, { label: string; width: numbe
   side: { label: 'Side panel', width: 440, height: null },
 };
 
-/** The default size: Small. */
-export const ASK_PANEL_WIDTH = ASK_PANEL_SIZES.small.width;
-export const ASK_PANEL_HEIGHT = ASK_PANEL_SIZES.small.height!;
-
 function modeFor(width: number): AskLayoutMode {
   return width >= 640 ? 'float' : 'sheet';
 }
@@ -41,7 +37,7 @@ export function useAskLayoutMode(): AskLayoutMode {
   return mode;
 }
 
-export function askSizeKey(userId: string | null | undefined): string {
+function askSizeKey(userId: string | null | undefined): string {
   return `vcfo.ask.size.${userId ?? 'anon'}`;
 }
 

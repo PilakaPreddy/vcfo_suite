@@ -16,7 +16,7 @@ import { DateTile, Empty, SCard, urgencyTint } from './spectrum';
 import type { DetailHistory, DetailReminder, DetailStep } from './task-api';
 
 /** R-28: mono only for identifiers (ARN, CPIN, SRN): runs of capitals and digits. */
-export const isId = (v: string) => /^[A-Z0-9][A-Z0-9 ·/-]{5,}$/.test(v.trim()) && /[A-Z0-9]{6,}/.test(v);
+const isId = (v: string) => /^[A-Z0-9][A-Z0-9 ·/-]{5,}$/.test(v.trim()) && /[A-Z0-9]{6,}/.test(v);
 
 /** "14 Oct" from a date or a timestamp; "-" when there is none. */
 export function whenText(v: string | null | undefined): string {

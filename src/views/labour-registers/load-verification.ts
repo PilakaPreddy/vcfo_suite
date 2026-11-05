@@ -4,7 +4,7 @@ import type { AuthContext } from '@/auth/guards';
 import { listVerifications } from '@/db/repositories/labour-registers';
 import { FORMS } from '@/data/labour-registers/forms';
 import { REGISTER_GAPS } from '@/data/labour-registers/gaps';
-import { STATES } from '@/data/labour-registers/states';
+import { stateByCode } from '@/data/labour-registers/states';
 import { resolveVerification, verificationIndex, verificationLabel } from '@/lib/labour-registers/verification';
 import { isAdminOrManager } from '@/lib/auth';
 import type { VerificationRow, VerificationView } from './VerificationPage';
@@ -27,10 +27,13 @@ const ORDER: Record<string, number> = {
   'gazette-verified': 3,
 };
 
+/** "All India" for a central form, the state's own name otherwise. */
+function jurisdictionName(code: string): string {
+  return code === 'IN' ? 'All India' : (stateByCode(code)?.name ?? code);
+}
+
 export async function loadVerificationView(ctx: AuthContext): Promise<VerificationView> {
   const index = verificationIndex(await listVerifications(ctx));
-  const stateName = new Map(STATES.map((s) => [s.code, s.name]));
-
   const rows: VerificationRow[] = FORMS.map((form) => {
     const state = resolveVerification(form, index);
     return {
@@ -41,8 +44,7 @@ export async function loadVerificationView(ctx: AuthContext): Promise<Verificati
       rule: form.rule,
       regime: form.regime,
       jurisdiction: form.jurisdiction,
-      jurisdictionName:
-        form.jurisdiction === 'IN' ? 'All India' : (stateName.get(form.jurisdiction) ?? form.jurisdiction),
+      jurisdictionName: jurisdictionName(form.jurisdiction),
       authorityLine: form.authorityLine,
       status: state.status,
       label: verificationLabel(state),
@@ -74,8 +76,7 @@ export async function loadVerificationView(ctx: AuthContext): Promise<Verificati
     gaps: REGISTER_GAPS.map((g) => ({
       id: g.id,
       jurisdiction: g.jurisdiction,
-      jurisdictionName:
-        g.jurisdiction === 'IN' ? 'All India' : (stateName.get(g.jurisdiction) ?? g.jurisdiction),
+      jurisdictionName: jurisdictionName(g.jurisdiction),
       act: g.act,
       formNumber: g.formNumber,
       title: g.title,

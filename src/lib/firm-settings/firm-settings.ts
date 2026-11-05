@@ -56,7 +56,7 @@ const SERVICE_TARGET_MAX: Record<ServiceTargetKey, number> = {
   partnerReportDay: 28,
 };
 
-export const EMPTY_SERVICE_TARGETS: ServiceTargets = {
+const EMPTY_SERVICE_TARGETS: ServiceTargets = {
   daysToCoi: null,
   fileDaysAhead: null,
   replyHours: null,
@@ -195,7 +195,7 @@ export type FirmSettingsField =
   | 'serviceTargets'
   | 'rolePermissions';
 
-export const FIRM_SETTINGS_FIELD_LABEL: Record<FirmSettingsField | 'logo', string> = {
+const FIRM_SETTINGS_FIELD_LABEL: Record<FirmSettingsField | 'logo', string> = {
   firmName: 'Firm name',
   logo: 'Logo',
   workingDays: 'Working days',
@@ -221,7 +221,7 @@ function isRealDay(value: string): boolean {
 }
 
 /** True when the runtime knows this IANA zone name. */
-export function isKnownTimezone(value: string): boolean {
+function isKnownTimezone(value: string): boolean {
   try {
     new Intl.DateTimeFormat('en-GB', { timeZone: value });
     return true;

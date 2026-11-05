@@ -108,7 +108,7 @@ export interface LrStat {
 }
 
 /** One figure in a tinted tile. The hero's row of them, and the batch screen's cache figures. */
-export function LrStatTile({ label, value, tone = 'neutral' }: LrStat) {
+function LrStatTile({ label, value, tone = 'neutral' }: LrStat) {
   const t = LR_TONES[tone];
   return (
     <div

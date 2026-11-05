@@ -1,5 +1,6 @@
 import { isMilestoneStoragePath } from '@/lib/documents/milestone-document-storage';
 import type { IndexedDocumentRow, VaultDocument, VaultEntityGroup } from '@/lib/documents/vault-documents';
+import type { DocNode } from '@/lib/client-portal/documents';
 import type { VaultTreeView } from '@/views/vault/vault-tree';
 
 /*
@@ -25,7 +26,7 @@ export type VaultIndexRow = IndexedDocumentRow & {
 export type ReviewStatus = 'none' | 'pending' | 'approved' | 'changes';
 
 /** A vault file's index row, if it has one: its own id, or a row for the same object. */
-export function indexRowFor(doc: VaultDocument, byKey: Map<string, VaultIndexRow>, byId: Map<string, VaultIndexRow>) {
+function indexRowFor(doc: VaultDocument, byKey: Map<string, VaultIndexRow>, byId: Map<string, VaultIndexRow>) {
   if (doc.documentId) return byId.get(doc.documentId) ?? null;
   return byKey.get(doc.storagePath.trim()) ?? null;
 }
@@ -37,14 +38,37 @@ export function indexMaps(rows: VaultIndexRow[]) {
   };
 }
 
-/** What the ZIP and preview routes take for one file. */
-export type VaultRef = { documentId: string } | { path: string } | { requestFileId: string };
+/**
+ * What the ZIP and preview routes take for one file. A board resolution has no vault reference,
+ * so it opens through the client documents route (`clientRef`), which the ZIP does not take.
+ */
+export type VaultRef =
+  | { documentId: string }
+  | { path: string }
+  | { requestFileId: string }
+  | { clientRef: string; engagementId: string };
+
+/** The facts the tree, preview and actions read about a file: its index row, when it has one. */
+export type VaultFileFacts = Omit<Partial<VaultIndexRow>, 'id'> & { id?: string };
+
+/** A server-read file's facts: the index row the server attached, plus the node's own type and size. */
+function nodeFacts(node: DocNode): VaultFileFacts {
+  return { ...node.indexRow, contentType: node.contentType, sizeBytes: node.sizeBytes };
+}
+
+/** The facts for any vault file: from its server node, or else from the firm-wide index rows. */
+export function factsFor(doc: VaultDocument, byKey: Map<string, VaultIndexRow>, byId: Map<string, VaultIndexRow>): VaultFileFacts | null {
+  return doc.node ? nodeFacts(doc.node) : indexRowFor(doc, byKey, byId);
+}
 
 /**
  * The reference for a vault file: its index row when it has one, otherwise a checklist upload's
  * storage path. Both routes check the step's release, so the two agree on who may read it.
  */
 export function refFor(doc: VaultDocument, indexId?: string | null): VaultRef | null {
+  const nodeRef = doc.node?.ref ?? '';
+  if (nodeRef.startsWith('r:')) return { requestFileId: nodeRef.slice(2) };
+  if (nodeRef.startsWith('br:')) return { clientRef: nodeRef, engagementId: doc.engagementId };
   const id = doc.documentId ?? indexId;
   if (id) return { documentId: id };
   if (isMilestoneStoragePath(doc.storagePath)) return { path: doc.storagePath.trim() };
@@ -54,6 +78,9 @@ export function refFor(doc: VaultDocument, indexId?: string | null): VaultRef | 
 /** Same-origin preview (inline) or download URL for a reference. */
 export function fileUrl(ref: VaultRef, mode: 'inline' | 'download' = 'inline'): string {
   const dl = mode === 'download' ? 'download=1' : '';
+  if ('clientRef' in ref) {
+    return `/api/client/documents/file?ref=${encodeURIComponent(ref.clientRef)}&engagement=${encodeURIComponent(ref.engagementId)}${dl ? '&dl=1' : ''}`;
+  }
   if ('documentId' in ref) {
     return `/api/documents/${encodeURIComponent(ref.documentId)}/preview${dl ? `?${dl}` : ''}`;
   }
@@ -71,7 +98,7 @@ export function previewKind(fileName: string, contentType?: string | null): 'pdf
 }
 
 /** The folder a file sits in inside the archive: phase, then step. */
-export function zipFolderFor(doc: VaultDocument): string {
+function zipFolderFor(doc: VaultDocument): string {
   return [doc.bucket, doc.milestoneTitle].filter(Boolean).join('/');
 }
 
@@ -100,12 +127,12 @@ export function entityDocs(entity: VaultEntityGroup): VaultDocument[] {
 export function zipItems(
   docs: VaultDocument[],
   indexIdFor: (doc: VaultDocument) => string | null | undefined,
-): Array<VaultRef & { folder: string }> {
+): Array<Exclude<VaultRef, { clientRef: string }> & { folder: string }> {
   const seen = new Set<string>();
-  const out: Array<VaultRef & { folder: string }> = [];
+  const out: Array<Exclude<VaultRef, { clientRef: string }> & { folder: string }> = [];
   for (const doc of docs) {
     const ref = refFor(doc, indexIdFor(doc));
-    if (!ref) continue;
+    if (!ref || 'clientRef' in ref) continue;
     const key = JSON.stringify(ref);
     if (seen.has(key)) continue;
     seen.add(key);
@@ -170,7 +197,8 @@ export function childFolderIds(allFolderIds: string[], folderId: string): string
  * True when a vault file was replaced by a newer upload to the same field (P-575). A file a
  * checklist step still holds is the current one, whatever its index row says.
  */
-export function isReplacedDoc(doc: VaultDocument, row: VaultIndexRow | null | undefined): boolean {
+export function isReplacedDoc(doc: VaultDocument, row: VaultFileFacts | null | undefined): boolean {
+  if (doc.node) return doc.node.replaced;
   return Boolean(row?.replacedAt) && doc.source !== 'milestone';
 }
 
@@ -178,7 +206,7 @@ export function isReplacedDoc(doc: VaultDocument, row: VaultIndexRow | null | un
  * The "From" fact (P-593): the client's name for a client upload, "SBC · <name>" for a staff
  * upload, or null when the file has no recorded uploader.
  */
-export function fromLabel(row: VaultIndexRow | null | undefined, companyName: string): string | null {
+export function fromLabel(row: VaultFileFacts | null | undefined, companyName: string): string | null {
   if (!row?.uploadedBy) return null;
   if (row.uploadedByRole === 'client') return companyName;
   const name = row.uploadedByName?.trim();
@@ -191,10 +219,10 @@ export function fromLabel(row: VaultIndexRow | null | undefined, companyName: st
  */
 export function canDeleteDoc(
   doc: VaultDocument,
-  row: VaultIndexRow | null | undefined,
+  row: VaultFileFacts | null | undefined,
   person: { role?: string | null; id?: string | null } | null | undefined,
 ): boolean {
-  if (!row || doc.source === 'milestone' || !person?.role) return false;
+  if (!row?.id || doc.source === 'milestone' || !person?.role) return false;
   if (person.role === 'admin' || person.role === 'super_admin' || person.role === 'manager') return true;
   return person.role === 'intern' && Boolean(person.id) && row.uploadedBy === person.id;
 }

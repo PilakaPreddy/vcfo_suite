@@ -163,6 +163,15 @@ export async function fetchOwnOutlookPhoto(
   return photo;
 }
 
+/**
+ * Checks that the caller's Outlook can send right now (linked, token fresh or refreshed), so a
+ * route can answer 409 before it hands the slow send to the work after the response.
+ */
+export async function assertOutlookReady(ctx: AuthContext): Promise<{ msEmail: string }> {
+  const { msEmail } = await validAccessToken(ctx);
+  return { msEmail };
+}
+
 export async function sendMailViaOutlook(
   ctx: AuthContext,
   input: {

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PgDialect } from 'drizzle-orm/pg-core';
+import type { SQL } from 'drizzle-orm';
 import type { AuthContext } from '@/auth/guards';
 
 /**
@@ -8,12 +10,16 @@ import type { AuthContext } from '@/auth/guards';
  * partner's access is tested in receivables/partner-portal.test.ts.
  */
 
-type Call = { op: string; values?: unknown; set?: unknown };
+type Call = { op: string; values?: unknown; set?: unknown; where?: SQL };
 const calls: Call[] = [];
 let results: unknown[][] = [];
 function chain(call: Call): unknown {
   const c: Record<string, unknown> = {};
-  for (const m of ['from', 'leftJoin', 'innerJoin', 'where', 'orderBy', 'limit', 'returning', 'onConflictDoNothing']) c[m] = () => c;
+  for (const m of ['from', 'leftJoin', 'innerJoin', 'orderBy', 'limit', 'returning', 'onConflictDoNothing']) c[m] = () => c;
+  c.where = (w: SQL) => {
+    call.where = w;
+    return c;
+  };
   c.values = (v: unknown) => {
     call.values = v;
     return c;
@@ -34,6 +40,8 @@ const db: Record<string, unknown> = { select: op('select'), insert: op('insert')
 db.transaction = async (fn: (tx: unknown) => unknown) => fn(db);
 vi.mock('@/db/client', () => ({ db }));
 vi.mock('server-only', () => ({}));
+// `after` runs its callback once the current tick is done, as it would after the response.
+vi.mock('next/server', async (orig) => ({ ...(await orig<Record<string, unknown>>()), after: (fn: () => unknown) => void Promise.resolve().then(fn) }));
 
 const repo = await import('@/db/repositories/receivables');
 
@@ -42,6 +50,8 @@ const INVOICE = '22222222-2222-2222-2222-222222222202';
 const MANAGER = '33333333-3333-3333-3333-333333333303';
 const ctx = (role: AuthContext['role'], userId = `user-${role}`): AuthContext => ({ userId, email: `${role}@vcfo.local`, name: role, role });
 const writes = () => calls.filter((c) => c.op !== 'select');
+const dialect = new PgDialect();
+const whereSql = (c: Call) => (c.where ? dialect.sqlToQuery(c.where).sql : '');
 const sheetRow = (over: Record<string, unknown> = {}) => ({
   id: SHEET,
   name: 'Summit Consulting',
@@ -291,12 +301,57 @@ describe('bank credits', () => {
 
   it('stores a new credit and settles a sure match in the draft', async () => {
     const row = { id: 'c1', sheetId: SHEET, valueDate: '2026-11-03', payer: 'DURAVANT INC', inrAmount: '6456984.00', status: 'unmatched' };
-    results = [[sheetRow()], [], [row], [invoiceRow()], [invoiceRow()], [], [], []];
+    results = [[sheetRow()], [], [row], [invoiceRow()], [invoiceRow()], [{ id: INVOICE }], [], []];
     await expect(repo.importCredits(ctx('manager', MANAGER), SHEET, [{ ...credit, source: 'hsbc_api' }])).resolves.toEqual({ added: 1, auto: 1, duplicates: 0 });
     const [insert, settle, change, status] = writes();
     expect(insert.values).toMatchObject({ sheetId: SHEET, source: 'manual', externalRef: 'HSBC-1', inrAmount: '6456984.00' });
     expect(settle.set).toMatchObject({ status: 'received', paidOn: '2026-11-03', paidVia: 'bank', paidAmount: '6456984.00' });
     expect(change.values).toMatchObject({ actorId: MANAGER, summary: 'Duravant SC/09/03 received (bank credit from DURAVANT INC)' });
     expect(status.set).toMatchObject({ status: 'auto', matchInvoiceIds: [INVOICE] });
+  });
+
+  // Audit 2026-11-04 findings 3 and 13: one credit row per bank reference whatever the source,
+  // one claim per credit, and each invoice received once.
+  const CREDIT = '44444444-4444-4444-4444-444444444404';
+  const creditRow = (over: Record<string, unknown> = {}) => ({ id: CREDIT, sheetId: SHEET, source: 'manual', externalRef: 'HSBC-1', valueDate: '2026-11-03', payer: 'DURAVANT INC', inrAmount: '6456984.00', status: 'to_confirm', ...over });
+  const received = () => calls.filter((c) => c.op === 'update' && (c.set as { status?: string })?.status === 'received');
+
+  it('stores a credit once when a statement and the feed both bring it, and receives its invoice once', async () => {
+    results = [[sheetRow()], [], [creditRow({ status: 'unmatched' })], [invoiceRow()], [invoiceRow()], [{ id: INVOICE }], [], []];
+    await expect(repo.importCredits(ctx('manager', MANAGER), SHEET, [credit])).resolves.toEqual({ added: 1, auto: 1, duplicates: 0 });
+    expect(received()).toHaveLength(1);
+    expect(whereSql(received()[0]!)).toContain('"status" = $');
+
+    // The feed brings the same reference: the lookup by (sheet, reference) finds the stored row.
+    calls.length = 0;
+    results = [[{ id: CREDIT }]];
+    await expect(repo.systemIngestCredits(SHEET, [{ ...credit, source: 'hsbc_api' }])).resolves.toEqual({ added: 0, auto: 0, duplicates: 1 });
+    expect(writes()).toHaveLength(0);
+
+    // Both raced past the lookup: the (sheet_id, external_ref) unique index makes the insert a no-op.
+    calls.length = 0;
+    results = [[], []];
+    await expect(repo.systemIngestCredits(SHEET, [{ ...credit, source: 'hsbc_api' }])).resolves.toEqual({ added: 0, auto: 0, duplicates: 1 });
+    expect(received()).toHaveLength(0);
+  });
+
+  it('settles once when a credit is confirmed twice', async () => {
+    results = [[creditRow()], [sheetRow()], [creditRow({ status: 'confirmed' })], [invoiceRow()], [{ id: INVOICE }], []];
+    await expect(repo.confirmCredit(ctx('manager', MANAGER), CREDIT, [INVOICE])).resolves.toMatchObject({ status: 'confirmed' });
+    const claim = calls.find((c) => c.op === 'update' && (c.set as { status?: string })?.status === 'confirmed')!;
+    expect(whereSql(claim)).toMatch(/"status" in \(\$\d+, \$\d+\)/);
+    expect(received()).toHaveLength(1);
+
+    // A double click read the credit before the first commit; the conditional claim returns no row.
+    calls.length = 0;
+    results = [[creditRow()], [sheetRow()], []];
+    await expect(repo.confirmCredit(ctx('manager', MANAGER), CREDIT, [INVOICE])).rejects.toMatchObject({ code: 'already_decided' });
+    expect(received()).toHaveLength(0);
+  });
+
+  it('fails the confirm, writing no change log, when another credit received the invoice in between', async () => {
+    results = [[creditRow()], [sheetRow()], [creditRow({ status: 'confirmed' })], [invoiceRow()], []];
+    await expect(repo.confirmCredit(ctx('manager', MANAGER), CREDIT, [INVOICE])).rejects.toMatchObject({ code: 'invoice' });
+    expect(calls.some((c) => c.op === 'insert')).toBe(false);
   });
 });

@@ -95,6 +95,13 @@ access, tunnels and Auth.js URLs are in `docs/context/notes/tooling.md`.
   `portal-css.ts` lists the cascade order.
 - **Component homes.** One greeting card (`DashHero`), one section card (`DashSection`), one
   chip style (`IconChip`), one button set (`ui/button-variants.ts`). Never fork a primitive.
+- **Reuse first, one page per feature.** Before writing a component, helper or route, search for
+  an existing one and extend it. A feature has one page component for every role; the role and
+  the repository's `AuthContext` decide what is shown or editable, never a second copy of the
+  page for clients. Slow work (Excel, PDF, docx, outbound email) belongs in an Inngest job in
+  `src/jobs/`, not inside the request. The project enables the `ponytail` plugin (reuse-first
+  coding; `/ponytail-audit`, `/ponytail-review`) and the `codebase-cleanup` plugin (dead code
+  and duplication removal on its own `cleanup/` branch) in `.claude/settings.json`.
 - **Large views.** A big page keeps its JSX in the original file; state moves to a `use*` hook
   and closure render helpers to `create*`/`render*` factories in a sibling folder (for example
   `src/views/incorporation/milestone-form/`), so the rendered tree does not change.

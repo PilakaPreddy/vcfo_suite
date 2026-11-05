@@ -84,9 +84,11 @@ export interface ToastOptions {
 }
 
 /** How long a toast stays (prototype useUndoToast, 5 s). Deferred actions with Undo wait this long. */
-export const TOAST_MS = 5000;
+const TOAST_MS = 5000;
 
-interface PortalContextValue {
+export interface PortalContextValue {
+  /** Set when staff view one client's page in their own shell (`StaffPortalProvider`); a client never has it. */
+  engagementId?: string;
   shell: ClientPortalShell | undefined;
   shellLoading: boolean;
   /** Layout shown: Before (false) or After (true) incorporation. */
@@ -141,7 +143,7 @@ export interface WhatsThisAnswer {
   goLabel?: string;
 }
 
-const PortalContext = createContext<PortalContextValue | null>(null);
+export const PortalContext = createContext<PortalContextValue | null>(null);
 
 export function usePortal(): PortalContextValue {
   const v = useContext(PortalContext);

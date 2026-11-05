@@ -1,22 +1,3 @@
-/**
- * LABOUR REGISTERS — the columns a form computes rather than reads.
- *
- * Seven of the catalogue's columns are declared `derived`, and one more (`overtimeWages`) is
- * declared as an input on some forms and has to be computed when nobody mapped it. This module
- * is all eight, each a pure function of one employee's row.
- *
- * Two rules run through the whole file:
- *
- *  1. **A mapped value always wins.** If the client's paysheet carries a figure, that figure is
- *     what the register prints. These functions are what happens when it does not. A register
- *     that silently replaces the client's own number with our arithmetic is worse than one that
- *     prints nothing, because nobody can tell it happened.
- *  2. **Nothing is guessed.** Where a value cannot be derived honestly — an overtime rate for
- *     an employee whose minimum wage coverage nobody decided, a payment date nobody supplied —
- *     the function says so and the caller blocks. The alternative is a statutory register
- *     carrying a figure the firm cannot stand behind.
- */
-import { fieldByKey } from '@/data/labour-registers/fields';
 import { computeOvertime, normalHoursFor, type MinimumWageCoverage } from './overtime';
 
 /** One employee's row, as `dataset.ts` assembles it. Kept structural so this module stays pure. */
@@ -240,12 +221,3 @@ export function deriveValue(field: string, e: DerivableEmployee, ctx: DeriveCont
   return deriver(e, ctx);
 }
 
-/** Every derived column this module knows how to produce. */
-export function derivableFields(): string[] {
-  return Object.keys(DERIVERS);
-}
-
-/** True when the catalogue declares a derived column that nothing here can produce. */
-export function underivedFields(fields: Iterable<string>): string[] {
-  return [...fields].filter((f) => !DERIVERS[f] && fieldByKey(f) !== undefined);
-}

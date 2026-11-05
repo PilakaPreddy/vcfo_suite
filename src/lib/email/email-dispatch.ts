@@ -1,3 +1,4 @@
+import type { NotificationKind } from '@/lib/checklist/checklist-notifications';
 /**
  * Shared email-dispatch summary (safe for client + server).
  * API routes include this on responses so the UI can toast.
@@ -13,6 +14,13 @@ export type OutgoingEmailDraft = {
   engagementId?: string;
   companyName?: string;
   itemId?: string;
+};
+
+export type EmailDispatchToastMeta = {
+  engagementId?: string;
+  companyName?: string;
+  itemId?: string;
+  href?: string;
 };
 
 export type EmailDispatchResult = {
@@ -62,4 +70,69 @@ export function emailDispatchToastId(
     .map((part) => (typeof part === 'string' ? part.trim() : ''))
     .filter(Boolean)
     .join(':');
+}
+
+/** The bell row (and toast text) that tells the sender how a dispatch went; null when nothing was tried. */
+export function emailDispatchNotice(
+  email: EmailDispatchResult,
+  meta?: EmailDispatchToastMeta,
+): {
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  engagementId: string;
+  companyName: string;
+  itemId?: string;
+  href: string;
+} | null {
+  if (email.attempted === 0) return null;
+
+  const subjects = [...new Set((email.subjects ?? []).map((s) => s.trim()).filter(Boolean))];
+  const subjectLine =
+    subjects.length === 0
+      ? null
+      : subjects.length === 1
+        ? subjects[0]
+        : `${subjects[0]} (+${subjects.length - 1} more)`;
+
+  if (email.sent.length > 0) {
+    return {
+      kind: 'email.sent',
+      title: subjectLine ?? 'Email sent',
+      body: subjectLine
+        ? `To ${formatEmailRecipients(email.sent)}`
+        : formatEmailRecipients(email.sent),
+      engagementId: meta?.engagementId ?? '',
+      companyName: meta?.companyName ?? '',
+      itemId: meta?.itemId,
+      href: meta?.href ?? '#',
+    };
+  }
+  if (email.skipped.length > 0) {
+    return {
+      kind: 'email.skipped',
+      title: subjectLine ?? 'Email not configured',
+      body: subjectLine
+        ? `Not sent to ${formatEmailRecipients(email.skipped)} — email provider not configured.`
+        : `Would send to ${formatEmailRecipients(email.skipped)}. Set EMAIL_PROVIDER and From (EMAIL_FROM / RESEND_FROM_EMAIL) — plus RESEND_API_KEY for Resend, or SES identity for SES.`,
+      engagementId: meta?.engagementId ?? '',
+      companyName: meta?.companyName ?? '',
+      itemId: meta?.itemId,
+      href: meta?.href ?? '#',
+    };
+  }
+  if (email.failed.length > 0) {
+    return {
+      kind: 'email.failed',
+      title: subjectLine ?? "Email didn't send",
+      body: subjectLine
+        ? `Failed for ${formatEmailRecipients(email.failed)}${email.error ? ` — ${email.error}` : ''}`
+        : `Could not deliver to ${formatEmailRecipients(email.failed)}${email.error ? ` — ${email.error}` : ''}`,
+      engagementId: meta?.engagementId ?? '',
+      companyName: meta?.companyName ?? '',
+      itemId: meta?.itemId,
+      href: meta?.href ?? '#',
+    };
+  }
+  return null;
 }

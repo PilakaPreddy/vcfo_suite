@@ -15,7 +15,7 @@ type Env = Record<string, string | undefined>;
  * The database password has no DATABASE_URL in production: DB_SECRET_ARN names the
  * RDS-managed master secret (rotated every 7 days). DATABASE_URL is for local dev only.
  */
-export const APP_SECRETS: Array<{ name: string; scope: string; secretIdVar?: string }> = [
+const APP_SECRETS: Array<{ name: string; scope: string; secretIdVar?: string }> = [
   { name: 'AUTH_SECRET', scope: 'Signs sign-in tokens' },
   { name: 'AUTH_SECRET_PREVIOUS', scope: 'Accepts tokens from before a rotation' },
   { name: 'CREDENTIALS_ENCRYPTION_KEY', scope: 'Encrypts portal logins and two-step secrets' },

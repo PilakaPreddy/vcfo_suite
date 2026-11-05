@@ -16,7 +16,7 @@
 import { regimeLine, resolveCodeRules } from '@/lib/labour-registers/code-rules';
 import type { StateSpec } from './types';
 
-export const STATES: StateSpec[] = [
+const STATES: StateSpec[] = [
   {
     code: 'TG',
     name: 'Telangana',
@@ -86,11 +86,6 @@ const BY_CODE = new Map(STATES.map((s) => [s.code, s]));
 /** One state by its code. */
 export function stateByCode(code: string): StateSpec | undefined {
   return BY_CODE.get(code as StateSpec['code']);
-}
-
-/** The states we can generate registers for today, in name order. */
-export function configuredStates(): StateSpec[] {
-  return STATES.filter((s) => s.configured).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Every state, configured first and then the rest, each group in name order. */

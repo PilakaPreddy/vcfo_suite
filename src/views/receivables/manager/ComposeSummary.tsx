@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { FilterSelect } from '@/components/ui/native-select';
 import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
-import { toastError, toastSuccess } from '@/lib/toast-errors';
+import { toastError, toastInfo, toastLoading, toastSuccess } from '@/lib/toast-errors';
 import { isEmailAddress, splitTypedRecipients } from '@/lib/email/recipient-input';
 import type { EmailRecipient } from '@/lib/receivables/model';
 import type { ManagerSheetDto } from '@/lib/receivables/wire';
-import { useOutlookStatus, useSendSummary, useSummary, type useReceivablesActions } from '@/hooks/use-receivables';
+import { summarySendOutcome, useOutlookStatus, useSendSummary, useSummary, type useReceivablesActions } from '@/hooks/use-receivables';
 import { stamp } from '../format';
 
 /**
@@ -137,9 +137,17 @@ export function ComposeSummary({ data, actions, onClose }: { data: ManagerSheetD
       { ...people, subject, html, attachExcel },
       {
         onSuccess: (r) => {
+          // The server answered 202 and sends after the response; the toast follows the send.
           const extra = [r.cc ? `${r.cc} in Cc` : '', r.bcc ? `${r.bcc} in Bcc` : ''].filter(Boolean).join(', ');
-          toastSuccess('Email sent', `From ${r.from} to ${r.to} ${r.to === 1 ? 'person' : 'people'}${extra ? ` (${extra})` : ''}.`);
+          const who = `From ${r.from} to ${r.to} ${r.to === 1 ? 'person' : 'people'}${extra ? ` (${extra})` : ''}.`;
+          const toastId = `rcv-send-${r.sendId}`;
+          toastLoading('Sending…', who, { id: toastId });
           onClose();
+          void summarySendOutcome(data.sheet.id, r.sendId).then((o) => {
+            if (o.status === 'sent') toastSuccess('Email sent', who, { id: toastId });
+            else if (o.status === 'failed') toastError('Not sent', o.error ?? undefined, { id: toastId });
+            else toastInfo('Still sending', 'Check Sent Items in Outlook in a minute.', { id: toastId });
+          });
         },
         onError: (e) => toastError('Not sent', e instanceof Error ? e.message : undefined),
       },
@@ -151,7 +159,7 @@ export function ComposeSummary({ data, actions, onClose }: { data: ManagerSheetD
       open
       onOpenChange={(o) => !o && onClose()}
       title="Send email"
-      sub={summary.data ? `Version ${summary.data.versionSeq} of ${stamp(summary.data.publishedAt)}${summary.data.lastSentAt ? ` · last sent ${stamp(summary.data.lastSentAt)}` : ''}` : undefined}
+      sub={summary.data ? `Version ${summary.data.versionSeq} of ${stamp(summary.data.publishedAt)}${summary.data.lastSentAt ? ` · ${summary.data.lastSendStatus === 'failed' ? 'last send failed' : summary.data.lastSendStatus === 'sending' ? 'sending since' : 'last sent'} ${stamp(summary.data.lastSentAt)}` : ''}` : undefined}
       size="xl"
       footer={
         <>

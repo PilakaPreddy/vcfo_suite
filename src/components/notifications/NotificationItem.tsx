@@ -18,7 +18,7 @@ function isOutboundKind(kind: AppNotification["kind"]): boolean {
  * The grey line under the title (prototype StaffBellMenu): the client, then the context. For an
  * outbound email the body is the recipient line, so it is the context; for the rest the body is.
  */
-export function notificationContextLine(item: AppNotification): string {
+function notificationContextLine(item: AppNotification): string {
   const context = item.body?.trim() || null;
   return [item.companyName || null, context].filter(Boolean).join(" · ");
 }

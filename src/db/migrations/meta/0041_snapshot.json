@@ -1,5 +1,5 @@
 {
-  "id": "d284cea4-92a1-46e9-a0e6-f4c94947faf7",
+  "id": "51dd77f3-ae82-4578-bc4e-b155689dd8c2",
   "prevId": "2f3c2a80-1ca2-47d8-bfd9-45be6c65b81c",
   "version": "7",
   "dialect": "postgresql",
@@ -12760,135 +12760,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.labour_register_verifications": {
-      "name": "labour_register_verifications",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "form_id": {
-          "name": "form_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "against": {
-          "name": "against",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "disputed_because": {
-          "name": "disputed_because",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "open_items": {
-          "name": "open_items",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
-        "evidence_key": {
-          "name": "evidence_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "evidence_file_name": {
-          "name": "evidence_file_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "suppressed": {
-          "name": "suppressed",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "suppressed_reason": {
-          "name": "suppressed_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "verified_by": {
-          "name": "verified_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "verified_at": {
-          "name": "verified_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "labour_register_verification_form_idx": {
-          "name": "labour_register_verification_form_idx",
-          "columns": [
-            {
-              "expression": "form_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "labour_register_verifications_verified_by_profiles_id_fk": {
-          "name": "labour_register_verifications_verified_by_profiles_id_fk",
-          "tableFrom": "labour_register_verifications",
-          "tableTo": "profiles",
-          "columnsFrom": [
-            "verified_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.agenda_library_items": {
       "name": "agenda_library_items",
       "schema": "",
@@ -14823,6 +14694,19 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'sent'"
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "sent_by": {
           "name": "sent_by",

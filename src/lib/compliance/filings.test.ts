@@ -16,8 +16,11 @@ import {
   rowsInFinancialYear,
   rowsInMonth,
   summarise,
+  todayIST,
+  DUE_SOON_DAYS,
   type FilingRow,
 } from '@/lib/compliance/filings';
+import { statusOf, todayIso } from '@/lib/client-portal/compliances';
 
 const NOW = new Date('2026-09-01T00:00:00Z');
 
@@ -87,10 +90,32 @@ describe('filingStatus', () => {
     expect(filingStatus({ dueDate: '2026-08-20', filedOn: null }, NOW)).toBe('overdue');
   });
 
-  it('marks the next fortnight due soon and beyond that upcoming', () => {
+  it('marks the next 15 days due soon and beyond that upcoming', () => {
     expect(filingStatus({ dueDate: '2026-09-11', filedOn: null }, NOW)).toBe('due-soon');
-    expect(filingStatus({ dueDate: '2026-09-15', filedOn: null }, NOW)).toBe('due-soon');
-    expect(filingStatus({ dueDate: '2026-09-16', filedOn: null }, NOW)).toBe('upcoming');
+    expect(filingStatus({ dueDate: '2026-09-16', filedOn: null }, NOW)).toBe('due-soon');
+    expect(filingStatus({ dueDate: '2026-09-17', filedOn: null }, NOW)).toBe('upcoming');
+  });
+
+  it('counts today in IST, so a filing due yesterday is overdue just after midnight IST', () => {
+    // 18:29 UTC on 31 Aug is 23:59 IST; 18:30 UTC is 00:00 IST on 1 Sep.
+    expect(todayIST(new Date('2026-08-31T18:29:59Z'))).toBe('2026-08-31');
+    expect(todayIST(new Date('2026-08-31T18:30:00Z'))).toBe('2026-09-01');
+    const row = { dueDate: '2026-08-31', filedOn: null };
+    expect(filingStatus(row, new Date('2026-08-31T18:29:59Z'))).toBe('due-soon');
+    expect(filingStatus(row, new Date('2026-08-31T18:30:00Z'))).toBe('overdue');
+  });
+
+  it('agrees with the client portal status for the same row at every boundary', () => {
+    const word = { filed: 'ok', overdue: 'over', 'due-soon': 'due', upcoming: 'up' } as const;
+    const instants = ['2026-08-31T18:29:59Z', '2026-08-31T18:30:00Z', '2026-09-01T12:00:00Z'];
+    const dues = ['2026-08-31', '2026-09-01', `2026-09-${String(1 + DUE_SOON_DAYS).padStart(2, '0')}`, '2026-09-30'];
+    for (const at of instants) {
+      const now = new Date(at);
+      for (const dueDate of dues) {
+        const r = { dueDate, filedOn: null };
+        expect(statusOf(r, todayIso(now)), `${dueDate} at ${at}`).toBe(word[filingStatus(r, now)]);
+      }
+    }
   });
 
   it('treats the due date itself as due soon, not overdue', () => {

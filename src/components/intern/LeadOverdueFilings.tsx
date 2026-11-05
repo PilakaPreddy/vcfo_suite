@@ -9,6 +9,7 @@ import type { Engagement } from '@/data/engagements';
 import { sep } from '@/lib/date-format';
 import { ymdFromIsoInIst } from '@/lib/intern/intern-work';
 import { cn } from '@/lib/utils';
+import { DUE_SOON_DAYS } from '@/lib/compliance/filings';
 import { exactDate, relativeDue } from '@/lib/relative-due';
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -19,12 +20,12 @@ const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct
  * filing and the company, and a state chip on the right; a late row is tinted soft red and
  * carries a small navy action (rule R-20).
  */
-/** Overdue, or open and due within the next 15 days. Shared with the practice strip. */
-export function isOverdueOrDueSoon(f: ComplianceFiling, now: Date): boolean {
+/** Overdue, or open and due within the due-soon window. Shared with the practice strip. */
+function isOverdueOrDueSoon(f: ComplianceFiling, now: Date): boolean {
   if (f.status === 'overdue') return true;
   if (f.status !== 'upcoming' && f.status !== 'in-progress') return false;
   const due = Date.parse(f.nextDue);
-  return Number.isFinite(due) && due - now.getTime() <= 15 * 86_400_000;
+  return Number.isFinite(due) && due - now.getTime() <= DUE_SOON_DAYS * 86_400_000;
 }
 
 export function LeadOverdueFilings({ filings, engagements, now }: { filings: ComplianceFiling[]; engagements: Engagement[]; now: Date }) {

@@ -29,7 +29,8 @@ import {
   SuperPageError,
   SuperPageSkeleton,
 } from '@/components/super/parts/super-parts';
-import { plainDay, shortCompany, todayKey } from '@/components/super/parts/super-text';
+import { shortCompany, todayKey } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import { useSuperOverview } from '@/hooks/use-super-overview';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import {

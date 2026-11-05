@@ -43,5 +43,5 @@ export {
   systemMarkFinalSent,
 } from './documents';
 export type { ResolutionInput, UploadedFile } from './documents';
-export { listLibrary, updateLibraryItem, importLibrary, listTemplates, saveTemplate, deleteTemplate, systemLibraryMap } from './library';
+export { listLibrary, updateLibraryItem, importLibrary, listTemplates, saveTemplate, deleteTemplate } from './library';
 export type { LibraryItemDto, TemplateDto } from './library';

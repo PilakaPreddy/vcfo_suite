@@ -9,8 +9,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { toastUndo } from '@/components/ui/undo-toast';
 import { useInvalidateSuperReads } from '@/components/super/assign/use-super-staff';
 import { shortCompany } from '@/components/super/parts/super-text';
-import { buildReassignSuggestions, type ReassignSuggestion } from '@/components/super/insights/reassign-model';
-import type { SuperInsightClient, SuperTeamManager } from '@/components/super/insights/super-insights-model';
+import { buildReassignSuggestions, type ReassignSuggestion } from '@/lib/super/reassign-model';
+import type { SuperInsightClient, SuperTeamManager } from '@/lib/super/super-insights-model';
 import type { PersonMetrics } from '@/lib/metrics/practice-metrics';
 import { errorMessage, toastError } from '@/lib/toast-errors';
 

@@ -61,7 +61,7 @@ export interface LoginFormCardProps {
 }
 
 /** Plain words for the `?error=microsoft_*` codes the Auth.js `signIn` callback sends back. */
-export const MICROSOFT_ERRORS: Record<string, string> = {
+const MICROSOFT_ERRORS: Record<string, string> = {
   microsoft_no_profile: 'No VCFO Suite account uses this Microsoft email. Ask your firm admin to add you.',
   microsoft_not_allowed: 'This account cannot sign in with Microsoft. Use your email and password.',
   microsoft_linked_elsewhere: 'Your VCFO Suite account is linked to a different Microsoft account.',

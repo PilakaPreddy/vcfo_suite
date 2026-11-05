@@ -39,7 +39,7 @@ const SLOTS: UploadSlot[] = [...UPLOAD_SLOTS];
  * cache key — so correcting a shift time rebuilds exactly the registers that print one, and
  * nothing else. That is why there is no separate table for them.
  */
-export function establishmentOf(batch: BatchRow, companyName: string): EstablishmentMaster {
+function establishmentOf(batch: BatchRow, companyName: string): EstablishmentMaster {
   const stored = ((batch.assumptions ?? {}) as { establishment?: Partial<EstablishmentMaster> }).establishment ?? {};
   return { ...EMPTY_ESTABLISHMENT, name: companyName, ...stored };
 }

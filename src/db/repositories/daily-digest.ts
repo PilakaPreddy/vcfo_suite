@@ -24,7 +24,7 @@ import type { DigestTimePrefs } from '@/lib/digest/daily-digest';
  *     job idempotent.
  */
 
-export const DAILY_DIGEST_EVENT = 'daily_digest';
+const DAILY_DIGEST_EVENT = 'daily_digest';
 
 const DIGEST_ROLES = ['super_admin', 'admin', 'manager', 'intern', 'client'] as const;
 

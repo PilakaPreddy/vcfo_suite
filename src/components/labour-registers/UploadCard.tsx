@@ -43,7 +43,7 @@ export interface SlotSpec {
   required?: boolean;
 }
 
-export const REGISTER_SLOTS: SlotSpec[] = [
+const REGISTER_SLOTS: SlotSpec[] = [
   {
     key: 'paysheet',
     label: 'Paysheet',

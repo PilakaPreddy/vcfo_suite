@@ -58,9 +58,6 @@ const TONE: Record<IconChipTone, { shell: string; icon: string }> = {
   lime: NEUTRAL,
 };
 
-/** @deprecated Identity colour-coding is gone; every key maps to `neutral`. */
-export const CATEGORICAL_TONES: IconChipTone[] = ['neutral'];
-
 /** @deprecated Returns `neutral` for every key. Chips no longer carry identity colour. */
 export function toneForKey(_key: string): IconChipTone {
   return 'neutral';
@@ -142,7 +139,6 @@ export const TONE_BADGE: Record<IconChipTone, string> = {
  */
 export const CHIP_CLASS =
   'inline-flex h-chip items-center gap-[7px] whitespace-nowrap rounded-md px-[9px] text-[12px] font-medium leading-4';
-export const CHIP_COLUMN_CLASS = 'w-[var(--chip-min-width)] min-w-chip justify-center';
 
 /**
  * One intensity for a state (K-04, rule R-13): a soft chip with a 6px dot in
@@ -154,7 +150,7 @@ export const CHIP_COLUMN_CLASS = 'w-[var(--chip-min-width)] min-w-chip justify-c
 export type StatusKey = 'done' | 'progress' | 'waiting' | 'due' | 'overdue' | 'upcoming';
 /* R-13: a 7px square dot (2px corners), never a round one. */
 const DOT_BEFORE = "before:inline-block before:h-[7px] before:w-[7px] before:shrink-0 before:rounded-[2px] before:content-['']";
-export const TONE_SOLID: Record<StatusKey, string> = {
+const TONE_SOLID: Record<StatusKey, string> = {
   done: `bg-positive-soft text-positive ${DOT_BEFORE} before:bg-positive-mid`,
   progress: `bg-brand-soft text-brand-text ${DOT_BEFORE} before:bg-brand`,
   waiting: `bg-waiting-soft text-waiting ${DOT_BEFORE} before:bg-waiting-mid`,
@@ -174,22 +170,11 @@ export const TONE_SOLID_BY_TONE: Partial<Record<IconChipTone, string>> = {
   info: TONE_SOLID.progress,
 };
 export type OwnerKey = 'client' | 'sbc' | 'mca' | 'manager';
-/** Owner chips (rule R-14): soft tint with a square dot, 104px wide via OWNER_CHIP_WIDTH.
- *  Client is amber, SBC is blue, MCA is violet. */
-export const TONE_OWNER: Record<OwnerKey, string> = {
-  client: `bg-owner-client-soft text-owner-client ${DOT_BEFORE} before:bg-warning-mid`,
-  sbc: `bg-owner-sbc-soft text-owner-sbc ${DOT_BEFORE} before:bg-current`,
-  mca: `bg-owner-mca-soft text-owner-mca ${DOT_BEFORE} before:bg-current`,
-  manager: `bg-owner-manager-soft text-owner-manager ${DOT_BEFORE} before:bg-waiting-mid`,
-};
-export const OWNER_CHIP_WIDTH = 'w-[104px] min-w-[104px] truncate';
 /**
  * The third form of a state, for dense lists (LeetCode's Easy / Medium / Hard): the word
  * alone in its colour at 600, no ground. `cn(STATE_WORD_CLASS, TONE_TEXT.success)`.
  */
 export const STATE_WORD_CLASS = 'text-[12px] font-medium whitespace-nowrap';
-/** A 7px square dot inside a soft chip, in the state's mid colour (R-13). */
-export const CHIP_DOT_CLASS = 'inline-block h-[7px] w-[7px] shrink-0 rounded-[2px]';
 
 const SIZE: Record<IconChipSize, { shell: string; icon: string }> = {
   sm: { shell: 'h-6 w-6 rounded-md', icon: 'h-3.5 w-3.5' },

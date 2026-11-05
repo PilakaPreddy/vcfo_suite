@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { sendEmail } from '@/lib/email/send-email';
@@ -47,12 +47,14 @@ export async function POST(request: Request, context: RouteContext) {
       text: result.note.text,
       url: partnerInvoiceUrl(siteUrl(), result.invoiceId),
     });
-    // Fire-and-forget: the reply is saved whether or not the email goes out.
-    void sendEmail({ to: to.email, subject: mail.subject, html: mail.html, text: mail.text, purpose: 'receivables.sbc_reply' })
-      .then((r) => {
-        if (!r.ok && !r.skipped) console.error('[receivables] reply email not sent', r.error);
-      })
-      .catch((e) => console.error('[receivables] reply email failed', e instanceof Error ? e.message : e));
+    // After the response: the reply is saved whether or not the email goes out.
+    after(() =>
+      sendEmail({ to: to.email, subject: mail.subject, html: mail.html, text: mail.text, purpose: 'receivables.sbc_reply' })
+        .then((r) => {
+          if (!r.ok && !r.skipped) console.error('[receivables] reply email not sent', r.error);
+        })
+        .catch((e) => console.error('[receivables] reply email failed', e instanceof Error ? e.message : e)),
+    );
   }
   return NextResponse.json({ note: result.note });
 }

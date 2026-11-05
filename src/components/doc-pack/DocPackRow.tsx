@@ -30,7 +30,7 @@ function stepTitle(stepId: string): string {
 }
 
 /** The short step code the prototype writes in the sub line: `pre-8` reads "Pre-8". */
-export function docPackStepCode(stepId: string): string {
+function docPackStepCode(stepId: string): string {
   return stepId.charAt(0).toUpperCase() + stepId.slice(1);
 }
 
@@ -41,13 +41,13 @@ function formatAttachedAt(iso: string): string {
 }
 
 /** The file type of a pack document: an attached file keeps its own type, a generated one is Word. */
-export function docPackFileType(item: Pick<DocPackItem, 'source' | 'storagePath'>): FileType {
+function docPackFileType(item: Pick<DocPackItem, 'source' | 'storagePath'>): FileType {
   if (item.source === 'attached' && item.storagePath?.includes('.')) return fileType(item.storagePath);
   return 'DOCX';
 }
 
 /** "Generated now", "Finalized 9 Oct" or "Attached to Pre-7 · 9 Oct"; nothing until the file is ready. */
-export function docPackProvenance(item: DocPackItem): string | null {
+function docPackProvenance(item: DocPackItem): string | null {
   if (item.status !== 'ready') return null;
   if (item.source !== 'attached') return 'Generated now';
   const when = item.attachedAt ? formatAttachedAt(item.attachedAt) : null;

@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { AuthContext } from '@/auth/guards';
 import { listCodeRuleOverrides } from '@/db/repositories/labour-registers';
-import { STATES } from '@/data/labour-registers/states';
+import { statesForPicker } from '@/data/labour-registers/states';
 import { codeRuleIndex, hybridFrom, oldestCheck, regimeLine, resolveCodeRules } from '@/lib/labour-registers/code-rules';
 import { isAdminOrManager } from '@/lib/auth';
 import type { CodeRulesView } from './CodeRulesPage';
@@ -17,7 +17,10 @@ import type { CodeRulesView } from './CodeRulesPage';
 export async function loadCodeRulesView(ctx: AuthContext): Promise<CodeRulesView> {
   const index = codeRuleIndex(await listCodeRuleOverrides(ctx));
 
-  const states = STATES.map((state) => {
+  /* `statesForPicker` already returns every state with the configured ones first, in name
+     order, which is the order this screen wants: the states whose answer changes a filing
+     this month, and then the rest. */
+  const states = statesForPicker().map((state) => {
     const cells = resolveCodeRules(state.code, index);
     return {
       code: state.code,
@@ -39,7 +42,7 @@ export async function loadCodeRulesView(ctx: AuthContext): Promise<CodeRulesView
       hybrid: hybridFrom(cells),
       oldestCheck: oldestCheck(cells),
     };
-  }).sort((a, b) => Number(b.configured) - Number(a.configured) || a.name.localeCompare(b.name));
+  });
 
   return {
     states,

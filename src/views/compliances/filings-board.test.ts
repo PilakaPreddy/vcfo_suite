@@ -11,6 +11,7 @@ import {
   parseRegulator,
   regulatorCounts,
   tileCounts,
+  tileSubs,
 } from '@/views/compliances/filings-board';
 
 const now = new Date('2026-10-14T09:00:00Z');
@@ -90,5 +91,16 @@ describe('filings board', () => {
     );
     expect(months).toHaveLength(6);
     expect(months.find((m) => m.key === '2026-09')).toMatchObject({ label: 'Sep', onTime: 1, late: 1 });
+  });
+});
+
+describe('tiles on the IST day', () => {
+  it('counts the month and the 7-day window from the IST date after 18:30 UTC', () => {
+    // 31 Oct 2026 19:00 UTC is 1 Nov 00:30 IST: November is this month, the window ends Sun 8 Nov.
+    const late = new Date('2026-10-31T19:00:00Z');
+    const counts = tileCounts([row({ id: 'n', dueDate: '2026-11-08' }), row({ id: 'o', dueDate: '2026-10-31' })], late);
+    expect(counts.month).toBe(1);
+    expect(counts.week).toBe(1);
+    expect(tileSubs([], late).week).toMatch(/^by Sun /);
   });
 });

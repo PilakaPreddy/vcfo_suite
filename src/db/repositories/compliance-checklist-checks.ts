@@ -30,7 +30,7 @@ export interface ChecklistTick {
   checkedAt: string;
 }
 
-export class ChecklistForbiddenError extends Error {
+class ChecklistForbiddenError extends Error {
   readonly status = 403;
   constructor() {
     super('Only firm staff can use the checklist');

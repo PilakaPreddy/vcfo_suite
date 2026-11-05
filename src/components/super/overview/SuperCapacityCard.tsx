@@ -4,7 +4,7 @@ import { Gauge } from 'lucide-react';
 import { DashSection } from '@/components/dash/DashSection';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PersonAvatar, ToneBar } from '@/components/super/parts/super-parts';
-import { capacityTone, type SuperTeamManager } from '@/components/super/insights/super-insights-model';
+import { capacityTone, type SuperTeamManager } from '@/lib/super/super-insights-model';
 import type { PersonMetrics } from '@/lib/metrics/practice-metrics';
 import { cn } from '@/lib/utils';
 

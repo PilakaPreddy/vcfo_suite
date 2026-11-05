@@ -190,15 +190,6 @@ export async function parseWorkbook(
   };
 }
 
-/** The sheet names in a workbook, so a preparer can pick when detection is not obvious. */
-export async function listSheets(
-  input: WorkbookInput,
-  format: SheetFormat = 'xlsx',
-): Promise<Array<{ name: string; rowCount: number }>> {
-  const workbook = await loadWorkbook(input, format);
-  return workbook.worksheets.map((ws) => ({ name: ws.name, rowCount: ws.rowCount }));
-}
-
 /**
  * Which slot a sheet belongs in, guessed from its own headings so a preparer can drop four
  * files at once without labelling them. Returns null when nothing is clear enough to act on —

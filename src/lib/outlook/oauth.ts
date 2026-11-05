@@ -109,7 +109,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<TokenRes
 }
 
 /** A refused token request; `code` is Microsoft's OAuth error code (for example invalid_client). */
-export class OutlookTokenError extends Error {
+class OutlookTokenError extends Error {
   constructor(
     message: string,
     readonly code: string | undefined,

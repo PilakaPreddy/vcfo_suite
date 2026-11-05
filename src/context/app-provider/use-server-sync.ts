@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, type QueryClient } from '@tanstack/react-query';
-import type { TaskInstance, DocRequest, Invite, ActivityEvent } from '@/data/engagements';
+import type { TaskInstance, DocRequest, ActivityEvent } from '@/data/engagements';
 import { type AuthUser, isAdminOrManager } from '@/lib/auth';
 import {
   fetchEngagements,
@@ -26,7 +26,6 @@ type ServerSyncParams = {
   | 'setEngagements'
   | 'setTasks'
   | 'setRequests'
-  | 'setInvites'
   | 'setActivity'
   | 'setDbChecklistState'
   | 'setNotifications'
@@ -34,7 +33,7 @@ type ServerSyncParams = {
 
 /**
  * Server state: the TanStack queries (engagements, checklist index, interns,
- * tasks, requests, invites, activity, notifications and its live head poll)
+ * tasks, requests, activity, notifications and its live head poll)
  * and the effects that copy their results into the provider state.
  */
 export function useServerSync({
@@ -44,7 +43,6 @@ export function useServerSync({
   setEngagements,
   setTasks,
   setRequests,
-  setInvites,
   setActivity,
   setDbChecklistState,
   setNotifications,
@@ -104,16 +102,6 @@ export function useServerSync({
     queryFn: async () => {
       const data = await fetchJson<{ requests: DocRequest[] }>('/api/requests');
       return data.requests;
-    },
-    enabled: Boolean(syncUser),
-    staleTime: 30_000,
-  });
-
-  const invitesQuery = useQuery({
-    queryKey: ['invites', user?.id],
-    queryFn: async () => {
-      const data = await fetchJson<{ invites: Invite[] }>('/api/invites');
-      return data.invites;
     },
     enabled: Boolean(syncUser),
     staleTime: 30_000,
@@ -198,12 +186,6 @@ export function useServerSync({
     if (!next) return;
     setRequests((prev) => preferUnchangedList(prev, next));
   }, [requestsQuery.data, setRequests]);
-
-  useEffect(() => {
-    const next = invitesQuery.data;
-    if (!next) return;
-    setInvites((prev) => preferUnchangedList(prev, next));
-  }, [invitesQuery.data, setInvites]);
 
   useEffect(() => {
     const next = activityQuery.data;

@@ -53,7 +53,7 @@ export interface OvertimeResult {
 }
 
 /** Hours in a normal working day, where a client has not said otherwise. */
-export const DEFAULT_DAILY_HOURS = 8;
+const DEFAULT_DAILY_HOURS = 8;
 
 /**
  * Compute the overtime wages for one employee.

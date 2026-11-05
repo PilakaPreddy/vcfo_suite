@@ -127,7 +127,7 @@ export const PRACTICE_BLOCK_LABELS = ['Incorporation', 'Compliances', 'Registrat
  * pages instead: Obligations opens Practice · Compliances (`/app/super/practice/calendar` only
  * redirects there, so Calendar is left out), then Filings.
  */
-export function practiceBlock(role: Role, base: string): NavEntry[] {
+function practiceBlock(role: Role, base: string): NavEntry[] {
   if (role === 'super_admin') {
     const practice = '/app/super/practice';
     return [

@@ -16,7 +16,7 @@ import type { SendWhatsAppDeps } from '@/lib/notify/send-whatsapp-shared';
  * Contract: never throws.
  */
 
-export function verifyTemplateName(env: NodeJS.ProcessEnv = process.env): string {
+function verifyTemplateName(env: NodeJS.ProcessEnv = process.env): string {
   return env.WHATSAPP_TEMPLATE_NAME_VERIFY_CODE?.trim() ?? '';
 }
 
@@ -26,7 +26,7 @@ export function isWhatsAppCodeSetUp(config?: WhatsAppConfig, env: NodeJS.Process
 }
 
 /** The Cloud API payload of a copy-code authentication template: the code in the body and the button. */
-export function verifyCodePayload(input: { toPhone: string; code: string; template: string; language: string }): Record<string, unknown> {
+function verifyCodePayload(input: { toPhone: string; code: string; template: string; language: string }): Record<string, unknown> {
   return {
     messaging_product: 'whatsapp',
     to: toMetaPhone(input.toPhone),

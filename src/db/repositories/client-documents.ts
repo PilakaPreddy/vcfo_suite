@@ -1,7 +1,6 @@
 import { companyShortName } from '@/lib/client-portal/company';
 import 'server-only';
 
-import PizZip from 'pizzip';
 import { and, desc, eq, inArray, isNull, ne } from 'drizzle-orm';
 import { db } from '@/db/client';
 import {
@@ -21,7 +20,6 @@ import {
 import { getDocumentById, listDocuments } from '@/db/repositories/documents';
 import { getBoardResolutionByEngagementId } from '@/db/repositories/board-resolution';
 import { resolveEngagementRecipients } from '@/db/repositories/engagement-recipients';
-import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { checklist, getItem } from '@/data/checklist';
 import { extractItemResponses, getClientResponseFields } from '@/lib/checklist/checklist-responses';
 import { repeatFieldLabel } from '@/lib/checklist/checklist-repeat';
@@ -77,6 +75,13 @@ import { bucketKey, deleteObject, getObjectBuffer, listObjects, putObject, type 
  * is resolved against the same rules, never trusted). Uploads go only to the
  * caller's own PENDING requests; Undo only removes the caller's own upload,
  * within 10 minutes.
+ *
+ * One read is shared with staff: `getClientDocuments(ctx, engagementId)` gives
+ * a staff member the same document tree for an engagement that passes
+ * `assertEngagementAccess` (firm-wide admins, the engagement's manager or its
+ * assigned lead), so the Vault can render the client's own Documents page.
+ * Staff see what their role allows (unreleased steps, unshared index rows);
+ * every write above stays client-only.
  */
 
 export class ClientDocumentsForbiddenError extends Error {}
@@ -164,9 +169,26 @@ function noteFromDetail(detail: string | null): string | undefined {
 /* Aggregate: every document source for the client's engagement        */
 /* ------------------------------------------------------------------ */
 
-export async function getClientDocuments(ctx: AuthContext): Promise<ClientDocumentsPayload | null> {
-  const mine = await myEngagement(ctx);
-  if (!mine) return null;
+/** The engagement to read: a client's own, or for staff the one they named and may access. */
+async function documentsEngagement(
+  ctx: AuthContext,
+  engagementId?: string,
+): Promise<{ dbId: string; row: EngagementDbRow } | null> {
+  if (ctx.role === 'client') return myEngagement(ctx);
+  if (!engagementId) return null;
+  const access = await assertEngagementAccess(ctx, engagementId);
+  if (!access.ok) return null;
+  return { dbId: access.dbId, row: access.row };
+}
+
+type DocumentsEngagement = { dbId: string; row: EngagementDbRow };
+
+export async function getClientDocuments(ctx: AuthContext, engagementId?: string): Promise<ClientDocumentsPayload | null> {
+  const mine = await documentsEngagement(ctx, engagementId);
+  return mine ? documentsFor(ctx, mine) : null;
+}
+
+async function documentsFor(ctx: AuthContext, mine: DocumentsEngagement): Promise<ClientDocumentsPayload> {
   const { dbId, row } = mine;
   const company = shortCompany(row.companyName);
   const state = checklistStateForViewer(ctx, checklistStateFromRow(row));
@@ -191,6 +213,18 @@ export async function getClientDocuments(ctx: AuthContext): Promise<ClientDocume
 
   const nodes: DocNode[] = [];
   const usedPaths = new Set<string>();
+  // Staff reads carry each file's index row, so the Vault can review, delete and name the uploader.
+  const staff = ctx.role !== 'client';
+  const indexRowOf = (d: (typeof indexed)[number]): DocNode['indexRow'] =>
+    staff
+      ? { id: d.id, uploadedBy: d.uploadedBy, reviewStatus: d.reviewStatus, reviewNote: d.reviewNote, reviewedAt: d.reviewedAt, replacedAt: d.replacedAt }
+      : undefined;
+  const indexByPath = new Map(
+    indexed.flatMap((d) => {
+      const { bucket, path } = indexedKey(d.objectKey);
+      return bucket === MILESTONE_DOCUMENTS_BUCKET ? [[path, d] as const] : [];
+    }),
+  );
 
   /* ---- earlier uploads per milestone field (S3 listing) ---- */
   const versionsByField = new Map<string, Array<{ path: string; size: number | null }>>();
@@ -209,7 +243,8 @@ export async function getClientDocuments(ctx: AuthContext): Promise<ClientDocume
   /* ---- checklist uploads ---- */
   for (const item of checklist) {
     const slice = state[item.id];
-    if (!slice || !isStepReleasedTo('client', slice)) continue;
+    // A client sees a step's files once the step is released to them; staff see every step.
+    if (!slice || (ctx.role === 'client' && !isStepReleasedTo('client', slice))) continue;
     const responses = extractItemResponses(item, slice);
     const fields = getClientResponseFields(item);
     const fieldById = new Map(fields.map((f) => [f.id, f]));
@@ -244,6 +279,7 @@ export async function getClientDocuments(ctx: AuthContext): Promise<ClientDocume
         ...(/Signed(Url)?$/.test(fieldId) ? { signed: true } : {}),
         portal: portalForField(fieldId),
         source: 'milestone',
+        indexRow: indexByPath.has(path) ? indexRowOf(indexByPath.get(path)!) : undefined,
       });
       // earlier uploads of the same field → Replaced versions (v1, v2…)
       const older = (versionsByField.get(fieldId) ?? [])
@@ -267,6 +303,7 @@ export async function getClientDocuments(ctx: AuthContext): Promise<ClientDocume
           stepId: item.id,
           categoryId: categoryFor(item.id, label),
           source: 'milestone',
+          indexRow: indexByPath.has(v.path) ? indexRowOf(indexByPath.get(v.path)!) : undefined,
         });
       });
     };
@@ -307,8 +344,8 @@ export async function getClientDocuments(ctx: AuthContext): Promise<ClientDocume
         fileName: d.fileName,
         contentType: d.contentType ?? contentTypeForName(d.fileName),
         sizeBytes: d.sizeBytes,
-        status: fromClient ? 'Approved' : 'Final',
-        replaced: false,
+        status: d.replacedAt ? 'Replaced' : fromClient ? 'Approved' : 'Final',
+        replaced: Boolean(d.replacedAt),
         from: fromClient ? company : up?.name ? `SBC · ${up.name}` : 'SBC',
         fromSbc: !fromClient,
         date: d.createdAt,
@@ -316,6 +353,7 @@ export async function getClientDocuments(ctx: AuthContext): Promise<ClientDocume
         categoryId: categoryFor(stepFor(d.stepId, label), `${label} ${d.category ?? ''}`),
         stale: isStaleProof(label, d.createdAt, now),
         source: 'index',
+        indexRow: indexRowOf(d),
       });
     }
   }
@@ -472,9 +510,22 @@ export interface ResolvedClientFile {
   contentType: string;
 }
 
-async function resolveClientDocumentFile(ctx: AuthContext, ref: string): Promise<ResolvedClientFile | null> {
-  const mine = await myEngagement(ctx);
-  if (!mine) return null;
+async function resolveClientDocumentFile(
+  ctx: AuthContext,
+  ref: string,
+  engagementId?: string,
+): Promise<ResolvedClientFile | null> {
+  const mine = await documentsEngagement(ctx, engagementId);
+  return mine ? resolveFileIn(ctx, mine, ref) : null;
+}
+
+/** Resolve one ref inside an engagement the caller was already checked against. */
+async function resolveFileIn(
+  ctx: AuthContext,
+  mine: DocumentsEngagement,
+  ref: string,
+  boardResolution: () => ReturnType<typeof getBoardResolutionByEngagementId> = () => getBoardResolutionByEngagementId(ctx, mine.dbId),
+): Promise<ResolvedClientFile | null> {
   const { dbId, row } = mine;
   const ct = (name: string) => contentTypeForName(name) ?? 'application/octet-stream';
 
@@ -486,8 +537,8 @@ async function resolveClientDocumentFile(ctx: AuthContext, ref: string): Promise
       .slice(1, -1)
       .map((seg) => checklistItemForFieldId(seg.split('.')[0] ?? seg))
       .find(Boolean);
-    // a path whose field names no step is not shown to clients
-    if (!item || !isStepReleasedTo('client', checklistStateFromRow(row)[item.id])) return null;
+    // a path whose field names no step is not shown; a client also waits for the step's release
+    if (!item || (ctx.role === 'client' && !isStepReleasedTo('client', checklistStateFromRow(row)[item.id]))) return null;
     const name = fileNameFromStoragePath(path);
     return { key: bucketKey(MILESTONE_DOCUMENTS_BUCKET, path), fileName: name, contentType: ct(name) };
   }
@@ -498,7 +549,7 @@ async function resolveClientDocumentFile(ctx: AuthContext, ref: string): Promise
     return { key: bucketKey(bucket, path), fileName: doc.fileName, contentType: doc.contentType || ct(doc.fileName) };
   }
   if (ref === 'br:final' || ref === 'br:signed') {
-    const br = await getBoardResolutionByEngagementId(ctx, dbId);
+    const br = await boardResolution();
     if (!br || br.status !== 'finalized') return null;
     const path = ref === 'br:final' ? br.storagePath?.trim() : br.signedStoragePath?.trim();
     if (!path) return null;
@@ -522,8 +573,9 @@ async function resolveClientDocumentFile(ctx: AuthContext, ref: string): Promise
 export async function readClientDocumentFile(
   ctx: AuthContext,
   ref: string,
+  engagementId?: string,
 ): Promise<(ResolvedClientFile & { bytes: Buffer }) | null> {
-  const file = await resolveClientDocumentFile(ctx, ref);
+  const file = await resolveClientDocumentFile(ctx, ref, engagementId);
   if (!file) return null;
   const bytes = await getObjectBuffer(file.key);
   if (!bytes) return null;
@@ -534,12 +586,28 @@ export async function readClientDocumentFile(
 /* ZIP — real step names as folders                                    */
 /* ------------------------------------------------------------------ */
 
-export async function buildClientDocumentsZip(
+export interface ClientZipEntry {
+  /** Path inside the archive. */
+  name: string;
+  /** Storage key to stream the bytes from. */
+  key: string;
+  /** Size from the listing or index row; null when unknown. */
+  sizeBytes: number | null;
+}
+
+/**
+ * The files of one folder of the documents tree, ready to stream as a ZIP (finding 4 of the
+ * 2026-11-04 audit): the engagement is resolved once and every file is re-checked against it,
+ * but no bytes are read here. The route streams the entries with `createZipStream`.
+ */
+export async function listClientDocumentsZip(
   ctx: AuthContext,
   folder: string,
-): Promise<{ buffer: Buffer; filename: string; count: number; missing: number } | null> {
-  const payload = await getClientDocuments(ctx);
-  if (!payload) return null;
+  engagementId?: string,
+): Promise<{ engagementId: string; filename: string; entries: ClientZipEntry[]; missing: number } | null> {
+  const mine = await documentsEngagement(ctx, engagementId);
+  if (!mine) return null;
+  const payload = await documentsFor(ctx, mine);
   const steps = stepNumbers();
   const byCategory = folder.startsWith('cat:');
   const pick = payload.nodes.filter((nd) => {
@@ -562,14 +630,15 @@ export async function buildClientDocumentsZip(
   else if (byCategory) rootName = DOC_CATEGORIES.find((c) => c.id === folder.slice(4))?.name ?? rootName;
   rootName = zipSegment(rootName);
 
-  const zip = new PizZip();
+  // The board resolution row is read once for both of its refs.
+  let br: ReturnType<typeof getBoardResolutionByEngagementId> | undefined;
+  const boardResolution = () => (br ??= getBoardResolutionByEngagementId(ctx, mine.dbId));
   const used = new Set<string>();
-  let count = 0;
+  const entries: ClientZipEntry[] = [];
   let missing = 0;
   for (const nd of pick) {
-    const file = await resolveClientDocumentFile(ctx, nd.ref!);
-    const bytes = file ? await getObjectBuffer(file.key).catch(() => null) : null;
-    if (!file || !bytes) {
+    const file = await resolveFileIn(ctx, mine, nd.ref!, boardResolution);
+    if (!file) {
       missing += 1;
       continue;
     }
@@ -585,17 +654,9 @@ export async function buildClientDocumentsZip(
     let path = `${parts.join('/')}/${zipSegment(nd.label)}${ext}`;
     for (let k = 2; used.has(path); k += 1) path = `${parts.join('/')}/${zipSegment(nd.label)} (${k})${ext}`;
     used.add(path);
-    zip.file(path, bytes);
-    count += 1;
+    entries.push({ name: path, key: file.key, sizeBytes: nd.sizeBytes ?? null });
   }
-  const buffer = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer;
-  await recordAuditEvent(ctx, {
-    engagementId: payload.engagementId,
-    action: 'documents.download_zip',
-    summary: `Downloaded ${rootName}.zip (${count} files)`,
-    metadata: { folder, count, missing },
-  });
-  return { buffer, filename: `${rootName}.zip`, count, missing };
+  return { engagementId: payload.engagementId, filename: `${rootName}.zip`, entries, missing };
 }
 
 /* ------------------------------------------------------------------ */
@@ -607,17 +668,6 @@ export class UploadRejectedError extends Error {}
 function safeName(name: string): string {
   const base = name.split(/[/\\]/).pop() ?? 'document';
   return base.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 120) || 'document';
-}
-
-export async function uploadRequestFile(
-  ctx: AuthContext,
-  requestId: string,
-  file: { name: string; type: string; size: number; bytes: Buffer },
-): Promise<{ fileId: string; requestLabel: string; engagementId: string; requestId: string } | null> {
-  const out = await uploadRequestFiles(ctx, requestId, [file]);
-  if (!out) return null;
-  if (!out.fileIds.length) throw new UploadRejectedError(out.rejected[0]?.error ?? 'Upload failed');
-  return { fileId: out.fileIds[0]!, requestLabel: out.requestLabel, engagementId: out.engagementId, requestId };
 }
 
 /** Most files one request upload may carry (G-09). */

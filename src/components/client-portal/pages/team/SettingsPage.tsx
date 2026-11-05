@@ -34,7 +34,7 @@ const HASH_ALIAS: Record<string, SecKey> = {
 };
 
 /** The section a URL names: `?tab=` first, then the older hash. */
-export function sectionFromUrl(search: string, hash: string): SecKey {
+function sectionFromUrl(search: string, hash: string): SecKey {
   const t = new URLSearchParams(search).get('tab') ?? '';
   const k = (TAB_ALIAS[t] ?? t) as SecKey;
   if (SECS.includes(k)) return k;

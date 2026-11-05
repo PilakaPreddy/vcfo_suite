@@ -318,7 +318,7 @@ export function tabLabel(id: string): string {
   return CRED_TABS.find((t) => t[0] === id)?.[1] ?? id;
 }
 
-export function colLetter(i: number): string {
+function colLetter(i: number): string {
   let s = '';
   let n = i;
   do {

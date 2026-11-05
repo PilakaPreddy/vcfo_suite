@@ -1,9 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { RouteErrorPanel } from '@/components/shell/RouteErrorPanel';
 
 export default function AdminProjectError({
   error,
@@ -12,50 +9,15 @@ export default function AdminProjectError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const router = useRouter();
-
-  useEffect(() => {
-    // Log to console so it appears in Vercel function logs
-    console.error('[admin/projects/[slug]] render error:', error.message, error.digest, error.stack);
-  }, [error]);
-
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center px-4">
-      <AlertTriangle className="h-10 w-10 text-warning" aria-hidden />
-      <div className="space-y-2 max-w-sm">
-        <p className="text-base font-semibold text-ink">
-          Couldn&apos;t load this project
-        </p>
-        <p className="text-sm text-ink-muted">
-          A temporary error occurred. Try reloading — if it keeps happening,
-          check your connection or try again later.
-        </p>
-        {error.digest && (
-          <p className="font-mono text-[11px] text-ink-muted">
-            Error ID: {error.digest}
-          </p>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-3 justify-center">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={reset}
-          className="gap-2"
-        >
-          <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-          Try again
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => router.push('/app/manager/projects')}
-        >
-          Back to projects
-        </Button>
-      </div>
-    </div>
+    <RouteErrorPanel
+      error={error}
+      reset={reset}
+      logTag="admin/projects/[slug]"
+      title="Couldn't load this project"
+      body="A temporary error occurred. Try reloading — if it keeps happening, check your connection or try again later."
+      backHref="/app/manager/projects"
+      backLabel="Back to projects"
+    />
   );
 }

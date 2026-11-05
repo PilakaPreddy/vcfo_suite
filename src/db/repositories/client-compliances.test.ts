@@ -9,6 +9,8 @@ import type { AuthContext } from '@/auth/guards';
  */
 
 const listScopedEngagementIds = vi.fn();
+const assertEngagementAccess = vi.fn();
+let whereArgs: unknown[] = [];
 const recordAuditEvent = vi.fn();
 const createNotificationsForUsers = vi.fn();
 const putObject = vi.fn();
@@ -30,6 +32,7 @@ vi.mock('@/db/client', () => ({
 
 vi.mock('@/db/repositories/engagements', () => ({
   listScopedEngagementIds: (...args: unknown[]) => listScopedEngagementIds(...args),
+  assertEngagementAccess: (...args: unknown[]) => assertEngagementAccess(...args),
 }));
 vi.mock('@/db/repositories/audit-events', () => ({
   recordAuditEvent: (...args: unknown[]) => recordAuditEvent(...args),
@@ -44,7 +47,7 @@ vi.mock('@/storage/s3', () => ({
   deleteObject: vi.fn(),
 }));
 
-const { addClientFilingProof, complianceErrorStatus } = await import('@/db/repositories/client-compliances');
+const { addClientFilingProof, complianceErrorStatus, getPortalFilings } = await import('@/db/repositories/client-compliances');
 
 const OWN_ENGAGEMENT = '11111111-1111-1111-1111-111111111101';
 const INSTANCE = '33333333-3333-3333-3333-333333333303';
@@ -57,9 +60,15 @@ beforeEach(() => {
   vi.clearAllMocks();
   selectQueue = [];
   insertedValues = null;
+  whereArgs = [];
   dbSelect.mockImplementation(() => {
     const chain: Record<string, unknown> = {};
-    for (const k of ['from', 'innerJoin', 'leftJoin', 'where', 'orderBy']) chain[k] = () => chain;
+    for (const k of ['from', 'innerJoin', 'leftJoin']) chain[k] = () => chain;
+    chain.where = (arg: unknown) => {
+      whereArgs.push(arg);
+      return chain;
+    };
+    chain.orderBy = () => Promise.resolve(selectQueue.shift() ?? []);
     chain.limit = () => Promise.resolve(selectQueue.shift() ?? []);
     return chain;
   });
@@ -131,5 +140,49 @@ describe('addClientFilingProof', () => {
     selectQueue = [[{ id: INSTANCE, engagementId: OWN_ENGAGEMENT, dueDate: '2026-10-20', filedOn: null, evidenceUrl: null }]];
     const err = await addClientFilingProof(clientCtx, INSTANCE, { ...FILE, bytes: new Uint8Array() }).catch((e: unknown) => e);
     expect(complianceErrorStatus(err)).toBe(400);
+  });
+});
+
+/** Every bound value inside a drizzle condition, so a test can see which engagement ids it scopes to. */
+function boundValues(node: unknown, seen = new Set<unknown>()): unknown[] {
+  if (!node || typeof node !== 'object' || seen.has(node)) return [];
+  seen.add(node);
+  const out: unknown[] = [];
+  if (node.constructor?.name === 'Param') out.push((node as { value: unknown }).value);
+  for (const [key, value] of Object.entries(node)) {
+    if (key === 'table' || key === 'encoder') continue;
+    out.push(...boundValues(value, seen));
+  }
+  return out.flat();
+}
+
+describe('getPortalFilings for staff viewing one client (engagementId)', () => {
+  const OTHER = '11111111-1111-1111-1111-111111111102';
+
+  it('reads only the named engagement when staff may access it', async () => {
+    assertEngagementAccess.mockResolvedValue({ ok: true, dbId: OWN_ENGAGEMENT, row: {} });
+    const rows = await getPortalFilings(leadCtx, { engagementId: 'kestrel-slug' });
+    expect(rows).toEqual([]);
+    expect(assertEngagementAccess).toHaveBeenCalledWith(leadCtx, 'kestrel-slug');
+    expect(listScopedEngagementIds).not.toHaveBeenCalled();
+    const values = boundValues(whereArgs[0]);
+    expect(values).toContain(OWN_ENGAGEMENT);
+    expect(values).not.toContain(OTHER);
+  });
+
+  it('reads nothing, and never queries filings, when staff may not access it', async () => {
+    assertEngagementAccess.mockResolvedValue({ ok: false });
+    listScopedEngagementIds.mockResolvedValue([OWN_ENGAGEMENT, OTHER]);
+    expect(await getPortalFilings(leadCtx, { engagementId: OTHER })).toEqual([]);
+    expect(dbSelect).not.toHaveBeenCalled();
+  });
+
+  it('ignores the engagement a client names and keeps to its own scope', async () => {
+    listScopedEngagementIds.mockResolvedValue([OWN_ENGAGEMENT]);
+    await getPortalFilings(clientCtx, { engagementId: OTHER });
+    expect(assertEngagementAccess).not.toHaveBeenCalled();
+    const values = boundValues(whereArgs[0]);
+    expect(values).toContain(OWN_ENGAGEMENT);
+    expect(values).not.toContain(OTHER);
   });
 });

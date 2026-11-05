@@ -20,8 +20,10 @@ import { appEngagementId } from '@/lib/projects/legacy-engagement-ids';
  *
  * >>> ACCESS CONTROL (Path A) <<<
  *   read    — a client sees the people + pending invites of THEIR OWN engagement
- *             only (`getMyEngagement` + `assertEngagementAccess`); no
- *             caller-supplied engagement id exists.
+ *             only (`getMyEngagement` + `assertEngagementAccess`); an engagement
+ *             id a client passes is ignored. Staff read the same view for an
+ *             engagement they name that passes `assertEngagementAccess`, so they
+ *             can see the client's Team page; they are never Primary.
  *   invite / resend / cancel / restore — the engagement's Primary contact only
  *             (`isPrimaryClient`, owner decision "only the Primary contact can
  *             invite"). `inviteEngagementClient` enforces the same rule again.
@@ -123,12 +125,21 @@ async function pendingInvites(dbId: string): Promise<Array<typeof clientInvites.
   return pending;
 }
 
-export async function getClientTeam(ctx: AuthContext): Promise<ClientTeamView> {
-  const { dbId, row } = await myEngagement(ctx);
+/** Staff name the engagement; it must pass `assertEngagementAccess`. */
+async function staffEngagement(ctx: AuthContext, engagementId: string | undefined) {
+  if (!engagementId) throw new ClientTeamError('No engagement found', 404);
+  const access = await assertEngagementAccess(ctx, engagementId);
+  if (!access.ok) throw new ClientTeamError('No engagement found', 404);
+  return { dbId: access.dbId, row: access.row };
+}
+
+export async function getClientTeam(ctx: AuthContext, engagementId?: string): Promise<ClientTeamView> {
+  const isClient = ctx.role === 'client';
+  const { dbId, row } = isClient ? await myEngagement(ctx) : await staffEngagement(ctx, engagementId);
   const [members, invites, isPrimary] = await Promise.all([
     listEngagementClients(ctx, dbId),
     pendingInvites(dbId),
-    isPrimaryClient(ctx.userId, dbId, row.clientUserId),
+    isClient ? isPrimaryClient(ctx.userId, dbId, row.clientUserId) : false,
   ]);
   const pendingIds = new Set(invites.map((i) => i.profileId));
   const titles = await designationsOf([...members.map((m) => m.userId), ...invites.map((i) => i.profileId).filter((x): x is string => Boolean(x))]);

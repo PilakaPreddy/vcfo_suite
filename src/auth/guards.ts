@@ -51,6 +51,56 @@ type Ok = { ok: true; ctx: AuthContext };
 type Err = { ok: false; status: 401 | 403; error: string };
 export type GuardResult = Ok | Err;
 
+/*
+ * One page load fires about ten API calls at once, and each guard read the profile row and the
+ * session row again (finding 14 of the 2026-11-04 audit). The lookup is shared for a few seconds
+ * per person and device, so those calls cost one pair of queries. The promise itself is kept, so
+ * calls that arrive together wait on the same queries.
+ * shortcut: a disabled person or a revoked device is let in for up to LOOKUP_TTL_MS more; drop
+ * the memo if instant revocation is ever required.
+ */
+const LOOKUP_TTL_MS = 3_000;
+type PersonLookup = {
+  row: { id: string; email: string; name: string | null; role: string; internId: string | null; clientId: string | null; status: string } | undefined;
+  sessionActive: boolean;
+};
+const lookups = new Map<string, { at: number; value: Promise<PersonLookup> }>();
+
+function lookupPerson(userId: string, sid: string | undefined): Promise<PersonLookup> {
+  const key = `${userId}:${sid ?? ''}`;
+  const now = Date.now();
+  const hit = lookups.get(key);
+  if (hit && now - hit.at < LOOKUP_TTL_MS) return hit.value;
+  if (lookups.size > 1000) {
+    for (const [k, v] of lookups) if (now - v.at >= LOOKUP_TTL_MS) lookups.delete(k);
+  }
+  const value = Promise.all([
+    db
+      .select({
+        id: profiles.id,
+        email: profiles.email,
+        name: profiles.name,
+        role: profiles.role,
+        internId: profiles.internId,
+        clientId: profiles.clientId,
+        status: profiles.status,
+      })
+      .from(profiles)
+      .where(eq(profiles.id, userId))
+      .limit(1),
+    sid ? systemIsSessionActive(sid, userId) : Promise.resolve(true),
+  ]).then(([[row], sessionActive]) => ({ row, sessionActive }));
+  lookups.set(key, { at: now, value });
+  // A failed lookup is not kept, so the next call tries again.
+  value.catch(() => lookups.delete(key));
+  return value;
+}
+
+/** Forget every shared lookup (tests, and anything that must see a change at once). */
+export function clearGuardLookups(): void {
+  lookups.clear();
+}
+
 /**
  * The signed-in person, or null. A developer gets null here unless the caller is
  * `requireDeveloper`, and a client partner unless the caller is `requirePartner` (or their own
@@ -74,23 +124,7 @@ async function currentContext(opts: { allowDeveloper?: boolean; allowPartner?: b
   const sid = typeof u.sid === 'string' && u.sid ? u.sid : undefined;
 
   // Prefer live profile row over JWT custom claims (source of truth).
-  const rowQuery = db
-    .select({
-      id: profiles.id,
-      email: profiles.email,
-      name: profiles.name,
-      role: profiles.role,
-      internId: profiles.internId,
-      clientId: profiles.clientId,
-      status: profiles.status,
-    })
-    .from(profiles)
-    .where(eq(profiles.id, u.id))
-    .limit(1);
-  const [[row], sessionActive] = await Promise.all([
-    rowQuery,
-    sid ? systemIsSessionActive(sid, u.id) : Promise.resolve(true),
-  ]);
+  const { row, sessionActive } = await lookupPerson(u.id, sid);
 
   if (!sessionActive) return null;
   if (!row || row.status !== 'active') return null;

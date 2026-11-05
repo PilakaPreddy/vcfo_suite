@@ -64,7 +64,7 @@ export class ArchetypeNotBuilt extends Error {
   }
 }
 
-export const ARCHETYPE_LAYOUT: Record<FormArchetype, ArchetypeLayout | null> = {
+const ARCHETYPE_LAYOUT: Record<FormArchetype, ArchetypeLayout | null> = {
   /* Up to 26 columns of money. Landscape, frozen past the name. */
   wages: { ...COMMON, orientation: 'landscape', freezeAfterField: 'name' },
 

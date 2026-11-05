@@ -1,4 +1,4 @@
-import { daysUntil, plainDate, type SixWord } from '@/views/compliances/spectrum-status';
+import { daysUntil, type SixWord } from '@/views/compliances/spectrum-status';
 
 /**
  * VIEW MODEL of the statutory and non-statutory split on the staff screens
@@ -62,14 +62,6 @@ const STAGE_WORD: Record<WorkflowStage, SixWord> = {
   'not-applicable': 'Not started',
 };
 
-export function isStage(v: unknown): v is WorkflowStage {
-  return typeof v === 'string' && v in STAGE_LABEL;
-}
-
-export function stageLabel(stage: string): string {
-  return isStage(stage) ? STAGE_LABEL[stage] : stage;
-}
-
 /** The chip word (3.3): Overdue and Due soon come from the date; the rest from the stage. */
 export function stageWord(stage: WorkflowStage, dueIso: string, notifyDays: number, now: Date): SixWord {
   if (stage === 'completed') return 'Done';
@@ -104,7 +96,7 @@ export interface TaskLike {
   ownerName?: string | null;
 }
 
-export const taskWord = (t: Pick<TaskLike, 'stage' | 'endDate' | 'notifyDays'>, now: Date): SixWord =>
+const taskWord = (t: Pick<TaskLike, 'stage' | 'endDate' | 'notifyDays'>, now: Date): SixWord =>
   stageWord(t.stage, t.endDate, t.notifyDays, now);
 
 /** S-3: rows group by end-date week. Weeks start on Monday (UTC). */
@@ -130,12 +122,6 @@ export function taskMatches(t: TaskLike, f: StripKey, now: Date): boolean {
   if (f === 'none') return (t.stage === 'not-started' || t.stage === 'ready') && w !== 'Overdue';
   return true;
 }
-
-/** "Not applicable" hides a task unless the viewer asks for it (3.3). */
-export const visibleTask = (t: Pick<TaskLike, 'stage'>, showNotApplicable = false) => showNotApplicable || t.stage !== 'not-applicable';
-
-/** C-3 hover text: "Starts 12 Oct · High". */
-export const taskHint = (t: Pick<TaskLike, 'startDate' | 'urgency'>, now: Date) => `Starts ${plainDate(t.startDate, now)} · ${t.urgency}`;
 
 /** The four calendar statuses of a task, by the rule of a staff filing: done, late, within 7 days, later. */
 export type TaskCal = 'filed' | 'due-soon' | 'overdue' | 'upcoming';
@@ -184,4 +170,3 @@ export function addDays(iso: string, n: number): string {
   return new Date(Date.UTC(y!, m! - 1, d! + n)).toISOString().slice(0, 10);
 }
 
-export const todayIso = (now: Date) => now.toISOString().slice(0, 10);

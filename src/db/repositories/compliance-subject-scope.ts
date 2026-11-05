@@ -63,13 +63,3 @@ export async function subjectInEngagement(dbId: string, kind: SubjectKind, key: 
   return Boolean(row);
 }
 
-/** The obligation id and area of a filing of this engagement, or null. */
-export async function filingObligation(dbId: string, instanceId: string): Promise<{ obligationId: string } | null> {
-  if (!UUID.test(instanceId)) return null;
-  const [row] = await db
-    .select({ obligationId: complianceInstances.obligationId })
-    .from(complianceInstances)
-    .where(and(eq(complianceInstances.id, instanceId), eq(complianceInstances.engagementId, dbId)))
-    .limit(1);
-  return row ?? null;
-}

@@ -12,10 +12,10 @@ import { toastError, toastSuccess } from '@/lib/toast-errors';
  * State and actions for the sign-in page. It is the same flow as `src/views/auth/Login.tsx`:
  * Auth.js sign-in through `useApp().signIn`, the role home on success, and the error inline and as a toast.
  *
- * Two-step sign-in (G-25): before signing in, `POST /api/auth/two-step` says whether this email and
- * password need a code. It answers yes only for a right password on an account with two-step on, so it
- * never tells whether an email exists. When a code is needed the card asks for it, and the code goes to
- * Auth.js with the password as the `otp` field; `authorize` checks both.
+ * Two-step sign-in (G-25): before signing in, `POST /api/auth/two-step` says whether this email needs
+ * a code. It answers from the email alone, never from the password, so it cannot be used to guess
+ * passwords. When a code is needed the card asks for it, and the code goes to Auth.js with the password
+ * as the `otp` field; `authorize` checks the code first, then the password.
  */
 export type SignInStep = 'password' | 'code';
 
@@ -43,7 +43,7 @@ export type SignInState = {
 
 type SignInAction = { type: 'patch'; patch: Partial<SignInState> } | { type: 'toggle_show_password' };
 
-export const initialSignInState: SignInState = {
+const initialSignInState: SignInState = {
   step: 'password',
   email: '',
   password: '',
@@ -56,7 +56,7 @@ export const initialSignInState: SignInState = {
   forgotLoading: false,
 };
 
-export function signInReducer(state: SignInState, action: SignInAction): SignInState {
+function signInReducer(state: SignInState, action: SignInAction): SignInState {
   switch (action.type) {
     case 'toggle_show_password':
       return { ...state, showPassword: !state.showPassword };
@@ -71,6 +71,7 @@ const CODE_ERRORS: Record<string, string> = {
   two_step_invalid: 'That code did not match. Check your authenticator app and try again.',
   two_step_locked: 'Too many codes tried. Wait ten minutes and try again.',
   two_step_required: 'Enter the 6-digit code from your authenticator app.',
+  rate_limited: 'Too many sign-in attempts. Wait fifteen minutes and try again.',
 };
 
 /** True when this email and password need a two-step code. Any failure answers false and the normal sign-in decides. */
@@ -141,7 +142,7 @@ export function useSignIn({ defaultNext }: UseSignInOptions = {}) {
       patch({ loading: false, error: message, code: '' });
       toastError('Sign-in failed', message);
       // A wrong password at this step means the pre-check was stale; start again from the password.
-      if (!result.code?.startsWith('two_step')) patch({ step: 'password' });
+      if (!result.code?.startsWith('two_step') && result.code !== 'rate_limited') patch({ step: 'password' });
       return;
     }
     const session = await getSession();

@@ -12,7 +12,7 @@ import type { DocModel, EvidenceRow, MergeValue } from './types';
  */
 
 /** Where each merge value comes from. A click on a tinted value names this field. */
-export const NOC_FIELD_SOURCES: Record<keyof BoardResolutionMergeFields, string> = {
+const NOC_FIELD_SOURCES: Record<keyof BoardResolutionMergeFields, string> = {
   PARENT_ENTITY_NAME: 'Pre-1 · Parent company name',
   PARENT_ENTITY_ADDRESS: 'Pre-1 · Parent address',
   RESOLUTION_EFFECTIVE_DATE: 'Pre-1 · Board resolution date',
@@ -35,11 +35,6 @@ export const NOC_FIELD_SOURCES: Record<keyof BoardResolutionMergeFields, string>
   NAME_WORD: 'Pre-1 · Parent company name',
   SIGNATORY_DIN: 'Filled by hand on the printed copy',
 };
-
-/** Short labels for the version compare list. */
-export const NOC_FIELD_LABELS: Record<string, string> = Object.fromEntries(
-  Object.entries(NOC_FIELD_SOURCES).map(([k, v]) => [k, v.replace(/^Pre-1 · /, '')]),
-);
 
 /** The merge values of the draft. Each director is its own value; placeholders come back missing. */
 export function nocMergeValues(fields: BoardResolutionMergeFields | null | undefined): MergeValue[] {

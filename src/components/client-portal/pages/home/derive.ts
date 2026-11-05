@@ -9,6 +9,7 @@ import { isReviewRejected } from '@/lib/checklist/checklist-item-review';
 import { approvalStateOf } from '@/lib/checklist/checklist-step-approval';
 import { isClientFillAwaitingClient } from '@/lib/checklist/checklist-client-fill';
 import { complianceGroupForAuthority, type ClientOverview, type ComplianceGroup } from '@/lib/client/client-overview';
+import { DUE_SOON_DAYS } from '@/lib/compliance/filings';
 import type { PortalIncorporationModel, PortalStep } from '@/lib/client-portal/step-model';
 import type { ClientHome, HomeFiling, NeedKind, TimelinePhaseDates } from '@/lib/client/client-home';
 import type { DrillConfig, DrillRow, DrillStepMeta } from '@/components/client-portal/PortalProvider';
@@ -19,9 +20,8 @@ export type Tone = 'ok' | 'due' | 'over' | 'prog' | 'up';
 /* ------------------------------------------------------------------ dates */
 
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export function ymd(v?: string | null): string | undefined {
+function ymd(v?: string | null): string | undefined {
   if (!v) return undefined;
   const s = v.trim();
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
@@ -44,17 +44,6 @@ export function dLong(iso?: string): string {
   const p = parts(iso);
   return `${p.d} ${MON[p.m]} ${p.y}`;
 }
-/** ["09", "Oct"] (sentence case, K-12) */
-export function dayMon(iso: string): [string, string] {
-  const p = parts(iso);
-  return [String(p.d).padStart(2, '0'), MON[p.m]!];
-}
-/** "Tue 6 Oct 2026" (sentence case, K-12) */
-export function dHeader(iso: string): string {
-  const p = parts(iso);
-  const dow = new Date(Date.UTC(p.y, p.m, p.d)).getUTCDay();
-  return `${DOW[dow]} ${p.d} ${MON[p.m]} ${p.y}`;
-}
 export function days(a: string, b: string): number {
   return Math.round((Date.parse(`${b.slice(0, 10)}T00:00:00Z`) - Date.parse(`${a.slice(0, 10)}T00:00:00Z`)) / 86_400_000);
 }
@@ -66,36 +55,18 @@ function plural(n: number, w: string) {
 }
 /** "Due 14 Oct" / "Today" / "Overdue 1 day". Statutory dates show the date,
     never "in N days" (K-13, rule R-29). */
-export function rel(today: string, iso: string): string {
+function rel(today: string, iso: string): string {
   const n = days(today, iso);
   if (n < 0) return `Overdue ${plural(-n, 'day')}`;
   if (n === 0) return 'Today';
   return `Due ${dShort(iso)}`;
 }
-export function chipTone(today: string, iso?: string): Tone {
-  if (!iso) return 'up';
-  const n = days(today, iso);
-  if (n < 0) return 'over';
-  if (n <= 7) return 'due';
-  return 'prog';
-}
 
 export const chipBg = (t: Tone) => `var(--${t}-chip)`;
-/* Status chips are soft (K-04, rule R-13): the tone's light ground, its text-safe
-   colour and a 6px dot in the tone's mid colour (drawn by .chip[style*="--dot"]).
-   The name stays so callers do not change; nothing is solid now. */
-const CHIP_DOT: Partial<Record<Tone, string>> = { ok: 'var(--ok-mid)', due: 'var(--due-mid)', over: 'var(--over-mid)' };
-export function solid(t: Tone): React.CSSProperties {
-  return {
-    background: `var(--${t}-light)`,
-    color: `var(--${t}-text, var(--${t}))`,
-    ['--dot' as string]: CHIP_DOT[t] ?? `var(--${t})`,
-  } as React.CSSProperties;
-}
 
 /* -------------------------------------------------------------- steps */
 
-export const STEP_STATUS: Record<string, [string, Tone]> = {
+const STEP_STATUS: Record<string, [string, Tone]> = {
   done: ['Completed', 'ok'],
   you: ['Waiting', 'due'],
   prog: ['In progress', 'prog'],
@@ -104,21 +75,17 @@ export const STEP_STATUS: Record<string, [string, Tone]> = {
   up: ['Upcoming', 'up'],
 };
 
-export function stepStatus(s: PortalStep): [string, Tone] {
+function stepStatus(s: PortalStep): [string, Tone] {
   if (s.late && s.kind !== 'done') return ['Overdue', 'over'];
   return STEP_STATUS[s.kind] ?? ['Upcoming', 'up'];
 }
 
-export function stepOwnerLabel(s: PortalStep, company: string): string {
-  return s.owner === 'client' ? company : 'SBC';
-}
-
-export function stepTimelineText(s: PortalStep): string {
+function stepTimelineText(s: PortalStep): string {
   return getChecklistStepTimelineLabel(s.item);
 }
 
 /** The ST5 part of a step row in a drill (C-138): mark, "Step n", owner chip, red date when late. */
-export function stepDrillMeta(s: PortalStep): DrillStepMeta {
+function stepDrillMeta(s: PortalStep): DrillStepMeta {
   const late = Boolean(s.late && s.kind !== 'done');
   const live = s.kind === 'you' || s.kind === 'prog' || s.kind === 'with';
   return {
@@ -130,7 +97,7 @@ export function stepDrillMeta(s: PortalStep): DrillStepMeta {
   };
 }
 
-export function stepDateLabel(s: PortalStep): string {
+function stepDateLabel(s: PortalStep): string {
   if (s.kind === 'done') return s.doneOn ? dShort(s.doneOn) : 'Done';
   return s.due ? dShort(s.due) : '—';
 }
@@ -232,14 +199,7 @@ export function buildNeeds(model: PortalIncorporationModel, home: ClientHome | u
   return out;
 }
 
-export function needChip(today: string, due: string | undefined, after: boolean): { label: string; tone: Tone } | null {
-  if (!due) return null;
-  const n = days(today, due);
-  if (n < 0) return { label: `Overdue ${-n}d`, tone: 'over' };
-  return { label: after ? rel(today, due) : dShort(due), tone: n <= 7 ? 'due' : 'prog' };
-}
-
-export const NEED_TABS: [NeedKind, string][] = [
+const NEED_TABS: [NeedKind, string][] = [
   ['upload', 'Upload'],
   ['fill', 'Fill'],
   ['correct', 'Correct'],
@@ -249,7 +209,6 @@ export const NEED_TABS: [NeedKind, string][] = [
 /* ---------------------------------------------------------- filings */
 
 export type FilingBucket = 'filed' | 'dueSoon' | 'overdue' | 'upcoming';
-export const DUE_SOON_DAYS = 15;
 
 export function bucketOf(f: HomeFiling, today: string): FilingBucket {
   if (f.status === 'filed' || f.filedOn) return 'filed';
@@ -258,7 +217,7 @@ export function bucketOf(f: HomeFiling, today: string): FilingBucket {
   return 'upcoming';
 }
 export const BUCKET_LABEL: Record<FilingBucket, string> = { filed: 'Filed', dueSoon: 'Due soon', overdue: 'Overdue', upcoming: 'Upcoming' };
-export const BUCKET_TONE: Record<FilingBucket, Tone> = { filed: 'ok', dueSoon: 'due', overdue: 'over', upcoming: 'up' };
+const BUCKET_TONE: Record<FilingBucket, Tone> = { filed: 'ok', dueSoon: 'due', overdue: 'over', upcoming: 'up' };
 export const BUCKETS: FilingBucket[] = ['filed', 'dueSoon', 'overdue', 'upcoming'];
 
 export const AREA_ORDER: ComplianceGroup[] = ['MCA', 'GST', 'Income tax', 'Payroll', 'FEMA', 'Other'];
@@ -276,7 +235,7 @@ export function filingName(f: HomeFiling, withPeriod = true): string {
   return withPeriod && f.periodLabel ? `${f.title} · ${f.periodLabel}` : f.title;
 }
 
-export const PORTALS: Record<string, [string, string]> = {
+const PORTALS: Record<string, [string, string]> = {
   GST: ['https://www.gst.gov.in', 'GST portal'],
   'Income tax': ['https://www.incometax.gov.in', 'Income-tax portal'],
   Payroll: ['https://unifiedportal-emp.epfindia.gov.in', 'EPFO portal'],
@@ -752,7 +711,7 @@ export interface DocItem {
   stepId?: string | null;
 }
 
-export function fileType(name: string, contentType?: string | null): string {
+function fileType(name: string, contentType?: string | null): string {
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
   if (ext === 'pdf' || contentType === 'application/pdf') return 'PDF';
   if (ext === 'jpg' || ext === 'jpeg' || contentType === 'image/jpeg') return 'JPG';
@@ -782,14 +741,6 @@ export function docGroup(today: string, iso?: string): 'This week' | 'Last week'
   if (age < 14) return 'Last week';
   return 'Earlier';
 }
-
-export const FT_STYLE: Record<string, React.CSSProperties> = {
-  JPG: { background: 'var(--teal-light)', color: 'var(--teal-chip)' },
-  PNG: { background: 'var(--teal-light)', color: 'var(--teal-chip)' },
-  PDF: { background: 'var(--over-light)', color: 'var(--over-text)' },
-  DOCX: { background: 'var(--prog-light)', color: 'var(--prog-text)' },
-};
-export const FT_PHONE: Record<string, string> = { PDF: 'var(--over)', JPG: 'oklch(47% .09 195)', PNG: 'oklch(47% .09 195)', DOCX: 'oklch(51% .17 252)' };
 
 export async function docUrl(d: DocItem): Promise<string> {
   const res = await fetch(

@@ -61,7 +61,7 @@ export function useSidebarFolds(role: Role | undefined) {
 }
 
 /** Open or closed per block, kept for the browser tab. Folds start open. */
-export function useFold(key: string): [boolean, () => void] {
+function useFold(key: string): [boolean, () => void] {
   const [open, setOpen] = useState(() => {
     try {
       return typeof window === 'undefined' || window.sessionStorage.getItem(`vcfo.nav.${key}`) !== '0';
@@ -82,7 +82,7 @@ export function useFold(key: string): [boolean, () => void] {
 }
 
 /** Plain chevron fold button at the right of a nav row (R-24). */
-export function FoldButton({ open, onToggle, label, ink }: { open: boolean; onToggle: () => void; label: string; ink: SidebarInk }) {
+function FoldButton({ open, onToggle, label, ink }: { open: boolean; onToggle: () => void; label: string; ink: SidebarInk }) {
   return (
     <button
       type="button"
@@ -142,20 +142,20 @@ const IDENTITY_SQUARE: Record<IdentityTone, string> = {
 };
 
 /** The company name without the legal suffix ("Northwind India Pvt Ltd" → "Northwind"). */
-export function shortClientName(name: string): string {
+function shortClientName(name: string): string {
   const short = name.replace(/(\s+India)?\s+(Private Limited|Pvt\.? Ltd\.?|Limited|Ltd\.?|LLP)$/i, '').trim();
   return short || name;
 }
 
 /** Where one client opens for a role. */
-export function clientHrefFor(role: Role, e: Pick<Engagement, 'id' | 'slug'>): string {
+function clientHrefFor(role: Role, e: Pick<Engagement, 'id' | 'slug'>): string {
   if (role === 'intern') return internEngagementPath(e);
   if (role === 'super_admin') return `/app/super/projects/${encodeURIComponent(e.id)}`;
   return adminProjectPath(e, role === 'manager' ? '/app/manager' : '/app/admin');
 }
 
 /** Clients shown in the fold: the first four by name, plus the open client when it is not one of them. */
-export function foldClients<T extends Pick<Engagement, 'id' | 'companyName'>>(all: readonly T[], openId: string | null, size = 4): T[] {
+function foldClients<T extends Pick<Engagement, 'id' | 'companyName'>>(all: readonly T[], openId: string | null, size = 4): T[] {
   const sorted = [...all].sort((a, b) => a.companyName.localeCompare(b.companyName, undefined, { sensitivity: 'base' }));
   const list = sorted.slice(0, size);
   const open = openId ? sorted.find((c) => c.id === openId) : undefined;

@@ -6,15 +6,13 @@
 
 const IST_MS = 330 * 60_000;
 const DAY_MS = 86_400_000;
-const YMD_RE = /^\d{4}-\d{2}-\d{2}$/;
-const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 /** Hours the week grid shows. Blocks outside are clipped to the grid edge. */
 export const PLAN_DAY_START = 8;
 export const PLAN_DAY_END = 20;
 /** Shortest and longest block. */
-export const MIN_BLOCK_MINUTES = 15;
-export const MAX_BLOCK_HOURS = 12;
+const MIN_BLOCK_MINUTES = 15;
+const MAX_BLOCK_HOURS = 12;
 /** A day over this many planned hours is heavy (prototype WorkPlan). */
 export const HEAVY_DAY_HOURS = 6;
 
@@ -28,14 +26,6 @@ export interface PlannerBlock {
   title: string;
   startsAt: string;
   endsAt: string;
-}
-
-export function isYmd(value: string): boolean {
-  return YMD_RE.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
-}
-
-export function isHhmm(value: string): boolean {
-  return HHMM_RE.test(value);
 }
 
 /** IST calendar date of a timestamp. */

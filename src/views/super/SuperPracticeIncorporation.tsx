@@ -20,13 +20,14 @@ import {
   SuperPageHead,
   SuperPageSkeleton,
 } from '@/components/super/parts/super-parts';
-import { plainDay, shortCompany, todayKey } from '@/components/super/parts/super-text';
+import { shortCompany, todayKey } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import {
   superOwnerOf,
   superPhaseTrack,
   superStateChip,
 } from '@/components/super/overview/super-overview-format';
-import type { SuperInsightClient } from '@/components/super/insights/super-insights-model';
+import type { SuperInsightClient } from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import { usePracticeMetrics } from '@/components/metrics/use-metrics';
 import { ExpectedCoiCard, StageDaysCard } from '@/components/metrics/practice-cards';
@@ -40,7 +41,7 @@ import { cn } from '@/lib/utils';
  * step, who holds it, the manager and lead, and the next open filing date. All of it is read
  * from the engagement rows and the checklist gate through `/api/super/insights`. Read-only.
  */
-export const SUPER_INCORPORATION_HREF = '/app/super/practice/incorporation';
+const SUPER_INCORPORATION_HREF = '/app/super/practice/incorporation';
 
 const OWNER_WORD: Record<'client' | 'sbc' | 'manager', string> = {
   client: 'Client',

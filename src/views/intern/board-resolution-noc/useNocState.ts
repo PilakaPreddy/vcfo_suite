@@ -29,7 +29,7 @@ const ERROR_TEXT: Record<string, string> = {
   unknown_variant: 'Choose a template.',
 };
 
-export function nocErrorText(code: string): string {
+function nocErrorText(code: string): string {
   return ERROR_TEXT[code] ?? code;
 }
 

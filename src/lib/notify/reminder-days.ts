@@ -10,10 +10,10 @@
  *    nudged N days before instead, for any frequency.
  */
 
-export const PERSONAL_REMIND_DAYS = [7, 3, 1] as const;
+const PERSONAL_REMIND_DAYS = [7, 3, 1] as const;
 
 /** Default WhatsApp due-nudge days before the due date, by frequency (unchanged behaviour). */
-export const DEFAULT_DUE_NUDGE_DAYS: Record<string, number> = { monthly: 5, quarterly: 7 };
+const DEFAULT_DUE_NUDGE_DAYS: Record<string, number> = { monthly: 5, quarterly: 7 };
 
 /** A valid personal choice, or null for the firm default. */
 export function personalRemindDays(value: number | null | undefined): number | null {

@@ -20,7 +20,7 @@ export interface EscalationRow {
   createdAt: string;
 }
 
-export const ESCALATIONS_QUERY_KEY = ['escalations'] as const;
+const ESCALATIONS_QUERY_KEY = ['escalations'] as const;
 
 async function json<T>(res: Response): Promise<T> {
   const body = (await res.json().catch(() => ({}))) as T & { error?: string };

@@ -8,7 +8,8 @@ import {
   FILING_BUCKET_COLOR,
   formatSuperAgo,
 } from '@/components/super/overview/super-overview-format';
-import { plainDay, todayKey } from '@/components/super/parts/super-text';
+import { todayKey } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import { cn } from '@/lib/utils';
 import type { SuperOverview } from '@/lib/super/super-overview';
 

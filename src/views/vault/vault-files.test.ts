@@ -6,8 +6,8 @@ import {
   fromLabel,
   isReplacedDoc,
   folderDocs,
+  factsFor,
   indexMaps,
-  indexRowFor,
   previewKind,
   refFor,
   reviewWord,
@@ -72,9 +72,26 @@ describe('index rows', () => {
   it('finds the row by id or by the object key', () => {
     const row = { id: 'row-1', engagementId: 'e1', category: null, fileName: 'pan.pdf', objectKey: PATH, stepId: null, createdAt: '' } as VaultIndexRow;
     const { byKey, byId } = indexMaps([row]);
-    expect(indexRowFor(doc('x', 'm1', 'KYC', { storagePath: PATH }), byKey, byId)).toBe(row);
-    expect(indexRowFor(doc('x', 'm1', 'KYC', { documentId: 'row-1' }), byKey, byId)).toBe(row);
-    expect(indexRowFor(doc('x', 'm1', 'KYC'), byKey, byId)).toBeNull();
+    expect(factsFor(doc('x', 'm1', 'KYC', { storagePath: PATH }), byKey, byId)).toBe(row);
+    expect(factsFor(doc('x', 'm1', 'KYC', { documentId: 'row-1' }), byKey, byId)).toBe(row);
+    expect(factsFor(doc('x', 'm1', 'KYC'), byKey, byId)).toBeNull();
+  });
+
+  it('reads a server-read file from its node: index row, replaced flag and reference', () => {
+    const { byKey, byId } = indexMaps([]);
+    const node = {
+      id: 'br-final', ref: 'br:final', label: 'Board resolution', fileName: 'br.docx', contentType: 'x/y', sizeBytes: 5,
+      status: 'Replaced' as const, replaced: true, from: 'SBC', fromSbc: true, categoryId: 'c3' as const, source: 'board-resolution' as const,
+    };
+    const br = doc('br-final', 'pre-3', 'KYC', { storagePath: '', source: 'board-resolution', node });
+    expect(factsFor(br, byKey, byId)).toEqual({ contentType: 'x/y', sizeBytes: 5 });
+    expect(isReplacedDoc(br, null)).toBe(true);
+    expect(refFor(br)).toEqual({ clientRef: 'br:final', engagementId: 'e1' });
+    expect(fileUrl({ clientRef: 'br:final', engagementId: 'e1' }, 'download')).toBe('/api/client/documents/file?ref=br%3Afinal&engagement=e1&dl=1');
+    expect(zipItems([br], () => null)).toEqual([]);
+    const rf = doc('rf-1', 'pre-3', 'KYC', { storagePath: '', source: 'request', node: { ...node, id: 'rf-1', ref: 'r:file-1', replaced: false } });
+    expect(refFor(rf)).toEqual({ requestFileId: 'file-1' });
+    expect(canDeleteDoc(rf, factsFor(rf, byKey, byId), { role: 'admin' })).toBe(false);
   });
 });
 

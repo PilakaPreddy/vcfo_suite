@@ -17,12 +17,12 @@ import type { BackupPlanInfo, Linked, NetworkPayload, RecoveryPointRow, Rotation
 
 // ---------- Shared states ----------
 
-export function LinkedChip({ reach }: { reach: Linked<unknown> }) {
+function LinkedChip({ reach }: { reach: Linked<unknown> }) {
   if (reach.state === 'not_connected') return <Chip tone="idle">Not connected</Chip>;
   return <ReachChip reach={reach} />;
 }
 
-export function LinkedNotice({ reach, service }: { reach: Exclude<Linked<unknown>, { state: 'ok' }>; service: string }) {
+function LinkedNotice({ reach, service }: { reach: Exclude<Linked<unknown>, { state: 'ok' }>; service: string }) {
   if (reach.state === 'not_connected') {
     return (
       <div className="p-4">

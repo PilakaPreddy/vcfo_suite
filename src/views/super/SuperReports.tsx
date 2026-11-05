@@ -14,8 +14,8 @@ import {
   SuperPageHead,
   SuperPageSkeleton,
 } from '@/components/super/parts/super-parts';
-import { plainDay } from '@/components/super/parts/super-text';
-import { buildRisks, type SuperTeamManager } from '@/components/super/insights/super-insights-model';
+import { plainDay } from '@/lib/date-format';
+import { buildRisks, type SuperTeamManager } from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import { useSuperStaff } from '@/components/super/assign/use-super-staff';
 import { cn } from '@/lib/utils';
@@ -53,7 +53,7 @@ import { useSavedReportMutations, useSavedReports } from '@/views/super/reports/
  * `saved-reports-send` emails due schedules with the PDF attached. The prototype's fee report
  * stays out (R-37: no money).
  */
-export const SUPER_REPORTS_HREF = '/app/super/reports';
+const SUPER_REPORTS_HREF = '/app/super/reports';
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 

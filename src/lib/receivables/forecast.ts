@@ -53,7 +53,7 @@ export type CashForecast = {
   total: { count: number; inr: number };
 };
 
-export const DEFAULT_FORECAST_WEEKS = 8;
+const DEFAULT_FORECAST_WEEKS = 8;
 
 /** The Monday of the ISO week that holds `iso`. */
 export function isoWeekStart(iso: string): string {

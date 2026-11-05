@@ -13,6 +13,13 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
     include: ["src/**/*.{test,spec}.{ts,tsx}", "tests/**/*.{test,spec}.{ts,tsx}"],
+    // `npm run test:coverage` writes the summary to the terminal and the HTML report to coverage/.
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}", "app/**/*.{ts,tsx}"],
+      exclude: ["**/*.{test,spec}.{ts,tsx}", "src/test/**"],
+      reporter: ["text-summary", "html"],
+    },
   },
   resolve: {
     alias: {

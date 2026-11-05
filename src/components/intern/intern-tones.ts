@@ -1,4 +1,4 @@
-import { TONE_BADGE, TONE_BG, TONE_SOLID_BY_TONE, TONE_TEXT, type IconChipTone } from '@/components/common/IconChip';
+import { TONE_BADGE, type IconChipTone } from '@/components/common/IconChip';
 import type { ChipTone, Owner } from '@/components/ui/spectrum-chip';
 import type { InternChipTone } from '@/lib/intern/intern-work';
 
@@ -8,19 +8,6 @@ function internIconTone(tone: InternChipTone): IconChipTone {
 
 export function internToneBadge(tone: InternChipTone): string {
   return TONE_BADGE[internIconTone(tone)];
-}
-
-/** Solid fill with on-status text: for a STATE chip in a column. Soft (internToneBadge) is for owners and tags. */
-export function internToneSolid(tone: InternChipTone): string {
-  return TONE_SOLID_BY_TONE[internIconTone(tone)] ?? TONE_BADGE[internIconTone(tone)];
-}
-
-export function internToneBg(tone: InternChipTone): string {
-  return TONE_BG[internIconTone(tone)];
-}
-
-export function internToneText(tone: InternChipTone): string {
-  return TONE_TEXT[internIconTone(tone)];
 }
 
 /* A kind is a state, so it wears a status tone (docs/design/TOKENS.md): in flight

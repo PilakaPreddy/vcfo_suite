@@ -4,7 +4,6 @@ import {
   type Engagement,
   type TaskInstance,
   type DocRequest,
-  type Invite,
   type ActivityEvent,
   seedEngagements,
 } from '@/data/engagements';
@@ -19,7 +18,6 @@ export type AppProviderState = {
   engagements: Engagement[];
   tasks: TaskInstance[];
   requests: DocRequest[];
-  invites: Invite[];
   activity: ActivityEvent[];
   notifications: AppNotification[];
   sidebarMode: 'auto' | 'open' | 'closed';
@@ -42,7 +40,6 @@ function createInitialAppProviderState(): AppProviderState {
     engagements: seedEngagements,
     tasks: [],
     requests: [],
-    invites: [],
     activity: [],
     notifications: [],
     sidebarMode: 'auto',
@@ -85,7 +82,6 @@ export function useAppProviderState() {
     engagements,
     tasks,
     requests,
-    invites,
     activity,
     notifications,
     sidebarMode,
@@ -110,9 +106,6 @@ export function useAppProviderState() {
   }, [dispatch]);
   const setRequests = useCallback((value: SetStateAction<AppProviderState['requests']>) => {
     dispatch({ type: 'patch', key: 'requests', value });
-  }, [dispatch]);
-  const setInvites = useCallback((value: SetStateAction<AppProviderState['invites']>) => {
-    dispatch({ type: 'patch', key: 'invites', value });
   }, [dispatch]);
   const setActivity = useCallback((value: SetStateAction<AppProviderState['activity']>) => {
     dispatch({ type: 'patch', key: 'activity', value });
@@ -140,7 +133,6 @@ export function useAppProviderState() {
     engagements,
     tasks,
     requests,
-    invites,
     activity,
     notifications,
     sidebarMode,
@@ -153,7 +145,6 @@ export function useAppProviderState() {
     setEngagements,
     setTasks,
     setRequests,
-    setInvites,
     setActivity,
     setNotifications,
     setSidebarMode,

@@ -33,7 +33,7 @@ export function taskHref(basePath: string, id: string, boardMeetingId?: string |
 }
 
 /** A board meeting's page: Obligations › Non-statutory › the meeting (docs/specs/board-meetings/PLAN.md). */
-export function meetingPageHref(basePath: string, meetingId: string): string {
+function meetingPageHref(basePath: string, meetingId: string): string {
   return `${basePath}/obligations/meetings/${encodeURIComponent(meetingId)}`;
 }
 

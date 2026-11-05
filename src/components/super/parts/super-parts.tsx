@@ -75,7 +75,7 @@ function dayOfYmd(ymd: string): Date {
 }
 
 /** Overdue red, within 7 days amber, within 15 blurple, later grey (prototype `urgency`). */
-export function urgencyOf(ymd: string, now: Date = new Date()): SuperUrgency {
+function urgencyOf(ymd: string, now: Date = new Date()): SuperUrgency {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const n = Math.round((dayOfYmd(ymd).getTime() - today.getTime()) / 86_400_000);
   if (n < 0) return 'bad';

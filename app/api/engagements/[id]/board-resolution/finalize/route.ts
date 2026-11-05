@@ -1,3 +1,4 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import {
   assertEngagementBoardResolutionAccess,
@@ -6,7 +7,6 @@ import { requireAnyRole } from '@/auth/guards';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { approveBoardResolution } from '@/db/repositories/board-resolution';
 import { checklistStateForViewer, toAppEngagement } from '@/db/repositories/engagements';
-import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -49,7 +49,7 @@ export async function POST(_request: Request, context: RouteContext) {
       });
     }
 
-    const email = await notifyEngagementEvent({
+    const email = await notifyEngagementEventSoon({
       engagementId: engagement.id,
       itemId: 'pre-2',
       event: 'board_resolution_shared',

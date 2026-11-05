@@ -17,7 +17,7 @@ import { CLIENT_MESSAGE_MAX, messageToSend, threadOrder, type ClientMessage } fr
 import { Avatar, Empty, SCard } from '../incorporation/spectrum';
 import { dShort } from './derive';
 
-export const MESSAGES_KEY = 'client-messages';
+const MESSAGES_KEY = 'client-messages';
 
 function timeOf(iso: string, today: string): string {
   const day = iso.slice(0, 10);
