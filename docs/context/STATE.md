@@ -26,6 +26,7 @@ Last updated: 2026-11-03 (receivables Phases 1 to 6 on `pr-13`, not committed (P
 | Two-step lockout across instances (audit small item) | fixed 2026-11-05 on `claude/keen-knuth-8on04j`: the ten-wrong-codes lockout in `src/lib/totp/guard.ts` counts in the Postgres `rate_limits` store (key `totp-fail:<user>`, cleared on a correct code), so `checkTotpCode` is async; the replay guard stays in process memory. |
 | Labour register loader (audit small item) | moved 2026-11-05 on `claude/keen-knuth-8on04j`: `loadBatchDataset` now lives in `src/lib/labour-registers/load-dataset.ts`, so `app/api/labour-registers/generate` no longer imports from `src/views/`. |
 | Audit `*_by` indexes (audit small item) | built 2026-11-05 on `claude/keen-knuth-8on04j`, **not deployed**: migration `0045_audit_by_indexes` (additive, apply on RDS before deploy) indexes the eight `*_by` columns a query filters on (the seven the profile delete reassigns or nulls, and `item_window_requests.requested_by`); the other unindexed `*_by` columns are never filtered on and stay unindexed. |
+| Task list cap (audit small item) | fixed 2026-11-05 on `claude/keen-knuth-8on04j`: `listTasks` in `src/db/repositories/tasks.ts` returns at most `TASK_LIST_LIMIT` (2000, the same cap as the compliance task list), most recently updated first; `/api/tasks` and the weekly digest read it unchanged. |
 | Setup / seed / Auth.js login | done |
 | Phase 0 stubs (intern portfolio, welcome email, resend helper, supabase client) | done |
 | Phase 1 API ports | done — `_reference-supabase/` deleted; ~35 real routes |

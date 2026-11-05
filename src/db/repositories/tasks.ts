@@ -125,18 +125,22 @@ const notPersonalTodo = or(
   notLike(tasks.stepId, `${PERSONAL_TODO_STEP_PREFIX}%`),
 );
 
+/**
+ * The most recently updated tasks first, capped like the compliance task list. The app provider
+ * loads this on every page, so the cap keeps one response bounded as the firm grows.
+ */
+export const TASK_LIST_LIMIT = 2000;
+
 export async function listTasks(ctx: AuthContext): Promise<TaskInstance[]> {
   const scope = await scopedEngagementIds(ctx);
   if (scope !== 'all' && scope.length === 0) return [];
 
-  const rows =
-    scope === 'all'
-      ? await db.select().from(tasks).where(notPersonalTodo).orderBy(desc(tasks.updatedAt))
-      : await db
-          .select()
-          .from(tasks)
-          .where(and(inArray(tasks.engagementId, scope), notPersonalTodo))
-          .orderBy(desc(tasks.updatedAt));
+  const rows = await db
+    .select()
+    .from(tasks)
+    .where(scope === 'all' ? notPersonalTodo : and(inArray(tasks.engagementId, scope), notPersonalTodo))
+    .orderBy(desc(tasks.updatedAt))
+    .limit(TASK_LIST_LIMIT);
 
   return withAssignerNames(rows.map(toAppTask));
 }
