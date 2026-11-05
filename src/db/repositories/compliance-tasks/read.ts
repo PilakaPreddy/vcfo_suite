@@ -138,7 +138,7 @@ interface RowExtras {
   day: string;
 }
 
-export function toTaskRowDto(t: TaskRow, x: RowExtras): TaskRowDto {
+function toTaskRowDto(t: TaskRow, x: RowExtras): TaskRowDto {
   const stage = asStage(t.stage);
   const urgency = asUrgency(t.urgency);
   const word = statusWord(stage, t.dueDate, t.remindBefore, x.day);

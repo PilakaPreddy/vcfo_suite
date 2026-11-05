@@ -33,7 +33,7 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
  * lines come from the values this home showed on earlier days (`useStampHomeTiles`,
  * `src/lib/metrics/home-tile-stamps.ts`); a new install draws them after a day or two.
  */
-export function leadHeroStats(items: InternWorkItem[], now: Date, trends?: HomeTrends): DashHeroStat[] {
+function leadHeroStats(items: InternWorkItem[], now: Date, trends?: HomeTrends): DashHeroStat[] {
   const action = filterInternWork(items, { focus: 'action' }, now);
   const overdue = filterInternWork(items, { focus: 'overdue' }, now);
   const waiting = filterInternWork(items, { tag: 'client' }, now).filter((i) => i.kind !== 'done');

@@ -10,6 +10,7 @@
  */
 import { useParams } from 'next/navigation';
 import { usePortalOptional } from '../../PortalProvider';
+import { StaffPortalProvider } from '../../StaffPortalProvider';
 import { ComplianceCalendarPage, FilingsPage } from '@/views/compliances/CompliancePages';
 import { CompliancesCalendar } from './CalendarPage';
 import { CompliancesFilings } from './FilingsPage';
@@ -59,4 +60,18 @@ export function ClientCompliancesMeetingRoute() {
   const id = decodeURIComponent(String(params?.id ?? ''));
   if (!portal) return <MeetingPage basePath="/app/admin/compliances" meetingId={id} />;
   return <CompliancesMeeting id={id} />;
+}
+
+/**
+ * The client's own Filings page for staff, for one engagement, inside the staff shell (the super
+ * admin project record's Obligations tab). The register is read with `&engagement=` and the
+ * server checks access with `assertEngagementAccess`; links that open another client page open
+ * the project record instead.
+ */
+export function StaffClientFilings({ engagementId, projectHref }: { engagementId: string; projectHref: string }) {
+  return (
+    <StaffPortalProvider engagementId={engagementId} projectHref={projectHref}>
+      <CompliancesFilings />
+    </StaffPortalProvider>
+  );
 }

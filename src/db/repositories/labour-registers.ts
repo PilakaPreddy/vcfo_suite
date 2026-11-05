@@ -2,19 +2,18 @@ import 'server-only';
 
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '@/db/client';
+import * as base from '@/db/schema';
 import {
   labourRegisterBatches,
-  labourRegisterChecklist,
-  labourRegisterChecklistTicks,
   labourRegisterColumnMaps,
   labourRegisterDocuments,
   labourRegisterUploads,
+  labourRegisterCodeRules,
+  labourRegisterVerifications,
 } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
 import { isAdminOrManager, isFirmWideAdmin } from '@/lib/auth';
 import { assertEngagementAccess, listScopedEngagementIds } from '@/db/repositories/engagements';
-import { CHECKLIST_HEADS, defaultHeadIds, type ChecklistOwner } from '@/data/labour-registers/checklist-heads';
-import { knownHeadIds } from '@/lib/labour-registers/catalogue';
 import type { UploadSlot } from '@/lib/labour-registers/parse';
 
 /**
@@ -34,14 +33,15 @@ import type { UploadSlot } from '@/lib/labour-registers/parse';
  *    correction is a new row that supersedes the old one. Rule 72 of the OSH (Central) Rules
  *    forbids destroying a register after its retention period unless it has been properly
  *    transferred, and the research found that an electronic register may change its layout but
- *    not its integrity, serial number or column contents.
+ *    not its integrity, serial numbering or column contents. That last principle is the
+ *    product’s own: a November 2026 research pass could not source it to a rule.
  */
 
 export type BatchRow = typeof labourRegisterBatches.$inferSelect;
 export type UploadRow = typeof labourRegisterUploads.$inferSelect;
 export type DocumentRow = typeof labourRegisterDocuments.$inferSelect;
-export type ChecklistRow = typeof labourRegisterChecklist.$inferSelect;
-export type TickRow = typeof labourRegisterChecklistTicks.$inferSelect;
+export type VerificationRow = typeof labourRegisterVerifications.$inferSelect;
+export type CodeRuleOverrideRow = typeof labourRegisterCodeRules.$inferSelect;
 
 function assertStaff(ctx: AuthContext) {
   if (!isAdminOrManager(ctx.role) && ctx.role !== 'intern') {
@@ -152,87 +152,137 @@ export async function updateBatch(
   return row ?? null;
 }
 
-/* ── The payroll checklist ────────────────────────────────────────────────── */
-
 /**
- * A client's standing checklist. A client with no rows yet gets the catalogue's defaults,
- * unsaved, so the screen has something to show on the first visit without a write.
+ * Close the period. This is the one transition that permits generation: before it, the batch
+ * is being gathered; after it, the uploads and the mapping are fixed and the registers are
+ * built from exactly what was locked.
+ *
+ * `readiness` is the summary the preparer was shown when they confirmed, stored verbatim —
+ * what somebody was told at the moment they took responsibility is part of the record, and
+ * recomputing it later would answer a different question.
  */
-export async function getChecklist(ctx: AuthContext, engagementId: string): Promise<ChecklistRow[] | null> {
-  const access = await engagement(ctx, engagementId);
-  if (!access) return null;
-  return db.select().from(labourRegisterChecklist).where(eq(labourRegisterChecklist.engagementId, access.dbId));
-}
-
-/** The head ids a client's payroll runs, falling back to the catalogue defaults. */
-export async function activeHeads(ctx: AuthContext, engagementId: string): Promise<string[]> {
-  const rows = await getChecklist(ctx, engagementId);
-  if (!rows) return [];
-  if (rows.length === 0) return defaultHeadIds();
-  return rows.filter((r) => r.active).map((r) => r.headId);
-}
-
-/** Turn a head on or off for a client, or change who supplies it. */
-export async function setChecklistHead(
+export async function markReady(
   ctx: AuthContext,
-  input: { engagementId: string; headId: string; active?: boolean; owner?: ChecklistOwner; note?: string },
-): Promise<ChecklistRow | null> {
+  input: { batchId: string; accuracyConfirmed: boolean; readiness: Record<string, unknown> },
+): Promise<BatchRow | null> {
   assertStaff(ctx);
-  if (!knownHeadIds().has(input.headId)) throw new Error('unknown checklist head');
-  const access = await engagement(ctx, input.engagementId);
-  if (!access) return null;
-
-  const fallback = CHECKLIST_HEADS.find((h) => h.id === input.headId);
-  const [row] = await db
-    .insert(labourRegisterChecklist)
-    .values({
-      engagementId: access.dbId,
-      headId: input.headId,
-      active: input.active ?? fallback?.defaultOn ?? false,
-      owner: input.owner ?? fallback?.owner ?? 'client-hr',
-      inFinalSettlement: fallback?.inFinalSettlement ?? true,
-      note: input.note ?? '',
-      updatedBy: ctx.userId,
-    })
-    .onConflictDoUpdate({
-      target: [labourRegisterChecklist.engagementId, labourRegisterChecklist.headId],
-      set: {
-        ...(input.active === undefined ? {} : { active: input.active }),
-        ...(input.owner === undefined ? {} : { owner: input.owner }),
-        ...(input.note === undefined ? {} : { note: input.note }),
-        updatedBy: ctx.userId,
-        updatedAt: new Date(),
-      },
-    })
-    .returning();
-  return row ?? null;
-}
-
-/** The monthly tick-off for one batch. */
-export async function listTicks(ctx: AuthContext, batchId: string): Promise<TickRow[]> {
-  const batch = await getBatch(ctx, batchId);
-  if (!batch) return [];
-  return db.select().from(labourRegisterChecklistTicks).where(eq(labourRegisterChecklistTicks.batchId, batch.id));
-}
-
-/** Record that a head's figure is in, still awaited, or not applicable this period. */
-export async function setTick(
-  ctx: AuthContext,
-  input: { batchId: string; headId: string; state: 'pending' | 'received' | 'off'; note?: string },
-): Promise<TickRow | null> {
-  assertStaff(ctx);
-  if (!knownHeadIds().has(input.headId)) throw new Error('unknown checklist head');
+  if (!input.accuracyConfirmed) throw new Error('the accuracy confirmation is required');
   const batch = await getBatch(ctx, input.batchId);
   if (!batch) return null;
+  if (batch.markedReadyAt) throw new Error('already marked ready — reopen the inputs to change them');
+
   const [row] = await db
-    .insert(labourRegisterChecklistTicks)
-    .values({ batchId: batch.id, headId: input.headId, state: input.state, note: input.note ?? '', updatedBy: ctx.userId })
-    .onConflictDoUpdate({
-      target: [labourRegisterChecklistTicks.batchId, labourRegisterChecklistTicks.headId],
-      set: { state: input.state, ...(input.note === undefined ? {} : { note: input.note }), updatedBy: ctx.userId, updatedAt: new Date() },
+    .update(labourRegisterBatches)
+    .set({
+      status: 'ready',
+      markedReadyBy: ctx.userId,
+      markedReadyAt: new Date(),
+      accuracyConfirmed: true,
+      readinessSnapshot: input.readiness,
+      updatedAt: new Date(),
     })
+    .where(eq(labourRegisterBatches.id, batch.id))
     .returning();
   return row ?? null;
+}
+
+/**
+ * Reopen a locked period. The only way back, and it takes a reason: a register that changed
+ * after it was produced is a question somebody will eventually ask, and the answer should be
+ * on the batch rather than in somebody's memory.
+ *
+ * Documents already generated are left alone. They keep their content address, so if the
+ * inputs come back unchanged the same files answer and nothing is rebuilt; if they change,
+ * the address moves and new documents are produced beside the old ones.
+ */
+export async function reopenInputs(
+  ctx: AuthContext,
+  input: { batchId: string; reason: string },
+): Promise<BatchRow | null> {
+  assertStaff(ctx);
+  const reason = input.reason.trim();
+  if (!reason) throw new Error('a reason is required to reopen a locked period');
+  const batch = await getBatch(ctx, input.batchId);
+  if (!batch) return null;
+  if (!batch.markedReadyAt) return batch;
+
+  const [row] = await db
+    .update(labourRegisterBatches)
+    .set({
+      status: 'open',
+      markedReadyBy: null,
+      markedReadyAt: null,
+      accuracyConfirmed: false,
+      reopenedBy: ctx.userId,
+      reopenedAt: new Date(),
+      reopenReason: reason,
+      reopenCount: batch.reopenCount + 1,
+      updatedAt: new Date(),
+    })
+    .where(eq(labourRegisterBatches.id, batch.id))
+    .returning();
+  return row ?? null;
+}
+
+/** What the provenance bar above a generated batch says. */
+export interface BatchProvenance {
+  periodFrom: string;
+  periodTo: string;
+  status: string;
+  markedReadyAt: string | null;
+  markedReadyByName: string | null;
+  generatedAt: string | null;
+  /** Registers that exist for this batch, and how many were served rather than built. */
+  registers: number;
+  fromStorage: number;
+  /** How many times the period has been reopened, so the bar can say so plainly. */
+  reopenCount: number;
+  reopenReason: string;
+}
+
+/**
+ * The provenance of a batch, in one read: who locked it, when, what was generated and how much
+ * of it came back from storage rather than being built again. It is the evidence manifest said
+ * out loud, which is the point — a number nobody can see is a number nobody trusts.
+ */
+export async function batchProvenance(ctx: AuthContext, batchId: string): Promise<BatchProvenance | null> {
+  const batch = await getBatch(ctx, batchId);
+  if (!batch) return null;
+
+  const docs = await db
+    .select()
+    .from(labourRegisterDocuments)
+    .where(eq(labourRegisterDocuments.batchId, batch.id));
+
+  let readyByName: string | null = null;
+  if (batch.markedReadyBy) {
+    const [who] = await db
+      .select({ name: base.profiles.name })
+      .from(base.profiles)
+      .where(eq(base.profiles.id, batch.markedReadyBy))
+      .limit(1);
+    readyByName = who?.name ?? null;
+  }
+
+  const generatedAt = docs.reduce<Date | null>(
+    (latest, d) => (!latest || d.generatedAt > latest ? d.generatedAt : latest),
+    null,
+  );
+
+  return {
+    periodFrom: batch.periodFrom,
+    periodTo: batch.periodTo,
+    status: batch.status,
+    markedReadyAt: batch.markedReadyAt ? batch.markedReadyAt.toISOString() : null,
+    markedReadyByName: readyByName,
+    generatedAt: generatedAt ? generatedAt.toISOString() : null,
+    registers: docs.length,
+    /* A document downloaded more than once was served from storage every time after the
+       first, which is the saving this feature exists to make. */
+    fromStorage: docs.filter((d) => d.downloadCount > 0).length,
+    reopenCount: batch.reopenCount,
+    reopenReason: batch.reopenReason,
+  };
 }
 
 /* ── Uploads ──────────────────────────────────────────────────────────────── */
@@ -400,11 +450,31 @@ export async function recordDocument(
   assertStaff(ctx);
   const batch = await getBatch(ctx, input.batchId);
   if (!batch) return null;
+  /* Generation follows the close, never precedes it: a register built from a half-gathered
+     month looks exactly like a finished one. */
+  if (!batch.markedReadyAt) throw new Error('mark the inputs ready before generating registers');
   const [row] = await db
     .insert(labourRegisterDocuments)
     .values({ ...input, format: input.format ?? 'xlsx', generatedBy: ctx.userId })
     .returning();
   return row ?? null;
+}
+
+/**
+ * One produced document, scoped the way everything else here is.
+ *
+ * A document belonging to another firm reads as absent rather than refused: whether a register
+ * exists for a client you cannot see is itself something not to disclose.
+ */
+export async function getDocument(ctx: AuthContext, documentId: string): Promise<DocumentRow | null> {
+  const [doc] = await db
+    .select()
+    .from(labourRegisterDocuments)
+    .where(eq(labourRegisterDocuments.id, documentId))
+    .limit(1);
+  if (!doc) return null;
+  const batch = await getBatch(ctx, doc.batchId);
+  return batch ? doc : null;
 }
 
 /** Count a download, so the saving from not regenerating is observable rather than claimed. */
@@ -427,7 +497,16 @@ export async function countDownload(ctx: AuthContext, documentId: string): Promi
  */
 export async function attestDocument(
   ctx: AuthContext,
-  input: { documentId: string; method: 'printed-wet-signature' | 'dsc' | 'aadhaar-esign' },
+  input: {
+    documentId: string;
+    method: 'printed-wet-signature' | 'dsc' | 'aadhaar-esign';
+    /** The signed scan. Required for the printed method, which is the one the firm uses. */
+    signedObjectKey?: string;
+    signedFileName?: string;
+    signedSha256?: string;
+    /** Who signed the paper. Not necessarily a user of this product. */
+    signedByName?: string;
+  },
 ): Promise<DocumentRow | null> {
   assertFirmAdmin(ctx);
   const [doc] = await db
@@ -440,13 +519,30 @@ export async function attestDocument(
   if (!batch) return null;
   if (doc.attestedAt) throw new Error('already attested — issue a superseding document instead');
 
+  /* The firm attests by signing a printout. Recording that without the scan would leave a row
+     claiming a signature nobody can produce, which is the one thing an attestation must not
+     be: the record exists so that somebody can be shown what was signed. */
+  if (input.method === 'printed-wet-signature' && !input.signedObjectKey) {
+    throw new Error('upload the signed printout before recording the attestation');
+  }
+
   const [row] = await db
     .update(labourRegisterDocuments)
-    .set({ status: 'attested', attestedBy: ctx.userId, attestedAt: new Date(), attestationMethod: input.method })
+    .set({
+      status: 'attested',
+      attestedBy: ctx.userId,
+      attestedAt: new Date(),
+      attestationMethod: input.method,
+      signedObjectKey: input.signedObjectKey ?? null,
+      signedFileName: input.signedFileName ?? null,
+      signedSha256: input.signedSha256 ?? null,
+      signedByName: input.signedByName ?? '',
+    })
     .where(eq(labourRegisterDocuments.id, doc.id))
     .returning();
   return row ?? null;
 }
+
 
 /**
  * Mark an attested document as replaced by a later one. The file itself is untouched and
@@ -460,4 +556,127 @@ export async function supersedeDocument(ctx: AuthContext, oldId: string, newId: 
   if (!batch) return;
   await db.update(labourRegisterDocuments).set({ status: 'superseded' }).where(eq(labourRegisterDocuments.id, oldId));
   await db.update(labourRegisterDocuments).set({ supersedesId: oldId }).where(eq(labourRegisterDocuments.id, newId));
+}
+
+/* ── Verification ─────────────────────────────────────────────────────────── */
+
+/**
+ * The firm's own verdicts on the catalogue's layouts.
+ *
+ * Readable by anyone who can see a batch, because the notice printed on a register is
+ * something a client is entitled to understand. Writable only by staff: deciding that a
+ * statutory layout has been checked is the firm's professional judgement, and a client
+ * recording it would be the firm's liability with none of its knowledge.
+ */
+export async function listVerifications(ctx: AuthContext): Promise<VerificationRow[]> {
+  void ctx;
+  return db.select().from(labourRegisterVerifications);
+}
+
+/** Record, or revise, what the firm has found about one form's layout. */
+export async function saveVerification(
+  ctx: AuthContext,
+  input: {
+    formId: string;
+    status: 'unverified' | 'disputed' | 'checked-against-sample' | 'gazette-verified';
+    against?: string;
+    disputedBecause?: string;
+    openItems?: string[];
+    evidenceKey?: string | null;
+    evidenceFileName?: string | null;
+    suppressed?: boolean;
+    suppressedReason?: string;
+  },
+): Promise<VerificationRow | null> {
+  assertStaff(ctx);
+
+  const values = {
+    formId: input.formId,
+    status: input.status,
+    against: input.against ?? '',
+    disputedBecause: input.disputedBecause ?? '',
+    openItems: input.openItems ?? [],
+    evidenceKey: input.evidenceKey ?? null,
+    evidenceFileName: input.evidenceFileName ?? null,
+    suppressed: input.suppressed ?? false,
+    suppressedReason: input.suppressedReason ?? '',
+    verifiedBy: ctx.userId,
+  };
+
+  const [row] = await db
+    .insert(labourRegisterVerifications)
+    .values(values)
+    .onConflictDoUpdate({
+      target: labourRegisterVerifications.formId,
+      set: { ...values, verifiedAt: new Date(), updatedAt: new Date() },
+    })
+    .returning();
+  return row ?? null;
+}
+
+/**
+ * Undo a verdict, so the catalogue's own claim stands again.
+ *
+ * Not a delete of history — there is none to lose here, since the row holds the current
+ * verdict rather than a log — but it is the only way back from a verdict entered in error,
+ * and without it a mistyped "gazette-verified" would be permanent.
+ */
+export async function clearVerification(ctx: AuthContext, formId: string): Promise<void> {
+  assertStaff(ctx);
+  await db.delete(labourRegisterVerifications).where(eq(labourRegisterVerifications.formId, formId));
+}
+
+/* ── Where each state has got to ──────────────────────────────────────────── */
+
+/**
+ * The firm's own reading of which states have notified rules under which code.
+ *
+ * Readable by anyone who can see a batch, because which rules govern a client's registers is
+ * something that client is entitled to understand. Writable only by staff, for the same reason
+ * a verification verdict is: it is the firm's professional reading of a gazette.
+ */
+export async function listCodeRuleOverrides(ctx: AuthContext): Promise<CodeRuleOverrideRow[]> {
+  void ctx;
+  return db.select().from(labourRegisterCodeRules);
+}
+
+/** Record, or revise, how far one state has got under one code. */
+export async function saveCodeRuleOverride(
+  ctx: AuthContext,
+  input: {
+    stateCode: string;
+    code: string;
+    stage: 'notified' | 'draft' | 'none';
+    notifiedOn?: string;
+    source?: string;
+    note?: string;
+  },
+): Promise<CodeRuleOverrideRow | null> {
+  assertStaff(ctx);
+  const values = {
+    stateCode: input.stateCode,
+    code: input.code,
+    stage: input.stage,
+    notifiedOn: input.notifiedOn ?? '',
+    source: input.source ?? '',
+    note: input.note ?? '',
+    verifiedBy: ctx.userId,
+  };
+  const [row] = await db
+    .insert(labourRegisterCodeRules)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [labourRegisterCodeRules.stateCode, labourRegisterCodeRules.code],
+      set: { ...values, verifiedAt: new Date(), updatedAt: new Date() },
+    })
+    .returning();
+  return row ?? null;
+}
+
+/** Undo an entry, so the catalogue's own reading stands again. */
+export async function clearCodeRuleOverride(ctx: AuthContext, stateCode: string, code: string): Promise<void> {
+  assertStaff(ctx);
+  await db
+    .delete(labourRegisterCodeRules)
+    .where(and(eq(labourRegisterCodeRules.stateCode, stateCode), eq(labourRegisterCodeRules.code, code)));
 }

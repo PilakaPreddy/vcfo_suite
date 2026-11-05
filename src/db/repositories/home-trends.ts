@@ -445,7 +445,7 @@ async function devTrends(now: Date): Promise<HomeTrends> {
 /* ------------------------------------------------------------------ client */
 
 async function clientTrends(ctx: AuthContext, engagementId: string | undefined, now: Date): Promise<HomeTrends> {
-  if (ctx.role === 'developer') return {};
+  if (ctx.role === 'developer' || ctx.role === 'partner') return {};
   let id = engagementId?.trim();
   if (!id) {
     const mine = await getMyEngagement(ctx);

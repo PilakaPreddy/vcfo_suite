@@ -1,3 +1,4 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import { checklistStateForViewer, clientApproveStep } from '@/db/repositories/engagements';
@@ -76,7 +77,7 @@ export async function POST(request: Request, context: RouteContext) {
       // One email for the whole phase, to the lead and the managers. The
       // approval itself is already committed, so a send failure is reported,
       // never thrown back at the client.
-      email = await notifyEngagementEvent({
+      email = await notifyEngagementEventSoon({
         engagementId,
         itemId: stepId.trim(),
         event: 'phase_approved',

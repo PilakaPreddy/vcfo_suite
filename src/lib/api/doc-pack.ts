@@ -1,7 +1,6 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import PizZip from 'pizzip';
 
 import { requireAnyRole, type AuthContext } from '@/auth/guards';
 import { getDocPackInputs, type DocPackInputs } from '@/db/repositories/doc-pack';
@@ -16,6 +15,8 @@ import { incorpDocDownloadFilename } from '@/lib/incorporation-docs/paths';
 import { downloadIncorpDocx } from '@/lib/incorporation-docs/storage';
 import { directorResponsesFromState } from '@/lib/incorporation/proposed-directors';
 import { slugifyCompanyName } from '@/lib/slug';
+import { createUniqueNamer } from '@/lib/zip/entry-names';
+import { createZipStream, type ZipEntrySource } from '@/lib/zip/zip-writer';
 import { downloadBoardResolutionDocx } from '@/storage/board-resolution';
 
 /**
@@ -156,28 +157,31 @@ function docPackZipFilename(engagement: { companyName: string; slug?: string }, 
   return `${slug}-pre-incorporation-${day}.zip`;
 }
 
-/** Zip of every ready item, flat, filenames as the single downloads use. */
-export async function buildDocPackZip(
+/** The file name an item downloads as, known before it is rendered. */
+function docPackItemFilename(inputs: DocPackInputs, item: DocPackItem): string {
+  if (item.generate.kind === 'board-resolution') return BOARD_RESOLUTION_DOCX_FILENAME;
+  const { pre6 } = directorResponsesFromState(inputs.checklistState);
+  return incorpDocDownloadFilename(item.generate.doc, item.audience, { pre6 });
+}
+
+/**
+ * Zip of every ready item, flat, filenames as the single downloads use. The archive is a stream:
+ * each document is rendered only when the writer reaches it, so the first bytes leave at once
+ * and the server holds one document at a time.
+ */
+export function buildDocPackZip(
   inputs: DocPackInputs,
   summary: DocPackSummary,
-): Promise<{ buffer: Buffer; filename: string; itemKeys: string[] }> {
+): { stream: ReadableStream<Uint8Array>; filename: string; itemKeys: string[] } {
   const ready = summary.items.filter((item) => item.status === 'ready');
   if (ready.length === 0) throw new DocPackError('No document is ready to download yet.', 409, 'none_ready');
 
-  const zip = new PizZip();
-  const used = new Set<string>();
-  const itemKeys: string[] = [];
-  for (const item of ready) {
-    const rendered = await renderDocPackItem(inputs, item);
-    let name = rendered.filename;
-    // Two items can only collide if a filename pattern changes; keep both.
-    if (used.has(name)) name = name.replace(/\.docx$/, `-${itemKeys.length + 1}.docx`);
-    used.add(name);
-    zip.file(name, rendered.buffer);
-    itemKeys.push(item.key);
-  }
-  const buffer = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' }) as Buffer;
-  return { buffer, filename: docPackZipFilename(inputs.engagement), itemKeys };
+  const unique = createUniqueNamer();
+  const entries: ZipEntrySource[] = ready.map((item) => ({
+    name: unique(docPackItemFilename(inputs, item)),
+    open: async () => [(await renderDocPackItem(inputs, item)).buffer],
+  }));
+  return { stream: createZipStream(entries), filename: docPackZipFilename(inputs.engagement), itemKeys: ready.map((item) => item.key) };
 }
 
 export function fileResponse(

@@ -40,5 +40,5 @@ Domain logic and helpers. Nothing here imports `db`; data access goes through
 
 Generic helpers used across areas: `utils.ts` (`cn`), `auth.ts` (role helpers such as
 `isFirmWideAdmin`), `auth-routes.ts`, `slug.ts`, `site-url.ts`, `person-name.ts`,
-`toast-errors.ts`, `upload-limits.ts`, `account-avatar.ts`, `credentials-crypto.ts`.
+`toast-errors.ts`, `toast-style.ts`, `upload-limits.ts`, `account-avatar.ts`, `credentials-crypto.ts`.
 `dev-allowed-origins.test.ts` checks `next.config.mjs`.

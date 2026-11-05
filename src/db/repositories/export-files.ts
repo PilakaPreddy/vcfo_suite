@@ -19,7 +19,7 @@ import { assertDeveloper, isStaffRole } from './dev-scope';
  * Cleanup: `systemPurgeExportFiles`, from the daily cleanup job.
  */
 
-export const EXPORT_KEEP_DAYS = 30;
+const EXPORT_KEEP_DAYS = 30;
 
 export async function recordExportFileForUser(
   ctx: AuthContext,

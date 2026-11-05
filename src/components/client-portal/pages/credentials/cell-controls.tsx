@@ -9,7 +9,7 @@ import type { CredentialsState } from './use-credentials-state';
 const TONE: Record<string, ChipTone> = { ok: 'ok', due: 'warn', over: 'bad', up: 'idle' };
 
 /** A shared status chip inside a Tailwind island (the portal resets Tailwind outside `.cp-tw`). */
-export function crChip(tone: ChipTone, text: string, fixed = false) {
+function crChip(tone: ChipTone, text: string, fixed = false) {
   return (
     <span className="cp-tw cr-chipw">
       <Chip tone={tone} fixed={fixed}>

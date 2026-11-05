@@ -24,7 +24,7 @@ export async function assignManagerInDb(engagementId: string, managerId: string)
 }
 
 /** Each manager's load: clients, open tasks on those clients, and clients marked overdue. */
-export function managerLoad(managerId: string, engagements: Engagement[], tasks: TaskInstance[]) {
+function managerLoad(managerId: string, engagements: Engagement[], tasks: TaskInstance[]) {
   const mine = engagements.filter((e) => (e.managerId ?? e.adminId) === managerId);
   const ids = new Set(mine.map((e) => e.id));
   const open = tasks.filter((t) => ids.has(t.engagementId) && t.status !== 'completed' && t.status !== 'not-applicable').length;

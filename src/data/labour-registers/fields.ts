@@ -28,8 +28,16 @@ export interface FieldSpec {
   values?: string[];
   /** Where it normally comes from, which the reconciliation screen uses as its default. */
   usually: 'input' | 'master' | 'derived' | 'grid';
-  /** The payroll checklist head that governs it, where one does. */
-  head?: string;
+  /**
+   * True when a register may legitimately go out without it.
+   *
+   * These are the pay heads not every payroll runs — a night shift allowance, a conveyance
+   * allowance, overtime. A prescribed form carries the column whatever the client pays, so the
+   * column is never dropped; it prints nil when the paysheet has nothing to put in it. What
+   * `optional` decides is only whether the preparer is *asked* to map it, which is why a
+   * client who pays no night shift allowance is never held up over a night shift column.
+   */
+  optional?: true;
 }
 
 /**
@@ -74,7 +82,7 @@ export const FIELDS: FieldSpec[] = [
   { key: 'attendanceGrid', label: 'Daily attendance', kind: 'enum', values: Object.keys(ATTENDANCE_CODES), aliases: [], usually: 'grid' },
   { key: 'workingDays', label: 'Working days in the period', kind: 'days', aliases: ['working days', 'working_days', 'total days', 'total_days', 'paid days'], usually: 'input' },
   { key: 'daysWorked', label: 'Days worked', kind: 'days', aliases: ['days worked', 'days_worked', 'present', 'total attendance', 'total attendance/ units of work done', 'attendance', 'days of attendance', 'total no. of actual working days', 'total no. of days worked'], usually: 'input' },
-  { key: 'lossOfPayDays', label: 'Loss of pay days', kind: 'days', aliases: ['lop', 'loss of pay', 'loss of pay days', 'lwp', 'absent days', 'unpaid days'], usually: 'input', head: 'attendance-lop' },
+  { key: 'lossOfPayDays', label: 'Loss of pay days', kind: 'days', aliases: ['lop', 'loss of pay', 'loss of pay days', 'lwp', 'absent days', 'unpaid days'], usually: 'input', optional: true },
   { key: 'weekOffs', label: 'Weekly offs granted', kind: 'days', aliases: ['week off', 'week_off', 'weekly off', 'number of weekly off granted', 'wo'], usually: 'input' },
   { key: 'holidays', label: 'Holidays', kind: 'days', aliases: ['holiday', 'holidays', 'nfh', 'national and festival holidays'], usually: 'input' },
   { key: 'leavesAvailed', label: 'Leave availed', kind: 'days', aliases: ['leaves', 'leaves_count', 'leave availed', 'leaves availed', 'number of leave granted', 'no of leaves availed'], usually: 'input' },
@@ -85,42 +93,42 @@ export const FIELDS: FieldSpec[] = [
   { key: 'minimumWageRate', label: 'Minimum rate of wages payable', kind: 'money', aliases: ['minimum rates of wages payable', 'minimum wage', 'minimum rate of wages'], usually: 'master' },
   { key: 'wageRate', label: 'Rate of wages', kind: 'money', aliases: ['rate of wages', 'rates of wages actually paid', 'rate of daily wages', 'rate of remuneration paid', 'wage rate'], usually: 'derived' },
   { key: 'basic', label: 'Basic wages', kind: 'money', aliases: ['basic', 'basic pay', 'basic_pay', 'basic wages', 'basic salary', 'basic wage or salary'], usually: 'input' },
-  { key: 'dearnessAllowance', label: 'Dearness allowance', kind: 'money', aliases: ['da', 'dearness allowance'], usually: 'input', head: 'dearness-allowance' },
-  { key: 'hra', label: 'House rent allowance', kind: 'money', aliases: ['hra', 'house rent allowance', 'house rent'], usually: 'input' },
-  { key: 'specialAllowance', label: 'Special allowance', kind: 'money', aliases: ['special allowance', 'special_allowance', 'special allowances', 'other allowance'], usually: 'input' },
-  { key: 'conveyanceAllowance', label: 'Conveyance allowance', kind: 'money', aliases: ['conveyance', 'conveyance allowance', 'transport allowance'], usually: 'input', head: 'conveyance-allowance' },
-  { key: 'foodAllowance', label: 'Food allowance', kind: 'money', aliases: ['food allowance', 'food_allowance', 'food allowances', 'meal allowance'], usually: 'input', head: 'food-allowance' },
-  { key: 'medicalAllowance', label: 'Medical allowance', kind: 'money', aliases: ['medical allowance', 'medical'], usually: 'input', head: 'medical-allowance' },
-  { key: 'nightShiftAllowance', label: 'Night shift allowance', kind: 'money', aliases: ['nsa', 'night shift allowance', 'night shift', 'nisha', 'shift allowance'], usually: 'input', head: 'night-shift-allowance' },
-  { key: 'attendanceBonus', label: 'Attendance bonus', kind: 'money', aliases: ['attendance bonus'], usually: 'input', head: 'attendance-bonus' },
-  { key: 'childEducationAllowance', label: 'Child education allowance', kind: 'money', aliases: ['child educational allowance', 'child education allowance', 'child hostel allowance'], usually: 'input', head: 'child-education-allowance' },
-  { key: 'leaveEncashment', label: 'Leave encashment', kind: 'money', aliases: ['leave encashment', 'leave encashment allowance', 'leave_encashment_allowance', 'encashment'], usually: 'input', head: 'leave-encashment' },
-  { key: 'noticePay', label: 'Notice period pay', kind: 'money', aliases: ['notice pay', 'notice period pay', 'notice_period_pay'], usually: 'input', head: 'notice-pay' },
-  { key: 'arrears', label: 'Arrears', kind: 'money', aliases: ['arrears', 'arrear', 'arrears payment', 'prv_arrear_days'], usually: 'input', head: 'arrears' },
-  { key: 'referralBonus', label: 'Referral bonus', kind: 'money', aliases: ['referral bonus', 'refferal bonus', 'referral'], usually: 'input', head: 'referral-bonus' },
-  { key: 'maternityBenefit', label: 'Maternity benefit', kind: 'money', aliases: ['maternity benefit', 'maternity', 'amount of maternity benefit'], usually: 'input', head: 'maternity-benefit' },
+  { key: 'dearnessAllowance', label: 'Dearness allowance', kind: 'money', aliases: ['da', 'dearness allowance'], usually: 'input', optional: true },
+  { key: 'hra', label: 'House rent allowance', kind: 'money', aliases: ['hra', 'house rent allowance', 'house rent'], usually: 'input', optional: true },
+  { key: 'specialAllowance', label: 'Special allowance', kind: 'money', aliases: ['special allowance', 'special_allowance', 'special allowances', 'other allowance'], usually: 'input', optional: true },
+  { key: 'conveyanceAllowance', label: 'Conveyance allowance', kind: 'money', aliases: ['conveyance', 'conveyance allowance', 'transport allowance'], usually: 'input', optional: true },
+  { key: 'foodAllowance', label: 'Food allowance', kind: 'money', aliases: ['food allowance', 'food_allowance', 'food allowances', 'meal allowance'], usually: 'input', optional: true },
+  { key: 'medicalAllowance', label: 'Medical allowance', kind: 'money', aliases: ['medical allowance', 'medical'], usually: 'input', optional: true },
+  { key: 'nightShiftAllowance', label: 'Night shift allowance', kind: 'money', aliases: ['nsa', 'night shift allowance', 'night shift', 'nisha', 'shift allowance'], usually: 'input', optional: true },
+  { key: 'attendanceBonus', label: 'Attendance bonus', kind: 'money', aliases: ['attendance bonus'], usually: 'input', optional: true },
+  { key: 'childEducationAllowance', label: 'Child education allowance', kind: 'money', aliases: ['child educational allowance', 'child education allowance', 'child hostel allowance'], usually: 'input', optional: true },
+  { key: 'leaveEncashment', label: 'Leave encashment', kind: 'money', aliases: ['leave encashment', 'leave encashment allowance', 'leave_encashment_allowance', 'encashment'], usually: 'input', optional: true },
+  { key: 'noticePay', label: 'Notice period pay', kind: 'money', aliases: ['notice pay', 'notice period pay', 'notice_period_pay'], usually: 'input', optional: true },
+  { key: 'arrears', label: 'Arrears', kind: 'money', aliases: ['arrears', 'arrear', 'arrears payment', 'prv_arrear_days'], usually: 'input', optional: true },
+  { key: 'referralBonus', label: 'Referral bonus', kind: 'money', aliases: ['referral bonus', 'refferal bonus', 'referral'], usually: 'input', optional: true },
+  { key: 'maternityBenefit', label: 'Maternity benefit', kind: 'money', aliases: ['maternity benefit', 'maternity', 'amount of maternity benefit'], usually: 'input', optional: true },
   { key: 'otherEarnings', label: 'Other earnings', kind: 'money', aliases: ['other earnings', 'other_earnings', 'others', 'misc earnings'], usually: 'input' },
   { key: 'normalWagesEarned', label: 'Normal wages earned', kind: 'money', aliases: ['normal wages earned', 'normal earnings', 'wages earned during the wage period'], usually: 'derived' },
-  { key: 'overtimeHours', label: 'Overtime hours', kind: 'hours', aliases: ['ot hours', 'total ot hours', 'overtime hours', 'overtime worked', 'extent of overtime worked', 'ot'], usually: 'input', head: 'overtime' },
-  { key: 'overtimeDates', label: 'Dates on which overtime was worked', kind: 'text', aliases: ['ot dates', 'dates', 'days on which overtime worked', 'date on which over-time is done'], usually: 'input', head: 'overtime' },
-  { key: 'overtimeWages', label: 'Overtime wages', kind: 'money', aliases: ['ot amount', 'otall', 'overtime wages', 'overtime earnings', 'wages earned for overtime work', 'amount of overtime wages'], usually: 'derived', head: 'overtime' },
+  { key: 'overtimeHours', label: 'Overtime hours', kind: 'hours', aliases: ['ot hours', 'total ot hours', 'overtime hours', 'overtime worked', 'extent of overtime worked', 'ot'], usually: 'input', optional: true },
+  { key: 'overtimeDates', label: 'Dates on which overtime was worked', kind: 'text', aliases: ['ot dates', 'dates', 'days on which overtime worked', 'date on which over-time is done'], usually: 'input', optional: true },
+  { key: 'overtimeWages', label: 'Overtime wages', kind: 'money', aliases: ['ot amount', 'otall', 'overtime wages', 'overtime earnings', 'wages earned for overtime work', 'amount of overtime wages'], usually: 'derived', optional: true },
   { key: 'grossEarnings', label: 'Gross wages payable', kind: 'money', aliases: ['gross', 'gross earnings', 'gross wages', 'gross wage payable', 'gross wages payable', 'total earnings', 'gross salary'], usually: 'input' },
   { key: 'reimbursements', label: 'Total reimbursements', kind: 'money', aliases: ['reimbursement', 'reimbursements', 'total reimbursements', 'reimb_gross_salary'], usually: 'input' },
 
   /* Deductions. */
-  { key: 'pf', label: "Employee's contribution to provident fund", kind: 'money', aliases: ['pf', 'epf', 'pf employee', "employee's contribution to p.f.", 'provident fund', 'pf deduction'], usually: 'input' },
-  { key: 'vpf', label: 'Voluntary provident fund', kind: 'money', aliases: ['vpf', 'voluntary provident fund', 'volutary provident fund'], usually: 'input', head: 'vpf' },
-  { key: 'esi', label: 'Employee state insurance', kind: 'money', aliases: ['esi', 'esic', 'esi deduction', 'esi employee'], usually: 'input', head: 'esi' },
-  { key: 'professionTax', label: 'Profession tax', kind: 'money', aliases: ['pt', 'profession tax', 'professional tax', 'ptax'], usually: 'input' },
-  { key: 'tds', label: 'Income tax deducted', kind: 'money', aliases: ['tds', 'income tax', 'total income tax', 'it deduction'], usually: 'input' },
-  { key: 'labourWelfareFund', label: 'Labour welfare fund', kind: 'money', aliases: ['lwf', 'labour welfare fund', 'lwf deduction'], usually: 'input', head: 'lwf' },
-  { key: 'advances', label: 'Advances or loans', kind: 'money', aliases: ['advance', 'advances', 'salary advance', 'cash advance', 'amount of advances / loans', 'loan'], usually: 'input', head: 'advances' },
-  { key: 'fines', label: 'Fines imposed', kind: 'money', aliases: ['fine', 'fines', 'deductions of fines imposed', 'damages/loss'], usually: 'input', head: 'fines' },
-  { key: 'foodCouponDeduction', label: 'Food coupon deduction', kind: 'money', aliases: ['food coupon', 'food coupon deduction', 'food_coupon_deduction', 'meal card'], usually: 'input', head: 'food-coupon' },
-  { key: 'assetDeduction', label: 'Asset deduction', kind: 'money', aliases: ['asset deduction', 'asset recovery'], usually: 'input', head: 'asset-deduction' },
-  { key: 'mediclaimDeduction', label: 'Medical claim deduction', kind: 'money', aliases: ['medi claim deduction', 'mediclaim', 'medical insurance deduction', 'insurance'], usually: 'input', head: 'mediclaim' },
-  { key: 'npsDeduction', label: 'National pension scheme deduction', kind: 'money', aliases: ['nps', 'nps deduction', 'nps_deduction', 'pran deduction'], usually: 'input', head: 'nps' },
-  { key: 'otherDeductions', label: 'Other deductions', kind: 'money', aliases: ['other deduction', 'other_deduction', 'other deductions', 'society'], usually: 'input' },
+  { key: 'pf', label: "Employee's contribution to provident fund", kind: 'money', aliases: ['pf', 'epf', 'pf employee', "employee's contribution to p.f.", 'provident fund', 'pf deduction'], usually: 'input', optional: true },
+  { key: 'vpf', label: 'Voluntary provident fund', kind: 'money', aliases: ['vpf', 'voluntary provident fund', 'volutary provident fund'], usually: 'input', optional: true },
+  { key: 'esi', label: 'Employee state insurance', kind: 'money', aliases: ['esi', 'esic', 'esi deduction', 'esi employee'], usually: 'input', optional: true },
+  { key: 'professionTax', label: 'Profession tax', kind: 'money', aliases: ['pt', 'profession tax', 'professional tax', 'ptax'], usually: 'input', optional: true },
+  { key: 'tds', label: 'Income tax deducted', kind: 'money', aliases: ['tds', 'income tax', 'total income tax', 'it deduction'], usually: 'input', optional: true },
+  { key: 'labourWelfareFund', label: 'Labour welfare fund', kind: 'money', aliases: ['lwf', 'labour welfare fund', 'lwf deduction'], usually: 'input', optional: true },
+  { key: 'advances', label: 'Advances or loans', kind: 'money', aliases: ['advance', 'advances', 'salary advance', 'cash advance', 'amount of advances / loans', 'loan'], usually: 'input', optional: true },
+  { key: 'fines', label: 'Fines imposed', kind: 'money', aliases: ['fine', 'fines', 'deductions of fines imposed', 'damages/loss'], usually: 'input', optional: true },
+  { key: 'foodCouponDeduction', label: 'Food coupon deduction', kind: 'money', aliases: ['food coupon', 'food coupon deduction', 'food_coupon_deduction', 'meal card'], usually: 'input', optional: true },
+  { key: 'assetDeduction', label: 'Asset deduction', kind: 'money', aliases: ['asset deduction', 'asset recovery'], usually: 'input', optional: true },
+  { key: 'mediclaimDeduction', label: 'Medical claim deduction', kind: 'money', aliases: ['medi claim deduction', 'mediclaim', 'medical insurance deduction', 'insurance'], usually: 'input', optional: true },
+  { key: 'npsDeduction', label: 'National pension scheme deduction', kind: 'money', aliases: ['nps', 'nps deduction', 'nps_deduction', 'pran deduction'], usually: 'input', optional: true },
+  { key: 'otherDeductions', label: 'Other deductions', kind: 'money', aliases: ['other deduction', 'other_deduction', 'other deductions', 'society'], usually: 'input', optional: true },
   { key: 'totalDeductions', label: 'Total deductions', kind: 'money', aliases: ['total deduction', 'total_dedn', 'total deductions', 'gross deductions'], usually: 'input' },
   { key: 'netPay', label: 'Net wages paid', kind: 'money', aliases: ['net pay', 'net_pay', 'net salary', 'net amount payable', 'actual wages paid', 'total wages paid', 'net wages payable', 'net transfer', 'total net pay'], usually: 'input' },
   { key: 'netPayInWords', label: 'Amount in words', kind: 'text', aliases: ['in words', 'inwords', 'amount in words'], usually: 'derived' },
@@ -132,7 +140,7 @@ export const FIELDS: FieldSpec[] = [
   { key: 'restInterval', label: 'Rest interval', kind: 'text', aliases: ['rest interval', 'break', 'lunch'], usually: 'master' },
   { key: 'shiftName', label: 'Shift', kind: 'text', aliases: ['shift', 'shift no', 'relay', 'group'], usually: 'master' },
   { key: 'normalHours', label: 'Normal hours', kind: 'hours', aliases: ['normal hours', 'period of work'], usually: 'derived' },
-  { key: 'remarks', label: 'Remarks', kind: 'text', aliases: ['remarks', 'remark', 'note'], usually: 'input' },
+  { key: 'remarks', label: 'Remarks', kind: 'text', aliases: ['remarks', 'remark', 'note'], usually: 'input', optional: true },
   { key: 'signature', label: 'Signature or thumb impression', kind: 'text', aliases: [], usually: 'derived' },
 
   /* Bank and statutory identifiers, which the wider registers and some returns carry. */

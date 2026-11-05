@@ -109,7 +109,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<TokenRes
 }
 
 /** A refused token request; `code` is Microsoft's OAuth error code (for example invalid_client). */
-export class OutlookTokenError extends Error {
+class OutlookTokenError extends Error {
   constructor(
     message: string,
     readonly code: string | undefined,
@@ -182,6 +182,8 @@ export async function graphSendMail(
   input: {
     to: string[];
     cc?: string[];
+    /** Hidden recipients (receivables summary, docs/specs/receivables/PLAN.md). */
+    bcc?: string[];
     subject: string;
     html: string;
     text?: string;
@@ -189,6 +191,7 @@ export async function graphSendMail(
   },
 ): Promise<void> {
   const cc = [...new Set((input.cc ?? []).map((a) => a.trim()).filter(Boolean))];
+  const bcc = [...new Set((input.bcc ?? []).map((a) => a.trim()).filter(Boolean))];
   const attachments = input.attachments ?? [];
   const res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
     method: 'POST',
@@ -213,6 +216,7 @@ export async function graphSendMail(
               })),
             }
           : {}),
+        ...(bcc.length > 0 ? { bccRecipients: bcc.map((address) => ({ emailAddress: { address } })) } : {}),
         ...(attachments.length > 0
           ? {
               attachments: attachments.map((a) => ({

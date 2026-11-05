@@ -24,7 +24,7 @@ logic, and API routes call these functions; they never import `db` directly.
 3. **Row scope.** Reuse the engagement scope instead of rebuilding it:
    - a list: `if (isFirmWideAdmin(ctx.role)) return all;` otherwise filter on
      `listScopedEngagementIds(ctx)` and return `[]` without a query when it is empty
-     (`invites.ts`, `document-requests.ts`, `activity.ts`);
+     (`document-requests.ts`, `activity.ts`);
    - one row or a write: load the row, then `assertEngagementAccess(ctx, row.engagementId)`
      and return `null` (or throw) when it is not `ok`; write against `access.dbId`, never the
      id the caller sent (`tasks.ts`, `documents.ts`);
@@ -76,8 +76,9 @@ this table, so re-check the migration before trusting a row.
 | weekly digest (`weekly-digest.ts`) | system only | system only | system only | system only | product; the Inngest cron lists active people with the digest on (never saved = on, developers never) as their own AuthContext, then reads through the scoped repositories; `notification_deliveries` rows with `event_type = 'weekly_digest'` and the ISO week in `template_sid` |
 | user_sessions, profiles.totp_* | own rows; reset another person's two-step | own rows | own rows | own rows | `0026` (G-25); developers reach own-account routes through `requireOwnAccount` |
 | home trends (`home-trends.ts`, read only) | super home: firm-wide engagements, filings, delete and reopen audit events; admin, manager and lead homes: no series | manager home: no series | lead home: no series | client home: own engagement's filings and reopen events | product (C-0122, R-18); dev home: developer or super admin only, counts of failed messages and denied events |
-| labour_register_* (`labour-registers.ts`) | all | owned engagements | assigned engagements | **read only** (downloads) | product (2 Nov 2026); scope reused from `engagements`; writes staff-only, attestation firm-wide admin only, and there is no delete path — an attested register is frozen and a correction supersedes it |
+| labour_register_* (`labour-registers.ts`) | all | owned engagements | assigned engagements | **read only** (downloads) | product (2 Nov 2026); scope reused from `engagements`; writes staff-only, the close (`markReady`) and reopen are staff with a reason recorded, attestation firm-wide admin only, generation refuses on an unlocked batch, and there is no delete path — an attested register is frozen and a correction supersedes it |
 | board_meetings / _events / _versions / _replies / _documents / _signature_events, company_directors (`board-meetings/`) | all | owned engagements; approve, send back and edit a notice waiting for approval | assigned engagements; create, draft, submit, reschedule, cancel, MoM and resolutions; no approval | read a meeting only once its notice is sent; locked documents only; directors without contact details | product (`0034_board_meetings.sql`, docs/specs/board-meetings/PLAN.md); director replies come from signed email links (`systemRecordReply`, no session) |
+| receivable_* , bank_credits (`receivables/`) | all sheets | **own sheet only** (`receivable_sheets.manager_user_id`); another manager's sheet reads as not found | **none** | **none** (the client page is public and reads a published snapshot by secret key) | product (`0037_receivables.sql`, docs/specs/receivables/PLAN.md); `systemPublicSheet` serves the public page with no session; reminders and bank credits have `system*` entry points for the Inngest jobs |
 | agenda_library_items / agenda_templates | read; edit and import; firm templates | read; client templates in scope | read; client templates in scope | **none** | `0034` |
 | dev-* (developer console reads) | **none** | **none** | **none** | **none** | developer and super admin only (`assertDeveloper`); firm-wide, client recipients masked or counted | `0026_gaps_backend.sql` |
 
@@ -129,7 +130,7 @@ Do not HTML-scrape homepages or login pages. System ingest:
 
 Implemented: `engagements`, `knowledge-bank`, `profiles`, `audit-events`,
 `board-resolution`, `compliance`, `documents`, `tasks`, `document-requests`,
-`invites`, `activity`, `notifications`, `outlook-connections`, `email-directory`,
+`activity`, `notifications`, `outlook-connections`, `email-directory`,
 `email-templates`, `announcements`.
 
 System jobs (Inngest): `systemGenerateComplianceInstances` /

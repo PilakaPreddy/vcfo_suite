@@ -4,11 +4,8 @@ import { Building2, Check, ClipboardList, KeyRound, User } from 'lucide-react';
 import { m as motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { SegmentedPicker } from '@/components/admin/SegmentedPicker';
-import {
-  PHASE_ORDER,
-  STAGE_LABEL,
-  type Stage,
-} from '@/components/admin/create-project-form-utils';
+import { PHASE_ORDER } from '@/components/admin/create-project-form-utils';
+import { STAGE_LABEL, type Stage } from '@/lib/projects/stage';
 
 export type FormFlowSection = 'entity' | 'team' | 'client' | 'questionnaire';
 

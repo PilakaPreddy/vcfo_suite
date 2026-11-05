@@ -9,7 +9,7 @@ import {
   type SuperAreaHealth,
   type SuperInsights,
   type SuperPracticeArea,
-} from '@/components/super/insights/super-insights-model';
+} from '@/lib/super/super-insights-model';
 import { cn } from '@/lib/utils';
 
 /**

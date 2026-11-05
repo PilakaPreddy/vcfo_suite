@@ -47,14 +47,20 @@ export function NewMeetingDialog({
   const create = useCreateMeeting();
   const [company, setCompany] = useState(defaultCompany ?? companies[0]?.id ?? '');
   const [kind, setKind] = useState<'board' | 'agm' | 'egm'>('board');
-  const [type, setType] = useState<MeetingType>(defaultType ?? (postInc ? 'first' : 'quarterly'));
+  // Null until the user picks: a company with no earlier meeting gets "First board meeting".
+  const [picked, setPicked] = useState<MeetingType | null>(defaultType ?? (postInc ? 'first' : null));
   const [date, setDate] = useState(addDaysIso(todayIst(), 21));
   const [time, setTime] = useState('11:00');
   const [mode, setMode] = useState<MeetingMode>('vc');
   const [venue, setVenue] = useState('');
   const [copy, setCopy] = useState(true);
+  const [held, setHeld] = useState(false);
   const past = useMeetings(company || null, open && Boolean(company));
   const last = (past.data ?? []).find((m) => m.status !== 'cancelled');
+  const type: MeetingType = picked ?? (kind === 'board' && !last ? 'first' : 'quarterly');
+  const today = todayIst();
+  const canBeHeld = Boolean(date) && date <= today;
+  const asHeld = held && canBeHeld;
 
   const submit = () =>
     create.mutate(
@@ -68,12 +74,13 @@ export function NewMeetingDialog({
         venue: venue.trim() || undefined,
         postInc,
         copyFromLast: Boolean(last) && copy,
+        alreadyHeld: asHeld,
       },
       {
         onSuccess: (m) => {
           onOpenChange(false);
-          toastSaved('Meeting created', { sub: `${m.meetingNo} · draft the notice next` });
-          router.push(`${basePath}/obligations/meetings/${m.id}?tab=notice`);
+          toastSaved(asHeld ? 'Meeting recorded' : 'Meeting created', { sub: asHeld ? `${m.meetingNo} · upload the MoM next` : `${m.meetingNo} · draft the notice next` });
+          router.push(`${basePath}/obligations/meetings/${m.id}?tab=${asHeld ? 'mom' : 'notice'}`);
         },
         onError: (e) => toastError('Could not create the meeting', errorMessage(e)),
       },
@@ -103,7 +110,7 @@ export function NewMeetingDialog({
             />
           </Field>
           <Field label="Type">
-            <FilterSelect size="md" value={type} onChange={(e) => setType(e.target.value as MeetingType)} options={MEETING_TYPES.map((t) => ({ value: t, label: TYPE_LABEL[t] }))} />
+            <FilterSelect size="md" value={type} onChange={(e) => setPicked(e.target.value as MeetingType)} options={MEETING_TYPES.map((t) => ({ value: t, label: TYPE_LABEL[t] }))} />
           </Field>
           <Field label="Date">
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -117,7 +124,16 @@ export function NewMeetingDialog({
           <Field label={mode === 'vc' ? 'Venue (deemed venue, optional)' : 'Venue'}>
             <Input value={venue} onChange={(e) => setVenue(e.target.value)} placeholder="Registered office" />
           </Field>
-          {last ? (
+          {canBeHeld ? (
+            <label htmlFor="meeting-already-held" className="col-span-2 flex items-start gap-2.5 rounded-md bg-surface-sunken px-3 py-2.5 text-[14px]">
+              <Checkbox id="meeting-already-held" className="mt-0.5" checked={held} onCheckedChange={(c) => setHeld(c === true)} />
+              <span>
+                This meeting already happened
+                <span className="block text-[12.5px] text-ink-muted">The notice went out outside VCFO. The meeting is recorded as held, so you can upload the MoM and add resolutions now. No notice is emailed.</span>
+              </span>
+            </label>
+          ) : null}
+          {last && !asHeld ? (
             <label className="col-span-2 flex items-center gap-2.5 text-[14px]">
               <Checkbox checked={copy} onCheckedChange={(c) => setCopy(c === true)} />
               Copy the agenda and recipients from {last.meetingNo}
@@ -129,7 +145,7 @@ export function NewMeetingDialog({
             Cancel
           </Button>
           <Button onClick={submit} disabled={!company || !date || !time || create.isPending}>
-            {create.isPending ? 'Creating…' : 'Create and draft notice'}
+            {create.isPending ? 'Saving…' : asHeld ? 'Record meeting' : 'Create and draft notice'}
           </Button>
         </DialogFooter>
       </DialogContent>

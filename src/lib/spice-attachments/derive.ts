@@ -71,7 +71,7 @@ type Def =
   | { key: string; label: string; kind: 'pack'; stepId: string; docIds: string[]; sources: string[] };
 
 /** The SPICe+ Part B attachments, in the order the MCA form asks for them. */
-export const SPICE_ATTACHMENT_DEFS: readonly Def[] = [
+const SPICE_ATTACHMENT_DEFS: readonly Def[] = [
   { key: 'board-resolution', label: 'Board resolution (NOC)', kind: 'noc', stepId: 'pre-3' },
   { key: 'parent-proof', label: 'Parent entity certificate of incorporation', kind: 'step', stepId: 'pre-1', needsBoardResolution: true },
   { key: 'office-proof', label: 'Registered office proof: owner’s NOC and utility bill', kind: 'step', stepId: 'pre-14' },

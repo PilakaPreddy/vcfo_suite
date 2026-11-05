@@ -21,8 +21,20 @@
  * generator prints it on the document rather than implying an authority we have not checked.
  */
 
-/** A state or union territory, by its ISO 3166-2:IN subdivision code without the `IN-` prefix. */
-export type StateCode = 'TG' | 'KA' | 'KL' | 'HR' | 'MH' | 'TN' | 'DL' | 'GJ' | 'UP' | 'WB' | 'AP';
+/**
+ * A state or union territory, by its ISO 3166-2:IN subdivision code without the `IN-` prefix.
+ *
+ * Every subdivision the map draws is here, whether or not its forms are configured. They used
+ * to be eleven, which made the picker say "7 other states and union territories" when the map
+ * beside it drew thirty-five — an undercount of twenty-four, and in the data rather than the
+ * copy. `JK` covers Jammu and Kashmir and Ladakh together, because the 2019 division is not in
+ * the licensed geometry and inventing that boundary is the thing not to do.
+ */
+export type StateCode =
+  | 'TG' | 'KA' | 'KL' | 'HR' | 'MH' | 'TN' | 'DL' | 'GJ' | 'UP' | 'WB' | 'AP'
+  | 'AN' | 'AR' | 'AS' | 'BR' | 'CH' | 'CG' | 'DH' | 'GA' | 'HP' | 'JK' | 'JH'
+  | 'LD' | 'MP' | 'MN' | 'ML' | 'MZ' | 'NL' | 'OD' | 'PY' | 'PB' | 'RJ' | 'SK'
+  | 'TR' | 'UK';
 
 /**
  * Which body of law a form belongs to. `state` forms are prescribed by a state's own rules,
@@ -31,6 +43,23 @@ export type StateCode = 'TG' | 'KA' | 'KL' | 'HR' | 'MH' | 'TN' | 'DL' | 'GJ' | 
  * `central-code` forms are prescribed by the rules notified under the four labour codes.
  */
 export type Regime = 'state' | 'central-legacy' | 'central-code';
+
+/**
+ * Whose rules an establishment is actually under.
+ *
+ * This is the distinction the catalogue was missing, and it decides which forms apply at all
+ * rather than merely which are due. The Codes name an "appropriate government" per
+ * establishment: the Centre for railways, mines, oilfields, major ports, banking, insurance,
+ * telecommunications, civil aviation and central public sector undertakings — and the State
+ * for everything else, which is nearly every ordinary commercial establishment.
+ *
+ * The Central Rules bind only the first group. Producing a central-code register for a shop in
+ * Hyderabad is not a harmless extra: it is a sheet nobody asked for, with an authority line
+ * citing rules that do not govern the client, handed to an inspector who will ask why.
+ *
+ * `state` is the default everywhere, because that is what almost every client is.
+ */
+export type Sphere = 'state' | 'central';
 
 /**
  * The seven shapes every register in the catalogue reduces to. One renderer serves each, which
@@ -64,10 +93,12 @@ export type PeriodKind = 'monthly' | 'quarterly' | 'halfYearly' | 'annual' | 'pe
  *  - `master`    — the client or employee record (address, registration number, shift timings).
  *  - `derived`   — computed from other values (age from date of birth, overtime wages).
  *  - `grid`      — the per-day attendance block, mapped once as a group.
- *  - `checklist` — present only when the client's payroll checklist ticks that head.
  *  - `signature` — left blank for a wet signature on the printed copy.
+ *  - `aggregate`  — a figure over the whole roll rather than one employee: a head count, a
+ *                   total of wages paid. Only a periodic return has these, and a return is one
+ *                   row about an establishment where a register is many rows about people.
  */
-export type ColumnSource = 'input' | 'master' | 'derived' | 'grid' | 'checklist' | 'signature';
+export type ColumnSource = 'input' | 'master' | 'derived' | 'grid' | 'signature' | 'aggregate';
 
 /** One column of a form, in the order the prescribed sheet prints it. */
 export interface FormColumn {
@@ -78,8 +109,6 @@ export interface FormColumn {
   source: ColumnSource;
   /** The column number the form itself prints under the heading, where it numbers them. */
   ordinal?: number;
-  /** The payroll checklist head that must be ticked for a `checklist` column to appear. */
-  requiresHead?: string;
   /** A note for the preparer, printed nowhere. */
   note?: string;
 }
@@ -91,7 +120,22 @@ export interface FormColumn {
  * mistakes an unverified layout for a filed one.
  */
 export interface FormVerification {
-  status: 'unverified' | 'checked-against-sample' | 'gazette-verified';
+  /**
+   * How far this layout has been checked.
+   *
+   * `disputed` is the one that is not simply a degree of confidence: it means a source we
+   * trust says our layout is *wrong*, not merely unconfirmed. Telangana Form V is the example
+   * — our catalogue calls it a muster roll and the rules text appears to call it a register of
+   * eating houses, lodging houses and cafés.
+   *
+   * A disputed form still generates. A missing statutory register is a compliance failure
+   * nobody notices; a register carrying a loud notice is a draft somebody reviews. The
+   * generator prints that notice at the head of the sheet, above the table, where it cannot be
+   * missed.
+   */
+  status: 'unverified' | 'disputed' | 'checked-against-sample' | 'gazette-verified';
+  /** What the dispute is, where there is one. Printed on the sheet verbatim. */
+  disputedBecause?: string;
   /** ISO date the check was made, when one was. */
   on?: string;
   /** What it was checked against: a filed client workbook, a gazette reference, a form PDF. */
@@ -139,6 +183,16 @@ export interface FormSpec {
   verification: FormVerification;
   /** Free text printed as the form's authority line, above the table. */
   authorityLine: string;
+  /**
+   * True when the columns here are a stand-in rather than the prescribed layout.
+   *
+   * Telangana Form XXVII is the case: its columns are recorded as `[1]` to `[7]` because
+   * nobody has seen the form. Producing it would emit a sheet with seven columns headed `[1]`
+   * through `[7]`, which is worse than producing nothing — a register that looks filed and
+   * says nothing is a register an inspector will ask about. The generator blocks it with the
+   * reason instead, and the layout-verification screen is where the real layout gets recorded.
+   */
+  layoutPlaceholder?: boolean;
 }
 
 /** A jurisdiction we can generate for, and how settled its law currently is. */
@@ -148,15 +202,14 @@ export interface StateSpec {
   /** The zone the state picker groups it under. */
   zone: 'North' | 'South' | 'East' | 'West' | 'Central' | 'North East';
   /**
-   * Whether the state has notified final rules under the four labour codes. As at 28 October
-   * 2026 the research found final rules in Gujarat, Andhra Pradesh and Uttar Pradesh only;
-   * Karnataka was at a January 2026 draft, Telangana and Haryana at May 2026 drafts, and
-   * Kerala had nothing newer than a December 2021 draft. Trackers disagreed on Telangana and
-   * Haryana, so this field is a product input, not a legal opinion.
+   * Where a state has got to under the codes is **not** here.
+   *
+   * It used to be, as one value for a whole state, and that could not be true of a state at
+   * all: the four codes were commenced together and are being notified separately, so a state
+   * can have final Wage Code rules and nothing under the OSH Code. It lives in
+   * `src/data/labour-registers/code-rules.ts`, one row per state and code, each with where it
+   * was read and when somebody last looked.
    */
-  codeRules: 'notified' | 'draft' | 'none';
-  /** ISO date the state's rules were notified, when they have been. */
-  codeRulesOn?: string;
   /** False until a form of this state has been checked against its own prescribed PDF. */
   configured: boolean;
 }

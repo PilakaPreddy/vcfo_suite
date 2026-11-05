@@ -52,7 +52,7 @@ export function InternWorkKindChip({
   );
 }
 
-export function InternWorkDenseRow({
+function InternWorkDenseRow({
   item,
   showCompany = false,
   leading,

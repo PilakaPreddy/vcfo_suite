@@ -51,6 +51,8 @@ export const roleEnum = pgEnum('trak_role', [
   'client',
   /** Engineering access to the developer console only; no client data (G-01). */
   'developer',
+  /** A client's partner: their own receivables at /receivables only (docs/specs/receivables/PLAN.md). */
+  'partner',
 ]);
 export const stageEnum = pgEnum('engagement_stage', [
   'Pre-Incorporation',
@@ -780,6 +782,10 @@ export const documentRequests = pgTable('document_requests', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * The demo-era client invites. Nothing reads or writes this table since audit 2026-11-04 finding 5
+ * removed the flow (client logins use `client_invites` from the Team page); a later migration may drop it.
+ */
 export const invites = pgTable('invites', {
   id: uuid('id').primaryKey().defaultRandom(),
   token: text('token').notNull().unique(),
@@ -1215,3 +1221,4 @@ export * from './schema-compliance-tasks';
 
 export * from './schema-labour-registers';
 export * from './schema-board-meetings';
+export * from './schema-receivables';

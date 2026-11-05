@@ -14,7 +14,7 @@ import {
   documentRequests,
 } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
-import { initialsFromName, isFirmWideAdmin } from '@/lib/auth';
+import { initialsFromName, isAdminOrManager, isFirmWideAdmin } from '@/lib/auth';
 import { ownAvatarSrc } from '@/lib/account-avatar';
 import { isUuid } from '@/lib/slug';
 import { systemGetWhatsAppGatePrefs } from '@/db/repositories/notification-prefs';
@@ -65,7 +65,7 @@ function generateInternId(): string {
 }
 
 export async function listInternOptions(ctx: AuthContext): Promise<InternOptionRow[]> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Only admins or managers may list project leads');
   }
 
@@ -111,7 +111,7 @@ export async function createInternProfile(
   ctx: AuthContext,
   input: CreateInternProfileInput,
 ): Promise<CreateInternProfileResult> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Only admins or managers may create project leads');
   }
 
@@ -188,7 +188,7 @@ export async function createClientProfile(
   ctx: AuthContext,
   input: CreateClientProfileInput,
 ): Promise<CreateClientProfileResult> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Only admins or managers may create client accounts');
   }
 
@@ -303,7 +303,10 @@ export type StaffPersonRow = {
   twoStepOn?: boolean;
 };
 
-/** Firm admin / super admin: list all accounts. */
+/**
+ * Firm admin / super admin: list all accounts. Client partner logins (receivables) are left out:
+ * they are not firm people and are managed on the receivables Partners tab.
+ */
 export async function listStaffPeople(ctx: AuthContext): Promise<StaffPersonRow[]> {
   if (!isFirmWideAdmin(ctx.role)) {
     throw new Error('Only firm admins may list all staff');
@@ -321,6 +324,7 @@ export async function listStaffPeople(ctx: AuthContext): Promise<StaffPersonRow[
       totpEnabledAt: profiles.totpEnabledAt,
     })
     .from(profiles)
+    .where(ne(profiles.role, 'partner'))
     .orderBy(asc(profiles.role), asc(profiles.name));
 
   return rows.map((r) => ({
@@ -411,7 +415,7 @@ export async function deleteProfileAccount(
   ctx: AuthContext,
   profileId: string,
 ): Promise<{ deletedId: string; email: string; role: string; name: string }> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
   if (profileId === ctx.userId) {
@@ -734,7 +738,7 @@ export async function updatePersonEmail(
   profileId: string,
   newEmail: string,
 ): Promise<{ id: string; name: string; email: string; previousEmail: string }> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
 
@@ -797,7 +801,7 @@ export async function updatePersonEmail(
 export async function listManagerOptions(
   ctx: AuthContext,
 ): Promise<{ id: string; name: string; email: string }[]> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
   const rows = await db
@@ -817,7 +821,7 @@ export async function listStaffContactsByIds(
   ctx: AuthContext,
   ids: string[],
 ): Promise<{ id: string; email: string; name: string }[]> {
-  if (!isFirmWideAdmin(ctx.role) && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
   const unique = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
@@ -837,7 +841,7 @@ export async function listStaffContactsByIds(
 export async function listClientAccounts(
   ctx: AuthContext,
 ): Promise<{ id: string; name: string; email: string; clientId: string | null }[]> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
   const rows = await db
@@ -873,7 +877,7 @@ export type RemovedClientRow = {
  * record — People > Removed clients is where the history stays readable.
  */
 export async function listRemovedClients(ctx: AuthContext): Promise<RemovedClientRow[]> {
-  if (ctx.role !== 'admin' && ctx.role !== 'super_admin' && ctx.role !== 'manager') {
+  if (!isAdminOrManager(ctx.role)) {
     throw new Error('Not permitted');
   }
   const rows = await db
@@ -952,6 +956,24 @@ export async function systemMarkWhatsAppStatus(
 }
 
 /**
+ * SYSTEM READER — the name and email of a person for a team assignment email.
+ *
+ * Called by `PATCH /api/engagements/[id]` after its own guard has admitted an admin changing
+ * the project manager; it reads only the id, email and name of the old or new manager it was
+ * given. Null when the id is empty or the person has no email.
+ */
+export async function systemGetProfileParty(id: string | null | undefined): Promise<{ userId: string; email: string; name: string } | null> {
+  if (!id) return null;
+  const [row] = await db
+    .select({ id: profiles.id, email: profiles.email, name: profiles.name })
+    .from(profiles)
+    .where(eq(profiles.id, id))
+    .limit(1);
+  if (!row?.email?.trim()) return null;
+  return { userId: row.id, email: row.email.trim(), name: row.name?.trim() || row.email.trim() };
+}
+
+/**
  * SYSTEM READER — background WhatsApp job (documented deviation).
  *
  * The Inngest job runs after the request that queued it has already returned,
@@ -1026,7 +1048,7 @@ export type SignInCandidate = {
  * Returns the person when the email and password match an active account that
  * may sign in, and null otherwise. It never says which part was wrong, and an
  * unknown email still runs one bcrypt comparison so the timing does not tell
- * either. Used by the Credentials `authorize` and by the code pre-check route.
+ * either. Used by the Credentials `authorize`.
  */
 export async function systemCheckSignInPassword(emailInput: string, password: string): Promise<SignInCandidate | null> {
   const email = String(emailInput ?? '').trim().toLowerCase();
@@ -1068,6 +1090,26 @@ export async function systemCheckSignInPassword(emailInput: string, password: st
     twoStepOn: Boolean(row.totpEnabledAt && row.totpSecretEnc),
     totpSecretEnc: row.totpSecretEnc,
   };
+}
+
+/**
+ * SYSTEM READER — sign-in (documented deviation; there is no session yet).
+ *
+ * The two-step secret of an active account with two-step on, looked up by email alone, and
+ * null for every other email. It takes no password on purpose: the code pre-check route and
+ * `authorize` ask for and check the code before the password, so no answer ever depends on
+ * whether a password was right (audit finding 2).
+ */
+export async function systemSignInTwoStep(emailInput: string): Promise<{ id: string; totpSecretEnc: string } | null> {
+  const email = String(emailInput ?? '').trim().toLowerCase();
+  if (!email) return null;
+  const [row] = await db
+    .select({ id: profiles.id, status: profiles.status, totpSecretEnc: profiles.totpSecretEnc, totpEnabledAt: profiles.totpEnabledAt })
+    .from(profiles)
+    .where(eq(profiles.email, email))
+    .limit(1);
+  if (!row || row.status !== 'active' || !row.totpEnabledAt || !row.totpSecretEnc) return null;
+  return { id: row.id, totpSecretEnc: row.totpSecretEnc };
 }
 
 export type TwoStepStatus = {

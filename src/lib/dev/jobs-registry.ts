@@ -13,6 +13,10 @@ import { serviceChecks } from '@/jobs/service-checks';
 import { complianceTaskReminders } from '@/jobs/compliance-task-reminders';
 import { complianceTaskRepeatOnComplete, complianceTaskRepeatSweep } from '@/jobs/compliance-task-repeat';
 import { boardMeetingReminders } from '@/jobs/board-meeting-reminders';
+import { receivablesReminders } from '@/jobs/receivables-reminders';
+import { receivablesBankFeed } from '@/jobs/receivables-bank-feed';
+import { receivablesFxRates } from '@/jobs/receivables-fx-rates';
+import { receivablesDigest } from '@/jobs/receivables-digest';
 import { devCleanup } from '@/jobs/dev-cleanup';
 import { describeFunctions } from './parse';
 import type { JobFunction } from './types';
@@ -39,5 +43,9 @@ export function registeredJobs(): JobFunction[] {
     complianceTaskRepeatOnComplete,
     complianceTaskRepeatSweep,
     boardMeetingReminders,
+    receivablesReminders,
+    receivablesBankFeed,
+    receivablesFxRates,
+    receivablesDigest,
   ]);
 }

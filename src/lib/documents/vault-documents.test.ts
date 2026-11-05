@@ -7,13 +7,13 @@ import {
 import {
   collectIndexedVaultDocuments,
   collectVaultDocuments,
-  filterVaultEntityGroups,
   formatVaultCommandHit,
   groupVaultDocuments,
   mergeVaultDocuments,
   scopeVaultDocumentsToEngagements,
   vaultFileNameMatches,
   vaultLocationLabel,
+  vaultDocumentsFromPayload,
   vaultPhaseForItem,
   vaultSearchHits,
   type VaultDocument,
@@ -118,27 +118,6 @@ describe('vault grouping', () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]?.companyName).toBe('Acme Pvt Ltd');
     expect(groups[0]?.docCount).toBe(1);
-  });
-
-  it('filters by client name without hiding that client’s files', () => {
-    const groups = groupVaultDocuments(
-      [doc(assigned, 'acme-pan.pdf'), doc(otherIntern, 'beta-gst.pdf')],
-      [assigned, otherIntern],
-    );
-    const filtered = filterVaultEntityGroups(groups, 'acme');
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0]?.docCount).toBe(1);
-    expect(filtered[0]?.milestones[0]?.sections[0]?.docs[0]?.fileName).toBe('acme-pan.pdf');
-  });
-
-  it('filters by document name across clients', () => {
-    const groups = groupVaultDocuments(
-      [doc(assigned, 'director-id.pdf'), doc(otherIntern, 'gst-certificate.pdf')],
-      [assigned, otherIntern],
-    );
-    const filtered = filterVaultEntityGroups(groups, 'gst-certificate');
-    expect(filtered.map((g) => g.companyName)).toEqual(['Beta Exports']);
-    expect(filtered[0]?.docCount).toBe(1);
   });
 
   it('maps indexed rows onto the checklist step when stepId is set', () => {
@@ -254,5 +233,29 @@ describe('vault grouping', () => {
     expect(collected[0]?.fileName).toBe('name-ack.pdf');
     expect(collected[0]?.bucket).toBe('Pre-incorporation');
     expect(collected[0]?.milestoneId).toBe('pre-4');
+  });
+});
+
+describe('vault documents from the server read', () => {
+  it('maps file nodes onto steps and categories and leaves missing rows out', () => {
+    const base = { replaced: false, from: 'Acme', fromSbc: false, categoryId: 'c1' as const };
+    const docs = vaultDocumentsFromPayload(
+      {
+        engagementId: 'eng-a',
+        companyName: 'Acme Pvt Ltd',
+        companyShort: 'Acme',
+        openRequests: [],
+        accept: { exts: [], maxLabel: '' },
+        nodes: [
+          { ...base, id: 'm-pre-1-pan', ref: 'm:eng-a/pan/1-pan.pdf', label: 'PAN', fileName: 'pan.pdf', status: 'Approved', stepId: 'pre-1', source: 'milestone' },
+          { ...base, id: 'd-doc-1', ref: 'd:doc-1', label: 'Lease', fileName: 'lease.pdf', status: 'Final', source: 'index' },
+          { ...base, id: 'req-1', label: 'Bank letter', fileName: '—', status: 'Missing', source: 'request' },
+        ],
+      },
+      'eng-a',
+    );
+    expect(docs.map((d) => d.id)).toEqual(['m-pre-1-pan', 'd-doc-1']);
+    expect(docs[0]).toMatchObject({ milestoneId: 'pre-1', storagePath: 'eng-a/pan/1-pan.pdf', section: 'Identity & KYC', source: 'milestone' });
+    expect(docs[1]).toMatchObject({ documentId: 'doc-1', milestoneTitle: 'Other documents', bucket: 'Statutory' });
   });
 });

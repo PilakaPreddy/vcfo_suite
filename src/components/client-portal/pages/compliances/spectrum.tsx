@@ -12,7 +12,8 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { Check, ChevronDown, ExternalLink, Plus, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AreaPill, Chip, regOf, type ChipTone, type Regulator } from '@/components/ui/spectrum-chip';
+import { AreaPill, Chip, type ChipTone } from '@/components/ui/spectrum-chip';
+import { regOf, type Regulator } from '@/lib/ui/regulator';
 import { CardHeadTile } from '@/components/common/CardHeadTile';
 import { AvatarStack } from '@/components/ui/avatar-stack';
 import { StepLink, StepMark } from '@/components/ui/step-track';
@@ -47,7 +48,7 @@ export function Island({ className, inline, children }: { className?: string; in
  * row that is not yet in its due-soon window is Not started.
  */
 export const WORD: Record<CompStatus, string> = { ok: 'Done', due: 'Due soon', over: 'Overdue', up: 'Not started' };
-export const TONE: Record<CompStatus, ChipTone> = { ok: 'ok', due: 'warn', over: 'bad', up: 'idle' };
+const TONE: Record<CompStatus, ChipTone> = { ok: 'ok', due: 'warn', over: 'bad', up: 'idle' };
 /** Solid marks for bars, legend squares and dots (R-25: status colours only in charts). */
 export const FILL: Record<CompStatus, string> = { ok: 'bg-positive-mid', due: 'bg-warning-mid', over: 'bg-danger-mid', up: 'bg-upcoming-mid' };
 /** SVG stroke colours for the donut, from the same tokens. */

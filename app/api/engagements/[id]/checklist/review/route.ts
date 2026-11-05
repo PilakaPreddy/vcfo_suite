@@ -1,3 +1,4 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAnyRole } from '@/auth/guards';
@@ -42,7 +43,7 @@ export async function POST(request: Request, context: RouteContext) {
       body.data.action,
       body.data.note,
     );
-    const email = await notifyEngagementEvent({
+    const email = await notifyEngagementEventSoon({
       engagementId: id,
       itemId: body.data.itemId,
       event: body.data.action === 'accept' ? 'review_accepted' : 'review_rejected',
@@ -57,7 +58,7 @@ export async function POST(request: Request, context: RouteContext) {
     // committed, so it is reported alongside rather than thrown.
     let clientApprovalEmail: Awaited<ReturnType<typeof notifyEngagementEvent>> | null = null;
     if (body.data.action === 'accept') {
-      clientApprovalEmail = await notifyEngagementEvent({
+      clientApprovalEmail = await notifyEngagementEventSoon({
         engagementId: id,
         itemId: body.data.itemId,
         event: 'step_awaiting_client_approval',
@@ -96,7 +97,7 @@ async function reviewBoardResolution(
   try {
     if (action === 'accept') {
       const { checklistState, firstApproval } = await approveBoardResolution(ctx, engagementId);
-      const email = await notifyEngagementEvent({
+      const email = await notifyEngagementEventSoon({
         engagementId,
         itemId: MANAGER_APPROVAL_STEP_ID,
         event: 'board_resolution_shared',
@@ -110,7 +111,7 @@ async function reviewBoardResolution(
     }
     const checklistState = await reviewChecklistItem(ctx, engagementId, MANAGER_APPROVAL_STEP_ID, 'reject', note);
     // Sent back to the lead only: the client never hears about a draft.
-    const email = await notifyEngagementEvent({
+    const email = await notifyEngagementEventSoon({
       engagementId,
       itemId: MANAGER_APPROVAL_STEP_ID,
       event: 'review_rejected',

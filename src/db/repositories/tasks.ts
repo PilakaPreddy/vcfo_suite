@@ -82,7 +82,7 @@ function appEngagementId(dbId: string | null): string {
 }
 
 /** A board place from the client: a whole number from 0 to 100000, or null to clear it. */
-export function normalizeSortOrder(value: unknown): number | null {
+function normalizeSortOrder(value: unknown): number | null {
   if (value === null) return null;
   const n = typeof value === 'number' ? value : Number(value);
   if (!Number.isInteger(n) || n < 0 || n > 100_000) return null;

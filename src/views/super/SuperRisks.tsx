@@ -22,7 +22,7 @@ import {
   SUPER_RISK_LABEL,
   type SuperRisk,
   type SuperRiskKind,
-} from '@/components/super/insights/super-insights-model';
+} from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import { superEngagementHref } from '@/lib/super/super-overview';
 import { cn } from '@/lib/utils';
@@ -39,7 +39,7 @@ import { cn } from '@/lib/utils';
  * client; once saved, the risk leaves the list because the next read no longer finds it.
  * A stuck client gets Open. The client name under each title links to the record.
  */
-export const SUPER_RISKS_HREF = '/app/super/risks';
+const SUPER_RISKS_HREF = '/app/super/risks';
 
 const KINDS: SuperRiskKind[] = ['step', 'filing', 'stuck', 'owner', 'lead'];
 

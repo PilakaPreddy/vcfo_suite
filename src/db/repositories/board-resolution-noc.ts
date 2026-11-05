@@ -46,7 +46,7 @@ type EngRow = NonNullable<Awaited<ReturnType<typeof getEngagementById>>>;
 
 const STAFF_ROLES = new Set(['intern', 'manager', 'admin', 'super_admin']);
 
-export function isNocStaff(role: string): boolean {
+function isNocStaff(role: string): boolean {
   return STAFF_ROLES.has(role);
 }
 
@@ -85,7 +85,7 @@ function rowInput(row: BrRow | undefined | null): NocRowInput | null {
 }
 
 async function requireEngagement(ctx: AuthContext, appOrDbId: string): Promise<EngRow> {
-  if (ctx.role === 'developer') throw new Error('Engagement not found or not permitted');
+  if (ctx.role === 'developer' || ctx.role === 'partner') throw new Error('Engagement not found or not permitted');
   const row = await getEngagementById(ctx, engagementDbId(appOrDbId));
   if (!row) throw new Error('Engagement not found or not permitted');
   return row;
@@ -165,7 +165,7 @@ async function stateFor(ctx: AuthContext, engagement: EngRow, row: BrRow | undef
 
 /** GET: the NOC state. A client gets no staff block; a foreign engagement returns null. */
 export async function getNocState(ctx: AuthContext, appOrDbId: string): Promise<NocState | null> {
-  if (ctx.role === 'developer') return null;
+  if (ctx.role === 'developer' || ctx.role === 'partner') return null;
   const engagement = await getEngagementById(ctx, engagementDbId(appOrDbId));
   if (!engagement) return null;
   const row = await loadRow(engagement.id);

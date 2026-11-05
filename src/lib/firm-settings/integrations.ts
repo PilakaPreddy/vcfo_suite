@@ -17,7 +17,7 @@ export interface FirmIntegration {
 
 const FIRM_FACING: ServiceConfig['id'][] = ['email', 'outlook', 'whatsapp', 'storage', 'jobs', 'ask'];
 
-export function integrationStatus(status: ServiceConfig['status']): IntegrationStatus {
+function integrationStatus(status: ServiceConfig['status']): IntegrationStatus {
   if (status === 'configured') return 'Connected';
   if (status === 'partial') return 'Needs set-up';
   return 'Not set up';

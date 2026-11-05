@@ -38,7 +38,7 @@ function inMonth(iso: string | undefined, year: number, month: number): number |
 }
 
 /** Due days in the month of `now`: filings and open task dates. The worst status of the day wins. */
-export function dueDayMarks(
+function dueDayMarks(
   filings: readonly Pick<FilingRow, 'filedOn' | 'dueDate'>[],
   tasks: readonly Pick<TaskInstance, 'dueAt' | 'status'>[],
   now: Date,

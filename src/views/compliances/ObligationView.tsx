@@ -13,7 +13,7 @@ import { CompanyPicker } from '@/components/admin/CompanyPicker';
 import { Button } from '@/components/ui/button';
 import { AreaPill } from '@/components/ui/spectrum-chip';
 import { EmptyState, SkeletonRows } from '@/components/ui/empty-state';
-import { filingStatus, financialYearLabel, rowsInFinancialYear, type FilingRow } from '@/lib/compliance/filings';
+import { filingStatus, financialYearLabel, rowsInFinancialYear, todayIST, type FilingRow } from '@/lib/compliance/filings';
 import { cn } from '@/lib/utils';
 import {
   ALL_COMPANIES,
@@ -195,7 +195,7 @@ export function ObligationView({
   // The head ring: for one client, the four workflow steps of this period (the same steps the
   // client portal shows); across clients, how many have filed this period.
   const oneRow = group.rows.length === 1 ? group.rows[0]! : null;
-  const steps = oneRow?.detail ? focusNodes(oneRow.detail, oneRow.row.companyName, now.toISOString().slice(0, 10)) : null;
+  const steps = oneRow?.detail ? focusNodes(oneRow.detail, oneRow.row.companyName, todayIST(now)) : null;
   const ringDone = steps ? steps.filter((n) => n.st === 'done').length : group.filed;
   const ringTotal = steps ? steps.length : group.total;
   const ringLate = group.status === 'overdue' && dueDays !== null ? -dueDays : 0;

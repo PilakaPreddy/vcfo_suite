@@ -2,7 +2,7 @@ import type { Reach } from './types';
 import { scrubText } from './mask';
 
 /** Every outside call from the console gives up after this long. */
-export const DEV_CALL_TIMEOUT_MS = 5000;
+const DEV_CALL_TIMEOUT_MS = 5000;
 
 /** The missing env var names, or an empty list when every one is set. */
 export function missingEnv(names: string[], env: Record<string, string | undefined> = process.env): string[] {

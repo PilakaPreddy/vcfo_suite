@@ -8,7 +8,7 @@ import { assertEngagementAccess, checklistStateFromRow } from '@/db/repositories
 import type { EngagementDbRow } from '@/db/repositories/engagements';
 import { createNotificationsForUsers } from '@/db/repositories/notifications';
 import { appEngagementId } from '@/lib/projects/legacy-engagement-ids';
-import { identifiersFromState } from '@/lib/client/client-overview';
+import { companyFactsFromState, type CompanyFacts } from '@/lib/board-meetings/company-facts';
 import type { MeetingStatus } from '@/lib/board-meetings/model';
 
 /**
@@ -28,7 +28,7 @@ import type { MeetingStatus } from '@/lib/board-meetings/model';
 
 export type MeetingRow = typeof boardMeetings.$inferSelect;
 
-export const STAFF = new Set(['super_admin', 'admin', 'manager', 'intern']);
+const STAFF = new Set(['super_admin', 'admin', 'manager', 'intern']);
 export const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class BoardMeetingError extends Error {
@@ -108,15 +108,20 @@ export interface CompanyInfo {
 }
 
 /** Name, CIN (from the checklist answers) and registered office of the client company. */
+/**
+ * The company on the notice: the legal name from the Certificate of Incorporation step (else
+ * the MCA-approved name, else the project's legal or display name), the CIN, and the
+ * registered office from the incorporation steps (else the project's address).
+ */
 export function companyInfoOf(row: EngagementDbRow): CompanyInfo {
-  let cin: string | null;
+  let facts: CompanyFacts = { legalName: null, cin: null, registeredOffice: null };
   try {
-    cin = identifiersFromState(checklistStateFromRow(row) as never).cin?.trim() || null;
+    facts = companyFactsFromState(checklistStateFromRow(row) as never);
   } catch {
-    cin = null;
+    // Old or partial checklist state: fall back to the project's own fields.
   }
-  const name = row.subsidiaryLegalName?.trim() || row.companyName;
-  return { name, cin, address: row.subsidiaryRegisteredAddress?.trim() || null };
+  const name = facts.legalName || row.subsidiaryLegalName?.trim() || row.companyName;
+  return { name, cin: facts.cin, address: facts.registeredOffice || row.subsidiaryRegisteredAddress?.trim() || null };
 }
 
 export type PersonLite = { id: string; name: string; email: string; role: string };
@@ -163,7 +168,7 @@ export async function firmAdmins(): Promise<PersonLite[]> {
   return rows.map((r) => ({ id: r.id, name: r.name?.trim() || r.email.split('@')[0] || 'Admin', email: r.email, role: r.role }));
 }
 
-export function portalOf(role: string): string {
+function portalOf(role: string): string {
   if (role === 'super_admin') return 'super';
   if (role === 'intern') return 'intern';
   if (role === 'manager') return 'manager';

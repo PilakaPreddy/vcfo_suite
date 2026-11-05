@@ -8,7 +8,7 @@ import { useState } from 'react';
  * dialog and the /contact form share this hook, so both send the same body and show the same
  * error words. `website` is the honeypot: hidden from people, filled by bots.
  */
-export const DEMO_REQUEST_URL = '/api/public/demo-request';
+const DEMO_REQUEST_URL = '/api/public/demo-request';
 
 export interface DemoRequestBody {
   name: string;

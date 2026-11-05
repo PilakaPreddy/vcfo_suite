@@ -22,6 +22,8 @@
  *                          public route; super admin reads.
  *  - mail_groups         — named recipient groups for Email (G-23), with
  *  - mail_group_members  — one row per address in a group.
+ *  - rate_limits         — fixed-window attempt counters shared by every App Runner
+ *                          instance (sign-in and the two-step pre-check, audit finding 2).
  */
 import {
   boolean,
@@ -411,5 +413,22 @@ export const signInLinks = pgTable(
   (t) => ({
     providerSubjectUidx: uniqueIndex('sign_in_links_provider_subject_uidx').on(t.provider, t.subject),
     profileProviderUidx: uniqueIndex('sign_in_links_profile_provider_uidx').on(t.profileId, t.provider),
+  }),
+);
+
+/**
+ * One fixed-window counter per key (for example `sign-in:email:a@b.co`). Postgres holds it so
+ * the limit is the same on every App Runner instance. Rows past `reset_at` are dead and are
+ * swept by `systemTakeRateLimit`.
+ */
+export const rateLimits = pgTable(
+  'rate_limits',
+  {
+    key: text('key').primaryKey(),
+    count: integer('count').notNull(),
+    resetAt: timestamp('reset_at', { withTimezone: true }).notNull(),
+  },
+  (t) => ({
+    resetIdx: index('rate_limits_reset_idx').on(t.resetAt),
   }),
 );

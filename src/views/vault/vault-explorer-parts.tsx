@@ -172,7 +172,7 @@ const GLYPH: Record<'done' | 'sbc' | 'client', { cls: string; Icon: typeof Check
 };
 
 /** Status glyph (R-13 tones, soft fill): done green tick, with SBC blurple arrow, sent back to the client amber person. */
-export function VaultStatusGlyph({ reviewStatus, companyName, date }: { reviewStatus?: string | null; companyName: string; date?: string | null }) {
+function VaultStatusGlyph({ reviewStatus, companyName, date }: { reviewStatus?: string | null; companyName: string; date?: string | null }) {
   const g = statusGlyphOf(reviewStatus);
   const when = date ? ` · ${formatUploadDate(date)}` : '';
   const tip =

@@ -54,6 +54,15 @@ export interface DocNode {
   noteBy?: string;
   /** Source, for the viewer's info line. */
   source: 'milestone' | 'index' | 'board-resolution' | 'request';
+  /** Staff reads only: the documents-table row behind the file, for the Vault's review and delete. */
+  indexRow?: {
+    id: string;
+    uploadedBy: string | null;
+    reviewStatus: string;
+    reviewNote: string | null;
+    reviewedAt: string | null;
+    replacedAt: string | null;
+  };
 }
 
 export interface OpenRequest {

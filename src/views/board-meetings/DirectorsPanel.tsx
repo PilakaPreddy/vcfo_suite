@@ -116,6 +116,12 @@ export function DirectorsPanel({ engagementId, compliancesBase }: { engagementId
             <SkeletonRows rows={3} />
           </div>
         ) : (
+          <>
+          {current.some((d) => !d.din) ? (
+            <p className="m-0 border-b border-line-soft bg-warning-soft px-4 py-2 text-[13px] text-warning">
+              Add the DIN allotted at incorporation for each director (pencil icon). The notice prints the signing director&apos;s DIN.
+            </p>
+          ) : null}
           <table className="w-full text-[14px]">
             <thead>
               <tr className="text-left text-[12px] text-ink-muted">
@@ -133,7 +139,13 @@ export function DirectorsPanel({ engagementId, compliancesBase }: { engagementId
                     <span className={d.current ? 'font-medium' : 'text-ink-muted'}>{d.name}</span>
                     <span className="block text-[12.5px] text-ink-muted">{d.designation}</span>
                   </td>
-                  <td className="px-3 py-2.5 font-mono text-[13px]">{d.din ?? <span className="text-warning">Missing</span>}</td>
+                  <td className="px-3 py-2.5 font-mono text-[13px]">
+                    {d.din ?? (
+                      <span className="text-warning" title="Add the DIN allotted at incorporation (8 digits). The notice prints the signing director's DIN.">
+                        Missing
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2.5">{d.email ?? <span className="text-warning">No email</span>}</td>
                   <td className="px-3 py-2.5 text-[13px] text-ink-muted">
                     {d.current ? (d.appointedOn ? shortDate(d.appointedOn) : '—') : (
@@ -188,6 +200,7 @@ export function DirectorsPanel({ engagementId, compliancesBase }: { engagementId
               ) : null}
             </tbody>
           </table>
+          </>
         )}
       </DashSection>
 
@@ -207,7 +220,7 @@ export function DirectorsPanel({ engagementId, compliancesBase }: { engagementId
             ))}
           </ul>
         ) : (
-          <p className="m-0 px-4 py-3 text-[13px] text-ink-muted">No meetings yet. Start one from Obligations › New task › Meeting.</p>
+          <p className="m-0 px-4 py-3 text-[13px] text-ink-muted">No meetings yet. Start one from Compliances › Obligations: New meeting (lead) or New task › Meeting (admin and manager).</p>
         )}
       </DashSection>
     </div>

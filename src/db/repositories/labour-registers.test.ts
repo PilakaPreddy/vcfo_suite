@@ -162,42 +162,9 @@ describe('writes are staff-only', () => {
     expect(calls.filter((c) => c.op === 'insert')).toHaveLength(0);
   });
 
-  it('rejects a checklist head the catalogue does not know', async () => {
-    allow();
-    await expect(
-      repo.setChecklistHead(ctx('manager'), { engagementId: OURS, headId: 'made-up-head' }),
-    ).rejects.toThrow('unknown checklist head');
-    expect(calls).toHaveLength(0);
-  });
 
-  it('refuses a tick for another firm\'s batch', async () => {
-    results = [[{ id: 'b1', engagementId: THEIRS }]];
-    deny();
-    expect(await repo.setTick(ctx('manager'), { batchId: 'b1', headId: 'overtime', state: 'received' })).toBeNull();
-    expect(calls.filter((c) => c.op === 'insert')).toHaveLength(0);
-  });
 });
 
-describe('the standing checklist', () => {
-  it('falls back to the catalogue defaults for a client with no rows yet', async () => {
-    allow();
-    results = [[]];
-    const heads = await repo.activeHeads(ctx('manager'), OURS);
-    expect(heads).toContain('attendance-lop');
-    expect(heads).toContain('overtime');
-  });
-
-  it('returns only the heads a client actually runs once they are set', async () => {
-    allow();
-    results = [[{ headId: 'overtime', active: true }, { headId: 'esi', active: false }]];
-    expect(await repo.activeHeads(ctx('manager'), OURS)).toEqual(['overtime']);
-  });
-
-  it('gives a client no heads at all', async () => {
-    deny();
-    expect(await repo.activeHeads(ctx('client'), THEIRS)).toEqual([]);
-  });
-});
 
 describe('attestation freezes a document', () => {
   it('is refused to a manager and an intern', async () => {
@@ -217,10 +184,33 @@ describe('attestation freezes a document', () => {
   it('attests an unattested document for a firm-wide admin', async () => {
     results = [[{ id: 'd1', batchId: 'b1', attestedAt: null }], [{ id: 'b1', engagementId: OURS }], [{ id: 'd1', status: 'attested' }]];
     allow();
-    const row = await repo.attestDocument(ctx('admin'), { documentId: 'd1', method: 'printed-wet-signature' });
+    const row = await repo.attestDocument(ctx('admin'), {
+      documentId: 'd1',
+      method: 'printed-wet-signature',
+      signedObjectKey: 'labour-registers/b1/signed/in-wages-iv-abc123',
+      signedFileName: 'Form IV signed.pdf',
+      signedSha256: 'ff'.repeat(32),
+      signedByName: 'R. Venkatesh, Director',
+    });
     expect(row).toEqual({ id: 'd1', status: 'attested' });
     const update = calls.find((c) => c.op === 'update');
     expect((update?.set as { status: string }).status).toBe('attested');
+    /* The scan is part of the same write. A row saying signed and an object store that has
+       nothing in it would be an attestation nobody can be shown. */
+    expect((update?.set as { signedObjectKey: string }).signedObjectKey).toContain('signed/');
+    expect((update?.set as { signedByName: string }).signedByName).toBe('R. Venkatesh, Director');
+  });
+
+  it('refuses a wet-signature attestation with no signed page behind it', async () => {
+    /* The firm's method is a signature on a printout. Recording that without the scan would
+       leave a row claiming a signature nobody can produce — the one thing an attestation must
+       not be. */
+    results = [[{ id: 'd1', batchId: 'b1', attestedAt: null }], [{ id: 'b1', engagementId: OURS }]];
+    allow();
+    await expect(
+      repo.attestDocument(ctx('admin'), { documentId: 'd1', method: 'printed-wet-signature' }),
+    ).rejects.toThrow('upload the signed printout');
+    expect(calls.filter((c) => c.op === 'update')).toHaveLength(0);
   });
 
   it('does not attest another firm\'s document', async () => {
@@ -235,5 +225,119 @@ describe('there is no delete path', () => {
   it('exports nothing that deletes a register', () => {
     const names = Object.keys(repo).filter((k) => /delete|remove|purge|destroy/i.test(k));
     expect(names).toEqual([]);
+  });
+});
+
+describe('the monthly close', () => {
+  it('refuses to lock without the accuracy confirmation', async () => {
+    allow();
+    await expect(
+      repo.markReady(ctx('manager'), { batchId: 'b1', accuracyConfirmed: false, readiness: {} }),
+    ).rejects.toThrow('accuracy confirmation');
+    expect(calls).toHaveLength(0);
+  });
+
+  it('refuses a client the close entirely', async () => {
+    allow();
+    await expect(
+      repo.markReady(ctx('client'), { batchId: 'b1', accuracyConfirmed: true, readiness: {} }),
+    ).rejects.toThrow('not permitted');
+    expect(calls).toHaveLength(0);
+  });
+
+  it('stores the readiness summary the preparer was shown', async () => {
+    results = [[{ id: 'b1', engagementId: OURS, markedReadyAt: null, reopenCount: 0 }], [{ id: 'b1', status: 'ready' }]];
+    allow();
+    await repo.markReady(ctx('manager'), {
+      batchId: 'b1',
+      accuracyConfirmed: true,
+      readiness: { employees: 422, employeesShort: 2 },
+    });
+    const set = calls.find((c) => c.op === 'update')?.set as Record<string, unknown>;
+    expect(set.status).toBe('ready');
+    expect(set.accuracyConfirmed).toBe(true);
+    expect(set.readinessSnapshot).toEqual({ employees: 422, employeesShort: 2 });
+    expect(set.markedReadyBy).toBe('staff-user');
+  });
+
+  it('refuses to lock a period that is already locked', async () => {
+    results = [[{ id: 'b1', engagementId: OURS, markedReadyAt: new Date('2026-11-03'), reopenCount: 0 }]];
+    allow();
+    await expect(
+      repo.markReady(ctx('manager'), { batchId: 'b1', accuracyConfirmed: true, readiness: {} }),
+    ).rejects.toThrow('already marked ready');
+    expect(calls.filter((c) => c.op === 'update')).toHaveLength(0);
+  });
+
+  it('does not lock another firm\'s period', async () => {
+    results = [[{ id: 'b1', engagementId: THEIRS, markedReadyAt: null, reopenCount: 0 }]];
+    deny();
+    expect(await repo.markReady(ctx('manager'), { batchId: 'b1', accuracyConfirmed: true, readiness: {} })).toBeNull();
+    expect(calls.filter((c) => c.op === 'update')).toHaveLength(0);
+  });
+});
+
+describe('reopening a locked period', () => {
+  it('requires a reason', async () => {
+    allow();
+    await expect(repo.reopenInputs(ctx('manager'), { batchId: 'b1', reason: '   ' })).rejects.toThrow('reason is required');
+    expect(calls).toHaveLength(0);
+  });
+
+  it('records who reopened it, why, and counts it', async () => {
+    results = [[{ id: 'b1', engagementId: OURS, markedReadyAt: new Date('2026-11-03'), reopenCount: 1 }], [{ id: 'b1' }]];
+    allow();
+    await repo.reopenInputs(ctx('manager'), { batchId: 'b1', reason: 'HR sent a corrected attendance sheet' });
+    const set = calls.find((c) => c.op === 'update')?.set as Record<string, unknown>;
+    expect(set.status).toBe('open');
+    expect(set.markedReadyAt).toBeNull();
+    expect(set.reopenReason).toBe('HR sent a corrected attendance sheet');
+    expect(set.reopenCount).toBe(2);
+  });
+
+  it('leaves an unlocked period alone', async () => {
+    const batch = { id: 'b1', engagementId: OURS, markedReadyAt: null, reopenCount: 0 };
+    results = [[batch]];
+    allow();
+    expect(await repo.reopenInputs(ctx('manager'), { batchId: 'b1', reason: 'x' })).toEqual(batch);
+    expect(calls.filter((c) => c.op === 'update')).toHaveLength(0);
+  });
+});
+
+describe('generation follows the close', () => {
+  it('refuses to record a document before the period is locked', async () => {
+    results = [[{ id: 'b1', engagementId: OURS, markedReadyAt: null }]];
+    allow();
+    await expect(
+      repo.recordDocument(ctx('manager'), {
+        batchId: 'b1', formId: 'tg-se-xxiii', cacheKey: 'k', objectKey: 'o', artifactSha256: 's',
+        byteLength: 10, templateVersion: 'v1', generatorRevision: 'r', manifest: {}, retainUntil: '2031',
+      }),
+    ).rejects.toThrow('mark the inputs ready');
+    expect(calls.filter((c) => c.op === 'insert')).toHaveLength(0);
+  });
+});
+
+describe('provenance', () => {
+  it('reports who locked it, when it was built and how much came from storage', async () => {
+    results = [
+      [{ id: 'b1', engagementId: OURS, periodFrom: '2026-09-01', periodTo: '2026-09-30', status: 'generated',
+         markedReadyAt: new Date('2026-11-03T09:00:00Z'), markedReadyBy: 'u1', reopenCount: 0, reopenReason: '' }],
+      [{ id: 'd1', generatedAt: new Date('2026-11-03T14:05:00Z'), downloadCount: 3 },
+       { id: 'd2', generatedAt: new Date('2026-11-03T14:04:00Z'), downloadCount: 0 }],
+      [{ name: 'Krishna' }],
+    ];
+    allow();
+    const p = await repo.batchProvenance(ctx('manager'), 'b1');
+    expect(p?.markedReadyByName).toBe('Krishna');
+    expect(p?.registers).toBe(2);
+    expect(p?.fromStorage).toBe(1);
+    expect(p?.generatedAt).toBe('2026-11-03T14:05:00.000Z');
+  });
+
+  it('gives a client nothing for another firm\'s batch', async () => {
+    results = [[{ id: 'b1', engagementId: THEIRS }]];
+    deny();
+    expect(await repo.batchProvenance(ctx('client'), 'b1')).toBeNull();
   });
 });

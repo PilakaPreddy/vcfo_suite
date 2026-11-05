@@ -1,4 +1,4 @@
-import { filingStatus, sortByDueDate, type FilingRow, type FilingStatus } from '@/lib/compliance/filings';
+import { DUE_SOON_DAYS, filingStatus, sortByDueDate, type FilingRow, type FilingStatus } from '@/lib/compliance/filings';
 import type { PortalFiling } from '@/lib/client-portal/compliances';
 import { daysUntil, filingWord, type SixWord } from '@/views/compliances/spectrum-status';
 
@@ -17,9 +17,6 @@ import { daysUntil, filingWord, type SixWord } from '@/views/compliances/spectru
  * client rows under the band are the instances due on that date, so "n of m
  * filed" counts the clients of that one period.
  */
-
-/** "Due in the next 15 days" (owner decision for the Obligations rail). */
-export const SOON_DAYS = 15;
 
 export interface ObligationClientRow {
   /** The instance id. */
@@ -124,7 +121,7 @@ export function groupObligations(
 export function dueWithinSoon(row: Pick<FilingRow, 'filedOn' | 'dueDate'>, now: Date): boolean {
   if (row.filedOn) return false;
   const days = daysUntil(row.dueDate, now);
-  return days !== null && days >= 0 && days <= SOON_DAYS;
+  return days !== null && days >= 0 && days <= DUE_SOON_DAYS;
 }
 
 /**
@@ -135,7 +132,7 @@ export function dueWithinSoon(row: Pick<FilingRow, 'filedOn' | 'dueDate'>, now: 
 export function waitingOnClient(row: Pick<FilingRow, 'filedOn' | 'dueDate'>, detail: PortalFiling | undefined, now: Date): boolean {
   if (row.filedOn || !detail || detail.dataReceivedOn) return false;
   const days = daysUntil(row.dueDate, now);
-  return days !== null && days <= SOON_DAYS;
+  return days !== null && days <= DUE_SOON_DAYS;
 }
 
 export type ObligationFilter = '' | 'overdue' | 'soon' | 'waiting' | 'done' | 'none';

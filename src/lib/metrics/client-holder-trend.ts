@@ -73,7 +73,7 @@ export function holderChanges(
 }
 
 /** The holder of one step at the end of `period`; `undefined` when it cannot be known. */
-export function holderAsOf(events: HolderHistoryEvent[] | undefined, period: TrendPeriod, since: Date): StepHolder | null | undefined {
+function holderAsOf(events: HolderHistoryEvent[] | undefined, period: TrendPeriod, since: Date): StepHolder | null | undefined {
   const end = period.end.getTime();
   let last: HolderHistoryEvent | undefined;
   for (const e of events ?? []) {

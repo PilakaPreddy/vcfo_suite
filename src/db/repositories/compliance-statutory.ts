@@ -344,7 +344,7 @@ async function buildDetail(
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /** The obligation's own rule as words, when it has no activity (GSTR-9, LLP Form 11 and Form 8). */
-export function dueRuleText(o: Pick<ObligationRow, 'dueRule' | 'applicabilityNote'>): string {
+function dueRuleText(o: Pick<ObligationRow, 'dueRule' | 'applicabilityNote'>): string {
   const r = (o.dueRule ?? {}) as { kind?: string; day?: number; month?: number; days?: number };
   switch (r.kind) {
     case 'fixed-calendar-date':

@@ -1,3 +1,4 @@
+import { notifyTeamAssignmentSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAnyRole } from '@/auth/guards';
@@ -11,7 +12,6 @@ import {
 } from '@/db/repositories/engagement-leads';
 import { getEngagementById, toAppEngagement } from '@/db/repositories/engagements';
 import { engagementDbId } from '@/lib/projects/legacy-engagement-ids';
-import { notifyTeamAssignment } from '@/lib/email/notify-team-assignment';
 import { emptyEmailDispatch } from '@/lib/email/email-dispatch';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -89,7 +89,7 @@ export async function POST(request: Request, context: RouteContext) {
       const eng = row ? toAppEngagement(row) : null;
       const email = emptyEmailDispatch();
       if (eng && removed?.profileId && removed.email) {
-        const part = await notifyTeamAssignment({
+        const part = await notifyTeamAssignmentSoon({
           engagementAppId: eng.id,
           engagementSlug: eng.slug,
           companyName: eng.companyName,
@@ -108,7 +108,7 @@ export async function POST(request: Request, context: RouteContext) {
         email.failed.push(...part.failed);
       }
       if (eng && added?.profileId && added.email) {
-        const part = await notifyTeamAssignment({
+        const part = await notifyTeamAssignmentSoon({
           engagementAppId: eng.id,
           engagementSlug: eng.slug,
           companyName: eng.companyName,
@@ -139,7 +139,7 @@ export async function POST(request: Request, context: RouteContext) {
     const eng = row ? toAppEngagement(row) : null;
     let email = emptyEmailDispatch();
     if (eng && added?.profileId && added.email) {
-      email = await notifyTeamAssignment({
+      email = await notifyTeamAssignmentSoon({
         engagementAppId: eng.id,
         engagementSlug: eng.slug,
         companyName: eng.companyName,
@@ -187,7 +187,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     const eng = row ? toAppEngagement(row) : null;
     let email = emptyEmailDispatch();
     if (eng && removed?.profileId && removed.email) {
-      email = await notifyTeamAssignment({
+      email = await notifyTeamAssignmentSoon({
         engagementAppId: eng.id,
         engagementSlug: eng.slug,
         companyName: eng.companyName,

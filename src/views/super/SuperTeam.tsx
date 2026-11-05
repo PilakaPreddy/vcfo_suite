@@ -18,7 +18,7 @@ import { AssignTaskDialog } from '@/components/super/assign/AssignTaskDialog';
 import { useEscalations } from '@/components/super/escalations/use-escalations';
 import { SuperCapacityCard } from '@/components/super/overview/SuperCapacityCard';
 import { SuperReassignCard } from '@/components/super/overview/SuperReassignCard';
-import { medianResponse } from '@/components/super/insights/super-insights-model';
+import { medianResponse } from '@/lib/super/super-insights-model';
 import {
   NameCell,
   PersonAvatar,
@@ -27,9 +27,9 @@ import {
   SuperPageHead,
   SuperPageSkeleton,
 } from '@/components/super/parts/super-parts';
-import { plainDay } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import { formatSuperAgo } from '@/components/super/overview/super-overview-format';
-import type { SuperTeamLead, SuperTeamManager } from '@/components/super/insights/super-insights-model';
+import type { SuperTeamLead, SuperTeamManager } from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
 import { CapacityControl, LoadCell, OnTimeCell } from '@/components/metrics/people-cells';
 import { indexPeople, usePeopleMetrics } from '@/components/metrics/use-metrics';
@@ -48,7 +48,7 @@ import { cn } from '@/lib/utils';
  * Capacity card bands each manager's load against the capacity an admin set. Assign client and
  * Assign task open the same dialogs as the Overview. People are managed on the admin People page.
  */
-export const SUPER_TEAM_HREF = '/app/super/team';
+const SUPER_TEAM_HREF = '/app/super/team';
 
 const PEOPLE_HREF = '/app/admin/people';
 

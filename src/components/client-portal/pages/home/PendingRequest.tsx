@@ -17,7 +17,7 @@ import { HOME_QUERY_KEY } from './useHome';
 import { dShort } from './derive';
 
 /** Withdraw the caller's own pending request; returns true when the server accepted it. */
-export function useWithdrawRequest() {
+function useWithdrawRequest() {
   const qc = useQueryClient();
   const { toast } = usePortal();
   const [busy, setBusy] = useState(false);
@@ -37,7 +37,7 @@ export function useWithdrawRequest() {
   return { withdraw, busy };
 }
 
-export function PendingRequestPopover({
+function PendingRequestPopover({
   pending,
   manager,
   trigger,

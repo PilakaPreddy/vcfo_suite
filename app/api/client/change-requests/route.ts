@@ -1,3 +1,4 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import {
@@ -9,7 +10,6 @@ import {
   checklistStateForViewer,
   clientRequestStepChange,
 } from '@/db/repositories/engagements';
-import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 import { isDirectFlowStep } from '@/lib/incorporation/pre-inc-direct-flow';
 
 /**
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         { coiTo: body.coiBefore },
       );
       if (!created) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
-      const email = await notifyEngagementEvent({
+      const email = await notifyEngagementEventSoon({
         engagementId: body.engagementId.trim(),
         itemId: 'pre-12',
         event: 'client_change_requested',
@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       checklistState = checklistStateForViewer(guard.ctx, reopened.checklistState);
       if (isDirectFlowStep(stepId.trim())) {
         // The client reopened a submitted step: every party hears it.
-        await notifyEngagementEvent({
+        await notifyEngagementEventSoon({
           engagementId: engagementId.trim(),
           itemId: stepId.trim(),
           event: 'step_reopened',
@@ -123,7 +123,7 @@ export async function POST(request: Request) {
     }
 
     // The lead did the work and the manager approved it, so both hear about it.
-    const email = await notifyEngagementEvent({
+    const email = await notifyEngagementEventSoon({
       engagementId: engagementId.trim(),
       itemId: stepId.trim(),
       event: 'client_change_requested',

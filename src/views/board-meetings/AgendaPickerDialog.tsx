@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, ChevronsLeft, GripVertical, Lock, Plus, X } from 'lucide-react';
+import { useEffect, useMemo, useState, type DragEvent } from 'react';
+import { ArrowLeft, ArrowRight, ChevronsRight, GripVertical, Lock, Plus, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,10 +19,17 @@ import { WithBlanks } from './parts';
 const focusOnMount = (el: HTMLInputElement | null) => el?.focus();
 
 /**
- * AGENDA PICKER — the two-box pop-up of the board meeting agendas page: this meeting's agenda on
- * the left, the SBC agenda library (224 items, 16 topics) on the right, arrows between them.
- * Fixed items stay at the top and the end; sub-points go one level deep (decision D1).
+ * AGENDA PICKER — the two-box pop-up of the board meeting agendas page: the SBC agenda library
+ * (224 items, 16 topics) on the left, this meeting's agenda on the right (owner, 3 Nov 2026).
+ * An item moves by dragging it across (dropped where the line shows), by the + button, by
+ * double-click, or by ticking items and using the arrows. Agenda items drag to reorder and
+ * drag back to the library to remove. Fixed items stay at the top and the end; sub-points go
+ * one level deep (decision D1).
  */
+
+/** What is being dragged: a library item (by id) or an agenda item (by key). */
+type Drag = { from: 'lib'; id: string } | { from: 'agenda'; key: string };
+const DRAG_TYPE = 'application/x-vcfo-agenda';
 
 const SHORT: Record<string, string> = {
   'Opening and Procedural Matters': 'Procedural',
@@ -83,6 +90,10 @@ export function AgendaPickerDialog({
   const [custom, setCustom] = useState('');
   const [subFor, setSubFor] = useState<string | null>(null);
   const [subText, setSubText] = useState('');
+  const [drag, setDrag] = useState<Drag | null>(null);
+  /** Where a drop lands in the agenda: the index of the item it goes before. */
+  const [dropAt, setDropAt] = useState<number | null>(null);
+  const [overLibrary, setOverLibrary] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -121,13 +132,64 @@ export function AgendaPickerDialog({
     const mid = list.filter((a) => !a.libraryId || !fixed.has(a.libraryId));
     return [...top.map((a) => ({ ...a, fixed: 'top' as const })), ...mid.map((a) => ({ ...a, fixed: undefined })), ...end.map((a) => ({ ...a, fixed: 'end' as const }))];
   };
-  const add = (ids: string[]) => {
+  const add = (ids: string[], at?: number) => {
     const fresh = ids
       .map((id) => byId.get(id))
       .filter((i): i is LibraryItemDto => Boolean(i))
       .map((i) => ({ key: key(), libraryId: i.id, text: agendaTextOf(i.wording), subs: [] }));
-    setLeft((l) => order([...l, ...fresh]));
+    setLeft((l) => order(at === undefined ? [...l, ...fresh] : [...l.slice(0, at), ...fresh, ...l.slice(at)]));
     setSelR([]);
+  };
+  /** Move an agenda item so it sits before the item now at `at`. */
+  const moveTo = (k: string, at: number) =>
+    setLeft((l) => {
+      const from = l.findIndex((a) => a.key === k);
+      if (from < 0 || l[from]!.fixed) return l;
+      const item = l[from]!;
+      const rest = l.filter((a) => a.key !== k);
+      const to = at > from ? at - 1 : at;
+      return order([...rest.slice(0, to), item, ...rest.slice(to)]);
+    });
+
+  const startDrag = (e: DragEvent, d: Drag) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData(DRAG_TYPE, JSON.stringify(d));
+    e.dataTransfer.setData('text/plain', d.from === 'lib' ? d.id : d.key);
+    setDrag(d);
+  };
+  const endDrag = () => {
+    setDrag(null);
+    setDropAt(null);
+    setOverLibrary(false);
+  };
+  const readDrag = (e: DragEvent): Drag | null => {
+    try {
+      return (JSON.parse(e.dataTransfer.getData(DRAG_TYPE)) as Drag) ?? drag;
+    } catch {
+      return drag;
+    }
+  };
+  /** Over an agenda row: the drop goes before it (top half) or after it (bottom half). */
+  const overRow = (e: DragEvent<HTMLElement>, i: number) => {
+    if (!drag) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const box = e.currentTarget.getBoundingClientRect();
+    setDropAt(e.clientY - box.top < box.height / 2 ? i : i + 1);
+  };
+  const dropOnAgenda = (e: DragEvent) => {
+    e.preventDefault();
+    const d = readDrag(e);
+    const at = dropAt ?? left.length;
+    if (d?.from === 'lib') add([d.id], at);
+    if (d?.from === 'agenda') moveTo(d.key, at);
+    endDrag();
+  };
+  const dropOnLibrary = (e: DragEvent) => {
+    e.preventDefault();
+    const d = readDrag(e);
+    if (d?.from === 'agenda') remove([d.key]);
+    endDrag();
   };
   const remove = (keys: string[]) => {
     setLeft((l) => l.filter((a) => a.fixed || !keys.includes(a.key)));
@@ -155,11 +217,111 @@ export function AgendaPickerDialog({
           <div className="min-w-0">
             <DialogTitle className="text-[16px] font-medium">Agenda · pick from the SBC library</DialogTitle>
             <DialogDescription className="text-[12.5px] text-ink-muted">
-              {items.length} items in {lib.data?.topics.length ?? 16} topics. Double-click moves an item. Fixed items stay at the top and the end.
+              {items.length} items in {lib.data?.topics.length ?? 16} topics. Drag an item into the agenda on the right, or double-click it. Fixed items stay at the top and the end.
             </DialogDescription>
           </div>
         </div>
         <div className="grid min-h-[560px] grid-cols-1 md:grid-cols-[minmax(0,1fr)_64px_minmax(0,1fr)]">
+          <div className="flex min-w-0 flex-col">
+            <div className="flex min-h-[52px] items-center justify-between gap-2 border-b border-line-soft px-4">
+              <h3 className="m-0 flex items-center gap-2 text-[15px] font-medium">
+                Agenda library <span className="rounded-[4px] bg-brand-soft px-1.5 text-[12px] font-medium text-brand-text">{pool.length}</span>
+              </h3>
+              <label className="flex items-center gap-2 text-[12.5px] text-ink-2">
+                <input type="checkbox" checked={hideListed} onChange={(e) => setHideListed(e.target.checked)} className="h-4 w-4 accent-[oklch(var(--brand))]" />
+                Hide listed-company items
+              </label>
+            </div>
+            <div className="px-4 pt-2.5">
+              <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search items, IDs or topics" aria-label="Search the agenda library" className="h-9" />
+            </div>
+            <div role="toolbar" aria-label="Filter the library" className="flex gap-1.5 overflow-x-auto border-b border-line-soft px-4 py-2">
+              {filters.map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={filter === k}
+                  onClick={() => {
+                    setFilter(k!);
+                    setQuery('');
+                  }}
+                  className={cn('h-[26px] flex-none rounded-[4px] border-1.5 px-2 text-[12px] font-medium', filter === k ? 'border-brand bg-brand text-white' : 'border-line-strong bg-surface text-ink-muted')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div
+              className={cn('flex max-h-[520px] flex-1 flex-col gap-0.5 overflow-auto p-1.5', overLibrary && 'bg-danger-soft/40 outline-dashed outline-1.5 -outline-offset-4 outline-danger/50')}
+              aria-label="Agenda library"
+              onDragOver={(e) => {
+                if (drag?.from !== 'agenda') return;
+                e.preventDefault();
+                setOverLibrary(true);
+              }}
+              onDragLeave={(e) => {
+                if (e.target === e.currentTarget) setOverLibrary(false);
+              }}
+              onDrop={dropOnLibrary}
+            >
+              {drag?.from === 'agenda' ? <p className="m-0 p-2 text-center text-[12.5px] text-danger">Drop here to remove it from the agenda</p> : null}
+              {lib.isPending ? <p className="p-6 text-center text-[13px] text-ink-muted">Loading the library…</p> : null}
+              {groups.map((g) => (
+                <div key={g.label} className="flex flex-col gap-0.5">
+                  <div className={cn('sticky top-0 z-[1] flex justify-between bg-surface px-2.5 pb-1 pt-2.5 text-[11px] font-medium uppercase tracking-[0.06em]', g.sug ? 'text-brand-text' : 'text-ink-muted')}>
+                    <span>{g.label}</span>
+                    <span>{g.rows.length}</span>
+                  </div>
+                  {g.rows.map((i) => {
+                    const sel = selR.includes(i.id);
+                    const fields = placeholdersIn(i.wording).length;
+                    return (
+                      <div
+                        key={i.id}
+                        draggable
+                        onDragStart={(e) => startDrag(e, { from: 'lib', id: i.id })}
+                        onDragEnd={endDrag}
+                        onDoubleClick={() => add([i.id])}
+                        className={cn(
+                          'grid cursor-grab grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-md border-1.5 px-2.5 py-2 active:cursor-grabbing',
+                          sel ? 'border-brand/45 bg-brand-soft' : 'border-transparent bg-surface',
+                          drag?.from === 'lib' && drag.id === i.id && 'opacity-50',
+                        )}
+                      >
+                        <input type="checkbox" aria-label={`Select ${i.id}`} checked={sel} onChange={() => setSelR((s) => toggle(s, i.id))} className="h-4 w-4 accent-[oklch(var(--brand))]" />
+                        <span className="flex min-w-0 flex-col gap-0.5">
+                          <b className="text-[13.5px] font-medium">{i.scenario}</b>
+                          <span className="text-[12.5px] text-ink-2">{i.wording}</span>
+                          <span className="flex flex-wrap items-center gap-1.5 text-[11.5px] text-ink-muted">
+                            <span className="font-mono text-[11px]">{i.id}</span>
+                            <Tag tone={kindOf(i) === 'Resolution' ? 'prog' : 'idle'}>{kindOf(i)}</Tag>
+                            <Tag tone={appTone(i.applicability)}>{i.applicability}</Tag>
+                            {fields ? <Tag tone="warn">{fields === 1 ? '1 field' : `${fields} fields`}</Tag> : null}
+                          </span>
+                        </span>
+                        <Button size="iconSm" variant="quiet" aria-label={`Add ${i.id}`} onClick={() => add([i.id])}>
+                          <Plus className="h-3.5 w-3.5" aria-hidden />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {!lib.isPending && groups.length === 0 ? <p className="p-6 text-center text-[13px] text-ink-muted">{q ? 'No items found' : 'All suggested items added'}</p> : null}
+            </div>
+          </div>
+          <div className="flex items-center justify-center gap-2.5 border-y-1.5 border-line bg-surface-sunken p-2.5 md:flex-col md:border-x-1.5 md:border-y-0">
+            <Button size="icon" aria-label="Add the selected items to the agenda" disabled={!selR.length} onClick={() => add(selR)}>
+              <ArrowRight aria-hidden />
+            </Button>
+            <Button size="icon" variant="secondary" aria-label="Remove the selected items from the agenda" disabled={!selL.length} onClick={() => remove(selL)}>
+              <ArrowLeft aria-hidden />
+            </Button>
+            <Button size="icon" variant="secondary" aria-label="Add all suggested items" disabled={!sug.length} onClick={() => add(sug.map((i) => i.id))}>
+              <ChevronsRight aria-hidden />
+            </Button>
+          </div>
+
           <div className="flex min-w-0 flex-col">
             <div className="flex min-h-[52px] items-center justify-between gap-2 border-b border-line-soft px-4">
               <h3 className="m-0 flex items-center gap-2 text-[15px] font-medium">
@@ -169,18 +331,32 @@ export function AgendaPickerDialog({
                 Clear
               </Button>
             </div>
-            <ol className="m-0 flex max-h-[520px] flex-1 list-none flex-col gap-0.5 overflow-auto p-1.5" aria-label="This meeting's agenda">
+            <ol
+              className={cn('m-0 flex max-h-[520px] flex-1 list-none flex-col gap-0.5 overflow-auto p-1.5', drag?.from === 'lib' && 'bg-brand-soft/40 outline-dashed outline-1.5 -outline-offset-4 outline-brand/50')}
+              aria-label="This meeting's agenda"
+              onDragOver={(e) => {
+                if (!drag) return;
+                e.preventDefault();
+                if (e.target === e.currentTarget) setDropAt(left.length);
+              }}
+              onDrop={dropOnAgenda}
+            >
               {left.map((a, i) => {
                 const lib = a.libraryId ? byId.get(a.libraryId) : null;
                 const sel = selL.includes(a.key);
                 return (
-                  <li key={a.key} className="flex flex-col gap-0.5">
+                  <li key={a.key} className={cn('flex flex-col gap-0.5 border-t-2', drag && dropAt === i ? 'border-brand' : 'border-transparent')}>
                     <div
+                      draggable={!a.fixed}
+                      onDragStart={(e) => startDrag(e, { from: 'agenda', key: a.key })}
+                      onDragEnd={endDrag}
+                      onDragOver={(e) => overRow(e, i)}
                       onDoubleClick={() => !a.fixed && remove([a.key])}
                       className={cn(
                         'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-md border-1.5 px-2.5 py-2',
                         sel ? 'border-brand/45 bg-brand-soft' : 'border-transparent',
-                        a.fixed ? 'bg-surface-sunken' : 'bg-surface',
+                        a.fixed ? 'bg-surface-sunken' : 'cursor-grab bg-surface active:cursor-grabbing',
+                        drag?.from === 'agenda' && drag.key === a.key && 'opacity-50',
                       )}
                     >
                       <span className="flex items-center gap-1.5">
@@ -274,6 +450,9 @@ export function AgendaPickerDialog({
                   </li>
                 );
               })}
+              <li aria-hidden className={cn('min-h-10 flex-1 border-t-2', drag && dropAt === left.length ? 'border-brand' : 'border-transparent')}>
+                {drag?.from === 'lib' ? <p className="m-0 p-3 text-center text-[12.5px] text-brand-text">Drop here to add it to the agenda</p> : null}
+              </li>
             </ol>
             <div className="flex gap-2 border-t border-line-soft px-4 py-2.5">
               <Input value={custom} onChange={(e) => setCustom(e.target.value)} placeholder="Add your own item" aria-label="Add your own item" className="h-9" />
@@ -291,86 +470,6 @@ export function AgendaPickerDialog({
             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-2.5 border-y-1.5 border-line bg-surface-sunken p-2.5 md:flex-col md:border-x-1.5 md:border-y-0">
-            <Button size="icon" aria-label="Add the selected items to the agenda" disabled={!selR.length} onClick={() => add(selR)}>
-              <ArrowLeft aria-hidden />
-            </Button>
-            <Button size="icon" variant="secondary" aria-label="Remove the selected items from the agenda" disabled={!selL.length} onClick={() => remove(selL)}>
-              <ArrowRight aria-hidden />
-            </Button>
-            <Button size="icon" variant="secondary" aria-label="Add all suggested items" disabled={!sug.length} onClick={() => add(sug.map((i) => i.id))}>
-              <ChevronsLeft aria-hidden />
-            </Button>
-          </div>
-
-          <div className="flex min-w-0 flex-col">
-            <div className="flex min-h-[52px] items-center justify-between gap-2 border-b border-line-soft px-4">
-              <h3 className="m-0 flex items-center gap-2 text-[15px] font-medium">
-                Agenda library <span className="rounded-[4px] bg-brand-soft px-1.5 text-[12px] font-medium text-brand-text">{pool.length}</span>
-              </h3>
-              <label className="flex items-center gap-2 text-[12.5px] text-ink-2">
-                <input type="checkbox" checked={hideListed} onChange={(e) => setHideListed(e.target.checked)} className="h-4 w-4 accent-[oklch(var(--brand))]" />
-                Hide listed-company items
-              </label>
-            </div>
-            <div className="px-4 pt-2.5">
-              <Input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search items, IDs or topics" aria-label="Search the agenda library" className="h-9" />
-            </div>
-            <div role="toolbar" aria-label="Filter the library" className="flex gap-1.5 overflow-x-auto border-b border-line-soft px-4 py-2">
-              {filters.map(([k, label]) => (
-                <button
-                  key={k}
-                  type="button"
-                  aria-pressed={filter === k}
-                  onClick={() => {
-                    setFilter(k!);
-                    setQuery('');
-                  }}
-                  className={cn('h-[26px] flex-none rounded-[4px] border-1.5 px-2 text-[12px] font-medium', filter === k ? 'border-brand bg-brand text-white' : 'border-line-strong bg-surface text-ink-muted')}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="flex max-h-[520px] flex-1 flex-col gap-0.5 overflow-auto p-1.5" aria-label="Agenda library">
-              {lib.isPending ? <p className="p-6 text-center text-[13px] text-ink-muted">Loading the library…</p> : null}
-              {groups.map((g) => (
-                <div key={g.label} className="flex flex-col gap-0.5">
-                  <div className={cn('sticky top-0 z-[1] flex justify-between bg-surface px-2.5 pb-1 pt-2.5 text-[11px] font-medium uppercase tracking-[0.06em]', g.sug ? 'text-brand-text' : 'text-ink-muted')}>
-                    <span>{g.label}</span>
-                    <span>{g.rows.length}</span>
-                  </div>
-                  {g.rows.map((i) => {
-                    const sel = selR.includes(i.id);
-                    const fields = placeholdersIn(i.wording).length;
-                    return (
-                      <div
-                        key={i.id}
-                        onDoubleClick={() => add([i.id])}
-                        className={cn('grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5 rounded-md border-1.5 px-2.5 py-2', sel ? 'border-brand/45 bg-brand-soft' : 'border-transparent bg-surface')}
-                      >
-                        <input type="checkbox" aria-label={`Select ${i.id}`} checked={sel} onChange={() => setSelR((s) => toggle(s, i.id))} className="h-4 w-4 accent-[oklch(var(--brand))]" />
-                        <span className="flex min-w-0 flex-col gap-0.5">
-                          <b className="text-[13.5px] font-medium">{i.scenario}</b>
-                          <span className="text-[12.5px] text-ink-2">{i.wording}</span>
-                          <span className="flex flex-wrap items-center gap-1.5 text-[11.5px] text-ink-muted">
-                            <span className="font-mono text-[11px]">{i.id}</span>
-                            <Tag tone={kindOf(i) === 'Resolution' ? 'prog' : 'idle'}>{kindOf(i)}</Tag>
-                            <Tag tone={appTone(i.applicability)}>{i.applicability}</Tag>
-                            {fields ? <Tag tone="warn">{fields === 1 ? '1 field' : `${fields} fields`}</Tag> : null}
-                          </span>
-                        </span>
-                        <Button size="iconSm" variant="quiet" aria-label={`Add ${i.id}`} onClick={() => add([i.id])}>
-                          <Plus className="h-3.5 w-3.5" aria-hidden />
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-              {!lib.isPending && groups.length === 0 ? <p className="p-6 text-center text-[13px] text-ink-muted">{q ? 'No items found' : 'All suggested items added'}</p> : null}
-            </div>
-          </div>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t-1.5 border-line bg-surface-sunken px-5 py-3">
           <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] text-ink-muted">

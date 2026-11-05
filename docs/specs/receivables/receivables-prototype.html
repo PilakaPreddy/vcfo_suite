@@ -1,0 +1,1168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VCFO Receivables</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  Receivables prototype (single file, no build step, no canvas).
+  Two routes, switched with the demo bar or the URL hash:
+    #/receivables          client page, no login, read-only, published version only
+    #/receivables/manager  manager login, Outlook, sheet editor, HSBC feed, reminders, email, share
+  All data is demo data shaped like "Receivables Summary Week 1 November.xlsx".
+  The demo date is fixed at 3 Nov 2026 so overdue days match the sheet.
+-->
+<style>
+:root {
+  color-scheme: light;
+  --surface: oklch(95.7% 0.008 254);
+  --raised: #fff;
+  --sunken: oklch(96.6% 0.006 255);
+  --hover: oklch(97.3% 0.006 265);
+  --line: oklch(88.9% 0.016 257);
+  --line-soft: oklch(95.6% 0.007 248);
+  --line-strong: oklch(81.5% 0.022 256);
+  --ink: oklch(26% 0.06 251);
+  --ink-2: oklch(42.3% 0.05 256);
+  --ink-muted: oklch(53.4% 0.041 257);
+  --ink-faint: oklch(66.8% 0.031 255);
+  --brand: oklch(57.8% 0.235 278);
+  --brand-strong: oklch(52.7% 0.239 277);
+  --brand-soft: oklch(95.5% 0.023 289);
+  --brand-text: oklch(49.3% 0.232 277);
+  --brand-line: oklch(87.7% 0.063 287);
+  --navy: oklch(26% 0.06 251);
+  --positive: oklch(51% 0.125 154);
+  --positive-soft: oklch(95% 0.03 158);
+  --warning: oklch(50.6% 0.126 55);
+  --warning-soft: oklch(96.1% 0.034 79);
+  --danger: oklch(51.9% 0.197 22);
+  --danger-soft: oklch(94.6% 0.028 9);
+  --info: oklch(50% 0.172 257);
+  --info-soft: oklch(95.5% 0.019 256);
+  --upcoming: oklch(47.4% 0.04 258);
+  --upcoming-soft: oklch(95.4% 0.007 261);
+  --scrim: rgba(10, 37, 64, 0.42);
+  --shadow-float: 0 16px 40px -12px rgba(10, 37, 64, 0.28), 0 4px 10px -4px rgba(10, 37, 64, 0.1);
+  --shadow-dialog: 0 32px 64px -16px rgba(10, 37, 64, 0.4), 0 12px 24px -12px rgba(10, 37, 64, 0.18);
+  --shadow-control: 0 1px 2px rgba(10, 37, 64, 0.05);
+  --sans: 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  --r: 10px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--surface);
+  color: var(--ink);
+  font: 13px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--brand-text); }
+.mono { font-family: var(--mono); font-size: 12px; }
+.num { font-family: var(--mono); font-size: 12px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.muted { color: var(--ink-muted); }
+.faint { color: var(--ink-faint); }
+.hidden { display: none !important; }
+
+/* Demo bar: not part of the product */
+.demobar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 8px 16px; background: var(--navy); color: oklch(85.7% 0.024 256);
+  font-size: 12px;
+}
+.demobar .tag { color: oklch(71% 0.047 257); }
+.demobar .addr {
+  flex: 1 1 260px; min-width: 0; padding: 4px 10px; border-radius: 6px;
+  background: oklch(31% 0.055 250); font-family: var(--mono); font-size: 12px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.demobar .addr b { color: #fff; font-weight: 500; }
+.seg { display: inline-flex; border: 1px solid oklch(36% 0.07 254); border-radius: 7px; overflow: hidden; }
+.seg button { border: 0; background: transparent; padding: 4px 12px; cursor: pointer; color: inherit; }
+.seg button.on { background: oklch(36.2% 0.101 268); color: #fff; }
+
+/* Layout */
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 16px 48px; }
+.top {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 14px 0;
+}
+.brand { font-weight: 700; letter-spacing: 0.06em; font-size: 13px; }
+.brand span { font-weight: 500; letter-spacing: 0; color: var(--ink-muted); }
+.top-r { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.who { color: var(--ink-2); font-weight: 500; }
+.tabs {
+  display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 16px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.tabs button {
+  border: 0; background: none; padding: 10px 14px; cursor: pointer; white-space: nowrap;
+  color: var(--ink-muted); font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tabs button.on { color: var(--ink); border-bottom-color: var(--ink); }
+.tabs .count {
+  display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 6px; border-radius: 9px;
+  background: var(--upcoming-soft); color: var(--ink-2); font-size: 11px; text-align: center;
+}
+.card {
+  background: var(--raised); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 16px; margin-bottom: 16px;
+}
+.card h3 { margin: 0 0 4px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); }
+.card .sub { margin: 0 0 12px; color: var(--ink-muted); }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.spread { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 14px;
+  border-radius: 8px; border: 1px solid var(--line-strong); background: var(--raised);
+  cursor: pointer; font-weight: 500; white-space: nowrap; box-shadow: var(--shadow-control);
+  text-decoration: none; color: var(--ink);
+}
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.primary:hover { background: var(--brand-strong); }
+.btn.navy { background: var(--navy); border-color: var(--navy); color: #fff; }
+.btn.ghost { border-color: transparent; background: transparent; box-shadow: none; }
+.btn.ghost:hover { background: var(--hover); }
+.btn.sm { height: 26px; padding: 0 9px; font-size: 12px; border-radius: 6px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.danger-text { color: var(--danger); }
+
+/* Chips: status always carries a word */
+.chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 500; white-space: nowrap; line-height: 18px;
+}
+.chip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.chip.positive { background: var(--positive-soft); color: var(--positive); }
+.chip.warning { background: var(--warning-soft); color: var(--warning); }
+.chip.danger { background: var(--danger-soft); color: var(--danger); }
+.chip.info { background: var(--info-soft); color: var(--info); }
+.chip.neutral { background: var(--upcoming-soft); color: var(--upcoming); }
+.chip.brand { background: var(--brand-soft); color: var(--brand-text); }
+
+/* Forms */
+.field { display: grid; gap: 4px; margin-bottom: 12px; }
+.field label { font-size: 12px; font-weight: 500; color: var(--ink-2); }
+.input, .select, textarea.input {
+  height: 34px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 8px;
+  background: var(--raised); width: 100%; outline: none;
+}
+textarea.input { height: auto; padding: 8px 10px; resize: vertical; }
+.input:focus, .select:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.select.sm { height: 30px; width: auto; font-size: 12px; padding: 0 8px; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.filters label { font-size: 12px; color: var(--ink-muted); display: inline-flex; align-items: center; gap: 6px; }
+.check { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
+
+/* Publish bar */
+.pubbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 12px 16px; margin-bottom: 16px; border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--raised);
+}
+.pubbar.dirty { border-color: oklch(85% 0.07 70); background: var(--warning-soft); }
+.pubbar .state { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* Tables */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r); background: var(--raised); margin-bottom: 16px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 7px 10px; border-bottom: 1px solid var(--line-soft); text-align: left; vertical-align: middle; }
+th { font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.04em; background: var(--sunken); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+.block-title td {
+  background: var(--raised); font-weight: 600; font-size: 12px; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink); padding-top: 12px; border-bottom: 1px solid var(--line);
+}
+.total td { font-weight: 600; background: var(--sunken); border-top: 1px solid var(--line); }
+.grand { display: flex; justify-content: flex-end; gap: 24px; align-items: baseline; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--r); background: var(--raised); }
+.grand .big { font-family: var(--mono); font-size: 20px; font-weight: 500; }
+td.actions { white-space: nowrap; text-align: right; }
+.cell {
+  width: 100%; min-width: 70px; height: 28px; padding: 0 6px; border: 1px solid transparent;
+  border-radius: 6px; background: transparent; outline: none;
+}
+.cell:hover { border-color: var(--line); }
+.cell:focus { border-color: var(--brand); background: var(--raised); box-shadow: 0 0 0 3px var(--brand-soft); }
+.cell.amt { text-align: right; font-family: var(--mono); font-size: 12px; min-width: 110px; }
+.cell.inv { font-family: var(--mono); font-size: 12px; min-width: 84px; }
+select.cell { min-width: 150px; cursor: pointer; }
+.cell.client { min-width: 130px; }
+table.sheet { min-width: 1040px; }
+input[type=date].cell { min-width: 128px; }
+.recv-row td { background: oklch(98% 0.012 158); }
+.empty { padding: 28px; text-align: center; color: var(--ink-muted); }
+
+/* Tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.tile { background: var(--raised); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; }
+.tile .k { font-size: 12px; color: var(--ink-muted); }
+.tile .v { font-family: var(--mono); font-size: 20px; font-weight: 500; margin-top: 2px; }
+.tile .s { font-size: 12px; color: var(--ink-muted); }
+
+/* Lists */
+.list { display: grid; gap: 0; }
+.li { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.li:last-child { border-bottom: 0; }
+.confirm-card { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; margin-bottom: 10px; background: var(--raised); }
+
+/* Auth screens */
+.auth { min-height: calc(100vh - 44px); display: grid; place-items: center; padding: 24px 16px; }
+.auth .box { width: 100%; max-width: 380px; background: var(--raised); border: 1px solid var(--line); border-radius: 14px; padding: 28px; box-shadow: var(--shadow-float); }
+.auth h1 { margin: 0 0 2px; font-size: 20px; }
+.auth p { margin: 0 0 18px; color: var(--ink-muted); }
+
+/* Modal */
+.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 40; display: grid; place-items: center; padding: 16px; }
+.modal {
+  width: 100%; max-width: 560px; max-height: calc(100vh - 32px); overflow: auto;
+  background: var(--raised); border-radius: 14px; box-shadow: var(--shadow-dialog);
+}
+.modal.wide { max-width: 860px; }
+.modal-h { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.modal-h h2 { margin: 0; font-size: 15px; }
+.modal-b { padding: 16px 20px; }
+.modal-f { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.kv { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; margin-bottom: 14px; }
+.kv dt { color: var(--ink-muted); }
+.kv dd { margin: 0; }
+
+/* Compose */
+.rcpt { display: flex; gap: 8px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--line-soft); }
+.rcpt .lbl { width: 34px; flex: none; padding-top: 4px; color: var(--ink-muted); font-size: 12px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; flex: 1; min-width: 0; }
+.rchip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 9px; border-radius: 999px; background: var(--sunken); border: 1px solid var(--line); font-size: 12px; max-width: 100%; }
+.rchip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rchip button { border: 0; background: none; cursor: pointer; color: var(--ink-muted); width: 18px; height: 18px; border-radius: 50%; line-height: 1; }
+.rchip button:hover { background: var(--line); color: var(--ink); }
+.chipin { flex: 1; min-width: 160px; border: 0; outline: none; height: 26px; background: transparent; }
+.body-edit {
+  margin-top: 12px; min-height: 260px; max-height: 46vh; overflow: auto; padding: 12px 14px;
+  border: 1px solid var(--line-strong); border-radius: 8px; outline: none; background: var(--raised);
+  font: 13px/1.5 Calibri, 'Segoe UI', var(--sans);
+}
+.body-edit:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft); }
+.notice { padding: 10px 12px; border-radius: 8px; background: var(--warning-soft); color: var(--warning); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.notice.info { background: var(--info-soft); color: var(--info); }
+
+/* Share */
+.share-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.share-grid .btn { height: 44px; justify-content: center; }
+.linkbox { display: flex; gap: 8px; margin-bottom: 14px; }
+.linkbox .input { font-family: var(--mono); font-size: 12px; }
+
+/* Toast */
+#toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 60; display: grid; gap: 8px; width: max-content; max-width: calc(100vw - 32px); }
+.toast { background: var(--navy); color: #fff; padding: 10px 14px; border-radius: 10px; box-shadow: var(--shadow-float); font-size: 13px; animation: tin .18s ease-out; }
+@keyframes tin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Client page */
+.stamp { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; color: var(--ink-2); }
+.foot { margin-top: 8px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--ink-muted); font-size: 12px; }
+
+@media (max-width: 640px) {
+  .kv { grid-template-columns: 1fr; gap: 2px; }
+  .kv dd { margin-bottom: 8px; }
+  .grand { flex-direction: column; align-items: flex-end; gap: 2px; }
+  .auth .box { padding: 22px; }
+}
+@media print {
+  .demobar, .tabs, .pubbar, .filters, .top-r, td.actions, th.actions, #toast, .noprint { display: none !important; }
+  body { background: #fff; }
+  .tablewrap { border: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="demobar" role="banner">
+  <span class="tag">Prototype · demo date 3 Nov 2026</span>
+  <div class="addr" id="addr">app.sbctrack.in<b>/receivables</b></div>
+  <div class="seg">
+    <button data-act="go" data-to="client" id="go-client">Client page</button>
+    <button data-act="go" data-to="manager" id="go-manager">Manager</button>
+  </div>
+</div>
+
+<div id="app"></div>
+<div id="modal-root"></div>
+<div id="toast" aria-live="polite"></div>
+
+<datalist id="contacts"></datalist>
+<datalist id="client-names"></datalist>
+
+<script>
+/* ===================== Dates and formatting ===================== */
+const TODAY = '2026-11-03';
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MON_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function d(iso) { const [y, m, dd] = iso.split('-').map(Number); return new Date(y, m - 1, dd); }
+function toIso(x) { return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); }
+function addDays(iso, n) { const x = d(iso); x.setDate(x.getDate() + n); return toIso(x); }
+/** a minus b, in whole days. */
+function diffDays(a, b) { return Math.round((d(a) - d(b)) / 86400000); }
+function fmtDate(iso) { if (!iso) return ''; const x = d(iso); return String(x.getDate()).padStart(2, '0') + '-' + MON[x.getMonth()] + '-' + String(x.getFullYear()).slice(2); }
+function shortDate(iso) { const x = d(iso); return x.getDate() + ' ' + MON[x.getMonth()]; }
+function isWeekend(iso) { const w = d(iso).getDay(); return w === 0 || w === 6; }
+function monthLong(m) { const i = MON.indexOf(m.slice(0, 3)); return MON_LONG[i] + ' 20' + m.slice(4); }
+function monthTitle(m) { return MON_LONG[MON.indexOf(m.slice(0, 3))] + '-' + m.slice(4) + ' Receivables'; }
+function nowStamp() { const t = new Date(); return '3 Nov 2026, ' + String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0'); }
+const inrFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+function inr(n) { return inrFmt.format(Math.round(n || 0)); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function clone(x) { return JSON.parse(JSON.stringify(x)); }
+function plural(n, w) { return n + ' ' + w + (n === 1 ? '' : 's'); }
+
+/* ===================== Demo data ===================== */
+const MANAGER = { name: 'Krishna Tungam', email: 'krishna@sbcllp.in' };
+const CLIENT_ORG = 'Summit Consulting';
+const LIVE_URL = 'https://app.sbctrack.in/receivables';
+
+const PARTNERS = [
+  { id: 'sandeep', name: 'Sandeep Sharma', email: 'sandeep@summitconsulting.in' },
+  { id: 'yash', name: 'Yash Babbar', email: 'yash.babbar@summitconsulting.in' },
+  { id: 'srikanth', name: 'Srikanth V', email: 'srikanth.v@summitconsulting.in' },
+  { id: 'mohan', name: 'Mohan Ramu', email: 'mohan.ramu@summitconsulting.in' },
+  { id: 'pallavi', name: 'Pallavi Vatse', email: 'pallavi@summitconsulting.in' },
+  { id: 'sabari', name: 'Sabari Charan', email: 'sabari.charan@summitconsulting.in' },
+  { id: 'bhargavi', name: 'Bhargavi Vavilala', email: 'bhargavi.vavilala@summitconsulting.in' },
+  { id: 'dheeraj', name: 'Dheeraj Singh Rawal', email: 'dheeraj.rawal@summitconsulting.in' },
+  { id: 'ranjit', name: 'Ranjit Pillai', email: 'ranjit.pillai@summitconsulting.in' },
+];
+const OTHER_CONTACTS = [
+  { name: 'Vishnu Nair', email: 'vishnu.nair@summitconsulting.in' },
+  { name: 'Shipra Jain', email: 'shipra.jain@summitconsulting.in' },
+  { name: 'Pankaj Kumar', email: 'pankaj.k@summitconsulting.in' },
+  { name: 'Harish Venkateswaran', email: 'harish.v@summitconsulting.in' },
+  { name: 'Client Partner org', email: 'CP.org@summitconsulting.in' },
+  { name: 'Rakesh Bhatia', email: 'rakesh@summitconsulting.in' },
+  { name: 'Rajeshree Naik', email: 'rajeshree@summitconsulting.in' },
+  { name: 'Finance', email: 'finance@summitconsulting.in' },
+];
+
+/* One row per invoice. The sheet's summed cells (Bupa, Vena, ANSR Comply) are split. */
+const INITIAL_INVOICES = [
+  { id: 'i1', month: 'Aug-26', client: 'Bupa', inv: 'SC/08/14', partner: 'sandeep', due: '2026-11-02', amount: 2010500 },
+  { id: 'i2', month: 'Sep-26', client: 'Emburse', inv: 'SC/09/01', partner: 'pallavi', due: '2026-10-30', amount: 22757764, paid: { date: '2026-11-01', amount: 22757764, via: 'HSBC' } },
+  { id: 'i3', month: 'Sep-26', client: 'Raptor', inv: 'SC/09/02', partner: 'yash', due: '2026-10-30', amount: 12276186, paid: { date: '2026-11-01', amount: 12276186, via: 'HSBC' } },
+  { id: 'i4', month: 'Sep-26', client: 'Duravant', inv: 'SC/09/03', partner: 'yash', due: '2026-10-16', amount: 6456984 },
+  { id: 'i5', month: 'Sep-26', client: 'KH ANSR', inv: 'SC/09/07', partner: 'srikanth', due: '2026-10-25', amount: 4830372 },
+  { id: 'i6', month: 'Sep-26', client: 'Bupa', inv: 'SC/09/11', partner: 'sandeep', due: '2026-11-14', amount: 1976259 },
+  { id: 'i7', month: 'Sep-26', client: 'Bupa', inv: 'SC/09/12', partner: 'sandeep', due: '2026-11-14', amount: 1643932 },
+  { id: 'i8', month: 'Sep-26', client: 'Vena', inv: 'SC/09/15', partner: 'mohan', due: '2026-11-13', amount: 2028240 },
+  { id: 'i9', month: 'Sep-26', client: 'Vena', inv: 'SC/09/16', partner: 'mohan', due: '2026-11-13', amount: 1415670 },
+  { id: 'i10', month: 'Sep-26', client: 'Inspired', inv: 'SC/09/18', partner: 'bhargavi', due: '2026-10-30', amount: 3141743 },
+  { id: 'i11', month: 'Sep-26', client: 'ANSR Comply', inv: 'SC/09/20', partner: 'sabari', due: '2026-11-08', amount: 2134928 },
+  { id: 'i12', month: 'Sep-26', client: 'ANSR Comply', inv: 'SC/09/21', partner: 'sabari', due: '2026-11-11', amount: 991358 },
+  { id: 'i13', month: 'Sep-26', client: 'Bonterra', inv: 'SC/09/24', partner: 'ranjit', due: '2026-10-31', amount: 1661450 },
+  { id: 'i14', month: 'Sep-26', client: 'Net Documents', inv: 'SC/09/26', partner: 'dheeraj', due: '2026-10-15', amount: 1630448 },
+];
+
+function unpaidCopy(list, ids) { return clone(list).map(i => (ids.includes(i.id) ? { ...i, paid: undefined } : i)); }
+
+const S = {
+  route: 'client',
+  authed: false,
+  outlook: false,
+  outlookAsked: false,
+  tab: 'sheet',
+  months: ['Aug-26', 'Sep-26'],
+  invoices: clone(INITIAL_INVOICES),
+  published: clone(INITIAL_INVOICES),
+  publishedAt: '3 Nov 2026, 09:15',
+  dirty: 0,
+  changes: [],
+  versions: [
+    { at: '3 Nov 2026, 09:15', note: 'Emburse and Raptor marked Received (HSBC credits of 1 Nov)', snap: clone(INITIAL_INVOICES) },
+    { at: '2 Nov 2026, 10:02', note: 'Bupa SC/08/14 due date confirmed as 02-Nov-26', snap: unpaidCopy(INITIAL_INVOICES, ['i2', 'i3']) },
+    { at: '1 Nov 2026, 09:40', note: 'September-26 invoices added', snap: unpaidCopy(INITIAL_INVOICES, ['i2', 'i3']) },
+  ],
+  partners: clone(PARTNERS),
+  f: { partner: 'all', status: 'open', month: 'all' },
+  credits: [
+    { id: 'c1', date: '2026-11-01', payer: 'EMBURSE INC', ccy: 'USD', fc: 272800, inr: 22757764, match: 'i2', status: 'auto' },
+    { id: 'c2', date: '2026-11-01', payer: 'RAPTOR TECHNOLOGIES LLC', ccy: 'USD', fc: 147150, inr: 12276186, match: 'i3', status: 'auto' },
+    { id: 'c3', date: '2026-11-03', payer: 'INSPIRED EDUCATION LTD', ccy: 'INR', fc: null, inr: 3138560, match: 'i10', status: 'confirm' },
+  ],
+  lastFetch: '10:30',
+  fetched: false,
+  rem: {
+    rules: { skipWeekends: true },
+    paused: { i14: { until: '2026-11-12', reason: 'Promised payment by 12 Nov' } },
+    skipped: {},
+    edits: {},
+    sent: false,
+    history: [
+      { at: '2 Nov, 09:00', to: 'yash.babbar@summitconsulting.in', what: 'Duravant SC/09/03 · 17 days overdue' },
+      { at: '2 Nov, 09:00', to: 'srikanth.v@summitconsulting.in', what: 'KH ANSR SC/09/07 · 8 days overdue' },
+      { at: '2 Nov, 09:00', to: 'sandeep@summitconsulting.in', what: 'Bupa SC/08/14 · due today' },
+      { at: '2 Nov, 09:00', to: 'bhargavi.vavilala@summitconsulting.in', what: 'Inspired SC/09/18 · 3 days overdue' },
+      { at: '2 Nov, 09:00', to: 'ranjit.pillai@summitconsulting.in', what: 'Bonterra SC/09/24 · 2 days overdue' },
+    ],
+  },
+  sentLog: [],
+  compose: null,
+  clientPartner: 'all',
+  key: '7Fq2xW9a',
+};
+
+/* ===================== Helpers over the data ===================== */
+const byId = id => S.invoices.find(i => i.id === id);
+const partner = id => S.partners.find(p => p.id === id) || { id, name: id, email: '' };
+function allContacts() {
+  const seen = new Set(); const out = [];
+  [...S.partners, ...OTHER_CONTACTS].forEach(c => { const k = c.email.toLowerCase(); if (!seen.has(k)) { seen.add(k); out.push({ name: c.name, email: c.email }); } });
+  return out;
+}
+function isOpen(i) { return !i.paid; }
+function daysLeft(i) { return diffDays(i.due, TODAY); }
+function isOverdue(i) { return isOpen(i) && daysLeft(i) < 0; }
+function paidThisWeek(i) { return i.paid && i.paid.date >= addDays(TODAY, -6); }
+function sum(list) { return list.reduce((a, i) => a + Number(i.amount || 0), 0); }
+function touch(note) { S.dirty++; S.changes.push(note); }
+
+function chip(tone, text) { return `<span class="chip ${tone}">${esc(text)}</span>`; }
+function dueChip(i) {
+  if (i.paid) return chip('positive', 'Received');
+  const dl = daysLeft(i);
+  if (dl < 0) return chip('danger', plural(-dl, 'day') + ' overdue');
+  if (dl === 0) return chip('warning', 'Due today');
+  return chip('neutral', 'Due in ' + plural(dl, 'day'));
+}
+function payTiming(i) {
+  const late = diffDays(i.paid.date, i.due);
+  if (late > 0) return plural(late, 'day') + ' late';
+  if (late === 0) return 'On the due date';
+  return plural(-late, 'day') + ' early';
+}
+
+/* Reminder rule: 5 days before, 3 days before, the due date, then every day after. */
+function reminderOn(i, iso) {
+  if (i.paid) return null;
+  const p = S.rem.paused[i.id];
+  if (p && iso <= p.until) return null;
+  if (S.rem.rules.skipWeekends && isWeekend(iso)) return null;
+  const dl = diffDays(i.due, iso);
+  if (dl === 5) return { label: '5 days before due', tone: 'info' };
+  if (dl === 3) return { label: '3 days before due', tone: 'info' };
+  if (dl === 0) return { label: 'Due today', tone: 'warning' };
+  if (dl < 0) return { label: plural(-dl, 'day') + ' overdue', tone: 'danger' };
+  return null;
+}
+function nextReminder(i) {
+  if (i.paid) return '';
+  const start = (S.rem.sent || S.rem.skipped[i.id]) ? 1 : 0;
+  for (let n = start; n < 90; n++) { const iso = addDays(TODAY, n); if (reminderOn(i, iso)) return n === 0 ? 'Today 09:00' : shortDate(iso); }
+  return '';
+}
+function reminderQueue() { return S.invoices.map(i => ({ i, r: reminderOn(i, TODAY) })).filter(x => x.r); }
+function reminderDraft(i, r) {
+  const p = partner(i.partner);
+  const first = p.name.split(' ')[0];
+  const subject = `Reminder: ${i.client} invoice ${i.inv || ''} · ${r.label}`.replace('  ', ' ');
+  let line;
+  if (r.label === 'Due today') line = `${i.client}'s invoice ${i.inv} for ₹${inr(i.amount)} is due today (${fmtDate(i.due)}).`;
+  else if (r.tone === 'danger') line = `${i.client}'s invoice ${i.inv} for ₹${inr(i.amount)} was due on ${fmtDate(i.due)} and is now ${r.label}. Please follow up with the client.`;
+  else line = `${i.client}'s invoice ${i.inv} for ₹${inr(i.amount)} falls due on ${fmtDate(i.due)} (${r.label.replace(' before due', '')} from today).`;
+  const body = `Hi ${first},\n\n${line}\n\nThe live receivables page: ${LIVE_URL}?partner=${p.id}\n\nRegards,\n${MANAGER.name}\nSBC`;
+  return S.rem.edits[i.id] || { subject, body };
+}
+
+/* ===================== Routing ===================== */
+function readHash() {
+  const h = location.hash.replace(/^#/, '');
+  const [path, q] = h.split('?');
+  S.route = path.startsWith('/receivables/manager') ? 'manager' : 'client';
+  const params = new URLSearchParams(q || '');
+  const p = params.get('partner');
+  if (S.route === 'client') {
+    if (p && S.partners.some(x => x.id === p)) S.clientPartner = p;
+    else if (!p) { try { const saved = localStorage.getItem('rcv-partner'); if (saved && (saved === 'all' || S.partners.some(x => x.id === saved))) S.clientPartner = saved; } catch (e) {} }
+  }
+}
+/* Route changes render directly; the hash is only kept in step, because some previews block hash navigation. */
+function go(route) {
+  S.route = route;
+  const qs = route === 'client' && S.clientPartner !== 'all' ? '?partner=' + S.clientPartner : '';
+  try { history.replaceState(null, '', route === 'manager' ? '#/receivables/manager' : '#/receivables' + qs); } catch (e) {}
+  render(); window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', () => { readHash(); render(); window.scrollTo(0, 0); });
+
+/* ===================== Render: shell ===================== */
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = S.route === 'manager' ? renderManagerRoute() : renderClient();
+  document.getElementById('go-client').classList.toggle('on', S.route === 'client');
+  document.getElementById('go-manager').classList.toggle('on', S.route === 'manager');
+  const qs = S.route === 'client' && S.clientPartner !== 'all' ? '?partner=' + S.clientPartner : '';
+  document.getElementById('addr').innerHTML = 'app.sbctrack.in<b>/receivables' + (S.route === 'manager' ? '/manager' : '') + esc(qs) + '</b>';
+  document.getElementById('contacts').innerHTML = allContacts().map(c => `<option value="${esc(c.name)} <${esc(c.email)}>"></option>`).join('');
+  document.getElementById('client-names').innerHTML = [...new Set(S.invoices.map(i => i.client))].map(c => `<option value="${esc(c)}"></option>`).join('');
+}
+
+function renderManagerRoute() {
+  if (!S.authed) return renderLogin();
+  if (!S.outlookAsked) return renderConnect();
+  return renderManager();
+}
+
+function renderLogin() {
+  return `<div class="auth"><form class="box" data-form="login">
+    <div class="brand" style="margin-bottom:18px">VCFO SUITE <span>/ Receivables</span></div>
+    <h1>Manager sign in</h1>
+    <p>This is the only login in the receivables tool. The client page needs none.</p>
+    <div class="field"><label for="lg-email">Email</label><input class="input" id="lg-email" type="email" value="${esc(MANAGER.email)}" autocomplete="username"></div>
+    <div class="field"><label for="lg-pass">Password</label><input class="input" id="lg-pass" type="password" placeholder="Any value works in the demo" autocomplete="current-password"></div>
+    <button class="btn primary" type="submit" style="width:100%;justify-content:center;height:38px;margin-top:4px">Sign in</button>
+    <div style="text-align:center;margin-top:12px"><a href="#" data-act="toast" data-msg="A reset link goes to ${esc(MANAGER.email)}.">Forgot password?</a></div>
+  </form></div>`;
+}
+
+function renderConnect() {
+  return `<div class="auth"><div class="box">
+    <div class="brand" style="margin-bottom:18px">VCFO SUITE <span>/ Receivables</span></div>
+    <h1>Connect your Outlook</h1>
+    <p>The summary email and the daily reminders send from your mailbox, so replies land in your inbox. This uses the same Outlook connection as the rest of VCFO Suite.</p>
+    <button class="btn navy" data-act="outlook-connect" style="width:100%;justify-content:center;height:38px">Connect Outlook</button>
+    <button class="btn ghost" data-act="outlook-later" style="width:100%;justify-content:center;margin-top:8px">Later</button>
+    <p class="faint" style="margin:14px 0 0;font-size:12px">Until Outlook is connected, Send email and reminders are paused.</p>
+  </div></div>`;
+}
+
+function renderManager() {
+  const confirmCount = S.credits.filter(c => c.status === 'confirm').length;
+  const remCount = S.rem.sent ? 0 : reminderQueue().filter(x => !S.rem.skipped[x.i.id]).length;
+  const tab = (id, label, count) => `<button class="${S.tab === id ? 'on' : ''}" data-act="tab" data-tab="${id}">${label}${count ? `<span class="count">${count}</span>` : ''}</button>`;
+  const outlookChip = S.outlook
+    ? `${chip('positive', 'Outlook: ' + MANAGER.email)} <button class="btn ghost sm" data-act="outlook-disconnect">Disconnect</button>`
+    : `${chip('warning', 'Outlook not connected')} <button class="btn sm navy" data-act="outlook-connect">Connect Outlook</button>`;
+  let body = '';
+  if (S.tab === 'sheet') body = renderSheet();
+  else if (S.tab === 'hsbc') body = renderHsbc();
+  else if (S.tab === 'reminders') body = renderReminders();
+  else if (S.tab === 'partners') body = renderPartners();
+  else if (S.tab === 'versions') body = renderVersions();
+  return `<div class="wrap">
+    <header class="top">
+      <div class="brand">VCFO SUITE <span>/ Receivables · ${esc(CLIENT_ORG)}</span></div>
+      <div class="top-r">${outlookChip}<span class="who">${esc(MANAGER.name)}</span><button class="btn ghost sm" data-act="logout">Log out</button></div>
+    </header>
+    <nav class="tabs" aria-label="Manager sections">
+      ${tab('sheet', 'Sheet')}${tab('hsbc', 'From HSBC', confirmCount)}${tab('reminders', 'Reminders', remCount)}${tab('partners', 'Partners')}${tab('versions', 'Versions')}
+    </nav>
+    ${body}
+  </div>`;
+}
+
+/* ===================== Manager: Sheet ===================== */
+function pubBar() {
+  const state = S.dirty
+    ? `${chip('warning', 'Draft · ' + plural(S.dirty, 'unpublished change'))}<span class="muted">The client page still shows ${esc(S.publishedAt)}.</span>`
+    : `${chip('positive', 'Published')}<span class="muted">The client page shows this version (${esc(S.publishedAt)}).</span>`;
+  return `<div class="pubbar ${S.dirty ? 'dirty' : ''}">
+    <div class="state">${state}</div>
+    <div class="row">
+      <button class="btn primary" data-act="update" ${S.dirty ? '' : 'disabled'}>Update</button>
+      <button class="btn" data-act="compose">Send email</button>
+      <button class="btn" data-act="share">Share</button>
+    </div>
+  </div>`;
+}
+
+function sheetFilters() {
+  const opt = (v, l, cur) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${esc(l)}</option>`;
+  return `<div class="filters">
+    <label>Partner <select class="select sm" data-filter="partner">${opt('all', 'All partners', S.f.partner)}${S.partners.map(p => opt(p.id, p.name, S.f.partner)).join('')}</select></label>
+    <label>Status <select class="select sm" data-filter="status">${opt('open', 'All open', S.f.status)}${opt('overdue', 'Overdue', S.f.status)}${opt('notdue', 'Not yet due', S.f.status)}</select></label>
+    <label>Month <select class="select sm" data-filter="month">${opt('all', 'All months', S.f.month)}${S.months.map(m => opt(m, monthLong(m), S.f.month)).join('')}</select></label>
+    <span style="flex:1"></span>
+    <button class="btn" data-act="add-invoice">+ Add invoice</button>
+  </div>`;
+}
+
+function filteredOpen() {
+  return S.invoices.filter(i => isOpen(i)
+    && (S.f.partner === 'all' || i.partner === S.f.partner)
+    && (S.f.month === 'all' || i.month === S.f.month)
+    && (S.f.status === 'open' || (S.f.status === 'overdue' ? daysLeft(i) < 0 : daysLeft(i) >= 0)));
+}
+
+function renderSheet() {
+  const open = filteredOpen();
+  const filtered = S.f.partner !== 'all' || S.f.status !== 'open' || S.f.month !== 'all';
+  const months = S.months.filter(m => S.f.month === 'all' || m === S.f.month);
+  const partnerOpts = cur => S.partners.map(p => `<option value="${p.id}" ${p.id === cur ? 'selected' : ''}>${esc(p.name)}</option>`).join('');
+  let rows = '';
+  months.forEach(m => {
+    const list = open.filter(i => i.month === m).sort((a, b) => a.due.localeCompare(b.due));
+    rows += `<tr class="block-title"><td colspan="8">${esc(monthTitle(m))}</td></tr>`;
+    if (!list.length) rows += `<tr><td colspan="8" class="muted">No open invoices${filtered ? ' for this filter' : ''}.</td></tr>`;
+    list.forEach(i => {
+      const paused = S.rem.paused[i.id];
+      rows += `<tr>
+        <td><input class="cell client" list="client-names" data-edit="client" data-id="${i.id}" value="${esc(i.client)}" aria-label="Client"></td>
+        <td><input class="cell inv" data-edit="inv" data-id="${i.id}" value="${esc(i.inv)}" placeholder="optional" aria-label="Invoice number"></td>
+        <td><select class="cell" data-edit="partner" data-id="${i.id}" aria-label="Client partner">${partnerOpts(i.partner)}</select></td>
+        <td><input class="cell" type="date" data-edit="due" data-id="${i.id}" value="${i.due}" aria-label="Due date"></td>
+        <td><input class="cell amt" inputmode="numeric" data-edit="amount" data-id="${i.id}" value="${inr(i.amount)}" aria-label="Amount INR"></td>
+        <td>${dueChip(i)}${i.part ? `<div class="faint" style="font-size:11px">₹${inr(i.part)} part-paid</div>` : ''}</td>
+        <td class="muted" style="white-space:nowrap">${paused ? `Paused to ${shortDate(paused.until)}` : esc(nextReminder(i))}</td>
+        <td class="actions">
+          <button class="btn sm" data-act="mark" data-id="${i.id}">Received</button>
+          <button class="btn sm ghost" data-act="pause" data-id="${i.id}">${paused ? 'Paused' : 'Pause'}</button>
+        </td>
+      </tr>`;
+    });
+    rows += `<tr class="total"><td colspan="4">${esc(m.replace('-', "'"))} receivables${filtered ? ' (filtered)' : ''}</td><td class="num">${inr(sum(list))}</td><td colspan="3"></td></tr>`;
+  });
+
+  const recv = S.invoices.filter(i => paidThisWeek(i) && (S.f.partner === 'all' || i.partner === S.f.partner));
+  const recvRows = recv.length ? recv.map(i => `<tr class="recv-row">
+      <td>${esc(i.client)}</td><td class="mono">${esc(i.inv)}</td><td>${esc(partner(i.partner).name)}</td>
+      <td>${fmtDate(i.due)}</td><td class="num">${inr(i.paid.amount)}</td>
+      <td>${fmtDate(i.paid.date)}${i.paid.via ? ` <span class="faint">· ${esc(i.paid.via)}</span>` : ''}</td>
+      <td>${esc(payTiming(i))}</td>
+      <td class="actions"><button class="btn sm ghost" data-act="undo-paid" data-id="${i.id}">Undo</button></td>
+    </tr>`).join('') : `<tr><td colspan="8" class="muted">Nothing received in the last 7 days.</td></tr>`;
+
+  const grand = sum(S.invoices.filter(isOpen));
+  return `${pubBar()}${sheetFilters()}
+    <div class="tablewrap"><table class="sheet">
+      <thead><tr><th>Client</th><th>Invoice no.</th><th>Client partner</th><th>Due date</th><th style="text-align:right">Amount INR</th><th>Status</th><th>Next reminder</th><th class="actions"></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>
+    <div class="tablewrap"><table>
+      <thead><tr class="block-title"><td colspan="8">Received this week</td></tr>
+      <tr><th>Client</th><th>Invoice no.</th><th>Client partner</th><th>Due date</th><th style="text-align:right">Amount INR</th><th>Paid on</th><th>Paid</th><th class="actions"></th></tr></thead>
+      <tbody>${recvRows}</tbody>
+    </table></div>
+    <div class="grand"><span class="muted">Total receivables (all open invoices)</span><span class="big">₹${inr(grand)}</span></div>`;
+}
+
+/* ===================== Manager: HSBC feed ===================== */
+function invLabel(i) { return `${i.client} ${i.inv || ''} · ₹${inr(i.amount)}`; }
+function renderHsbc() {
+  const auto = S.credits.filter(c => c.status === 'auto');
+  const conf = S.credits.filter(c => c.status === 'confirm');
+  const done = S.credits.filter(c => c.status === 'confirmed' || c.status === 'ignored');
+  const amt = c => (c.ccy !== 'INR' ? `<span class="faint">${c.ccy} ${inr(c.fc)} →</span> ` : '') + `₹${inr(c.inr)}`;
+  const openOpts = sel => S.invoices.filter(isOpen).map(i => `<option value="${i.id}" ${i.id === sel ? 'selected' : ''}>${esc(invLabel(i))}</option>`).join('');
+  return `<div class="card">
+      <div class="spread">
+        <div><h3>HSBC current account ••4821</h3><p class="sub" style="margin:0">Simulated feed · last fetch ${esc(S.lastFetch)} · next fetch in about an hour</p></div>
+        <button class="btn" data-act="fetch">Fetch now</button>
+      </div>
+      <p class="faint" style="margin:10px 0 0;font-size:12px">In production this reads the HSBC Treasury account API (or HSBCnet credit alerts in Outlook). A credit is auto-matched when the payer name and amount fit one open invoice within the FX, TDS and bank-charge tolerance. Anything less certain waits below for you.</p>
+    </div>
+    <div class="card"><h3>To confirm</h3><p class="sub">Suggested by the matcher. Nothing changes until you confirm.</p>
+      ${conf.length ? conf.map(c => { const i = byId(c.match); const diff = c.inr - (i ? i.amount : 0); return `<div class="confirm-card">
+        <div class="spread"><div><b>${esc(c.payer)}</b> <span class="muted">· ${fmtDate(c.date)}</span></div><div class="num" style="font-size:14px">${amt(c)}</div></div>
+        <div class="row" style="margin-top:8px"><span class="muted">Match to</span>
+          <select class="select sm" data-credit-pick="${c.id}">${openOpts(c.match)}</select>
+          ${i && diff ? chip('warning', (diff < 0 ? '₹' + inr(-diff) + ' short' : '₹' + inr(diff) + ' extra') + ' · bank charge?') : ''}
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn sm primary" data-act="credit-confirm" data-id="${c.id}">Confirm, mark Received</button>
+          <button class="btn sm ghost" data-act="credit-ignore" data-id="${c.id}">Not a receipt</button>
+        </div></div>`; }).join('') : `<div class="empty">Nothing waiting. Every credit so far matched on its own.</div>`}
+    </div>
+    <div class="card"><h3>Auto-matched</h3><p class="sub">Already marked Received in the draft.</p>
+      <div class="list">${auto.map(c => { const i = byId(c.match); return `<div class="li"><div><b>${esc(c.payer)}</b> <span class="muted">· ${fmtDate(c.date)}</span><div class="muted" style="font-size:12px">→ ${esc(i ? i.client + ' ' + i.inv : '')}</div></div><div class="row"><span class="num">${amt(c)}</span>${chip('positive', 'Received')}</div></div>`; }).join('')}</div>
+    </div>
+    ${done.length ? `<div class="card"><h3>Handled today</h3><div class="list">${done.map(c => `<div class="li"><div><b>${esc(c.payer)}</b> <span class="muted">· ${fmtDate(c.date)}</span></div><div class="row"><span class="num">${amt(c)}</span>${c.status === 'confirmed' ? chip('positive', 'Confirmed') : chip('neutral', 'Not a receipt')}</div></div>`).join('')}</div></div>` : ''}`;
+}
+
+/* ===================== Manager: Reminders ===================== */
+function renderReminders() {
+  const q = reminderQueue();
+  const qRows = q.length ? q.map(({ i, r }) => {
+    const p = partner(i.partner); const skipped = S.rem.skipped[i.id];
+    const state = S.rem.sent ? (skipped ? chip('neutral', 'Skipped') : chip('positive', 'Sent 09:00')) : (skipped ? chip('neutral', 'Skipped') : chip('info', 'Queued'));
+    return `<tr${skipped ? ' style="opacity:.55"' : ''}>
+      <td>${esc(p.name)}<div class="faint" style="font-size:11px">${esc(p.email)}</div></td>
+      <td>${esc(i.client)} <span class="mono faint">${esc(i.inv)}</span></td>
+      <td>${chip(r.tone, r.label)}</td><td>${fmtDate(i.due)}</td><td class="num">${inr(i.amount)}</td><td>${state}</td>
+      <td class="actions">${S.rem.sent ? '' : `<button class="btn sm" data-act="rem-edit" data-id="${i.id}">Edit</button> <button class="btn sm ghost" data-act="rem-skip" data-id="${i.id}">${skipped ? 'Undo skip' : 'Skip'}</button>`}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="7" class="muted">No reminders due today.</td></tr>`;
+  const paused = Object.entries(S.rem.paused);
+  return `<div class="card">
+      <div class="spread">
+        <div><h3>Today's queue</h3><p class="sub" style="margin:0">${S.rem.sent ? 'Sent at 09:00 from ' + esc(MANAGER.email) + '.' : 'Built at 08:00. Sends on its own at 09:00 from your Outlook. Edit or skip any item before then.'}</p></div>
+        ${S.rem.sent ? '' : `<button class="btn primary" data-act="rem-run" ${S.outlook ? '' : 'disabled title="Connect Outlook first"'}>Send now (demo of 09:00)</button>`}
+      </div>
+      ${S.outlook ? '' : `<div class="notice" style="margin:12px 0 0"><span>Outlook is not connected, so today's reminders will not send.</span><button class="btn sm navy" data-act="outlook-connect">Connect Outlook</button></div>`}
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>To (client partner)</th><th>Client · invoice</th><th>Reminder</th><th>Due date</th><th style="text-align:right">Amount INR</th><th>State</th><th class="actions"></th></tr></thead>
+      <tbody>${qRows}</tbody></table></div>
+    <div class="card"><h3>Rules</h3><p class="sub">Each open invoice gets a reminder to its client partner on these days, and they stop as soon as it is marked Received.</p>
+      <div class="row" style="margin-bottom:12px">${chip('info', '5 days before due')}${chip('info', '3 days before due')}${chip('warning', 'On the due date')}${chip('danger', 'Every day after due')}</div>
+      <label class="check"><input type="checkbox" data-rule="skipWeekends" ${S.rem.rules.skipWeekends ? 'checked' : ''}> Skip Saturdays and Sundays</label>
+    </div>
+    <div class="card"><h3>Paused</h3>
+      ${paused.length ? `<div class="list">${paused.map(([id, p]) => { const i = byId(id); return `<div class="li"><div>${esc(i.client)} <span class="mono faint">${esc(i.inv)}</span><div class="muted" style="font-size:12px">Until ${fmtDate(p.until)}${p.reason ? ' · ' + esc(p.reason) : ''}</div></div><button class="btn sm" data-act="rem-resume" data-id="${id}">Resume</button></div>`; }).join('')}</div>` : `<p class="muted" style="margin:0">Nothing paused. Use Pause on a sheet row when a client promises a date.</p>`}
+    </div>
+    <div class="card"><h3>History</h3><div class="list">${S.rem.history.map(h => `<div class="li"><div>${esc(h.what)}<div class="muted" style="font-size:12px">${esc(h.to)}</div></div><div class="row"><span class="muted">${esc(h.at)}</span>${chip('positive', 'Sent')}</div></div>`).join('')}</div></div>`;
+}
+
+/* ===================== Manager: Partners ===================== */
+function renderPartners() {
+  const rows = S.partners.map(p => {
+    const mine = S.invoices.filter(i => i.partner === p.id);
+    const clients = [...new Set(mine.map(i => i.client))].join(', ') || '—';
+    return `<tr><td>${esc(p.name)}</td><td class="mono">${esc(p.email)}</td><td>${esc(clients)}</td><td class="num">${inr(sum(mine.filter(isOpen)))}</td>
+      <td class="actions"><button class="btn sm ghost" data-act="copy" data-text="${esc(LIVE_URL + '?partner=' + p.id)}">Copy their link</button></td></tr>`;
+  }).join('');
+  return `<div class="card"><div class="spread"><div><h3>Client page link</h3><p class="sub" style="margin:0">Anyone with this link sees the published sheet. No login.</p></div><button class="btn" data-act="go" data-to="client">Open client page</button></div>
+      <div class="linkbox" style="margin:12px 0 8px"><input class="input" readonly value="${esc(LIVE_URL)}"><button class="btn" data-act="copy" data-text="${esc(LIVE_URL)}">Copy</button></div>
+      <p class="faint" style="margin:0;font-size:12px">Optional hardening: a secret key in the link (<span class="mono">/receivables/k/${esc(S.key)}</span>) so the plain URL shows nothing. <a href="#" data-act="reset-key">Reset key</a></p>
+    </div>
+    <div class="spread" style="margin-bottom:10px"><div><b>Client partners</b> <span class="muted">· used by the client-page filter and the reminders</span></div><button class="btn" data-act="add-partner">+ Add partner</button></div>
+    <div class="tablewrap"><table><thead><tr><th>Name</th><th>Email</th><th>Clients</th><th style="text-align:right">Open INR</th><th class="actions"></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+/* ===================== Manager: Versions ===================== */
+function renderVersions() {
+  return `<div class="card"><h3>Versions</h3><p class="sub">Each Update publishes a version. The client page always shows the newest one.</p>
+    <div class="list">${S.versions.map((v, n) => `<div class="li"><div><b>${esc(v.at)}</b> ${n === 0 ? chip('positive', 'On the client page') : ''}<div class="muted" style="font-size:12px">${esc(v.note)} · by ${esc(MANAGER.name)}</div></div><button class="btn sm" data-act="version-view" data-n="${n}">View</button></div>`).join('')}</div></div>`;
+}
+
+/* ===================== Client page ===================== */
+function renderClient() {
+  const snap = S.published;
+  const p = S.clientPartner;
+  const mine = snap.filter(i => p === 'all' || i.partner === p);
+  const open = mine.filter(isOpen);
+  const overdue = open.filter(i => daysLeft(i) < 0);
+  const recv = mine.filter(paidThisWeek);
+  const months = [...new Set(snap.map(i => i.month))].sort((a, b) => S.months.indexOf(a) - S.months.indexOf(b));
+  const opt = (v, l) => `<option value="${v}" ${p === v ? 'selected' : ''}>${esc(l)}</option>`;
+  let tables = '';
+  months.forEach(m => {
+    const list = open.filter(i => i.month === m).sort((a, b) => a.due.localeCompare(b.due));
+    if (!list.length) return;
+    tables += `<tr class="block-title"><td colspan="${p === 'all' ? 6 : 5}">${esc(monthTitle(m))}</td></tr>` + list.map(i => `<tr>
+      <td>${esc(i.client)}</td><td class="mono">${esc(i.inv)}</td>${p === 'all' ? `<td>${esc(partner(i.partner).name)}</td>` : ''}
+      <td>${fmtDate(i.due)}</td><td class="num">${inr(i.amount)}</td><td>${dueChip(i)}</td></tr>`).join('')
+      + `<tr class="total"><td colspan="${p === 'all' ? 4 : 3}">${esc(m.replace('-', "'"))} receivables</td><td class="num">${inr(sum(list))}</td><td></td></tr>`;
+  });
+  if (!tables) tables = `<tr><td colspan="6" class="empty">No open invoices for this partner.</td></tr>`;
+  const recvRows = recv.map(i => `<tr class="recv-row"><td>${esc(i.client)}</td><td class="mono">${esc(i.inv)}</td>${p === 'all' ? `<td>${esc(partner(i.partner).name)}</td>` : ''}<td>${fmtDate(i.paid.date)}</td><td class="num">${inr(i.paid.amount)}</td><td>${esc(payTiming(i))}</td></tr>`).join('');
+  return `<div class="wrap">
+    <header class="top"><div class="brand">VCFO SUITE <span>/ Receivables · ${esc(CLIENT_ORG)}</span></div></header>
+    <div class="stamp">${chip('positive', 'Live')}<span>Updated ${esc(S.publishedAt)} by SBC</span></div>
+    <div class="filters"><label>Client partner <select class="select sm" data-client-partner>${opt('all', 'All partners')}${S.partners.map(x => opt(x.id, x.name)).join('')}</select></label></div>
+    <div class="tiles">
+      <div class="tile"><div class="k">Open receivables</div><div class="v">₹${inr(sum(open))}</div><div class="s">${plural(open.length, 'invoice')}</div></div>
+      <div class="tile"><div class="k">Overdue</div><div class="v">₹${inr(sum(overdue))}</div><div class="s">${plural(overdue.length, 'invoice')}${overdue.length ? ', oldest ' + Math.max(...overdue.map(i => -daysLeft(i))) + ' days' : ''}</div></div>
+      <div class="tile"><div class="k">Received this week</div><div class="v">₹${inr(recv.reduce((a, i) => a + i.paid.amount, 0))}</div><div class="s">${plural(recv.length, 'payment')}</div></div>
+    </div>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Client</th><th>Invoice no.</th>${p === 'all' ? '<th>Client partner</th>' : ''}<th>Due date</th><th style="text-align:right">Amount INR</th><th>Status</th></tr></thead>
+      <tbody>${tables}</tbody></table></div>
+    ${recv.length ? `<div class="tablewrap"><table><thead><tr class="block-title"><td colspan="6">Received this week</td></tr><tr><th>Client</th><th>Invoice no.</th>${p === 'all' ? '<th>Client partner</th>' : ''}<th>Paid on</th><th style="text-align:right">Amount INR</th><th>Paid</th></tr></thead><tbody>${recvRows}</tbody></table></div>` : ''}
+    <div class="foot"><span>Read only. Figures change when SBC publishes an update.</span><button class="btn sm noprint" data-act="csv-client">Download Excel</button></div>
+  </div>`;
+}
+
+/* ===================== Modals ===================== */
+function openModal(html, wide) {
+  document.getElementById('modal-root').innerHTML = `<div class="scrim" data-act="scrim"><div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true">${html}</div></div>`;
+  const f = document.querySelector('.modal [autofocus]'); if (f) f.focus();
+}
+function closeModal() { document.getElementById('modal-root').innerHTML = ''; S.compose = null; }
+function modalHead(title) { return `<div class="modal-h"><h2>${esc(title)}</h2><button class="btn ghost sm" data-act="close" aria-label="Close">✕</button></div>`; }
+
+function markModal(id) {
+  const i = byId(id);
+  openModal(`${modalHead('Mark received · ' + i.client + ' ' + i.inv)}
+    <form data-form="mark" data-id="${id}"><div class="modal-b">
+      <dl class="kv"><dt>Amount due</dt><dd class="num" style="text-align:left">₹${inr(i.amount)}</dd><dt>Due date</dt><dd>${fmtDate(i.due)}</dd><dt>Client partner</dt><dd>${esc(partner(i.partner).name)}</dd></dl>
+      <div class="field"><label for="mk-date">Paid on</label><input class="input" id="mk-date" type="date" value="${TODAY}"></div>
+      <div class="field"><label for="mk-amt">Amount received (INR)</label><input class="input" id="mk-amt" inputmode="numeric" value="${inr(i.amount)}" autofocus></div>
+      <div class="row" style="margin-bottom:6px">
+        <label class="check"><input type="radio" name="mk-kind" value="full" checked> Full payment</label>
+        <label class="check"><input type="radio" name="mk-kind" value="part"> Part payment, keep the balance open</label>
+      </div>
+      <p class="faint" style="margin:8px 0 0;font-size:12px">A small difference from FX, TDS or bank charges still counts as full payment. Days to pay are worked out from the due date.</p>
+    </div>
+    <div class="modal-f"><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn primary" type="submit">Save</button></div></form>`);
+}
+
+function pauseModal(id) {
+  const i = byId(id); const p = S.rem.paused[id];
+  openModal(`${modalHead('Pause reminders · ' + i.client + ' ' + i.inv)}
+    <form data-form="pause" data-id="${id}"><div class="modal-b">
+      <div class="field"><label for="ps-until">No reminders until</label><input class="input" id="ps-until" type="date" value="${p ? p.until : addDays(TODAY, 7)}"></div>
+      <div class="field"><label for="ps-why">Reason (shown in the reminders tab)</label><input class="input" id="ps-why" value="${esc(p ? p.reason : '')}" placeholder="e.g. Client promised payment by 10 Nov" autofocus></div>
+    </div>
+    <div class="modal-f">${p ? '<button type="button" class="btn ghost danger-text" data-act="rem-resume" data-id="' + id + '">Resume now</button>' : ''}<button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn primary" type="submit">Pause</button></div></form>`);
+}
+
+function addInvoiceModal() {
+  const nextMonth = 'Oct-26';
+  const months = [...new Set([...S.months, nextMonth])];
+  openModal(`${modalHead('Add invoice')}
+    <form data-form="add-invoice"><div class="modal-b">
+      <div class="field"><label for="ai-client">Client</label><input class="input" id="ai-client" list="client-names" required autofocus></div>
+      <div class="field"><label for="ai-inv">Invoice number (optional)</label><input class="input" id="ai-inv"></div>
+      <div class="field"><label for="ai-partner">Client partner</label><select class="input" id="ai-partner">${S.partners.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
+      <div class="field"><label for="ai-month">Invoice month</label><select class="input" id="ai-month">${months.map(m => `<option value="${m}" ${m === 'Sep-26' ? 'selected' : ''}>${monthLong(m)}</option>`).join('')}</select></div>
+      <div class="field"><label for="ai-due">Due date</label><input class="input" id="ai-due" type="date" value="${addDays(TODAY, 30)}" required></div>
+      <div class="field"><label for="ai-amt">Amount (INR)</label><input class="input" id="ai-amt" inputmode="numeric" required></div>
+    </div>
+    <div class="modal-f"><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn primary" type="submit">Add to draft</button></div></form>`);
+}
+
+function addPartnerModal() {
+  openModal(`${modalHead('Add client partner')}
+    <form data-form="add-partner"><div class="modal-b">
+      <div class="field"><label for="ap-name">Name</label><input class="input" id="ap-name" required autofocus></div>
+      <div class="field"><label for="ap-email">Email</label><input class="input" id="ap-email" type="email" required></div>
+      <p class="faint" style="margin:0;font-size:12px">Partners have no login. They appear in the client-page filter and get reminders for their invoices.</p>
+    </div>
+    <div class="modal-f"><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn primary" type="submit">Add partner</button></div></form>`);
+}
+
+function remEditModal(id) {
+  const i = byId(id); const r = reminderOn(i, TODAY); const dr = reminderDraft(i, r); const p = partner(i.partner);
+  openModal(`${modalHead('Edit reminder')}
+    <form data-form="rem-edit" data-id="${id}"><div class="modal-b">
+      <dl class="kv"><dt>To</dt><dd>${esc(p.name)} &lt;${esc(p.email)}&gt;</dd><dt>From</dt><dd>${esc(MANAGER.email)} (Outlook)</dd><dt>Sends</dt><dd>Today 09:00</dd></dl>
+      <div class="field"><label for="re-sub">Subject</label><input class="input" id="re-sub" value="${esc(dr.subject)}"></div>
+      <div class="field"><label for="re-body">Message</label><textarea class="input" id="re-body" rows="9">${esc(dr.body)}</textarea></div>
+    </div>
+    <div class="modal-f"><button type="button" class="btn ghost" data-act="close">Cancel</button><button class="btn primary" type="submit">Save for today</button></div></form>`);
+}
+
+function versionModal(n) {
+  const v = S.versions[n]; const open = v.snap.filter(isOpen);
+  openModal(`${modalHead('Version · ' + v.at)}<div class="modal-b">
+    <p class="muted" style="margin-top:0">${esc(v.note)}</p>
+    <div class="tablewrap"><table><thead><tr><th>Client</th><th>Invoice no.</th><th>Due date</th><th style="text-align:right">Amount INR</th><th>Status</th></tr></thead><tbody>
+    ${v.snap.map(i => `<tr${i.paid ? ' class="recv-row"' : ''}><td>${esc(i.client)}</td><td class="mono">${esc(i.inv)}</td><td>${fmtDate(i.due)}</td><td class="num">${inr(i.amount)}</td><td>${i.paid ? chip('positive', 'Received') : chip('neutral', 'Open')}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="grand"><span class="muted">Open total in this version</span><span class="big">₹${inr(sum(open))}</span></div>
+  </div><div class="modal-f"><button class="btn" data-act="close">Close</button></div>`, true);
+}
+
+function shareModal() {
+  const msg = `Receivables update (${S.publishedAt}). Live view, always current: ${LIVE_URL}`;
+  openModal(`${modalHead('Share receivables')}<div class="modal-b">
+    ${S.dirty ? `<div class="notice"><span>You have ${plural(S.dirty, 'unpublished change')}. Shared links show the published version.</span><button class="btn sm" data-act="update">Update now</button></div>` : ''}
+    <div class="linkbox"><input class="input" readonly value="${esc(LIVE_URL)}"><button class="btn" data-act="copy" data-text="${esc(LIVE_URL)}">Copy link</button></div>
+    <div class="share-grid">
+      <a class="btn" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp</a>
+      <button class="btn" data-act="compose">Email</button>
+      <button class="btn" data-act="pdf">PDF</button>
+      <button class="btn" data-act="csv-manager">Excel</button>
+    </div>
+    <p class="faint" style="margin:14px 0 0;font-size:12px">WhatsApp opens your own WhatsApp with the message and link filled in. No WhatsApp API is needed.</p>
+  </div>`);
+}
+
+/* ===================== Compose ===================== */
+function weeklyList() {
+  return {
+    to: ['sandeep', 'yash', 'srikanth', 'mohan', 'pallavi', 'sabari', 'bhargavi', 'dheeraj', 'ranjit'].map(id => ({ name: partner(id).name, email: partner(id).email }))
+      .concat(OTHER_CONTACTS.filter(c => ['vishnu.nair', 'shipra.jain', 'pankaj.k', 'harish.v', 'CP.org'].some(k => c.email.startsWith(k)))),
+    cc: OTHER_CONTACTS.filter(c => c.email.startsWith('rakesh') || c.email.startsWith('rajeshree')),
+  };
+}
+function overdueList() {
+  const ids = [...new Set(S.published.filter(i => isOverdue(i)).map(i => i.partner))];
+  return { to: ids.map(id => ({ name: partner(id).name, email: partner(id).email })), cc: [] };
+}
+function emailBodyHtml() {
+  const snap = S.published;
+  const recv = snap.filter(paidThisWeek);
+  const cell = 'border:1px solid #333;padding:3px 8px;font-size:12px;';
+  const head = `background:#000;color:#fff;font-weight:bold;text-align:center;${cell}`;
+  const months = [...new Set(snap.map(i => i.month))].sort((a, b) => S.months.indexOf(a) - S.months.indexOf(b));
+  let tables = '';
+  months.forEach(m => {
+    const list = snap.filter(i => i.month === m && (isOpen(i) || paidThisWeek(i))).sort((a, b) => a.due.localeCompare(b.due));
+    if (!list.length) return;
+    tables += `<table style="border-collapse:collapse;margin:10px 0;min-width:560px"><tr><td colspan="5" style="${head}">${esc(monthTitle(m).replace(' Receivables', ' -Receivables'))}</td></tr>
+      <tr>${['Client', 'Due Date', 'Invoice Amount INR', 'No of Days Over Due', 'Remarks'].map(h => `<td style="${cell}font-weight:bold;text-align:center">${h}</td>`).join('')}</tr>
+      ${list.map(i => { const dl = daysLeft(i); const bg = i.paid ? 'background:#d9ead3;' : ''; return `<tr><td style="${cell}${bg}">${esc(i.client)}</td><td style="${cell}${bg}text-align:center">${fmtDate(i.due)}</td><td style="${cell}${bg}text-align:right">${inr(i.amount)}</td><td style="${cell}${bg}text-align:center">${dl < 0 ? -dl : '-'}</td><td style="${cell}${bg}">${i.paid ? 'Received' : ''}</td></tr>`; }).join('')}
+      <tr><td style="${cell}font-weight:bold;text-align:center">${esc(m.replace('-', "'"))}- Receivables</td><td style="${cell}"></td><td style="${cell}font-weight:bold;text-align:right">${inr(sum(list.filter(isOpen)))}</td><td style="${cell}"></td><td style="${cell}"></td></tr></table>`;
+  });
+  const total = sum(snap.filter(isOpen));
+  const paidLines = recv.length
+    ? `<p>We have received the following payments:</p><ul>${[...new Set(recv.map(i => `<li><b>${esc(i.client)}</b> - ${esc(monthLong(i.month))}</li>`))].join('')}</ul>`
+    : `<p>No new payments have been received since the last update.</p>`;
+  return `<p>Hi Team,</p>${paidLines}<p>Please find the receivable summary as of today:</p>${tables}
+    <table style="border-collapse:collapse;margin:0 0 10px;min-width:560px"><tr><td style="${cell}font-weight:bold;text-align:center;width:40%">Total Receivables</td><td style="${cell}font-weight:bold;text-align:right">${inr(total)}</td></tr></table>
+    <p>Live view, always current: <a href="${LIVE_URL}">app.sbctrack.in/receivables</a></p>
+    <p>Regards,<br>${esc(MANAGER.name)}<br>SBC</p>`;
+}
+function composeModal() {
+  if (!S.outlook) {
+    openModal(`${modalHead('Connect Outlook first')}<div class="modal-b"><p style="margin-top:0">The email sends from your own mailbox, so Outlook has to be connected once.</p></div>
+      <div class="modal-f"><button class="btn ghost" data-act="close">Cancel</button><button class="btn navy" data-act="outlook-connect-compose">Connect Outlook</button></div>`);
+    return;
+  }
+  const list = weeklyList();
+  S.compose = { to: list.to.slice(), cc: list.cc.slice(), bcc: [], subject: 'RE: Receivables update - 3 November', thread: true, excel: true, pdf: false };
+  openModal(`${modalHead('Send email')}<div class="modal-b">
+    ${S.dirty ? `<div class="notice"><span>${plural(S.dirty, 'unpublished change')}. The email uses the published version.</span><button class="btn sm" data-act="update-compose">Update first</button></div>` : ''}
+    <div class="spread" style="margin-bottom:6px"><span class="muted">From <b style="color:var(--ink)">${esc(MANAGER.email)}</b> · Outlook</span>
+      <label class="muted" style="font-size:12px">Recipient list <select class="select sm" data-act-change="apply-list"><option value="weekly">Weekly receivables group</option><option value="overdue">Partners with overdue invoices</option><option value="none">Start empty</option></select></label></div>
+    ${['to', 'cc', 'bcc'].map(f => `<div class="rcpt"><span class="lbl">${f === 'to' ? 'To' : f === 'cc' ? 'Cc' : 'Bcc'}</span><div class="chips" id="chips-${f}"></div></div>`).join('')}
+    <div class="field" style="margin:10px 0 6px"><label for="cp-sub">Subject</label><input class="input" id="cp-sub" value="${esc(S.compose.subject)}"></div>
+    <label class="check" style="font-size:12px"><input type="checkbox" id="cp-thread" checked> Reply in the same Outlook thread as last week</label>
+    <div class="body-edit" contenteditable="true" id="cp-body" aria-label="Email body">${emailBodyHtml()}</div>
+    <div class="row" style="margin-top:10px;font-size:12px"><span class="muted">Attach</span>
+      <label class="check"><input type="checkbox" id="cp-xl" checked> Excel</label><label class="check"><input type="checkbox" id="cp-pdf"> PDF</label></div>
+  </div>
+  <div class="modal-f"><button class="btn ghost" data-act="close">Cancel</button><button class="btn primary" data-act="compose-send">Send</button></div>`, true);
+  ['to', 'cc', 'bcc'].forEach(renderChips);
+}
+function renderChips(field) {
+  const box = document.getElementById('chips-' + field); if (!box) return;
+  box.innerHTML = S.compose[field].map((c, n) => `<span class="rchip" title="${esc(c.email)}"><span>${esc(c.name || c.email)}</span><button type="button" data-act="chip-x" data-field="${field}" data-n="${n}" aria-label="Remove ${esc(c.name || c.email)}">✕</button></span>`).join('')
+    + `<input class="chipin" list="contacts" data-chipin="${field}" placeholder="${S.compose[field].length ? '' : 'Add a name or any email'}" aria-label="Add ${field} recipient">`;
+}
+function parseRecipient(v) {
+  v = v.trim().replace(/[,;]$/, '').trim(); if (!v) return null;
+  const m = v.match(/^(.*)<([^>]+)>$/);
+  if (m) return { name: m[1].trim(), email: m[2].trim() };
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { const c = allContacts().find(x => x.email.toLowerCase() === v.toLowerCase()); return c || { name: '', email: v }; }
+  const c = allContacts().find(x => x.name.toLowerCase().startsWith(v.toLowerCase()));
+  return c || null;
+}
+function addChip(field, value) {
+  const r = parseRecipient(value);
+  if (!r) { if (value.trim()) toast('"' + value.trim() + '" is not an email address or a known contact.'); return false; }
+  if (['to', 'cc', 'bcc'].some(f => S.compose[f].some(x => x.email.toLowerCase() === r.email.toLowerCase()))) toast((r.name || r.email) + ' is already a recipient.');
+  else S.compose[field].push(r);
+  renderChips(field);
+  const inp = document.querySelector(`[data-chipin="${field}"]`); if (inp) inp.focus();
+  return true;
+}
+
+/* ===================== Downloads ===================== */
+function downloadCsv(rows, name) {
+  const head = ['Month', 'Client', 'Invoice no.', 'Client partner', 'Due date', 'Amount INR', 'Days overdue', 'Status', 'Paid on'];
+  const lines = [head].concat(rows.map(i => [monthLong(i.month), i.client, i.inv || '', partner(i.partner).name, fmtDate(i.due), Math.round(i.amount),
+    i.paid ? '' : Math.max(0, -daysLeft(i)), i.paid ? 'Received' : (daysLeft(i) < 0 ? 'Overdue' : 'Open'), i.paid ? fmtDate(i.paid.date) : '']));
+  const csv = lines.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv' }));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  toast('Downloaded ' + name + ' (opens in Excel).');
+}
+
+/* ===================== Toast ===================== */
+function toast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.getElementById('toast').appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+/* ===================== Actions ===================== */
+function publish() {
+  if (!S.dirty) return;
+  S.publishedAt = nowStamp();
+  S.published = clone(S.invoices);
+  const note = [...new Set(S.changes)].slice(0, 3).join('; ') + (new Set(S.changes).size > 3 ? '; and more' : '');
+  S.versions.unshift({ at: S.publishedAt, note, snap: clone(S.invoices) });
+  S.dirty = 0; S.changes = [];
+  toast('Published. The client page now shows ' + S.publishedAt + '.');
+}
+function markPaid(i, date, amount, via) {
+  i.paid = { date, amount, via };
+  delete S.rem.paused[i.id];
+}
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const act = t.dataset.act; const id = t.dataset.id;
+  if (act === 'scrim') { if (e.target === t) closeModal(); return; }
+  if (t.tagName === 'A' && t.getAttribute('href') === '#') e.preventDefault();
+  switch (act) {
+    case 'go': closeModal(); go(t.dataset.to); return;
+    case 'close': closeModal(); return;
+    case 'toast': toast(t.dataset.msg); return;
+    case 'outlook-connect': S.outlook = true; S.outlookAsked = true; closeModal(); toast('Outlook connected as ' + MANAGER.email + '.'); break;
+    case 'outlook-connect-compose': S.outlook = true; S.outlookAsked = true; render(); toast('Outlook connected as ' + MANAGER.email + '.'); composeModal(); return;
+    case 'outlook-later': S.outlookAsked = true; break;
+    case 'outlook-disconnect': S.outlook = false; toast('Outlook disconnected. Email and reminders are paused.'); break;
+    case 'logout': S.authed = false; S.outlookAsked = false; break;
+    case 'tab': S.tab = t.dataset.tab; break;
+    case 'update': publish(); closeModal(); break;
+    case 'update-compose': publish(); render(); composeModal(); return;
+    case 'compose': closeModal(); composeModal(); return;
+    case 'share': shareModal(); return;
+    case 'add-invoice': addInvoiceModal(); return;
+    case 'add-partner': addPartnerModal(); return;
+    case 'mark': markModal(id); return;
+    case 'pause': pauseModal(id); return;
+    case 'undo-paid': { const i = byId(id); i.paid = undefined; touch(i.client + ' ' + i.inv + ' set back to open'); toast(i.client + ' ' + i.inv + ' is open again (draft).'); break; }
+    case 'fetch': {
+      S.lastFetch = new Date().toTimeString().slice(0, 5);
+      if (!S.fetched) {
+        S.fetched = true;
+        const i = byId('i13');
+        if (i && isOpen(i)) {
+          S.credits.unshift({ id: 'c4', date: TODAY, payer: 'BONTERRA INC', ccy: 'USD', fc: 19915, inr: i.amount, match: 'i13', status: 'auto' });
+          markPaid(i, TODAY, i.amount, 'HSBC'); touch('Bonterra SC/09/24 received (HSBC)');
+          toast('1 new credit: Bonterra ₹' + inr(i.amount) + ', auto-matched and marked Received.');
+        } else toast('No new credits since the last fetch.');
+      } else toast('No new credits since the last fetch.');
+      break;
+    }
+    case 'credit-confirm': {
+      const c = S.credits.find(x => x.id === id); const i = byId(c.match);
+      if (!i || !isOpen(i)) { toast('Pick an open invoice first.'); return; }
+      markPaid(i, c.date, c.inr, 'HSBC'); c.status = 'confirmed';
+      touch(i.client + ' ' + i.inv + ' received (HSBC, confirmed)');
+      toast(i.client + ' ' + i.inv + ' marked Received in the draft.');
+      break;
+    }
+    case 'credit-ignore': { const c = S.credits.find(x => x.id === id); c.status = 'ignored'; toast('Marked as not a receipt.'); break; }
+    case 'rem-skip': S.rem.skipped[id] = !S.rem.skipped[id]; break;
+    case 'rem-edit': remEditModal(id); return;
+    case 'rem-resume': delete S.rem.paused[id]; closeModal(); toast('Reminders resumed.'); break;
+    case 'rem-run': {
+      const q = reminderQueue().filter(x => !S.rem.skipped[x.i.id]);
+      q.forEach(({ i, r }) => S.rem.history.unshift({ at: '3 Nov, 09:00', to: partner(i.partner).email, what: `${i.client} ${i.inv} · ${r.label}` }));
+      S.rem.sent = true;
+      toast(plural(q.length, 'reminder') + ' sent from ' + MANAGER.email + '.');
+      break;
+    }
+    case 'version-view': versionModal(Number(t.dataset.n)); return;
+    case 'copy': {
+      const text = t.dataset.text;
+      const done = () => toast('Link copied: ' + text);
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, () => toast('Copy this link: ' + text)); else toast('Copy this link: ' + text);
+      return;
+    }
+    case 'reset-key': S.key = Math.random().toString(36).slice(2, 10); toast('New key issued. Old secret links stop working.'); break;
+    case 'pdf': closeModal(); setTimeout(() => window.print(), 50); return;
+    case 'csv-manager': downloadCsv(S.published, 'Receivables ' + S.publishedAt.slice(0, 10) + '.csv'); return;
+    case 'csv-client': downloadCsv(S.published.filter(i => S.clientPartner === 'all' || i.partner === S.clientPartner), 'Receivables ' + S.publishedAt.slice(0, 10) + '.csv'); return;
+    case 'chip-x': S.compose[t.dataset.field].splice(Number(t.dataset.n), 1); renderChips(t.dataset.field); return;
+    case 'compose-send': {
+      const c = S.compose;
+      const pending = document.querySelectorAll('[data-chipin]');
+      pending.forEach(inp => { if (inp.value.trim()) addChip(inp.dataset.chipin, inp.value); });
+      if (!c.to.length) { toast('Add at least one recipient in To.'); return; }
+      const subject = document.getElementById('cp-sub').value;
+      S.sentLog.unshift({ at: nowStamp(), subject, to: c.to.length, cc: c.cc.length, bcc: c.bcc.length });
+      const extra = [c.cc.length ? c.cc.length + ' in Cc' : '', c.bcc.length ? c.bcc.length + ' in Bcc' : ''].filter(Boolean).join(', ');
+      closeModal();
+      toast(`Sent "${subject}" from ${MANAGER.email} to ${plural(c.to.length, 'person')}${extra ? ' (' + extra + ')' : ''}.`);
+      return;
+    }
+    default: return;
+  }
+  render();
+});
+
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.dataset.edit) {
+    const i = byId(el.dataset.id); const f = el.dataset.edit; let v = el.value;
+    if (f === 'amount') { v = Number(String(v).replace(/[^0-9.]/g, '')) || 0; }
+    if (f === 'due' && !v) { render(); return; }
+    if (i[f] === v) return;
+    i[f] = v;
+    const label = { client: 'client name', inv: 'invoice number', partner: 'client partner', due: 'due date', amount: 'amount' }[f];
+    touch(`${i.client} ${i.inv || ''} ${label} edited`.replace('  ', ' '));
+    render();
+    return;
+  }
+  if (el.dataset.filter) { S.f[el.dataset.filter] = el.value; render(); return; }
+  if (el.hasAttribute('data-client-partner')) {
+    S.clientPartner = el.value;
+    try { localStorage.setItem('rcv-partner', el.value); } catch (err) {}
+    try { history.replaceState(null, '', el.value === 'all' ? '#/receivables' : '#/receivables?partner=' + el.value); } catch (err) {}
+    render(); return;
+  }
+  if (el.dataset.creditPick) { const c = S.credits.find(x => x.id === el.dataset.creditPick); c.match = el.value; render(); return; }
+  if (el.dataset.rule) { S.rem.rules[el.dataset.rule] = el.checked; render(); return; }
+  if (el.dataset.actChange === 'apply-list') {
+    const l = el.value === 'weekly' ? weeklyList() : el.value === 'overdue' ? overdueList() : { to: [], cc: [] };
+    S.compose.to = l.to.slice(); S.compose.cc = l.cc.slice(); S.compose.bcc = [];
+    ['to', 'cc', 'bcc'].forEach(renderChips); return;
+  }
+  if (el.dataset.chipin && el.value.trim()) { if (addChip(el.dataset.chipin, el.value)) el.value = ''; }
+});
+
+document.addEventListener('keydown', e => {
+  const el = e.target;
+  if (el.dataset && el.dataset.chipin) {
+    if (e.key === 'Enter' || e.key === ',' || e.key === ';' || (e.key === 'Tab' && el.value.trim())) {
+      e.preventDefault(); addChip(el.dataset.chipin, el.value);
+    } else if (e.key === 'Backspace' && !el.value) {
+      const f = el.dataset.chipin; if (S.compose[f].length) { S.compose[f].pop(); renderChips(f); }
+    }
+    return;
+  }
+  if (e.key === 'Escape' && document.getElementById('modal-root').innerHTML) closeModal();
+});
+
+document.addEventListener('submit', e => {
+  const f = e.target; const kind = f.dataset.form; if (!kind) return;
+  e.preventDefault();
+  const val = id => document.getElementById(id).value;
+  if (kind === 'login') { S.authed = true; S.tab = 'sheet'; render(); return; }
+  if (kind === 'mark') {
+    const i = byId(f.dataset.id);
+    const amt = Number(val('mk-amt').replace(/[^0-9.]/g, '')) || 0; const date = val('mk-date') || TODAY;
+    const part = f.querySelector('input[name="mk-kind"]:checked').value === 'part';
+    if (part && amt < i.amount) {
+      i.amount = i.amount - amt; i.part = (i.part || 0) + amt;
+      touch(`${i.client} ${i.inv} part payment ₹${inr(amt)}`);
+      toast(`₹${inr(amt)} recorded. ₹${inr(i.amount)} stays open.`);
+    } else {
+      markPaid(i, date, amt, 'Manual');
+      touch(`${i.client} ${i.inv} marked Received`);
+      toast(`${i.client} ${i.inv} marked Received (draft). Click Update to publish.`);
+    }
+    closeModal(); render(); return;
+  }
+  if (kind === 'pause') {
+    S.rem.paused[f.dataset.id] = { until: val('ps-until') || addDays(TODAY, 7), reason: val('ps-why') };
+    closeModal(); toast('Reminders paused until ' + fmtDate(S.rem.paused[f.dataset.id].until) + '.'); render(); return;
+  }
+  if (kind === 'add-invoice') {
+    const m = val('ai-month');
+    const n = { id: 'i' + Date.now(), month: m, client: val('ai-client').trim(), inv: val('ai-inv').trim(), partner: val('ai-partner'), due: val('ai-due'), amount: Number(val('ai-amt').replace(/[^0-9.]/g, '')) || 0 };
+    S.invoices.push(n);
+    if (!S.months.includes(m)) { S.months.push(m); S.months.sort((a, b) => (a.slice(4) + String(MON.indexOf(a.slice(0, 3))).padStart(2, '0')).localeCompare(b.slice(4) + String(MON.indexOf(b.slice(0, 3))).padStart(2, '0'))); }
+    touch(`${n.client} ${n.inv} added`);
+    closeModal(); toast('Invoice added to the draft.'); render(); return;
+  }
+  if (kind === 'add-partner') {
+    const name = val('ap-name').trim(); const email = val('ap-email').trim();
+    let id = name.split(' ')[0].toLowerCase().replace(/[^a-z]/g, '') || 'partner';
+    while (S.partners.some(p => p.id === id)) id += '2';
+    S.partners.push({ id, name, email });
+    closeModal(); toast(name + ' added.'); render(); return;
+  }
+  if (kind === 'rem-edit') {
+    S.rem.edits[f.dataset.id] = { subject: val('re-sub'), body: val('re-body') };
+    closeModal(); toast('Reminder text saved for today.'); return;
+  }
+});
+
+/* ===================== Start ===================== */
+readHash();
+if (!location.hash) { try { history.replaceState(null, '', '#/receivables'); } catch (e) {} }
+render();
+</script>
+</body>

@@ -23,9 +23,9 @@ export type Profile = {
   avatarUrl: string | null;
 };
 
-export const PREFS_KEY = ['client-portal', 'notification-prefs'] as const;
-export const PW_KEY = ['client-portal', 'password-changed'] as const;
-export const ACCOUNT_KEY = ['client-portal', 'account'] as const;
+const PREFS_KEY = ['client-portal', 'notification-prefs'] as const;
+const PW_KEY = ['client-portal', 'password-changed'] as const;
+const ACCOUNT_KEY = ['client-portal', 'account'] as const;
 
 /** `/api/client/account`: the person's designation and reminder lead time (migration 0028). */
 export type ClientAccount = { designation: string | null; remindDays: 7 | 3 | 1 | null };

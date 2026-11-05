@@ -5,7 +5,9 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { profiles } from '@/db/schema';
 import { authConfigBase } from '@/auth/config.base';
-import { systemCheckSignInPassword } from '@/db/repositories/profiles';
+import { systemCheckSignInPassword, systemSignInTwoStep } from '@/db/repositories/profiles';
+import { clientIp } from '@/lib/growth/demo-request';
+import { takeSignInAttempt } from '@/lib/sign-in-throttle';
 import {
   systemCreateUserSession,
   systemIsSessionActive,
@@ -19,8 +21,9 @@ import { cityFromHeaders, deviceLabel } from '@/lib/sign-in-device';
 
 /**
  * Two-step sign-in outcomes (G-25). Each reaches the browser as `code` on the
- * `signIn()` result. They are only thrown after the password was accepted, so
- * they never say whether an email exists.
+ * `signIn()` result. They are decided by the email and the code alone, before
+ * the password is checked, so they never say whether a password was right; they
+ * do say that an email has two-step on, which the pre-check route also says.
  */
 class TwoStepRequired extends CredentialsSignin {
   code = 'two_step_required';
@@ -31,11 +34,9 @@ class TwoStepInvalid extends CredentialsSignin {
 class TwoStepLocked extends CredentialsSignin {
   code = 'two_step_locked';
 }
-
-/** The first address in X-Forwarded-For (App Runner and the tunnel set it), else X-Real-IP. */
-function clientIp(request: Request | undefined): string | null {
-  const fwd = request?.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-  return fwd || request?.headers.get('x-real-ip')?.trim() || null;
+/** Too many attempts for this email or this IP (audit finding 2); thrown before any password check. */
+class SignInRateLimited extends CredentialsSignin {
+  code = 'rate_limited';
 }
 
 /**
@@ -48,7 +49,9 @@ function clientIp(request: Request | undefined): string | null {
  *
  * Two-step sign-in (G-25): when `profiles.totp_enabled_at` is set, `authorize`
  * also needs a valid `otp` field (RFC 6238, see `src/lib/totp/`). The sign-in
- * screen learns whether to ask for one from `POST /api/auth/two-step`.
+ * screen learns whether to ask for one from `POST /api/auth/two-step`. Both
+ * paths are rate-limited by email and client IP in Postgres
+ * (`src/lib/sign-in-throttle.ts`).
  *
  * Devices (G-25): each sign-in makes a `user_sessions` row and the JWT carries
  * its id as `sid`. A revoked row clears the token here and fails
@@ -71,16 +74,25 @@ const credentialsProvider = Credentials({
     otp: { label: 'Code', type: 'text' },
   },
   async authorize(creds, request) {
-    const row = await systemCheckSignInPassword(String(creds?.email ?? ''), String(creds?.password ?? ''));
-    if (!row) return null;
+    const email = String(creds?.email ?? '');
+    const ip = request ? clientIp(request.headers) : 'unknown';
+    if (!(await takeSignInAttempt('sign-in', email, ip))) throw new SignInRateLimited();
 
-    if (row.twoStepOn) {
+    // Two-step accounts: the code is asked for and checked BEFORE the password, so no answer
+    // depends on whether the password was right unless the caller also holds a valid code.
+    const twoStep = await systemSignInTwoStep(email);
+    if (twoStep) {
       const otp = String(creds?.otp ?? '').trim();
       if (!otp) throw new TwoStepRequired();
-      const check = checkTotpCode(row.id, row.totpSecretEnc, otp);
+      const check = checkTotpCode(twoStep.id, twoStep.totpSecretEnc, otp);
       if (check === 'locked') throw new TwoStepLocked();
       if (check === 'invalid') throw new TwoStepInvalid();
     }
+
+    const row = await systemCheckSignInPassword(email, String(creds?.password ?? ''));
+    if (!row) return null;
+    // Two-step was turned on between the two reads: ask for a code rather than let it through.
+    if (row.twoStepOn && !twoStep) throw new TwoStepRequired();
 
     const userAgent = request?.headers.get('user-agent');
     // C-851: the sign-in city when a CDN in front of the app sends a geo header.
@@ -88,7 +100,7 @@ const credentialsProvider = Credentials({
     const sid = await systemCreateUserSession({
       userId: row.id,
       userAgent,
-      ip: clientIp(request),
+      ip: ip === 'unknown' ? null : ip,
       city,
     });
     // C-787: the sign-in goes on the audit log (a client's on its company's). Not awaited, never throws.
@@ -293,7 +305,7 @@ const authConfig = {
  * S-650: Microsoft Entra ID, only when its env vars are set. It links to an existing profile
  * by email and never creates one (see `signIn` and `jwt` above, and `src/auth/microsoft.ts`).
  */
-export const { handlers, auth, signIn, signOut } = NextAuth(
+export const { handlers, auth } = NextAuth(
   async (): Promise<NextAuthConfig> => ({
     ...authConfig,
     providers: [credentialsProvider, ...(await microsoftProviders())],

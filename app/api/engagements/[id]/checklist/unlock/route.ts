@@ -1,9 +1,9 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/auth/guards';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { checklistStateForViewer, unlockChecklistFields } from '@/db/repositories/engagements';
-import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 import { isDirectFlowStep } from '@/lib/incorporation/pre-inc-direct-flow';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -36,7 +36,7 @@ export async function POST(request: Request, context: RouteContext) {
     // Direct flow: "Reopen step" tells every party; other steps keep the
     // field-unlock notice to the client.
     const reopened = isDirectFlowStep(body.data.itemId);
-    const email = await notifyEngagementEvent({
+    const email = await notifyEngagementEventSoon({
       engagementId: id,
       itemId: body.data.itemId,
       event: reopened ? 'step_reopened' : 'unlocked',

@@ -10,6 +10,7 @@
  * attendance headings on row 3 and the employee details on row 2, under a title row and a
  * row of instructions. A fixed header row would misread three of the four inputs.
  */
+import { Readable } from 'node:stream';
 import ExcelJS from 'exceljs';
 import { detectAttendanceGrid, type GridDetection } from './attendance-grid';
 import { normaliseHeader } from './normalise';
@@ -17,11 +18,58 @@ import { normaliseHeader } from './normalise';
 /**
  * Whatever `exceljs` itself accepts, so no cast is needed at the boundary and a change in the
  * library's own typing surfaces here rather than in every caller.
+ *
+ * `Uint8Array` is added because the library's own declaration says `Buffer`, and the `Buffer`
+ * a route gets from `Buffer.from(await file.arrayBuffer())` is typed `Buffer<ArrayBufferLike>`,
+ * which is not assignable to it. Both are the same bytes at runtime; this is the one place to
+ * absorb that rather than casting at every call site.
  */
-export type WorkbookInput = Parameters<ExcelJS.Workbook['xlsx']['load']>[0];
+export type WorkbookInput = Parameters<ExcelJS.Workbook['xlsx']['load']>[0] | Uint8Array;
 
-/** The four inputs a batch takes. */
-export type UploadSlot = 'paysheet' | 'attendance' | 'overtime' | 'employees';
+/**
+ * The inputs a batch takes.
+ *
+ * Written once and exported, because the list was spelled out in seven places — the upload
+ * route, the mapping route, four role shells and the dataset loader — and adding a fifth meant
+ * finding all seven. A slot missing from one of them is a file that uploads and is then never
+ * read, which is the quietest way for a register to come out short.
+ *
+ * `leave` is the fifth. Five forms in the catalogue print a leave balance, days availed and a
+ * category of leave, and none of those is on a paysheet: leave is kept in an HR system, not a
+ * payroll run. Without the slot those forms could only ever be produced blank.
+ */
+export const UPLOAD_SLOTS = ['paysheet', 'attendance', 'overtime', 'employees', 'leave'] as const;
+
+export type UploadSlot = (typeof UPLOAD_SLOTS)[number];
+
+/**
+ * Which reader to use. A payroll system exports a CSV about as often as a workbook, and the
+ * header-detection below works the same either way — a CSV simply has one sheet and no merged
+ * cells. Legacy `.xls` is not here because exceljs cannot read the BIFF format at all.
+ */
+export type SheetFormat = 'xlsx' | 'csv';
+
+/** Guess the reader from the file name. Anything not obviously a CSV is read as a workbook. */
+export function formatForFileName(fileName: string): SheetFormat {
+  return /\.csv$/i.test(fileName.trim()) ? 'csv' : 'xlsx';
+}
+
+/**
+ * Load a workbook, whichever of the two formats it is.
+ *
+ * exceljs reads a CSV from a stream rather than a buffer, which is the only reason this is a
+ * function and not a line.
+ */
+async function loadWorkbook(input: WorkbookInput, format: SheetFormat): Promise<ExcelJS.Workbook> {
+  const workbook = new ExcelJS.Workbook();
+  if (format === 'csv') {
+    const bytes = ArrayBuffer.isView(input) ? Buffer.from(input.buffer, input.byteOffset, input.byteLength) : Buffer.from(input as ArrayBuffer);
+    await workbook.csv.read(Readable.from(bytes));
+    return workbook;
+  }
+  await workbook.xlsx.load(input as Parameters<ExcelJS.Workbook['xlsx']['load']>[0]);
+  return workbook;
+}
 
 export interface ParsedSheet {
   sheetName: string;
@@ -88,10 +136,9 @@ function rowValues(row: ExcelJS.Row, width: number): string[] {
  */
 export async function parseWorkbook(
   input: WorkbookInput,
-  options: { preferSheet?: string; maxHeaderRow?: number } = {},
+  options: { preferSheet?: string; maxHeaderRow?: number; format?: SheetFormat } = {},
 ): Promise<ParsedSheet> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(input);
+  const workbook = await loadWorkbook(input, options.format ?? 'xlsx');
 
   const sheets = workbook.worksheets.filter((ws) => ws.rowCount > 0);
   if (sheets.length === 0) throw new Error('The workbook has no sheet with any rows in it.');
@@ -143,13 +190,6 @@ export async function parseWorkbook(
   };
 }
 
-/** The sheet names in a workbook, so a preparer can pick when detection is not obvious. */
-export async function listSheets(input: WorkbookInput): Promise<Array<{ name: string; rowCount: number }>> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(input);
-  return workbook.worksheets.map((ws) => ({ name: ws.name, rowCount: ws.rowCount }));
-}
-
 /**
  * Which slot a sheet belongs in, guessed from its own headings so a preparer can drop four
  * files at once without labelling them. Returns null when nothing is clear enough to act on —
@@ -163,6 +203,11 @@ export function guessSlot(headers: string[]): UploadSlot | null {
   if (has('total ot hours', 'ot hours', 'overtime hours') && !has('gross', 'net pay')) return 'overtime';
   if (has('gross', 'net pay', 'basic pay', 'basic')) return 'paysheet';
   if (has('residential address', 'father husband name', 'education qualification')) return 'employees';
+  /* Checked after the paysheet, not before: a paysheet often carries a leave-encashment
+     column, and a leave register never carries a gross or a net pay. */
+  if (has('leave balance', 'balance of leave to credit', 'leaves availed', 'leave availed', 'category of leave')) {
+    return 'leave';
+  }
   return null;
 }
 

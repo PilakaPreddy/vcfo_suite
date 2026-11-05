@@ -1,7 +1,7 @@
 'use client';
 
 import { visualSchema } from '@/data/ask/schema';
-import { visualText } from './visual-text';
+import { visualText } from '@/lib/ask/visual-text';
 import { Compare } from './Compare';
 import { Flow } from './Flow';
 import { KeyFacts } from './KeyFacts';

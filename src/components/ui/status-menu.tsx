@@ -7,7 +7,7 @@ import { statusParts } from '@/components/ui/spectrum-chip';
 import { cn } from '@/lib/utils';
 
 /** R-13: the six status words, in the order of the work. */
-export const SIX_WORDS = ['Not started', 'In progress', 'Waiting', 'Due soon', 'Overdue', 'Done'] as const;
+const SIX_WORDS = ['Not started', 'In progress', 'Waiting', 'Due soon', 'Overdue', 'Done'] as const;
 export type SixWord = (typeof SIX_WORDS)[number];
 
 const DOT: Record<SixWord, string> = {
@@ -20,7 +20,7 @@ const DOT: Record<SixWord, string> = {
 };
 
 /** The six-word form of any status ("With client" is Waiting, "Due this week" is Due soon). */
-export function sixOf(status: string): SixWord {
+function sixOf(status: string): SixWord {
   const w = statusParts(status).word;
   if ((SIX_WORDS as readonly string[]).includes(w)) return w as SixWord;
   if (/due/i.test(status)) return 'Due soon';

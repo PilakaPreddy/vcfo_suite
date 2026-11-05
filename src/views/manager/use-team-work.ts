@@ -8,7 +8,7 @@ import { buildTeamWork, teamWorkKpis, type TeamLead, type TeamWorkItem } from '@
 import type { WorkTeam } from '@/views/intern/MyWork';
 
 /** The lead key of a staff owner's own tasks (`useTeamWork` `owners`). */
-export const ownerKey = (profileId: string) => `profile:${profileId}`;
+const ownerKey = (profileId: string) => `profile:${profileId}`;
 
 /**
  * The project leads' work on the caller's engagements (the server already scopes them: a

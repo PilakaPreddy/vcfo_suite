@@ -16,7 +16,7 @@ import type { AuthContext } from '@/auth/guards';
  *                 before a due date; null means the firm default.
  */
 
-export const REMIND_DAYS = [7, 3, 1] as const;
+const REMIND_DAYS = [7, 3, 1] as const;
 export type RemindDays = (typeof REMIND_DAYS)[number];
 
 export interface ClientAccountExtras {

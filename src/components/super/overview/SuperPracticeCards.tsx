@@ -25,8 +25,9 @@ import {
   type SuperInsights,
   type SuperRiskKind,
   type SuperTeamManager,
-} from '@/components/super/insights/super-insights-model';
+} from '@/lib/super/super-insights-model';
 import { cn } from '@/lib/utils';
+import { todayIST } from '@/lib/compliance/filings';
 
 /**
  * The Overview's practice row and its insight panels (prototype `OverviewScreen`): the three
@@ -151,7 +152,7 @@ function CompliancesCard({ insights }: { insights: SuperInsights }) {
   const title = `Compliances · ${month?.longLabel.split(' ')[0] ?? 'this month'}`;
   const byAuthority = new Map<string, number>();
   const monthKey = month?.key ?? '';
-  const today = insights.generatedAt.slice(0, 10);
+  const today = todayIST(new Date(insights.generatedAt));
   for (const f of insights.filings) {
     if (!f.dueDate.startsWith(monthKey)) continue;
     if (filingOutcome(f, today) === 'overdue') byAuthority.set(f.authority, (byAuthority.get(f.authority) ?? 0) + 1);

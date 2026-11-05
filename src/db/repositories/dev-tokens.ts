@@ -21,7 +21,7 @@ import { assertDeveloper } from './dev-scope';
 
 export const TOKEN_PREFIX = 'vcfo_dev_';
 /** How long the old token keeps working after "Rotate". */
-export const ROTATE_GRACE_MS = 24 * 3600000;
+const ROTATE_GRACE_MS = 24 * 3600000;
 
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');

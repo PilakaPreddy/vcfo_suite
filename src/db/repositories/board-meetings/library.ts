@@ -36,7 +36,7 @@ function toDto(r: LibraryRow): LibraryItemDto {
 let seeded = false;
 
 /** Seed the table from src/data the first time it is read (idempotent). */
-export async function systemEnsureLibrarySeeded(): Promise<void> {
+async function systemEnsureLibrarySeeded(): Promise<void> {
   if (seeded) return;
   const [one] = await db.select({ id: agendaLibraryItems.id }).from(agendaLibraryItems).limit(1);
   if (!one) {

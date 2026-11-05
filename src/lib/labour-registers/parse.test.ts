@@ -1,7 +1,14 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, it } from 'vitest';
 
-import { columnValues, guessSlot, gridValues, parseWorkbook, type WorkbookInput } from './parse';
+import {
+  columnValues,
+  formatForFileName,
+  guessSlot,
+  gridValues,
+  parseWorkbook,
+  type WorkbookInput,
+} from './parse';
 
 /** Build a workbook in memory, so the test needs no fixture file on disk. */
 async function book(sheets: Array<{ name: string; rows: unknown[][]; merge?: string }>): Promise<WorkbookInput> {
@@ -130,5 +137,47 @@ describe('columnValues', () => {
   it('returns the non-empty values of one column', () => {
     const rows = [{ Gender: 'Male' }, { Gender: '' }, { Gender: 'Female' }];
     expect(columnValues(rows, 'Gender')).toEqual(['Male', 'Female']);
+  });
+});
+
+describe('a CSV payroll export', () => {
+  /*
+   * A payroll system exports a CSV about as often as a workbook, and exceljs reads one through
+   * a different door (`csv.read`, from a stream) than it reads an xlsx. The header detection
+   * either side of that door is the same code, so these tests check the door.
+   */
+  const csv = (text: string) => Buffer.from(text, 'utf8');
+
+  it('reads one, finding the headings under a title row', async () => {
+    const parsed = await parseWorkbook(
+      csv(
+        'WebPT India — Payroll Register\n' +
+          'September 2026\n' +
+          'Emp No,Employee Name,Days Worked,Basic,Net Pay\n' +
+          'E0001,Asha Rao,26,25000,34200\n' +
+          'E0002,Vikram Shah,24,25000,31600\n',
+      ),
+      { format: 'csv' },
+    );
+    expect(parsed.headerRow).toBe(3);
+    expect(parsed.headers).toEqual(['Emp No', 'Employee Name', 'Days Worked', 'Basic', 'Net Pay']);
+    expect(parsed.rows).toHaveLength(2);
+    expect(parsed.rows[0]['Employee Name']).toBe('Asha Rao');
+  });
+
+  it('reads a bare one with no title row at all', async () => {
+    const parsed = await parseWorkbook(csv('Emp No,Employee Name\nE0001,Asha Rao\n'), { format: 'csv' });
+    expect(parsed.headerRow).toBe(1);
+    expect(parsed.rows).toHaveLength(1);
+  });
+
+  it('picks the reader from the file name, and treats anything else as a workbook', () => {
+    expect(formatForFileName('paysheet.csv')).toBe('csv');
+    expect(formatForFileName('PAYSHEET.CSV')).toBe('csv');
+    expect(formatForFileName('  paysheet.csv  ')).toBe('csv');
+    expect(formatForFileName('paysheet.xlsx')).toBe('xlsx');
+    expect(formatForFileName('paysheet.xlsm')).toBe('xlsx');
+    /* A name with no extension is far more likely a workbook than a CSV. */
+    expect(formatForFileName('paysheet')).toBe('xlsx');
   });
 });

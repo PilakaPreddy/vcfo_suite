@@ -7,7 +7,8 @@ import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PhaseBar } from '@/components/ui/step-track';
 import { ClientTile, StackedBar, ToneBar } from '@/components/super/parts/super-parts';
-import { plainDay, shortCompany } from '@/components/super/parts/super-text';
+import { shortCompany } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import type { ExpectedCoiRow, PracticeMetrics, StageRow } from '@/lib/metrics/practice-metrics';
 import { cn } from '@/lib/utils';
 

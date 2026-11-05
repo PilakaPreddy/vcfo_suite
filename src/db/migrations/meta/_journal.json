@@ -246,6 +246,83 @@
       "when": 1793627969985,
       "tag": "0034_board_meetings",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1793696145085,
+      "tag": "0035_labour_register_lock",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793700000000,
+      "tag": "0036_drop_labour_register_checklist",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793722222139,
+      "tag": "0037_receivables",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793730767379,
+      "tag": "0038_receivables_partners",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793730791627,
+      "tag": "0039_receivables_fx",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1793744564639,
+      "tag": "0040_receivables_share_forex",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793817021210,
+      "tag": "0041_receivables_send_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793817618336,
+      "tag": "0042_rate_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1793817914370,
+      "tag": "0043_bank_credits_ref_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1793819323847,
+      "tag": "0044_engagement_partner_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1793840206514,
+      "tag": "0045_labour_registers_second_pass",
+      "breakpoints": true
     }
   ]
 }

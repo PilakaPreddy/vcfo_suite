@@ -16,7 +16,7 @@ const chain = {
   where: () => chain,
   limit: () => Promise.resolve(profileRow ? [profileRow] : []),
 };
-vi.mock('@/db/client', () => ({ db: { select: () => chain } }));
+vi.mock('@/db/client', () => ({ db: { select: () => chain.select() } }));
 
 const systemIsSessionActive = vi.fn();
 const systemTouchLastSeen = vi.fn();
@@ -25,12 +25,13 @@ vi.mock('@/db/repositories/user-sessions', () => ({
   systemTouchLastSeen: (...a: unknown[]) => systemTouchLastSeen(...a),
 }));
 
-const { requireAuth, requireOwnAccount, requireAdmin } = await import('./guards');
+const { requireAuth, requireOwnAccount, requireAdmin, clearGuardLookups } = await import('./guards');
 
 const ME = '11111111-1111-4111-8111-111111111111';
 const SID = '33333333-3333-4333-8333-333333333333';
 
 beforeEach(() => {
+  clearGuardLookups();
   systemIsSessionActive.mockReset();
   systemTouchLastSeen.mockReset();
   sessionUser = { id: ME, email: 'me@sbc.in', role: 'admin', sid: SID };
@@ -68,5 +69,23 @@ describe('currentContext sessions', () => {
     profileRow = { ...profileRow, role: 'developer' };
     expect(await requireAuth()).toMatchObject({ ok: false, status: 401 });
     expect(await requireOwnAccount()).toMatchObject({ ok: true });
+  });
+});
+
+describe('currentContext shared lookup', () => {
+  it('ten calls at once read the profile and the session once', async () => {
+    systemIsSessionActive.mockResolvedValue(true);
+    const selects = vi.spyOn(chain, 'select');
+    const all = await Promise.all(Array.from({ length: 10 }, () => requireAuth()));
+    expect(all.every((g) => g.ok)).toBe(true);
+    expect(selects).toHaveBeenCalledTimes(1);
+    expect(systemIsSessionActive).toHaveBeenCalledTimes(1);
+    selects.mockRestore();
+  });
+
+  it('a failed lookup is not kept', async () => {
+    systemIsSessionActive.mockRejectedValueOnce(new Error('db down')).mockResolvedValue(true);
+    await expect(requireAuth()).rejects.toThrow('db down');
+    expect((await requireAuth()).ok).toBe(true);
   });
 });

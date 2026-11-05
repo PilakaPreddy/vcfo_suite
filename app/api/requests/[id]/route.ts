@@ -1,3 +1,4 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import {
@@ -5,7 +6,6 @@ import {
   updateDocumentRequest,
 } from '@/db/repositories/document-requests';
 import type { DocRequest } from '@/data/engagements';
-import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 import { emptyEmailDispatch } from '@/lib/email/email-dispatch';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -46,7 +46,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const newlyUploaded =
       previous?.status !== 'uploaded' && docRequest.status === 'uploaded';
     const email = newlyUploaded
-      ? await notifyEngagementEvent({
+      ? await notifyEngagementEventSoon({
           engagementId: docRequest.engagementId,
           itemId: docRequest.taskId?.trim() || 'document-request',
           event: 'client_uploaded',

@@ -28,7 +28,7 @@ vi.mock('@/lib/toast-errors', () => ({ toastError: vi.fn(), toastSuccess: vi.fn(
 import { SignInScreen } from './SignInScreen';
 
 function fill(email: string, password: string) {
-  fireEvent.change(screen.getByLabelText('Work email'), { target: { value: email } });
+  fireEvent.change(screen.getByLabelText(/^(Work email|Email)$/), { target: { value: email } });
   fireEvent.change(screen.getByLabelText('Password'), { target: { value: password } });
 }
 
@@ -140,5 +140,29 @@ describe('Microsoft sign-in (S-650)', () => {
     render(<SignInScreen />);
     await Promise.resolve();
     expect(screen.queryByRole('button', { name: /sign in with microsoft/i })).toBeNull();
+  });
+});
+
+describe('SignInScreen, client partner variant', () => {
+  beforeEach(() => {
+    push.mockReset();
+    signIn.mockReset();
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ codeRequired: false }) });
+    getProviders.mockClear();
+    params = new URLSearchParams();
+  });
+
+  it('shows the receivables heading and sends a partner to /receivables', async () => {
+    signIn.mockResolvedValue({ user: { role: 'partner' } });
+    render(<SignInScreen variant="partner" />);
+    expect(screen.getByRole('heading', { name: 'Sign in to your receivables' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Email')).toBeInTheDocument();
+    expect(screen.queryByText('Book a demo')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign in with Microsoft' })).not.toBeInTheDocument();
+    expect(getProviders).not.toHaveBeenCalled();
+    fill('partner@client.in', 'secret');
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/receivables'));
   });
 });

@@ -4,8 +4,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { SIDEBAR_NARROW_QUERY, isTypingTarget } from '@/components/shell/intern-sidebar';
 
 /** R-49 timings: hover intent before the rail opens, and the grace before it closes. */
-export const SIDEBAR_PEEK_OPEN_MS = 160;
-export const SIDEBAR_PEEK_CLOSE_MS = 280;
+const SIDEBAR_PEEK_OPEN_MS = 160;
+const SIDEBAR_PEEK_CLOSE_MS = 280;
 
 /** True under 1100px, where the desktop sidebar is always the rail (R-49). */
 export function useSidebarNarrow(): boolean {

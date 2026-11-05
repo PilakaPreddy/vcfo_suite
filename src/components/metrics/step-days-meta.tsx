@@ -1,6 +1,7 @@
 'use client';
 
-import { plainDay, todayKey } from '@/components/super/parts/super-text';
+import { todayKey } from '@/components/super/parts/super-text';
+import { plainDay } from '@/lib/date-format';
 import { useStepTiming } from '@/components/metrics/use-metrics';
 import { cn } from '@/lib/utils';
 

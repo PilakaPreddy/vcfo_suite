@@ -1,12 +1,5 @@
 'use client';
 
-/**
- * Marks for non-statutory tasks on the client portal (COMPLIANCE-MODEL.md S-6, S-7 and C-1):
- * the urgency pill with signal bars, the visibility tag, the hollow task square of the
- * calendar and the Statutory / Non-statutory / All switch. Urgency stays neutral: red is for
- * late work only (R-03); only "Critical" fills its bars with warning-mid.
- */
-import { Building2, User, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import type { PortalFiling } from '@/lib/client-portal/compliances';
@@ -36,24 +29,8 @@ export function UrgencyPill({ urgency, className }: { urgency: string; className
   );
 }
 
-const VIS = {
-  firm: { Icon: Building2, word: 'Firm', tip: 'Visible to the firm only' },
-  client: { Icon: User, word: 'Client', tip: 'Visible to you and SBC' },
-  both: { Icon: Users, word: 'Both', tip: 'Visible to the firm and the client' },
-} as const;
-
-export function VisibilityTag({ visibility, className }: { visibility: string; className?: string }) {
-  const v = VIS[visibility as keyof typeof VIS] ?? VIS.both;
-  return (
-    <span className={cn('inline-flex items-center gap-1.5 text-[13px] text-ink-2', className)} title={v.tip}>
-      <v.Icon size={15} strokeWidth={1.6} aria-hidden className="text-ink-muted" />
-      {v.word}
-    </span>
-  );
-}
-
 /** C-3: the hollow 8px square a task carries on the calendar, in ink-2. */
-export function TaskSquare({ className }: { className?: string }) {
+function TaskSquare({ className }: { className?: string }) {
   return <i aria-hidden className={cn('inline-block h-2 w-2 flex-none rounded-[2px] border-1.5 border-ink-2 bg-transparent', className)} />;
 }
 

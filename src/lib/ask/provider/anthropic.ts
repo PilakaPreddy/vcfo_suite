@@ -6,7 +6,7 @@ import { anthropicApiKey } from '@/lib/secrets/app-secrets';
 import { withSecretRetry, type RuntimeSecret } from '@/lib/secrets/runtime-secret';
 
 /** The API refused the key (HTTP 401): it was rotated or revoked. */
-export function isUnauthorized(err: unknown): boolean {
+function isUnauthorized(err: unknown): boolean {
   return (err as { status?: unknown } | null)?.status === 401;
 }
 

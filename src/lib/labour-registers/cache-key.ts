@@ -15,7 +15,9 @@
  * reason: they all change the bytes.
  *
  * **Two: a filed register must not be re-keyed.** The research found that electronic registers
- * may change layout but not "integrity, serial number and column contents", and that the
+ * may change layout but not its integrity, serial numbering or column contents — a design
+ * principle this product adopted rather than a rule anybody has cited, since a November 2026
+ * research pass could not find that phrasing in any rule text — and that the
  * admissibility certificate under section 63 of the Bharatiya Sakshya Adhiniyam 2023
  * reportedly has to disclose a hash value — every citation for which was secondary
  * commentary, so it needs checking against the enacted text before anyone relies on it. Either
@@ -46,6 +48,25 @@ export interface AssumptionSet {
   dateOrder?: 'day-first' | 'month-first';
   /** True when overtime was computed at twice the ordinary rate for employees covered by a fixed minimum wage. */
   doubleRateOvertime?: boolean;
+  /**
+   * Whether this client's "rate of wages" means a month's wages or a day's.
+   *
+   * It is a property of their payroll rather than anything to infer from the numbers, and every
+   * form that prints a rate prints a different figure depending on it — so it is keyed, and
+   * changing it correctly rebuilds those registers.
+   */
+  wageRateBasis?: 'monthly' | 'daily';
+  /** Hours in a normal working day, where the client has said something other than eight. */
+  dailyHours?: number;
+  /**
+   * Whose rules this establishment is under: the Centre (railways, mines, ports, banking,
+   * telecom, central PSUs) or the State (everything else).
+   *
+   * Keyed, because it decides which registers exist at all. Switching a client from state to
+   * central sphere does not change a figure on any existing sheet — it changes which sheets
+   * there are — so the registers already produced stay valid and the new ones build.
+   */
+  sphere?: 'state' | 'central';
 }
 
 export interface DocumentIdentity {
@@ -59,8 +80,6 @@ export interface DocumentIdentity {
   period: string;
   /** Hash of the mapped input data, computed by the caller over the rows actually used. */
   inputsHash: string;
-  /** The payroll checklist heads in force, which decide the columns. */
-  activeHeads: string[];
   /** The form template's own version, from the form registry. */
   templateVersion: string;
   assumptions: AssumptionSet;
@@ -92,8 +111,6 @@ export function draftKey(id: DocumentIdentity): string {
     formId: id.formId,
     period: id.period,
     inputsHash: id.inputsHash,
-    /* Sorted, so the order a preparer ticked the checklist in cannot change the address. */
-    activeHeads: [...id.activeHeads].sort(),
     templateVersion: id.templateVersion,
     assumptions: id.assumptions,
     locale: id.locale,
@@ -168,9 +185,6 @@ export function mayReplaceInPlace(manifest: Pick<EvidenceManifest, 'attestation'
 export function stalenessReason(storedKey: string, storedIdentity: DocumentIdentity, now: DocumentIdentity): string | null {
   if (storedKey === draftKey(now)) return null;
   if (storedIdentity.inputsHash !== now.inputsHash) return 'the uploaded data changed';
-  if (canonical([...storedIdentity.activeHeads].sort()) !== canonical([...now.activeHeads].sort())) {
-    return 'the payroll checklist changed';
-  }
   if (canonical(storedIdentity.assumptions) !== canonical(now.assumptions)) return 'the attendance assumptions changed';
   if (storedIdentity.templateVersion !== now.templateVersion) return 'the form template changed';
   if (storedIdentity.locale !== now.locale || storedIdentity.timeZone !== now.timeZone) return 'the locale or time zone changed';

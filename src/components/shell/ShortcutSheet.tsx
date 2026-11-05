@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { useAskOptional } from '@/components/ask/ask-context';
 
 /** Window event that opens the sheet, for a sidebar button or a menu row. */
-export const SHORTCUT_SHEET_EVENT = 'vcfo:shortcuts';
+const SHORTCUT_SHEET_EVENT = 'vcfo:shortcuts';
 
 /** Open the shortcut sheet from anywhere (the sidebar keyboard button, a menu row). */
 export function openShortcuts() {
@@ -21,7 +21,7 @@ function isTyping(t: EventTarget | null) {
 }
 
 /** The groups the sheet lists. Ask VCFO rows show only for the roles that have Ask. */
-export function shortcutGroups(hasAsk: boolean): Array<[string, Row[]]> {
+function shortcutGroups(hasAsk: boolean): Array<[string, Row[]]> {
   return [
     [
       'Everywhere',

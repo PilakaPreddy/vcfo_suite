@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq, gte, inArray, isNull, lte, ne, notInArray, or } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNull, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import {
   complianceInstanceWorkflow,
@@ -350,48 +350,78 @@ export async function systemDeliverComplianceBells(today: string, plan: PlannedR
   const byId = new Map(people.filter((p) => STAFF.has(p.role)).map((p) => [p.id, p]));
   const emails = new Map<string, ReminderEmailPlan>();
 
+  // Every (item, reminder, recipient) once, for active staff only.
+  const keyOf = (kind: string, id: string, key: string, rid: string) => `${kind}|${id}|${key}|${rid}`;
+  const wanted = new Map<string, { p: PlannedReminder; rid: string; person: NonNullable<ReturnType<typeof byId.get>> }>();
   for (const p of plan) {
     for (const rid of p.recipientIds) {
       const person = byId.get(rid);
-      if (!person) continue;
-      const [log] = await db
-        .insert(complianceReminderLog)
-        .values({ subjectKind: p.kind, subjectId: p.id, reminderKey: p.key, sentOn: today, recipientId: rid })
-        .onConflictDoNothing()
-        .returning({ id: complianceReminderLog.id });
-      if (!log) continue; // already sent today
-      const href = p.kind === 'task' ? taskHref(person.role, p.id) : statutoryHref(person.role, p.obligationId ?? '', p.id);
-      const [bell] = await createNotificationsForUsers([
-        {
-          userId: rid,
-          kind: 'compliance.reminder',
-          title: `${p.label}: ${p.title}`,
-          body: `${p.companyName} · due ${p.dueDate}`,
-          engagementId: appEngagementId(p.engagementId),
-          companyName: p.companyName,
-          itemId: p.id,
-          href,
-        },
-      ]);
-      if (bell) await db.update(complianceReminderLog).set({ notificationId: bell.id }).where(eq(complianceReminderLog.id, log.id));
-      if (!person.email?.trim()) continue;
-      const entry = emails.get(rid) ?? {
-        profileId: rid,
-        email: person.email,
-        name: person.name?.trim() || person.email.split('@')[0] || 'there',
-        quiet: {
-          quietHours: person.quietHours ?? true,
-          quietStart: person.quietStart ?? '21:00',
-          quietEnd: person.quietEnd ?? '08:00',
-          tz: person.tz || 'Asia/Kolkata',
-        },
-        lines: [],
-        logIds: [],
-      };
-      entry.lines.push({ title: p.title, companyName: p.companyName, label: p.label, dueDate: p.dueDate, href });
-      entry.logIds.push(log.id);
-      emails.set(rid, entry);
+      if (person) wanted.set(keyOf(p.kind, p.id, p.key, rid), { p, rid, person });
     }
+  }
+  if (wanted.size === 0) return [];
+
+  // One insert for the whole day; a row already logged today comes back missing, so it is skipped.
+  // shortcut: one statement holds at most about 13,000 rows (5 parameters each); chunk if a day ever plans more.
+  const logged = await db
+    .insert(complianceReminderLog)
+    .values([...wanted.values()].map(({ p, rid }) => ({ subjectKind: p.kind, subjectId: p.id, reminderKey: p.key, sentOn: today, recipientId: rid })))
+    .onConflictDoNothing()
+    .returning({
+      id: complianceReminderLog.id,
+      subjectKind: complianceReminderLog.subjectKind,
+      subjectId: complianceReminderLog.subjectId,
+      reminderKey: complianceReminderLog.reminderKey,
+      recipientId: complianceReminderLog.recipientId,
+    });
+  const fresh = logged.flatMap((log) => {
+    const w = wanted.get(keyOf(log.subjectKind, log.subjectId, log.reminderKey, log.recipientId));
+    if (!w) return [];
+    const href = w.p.kind === 'task' ? taskHref(w.person.role, w.p.id) : statutoryHref(w.person.role, w.p.obligationId ?? '', w.p.id);
+    return [{ ...w, logId: log.id, href }];
+  });
+  if (fresh.length === 0) return [];
+
+  // One insert for every bell; the rows come back in the order they were given.
+  const bells = await createNotificationsForUsers(
+    fresh.map(({ p, rid, href }) => ({
+      userId: rid,
+      kind: 'compliance.reminder' as const,
+      title: `${p.label}: ${p.title}`,
+      body: `${p.companyName} · due ${p.dueDate}`,
+      engagementId: appEngagementId(p.engagementId),
+      companyName: p.companyName,
+      itemId: p.id,
+      href,
+    })),
+  );
+  const links = fresh.flatMap((f, i) => (bells[i] ? [{ logId: f.logId, bellId: bells[i]!.id }] : []));
+  if (links.length) {
+    const byLog = sql.join(links.map((l) => sql`when ${l.logId}::uuid then ${l.bellId}::uuid`), sql` `);
+    await db
+      .update(complianceReminderLog)
+      .set({ notificationId: sql`case ${complianceReminderLog.id} ${byLog} end` })
+      .where(inArray(complianceReminderLog.id, links.map((l) => l.logId)));
+  }
+
+  for (const { p, rid, person, logId, href } of fresh) {
+    if (!person.email?.trim()) continue;
+    const entry = emails.get(rid) ?? {
+      profileId: rid,
+      email: person.email,
+      name: person.name?.trim() || person.email.split('@')[0] || 'there',
+      quiet: {
+        quietHours: person.quietHours ?? true,
+        quietStart: person.quietStart ?? '21:00',
+        quietEnd: person.quietEnd ?? '08:00',
+        tz: person.tz || 'Asia/Kolkata',
+      },
+      lines: [],
+      logIds: [],
+    };
+    entry.lines.push({ title: p.title, companyName: p.companyName, label: p.label, dueDate: p.dueDate, href });
+    entry.logIds.push(logId);
+    emails.set(rid, entry);
   }
   return [...emails.values()];
 }

@@ -375,15 +375,6 @@ export async function needUploadTarget(
   return { dbId: access.dbId, title: req.title, stepId: req.stepId ?? undefined };
 }
 
-export async function recordNeedUpload(
-  ctx: AuthContext,
-  requestId: string,
-  file: { objectKey: string; fileName: string; contentType: string | null; sizeBytes: number },
-): Promise<{ documentId: string; title: string } | null> {
-  const out = await recordNeedUploads(ctx, requestId, [file]);
-  return out && out.documents[0] ? { documentId: out.documents[0].documentId, title: out.title } : null;
-}
-
 /**
  * G-09: several files answer one open request at once. Every stored object is
  * indexed as a document shared with the client, the request is marked
@@ -586,7 +577,6 @@ export async function upsertWorkItem(
   if (!row) return null;
   return { id: row.id, title: row.title, stepId: row.stepId ?? undefined, progressPct: row.progressPct, readyOn: row.readyOn ?? undefined };
 }
-
 
 /** Staff editor: the engagement's work items (active + done, not hidden), for anyone with access. */
 export async function listWorkItems(

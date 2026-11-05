@@ -170,7 +170,12 @@ export async function sendNotice(meetingId: string, opts: { leadId: string | nul
     });
     sent = res.ok;
   }
-  await bell(bundle, opts.notifyIds, `${opts.update ? 'Updated notice' : 'Notice'} sent: ${m.meetingNo}`, `Emailed to ${to.length} and CC ${cc.length}. ${m.teamsLink ? 'Teams link included.' : 'No Teams link.'}`);
+  // The notice is sent after the approval has answered, so a failed email is told in the bell.
+  if (to.length && !sent) {
+    await bell(bundle, opts.notifyIds, `Notice not sent: ${m.meetingNo}`, 'The email to the directors failed. It is kept in the developer console for a retry.');
+  } else {
+    await bell(bundle, opts.notifyIds, `${opts.update ? 'Updated notice' : 'Notice'} sent: ${m.meetingNo}`, `Emailed to ${to.length} and CC ${cc.length}. ${m.teamsLink ? 'Teams link included.' : 'No Teams link.'}`);
+  }
   return { sent, to: to.length, cc: cc.length, teams: Boolean(m.teamsLink) };
 }
 

@@ -5,13 +5,14 @@ import { extractItemResponses, getClientResponseFields } from '@/lib/checklist/c
 import { repeatFieldLabel } from '@/lib/checklist/checklist-repeat';
 import { internRegistrationHeadingForTitle } from '@/lib/intern/intern-overview-progress';
 import { appEngagementId, engagementIdAliases } from '@/lib/projects/legacy-engagement-ids';
+import { DOC_CATEGORIES, type ClientDocumentsPayload, type DocNode } from '@/lib/client-portal/documents';
 import {
   fileNameFromStoragePath,
   isMilestoneStoragePath,
   uploadTimestampFromStoragePath,
 } from '@/lib/documents/milestone-document-storage';
 
-type VaultDocumentSource = 'milestone' | 'index';
+type VaultDocumentSource = DocNode['source'];
 
 export interface VaultDocument {
   id: string;
@@ -29,6 +30,8 @@ export interface VaultDocument {
   source?: VaultDocumentSource;
   /** documents-table row id when source is `index`. */
   documentId?: string;
+  /** The server's node when the file came from the engagement's documents read. */
+  node?: DocNode;
 }
 
 /** Indexed files that are not tied to a checklist step. */
@@ -321,6 +324,37 @@ export function collectVaultDocuments(
   });
 }
 
+/**
+ * One engagement's files from the server's documents read (the client Documents page's data),
+ * as vault files: phase and step from the node's step, section from its category. Missing rows
+ * (open requests) have no file and stay out; the requests card shows them.
+ */
+export function vaultDocumentsFromPayload(payload: ClientDocumentsPayload, engagementId: string): VaultDocument[] {
+  return payload.nodes.flatMap((node): VaultDocument[] => {
+    if (!node.ref) return [];
+    const item = node.stepId ? getItem(node.stepId) : undefined;
+    return [
+      {
+        id: node.id,
+        engagementId,
+        companyName: payload.companyName,
+        milestoneId: item?.id ?? INDEXED_MILESTONE_ID,
+        milestoneTitle: item?.title ?? 'Other documents',
+        bucket: VAULT_PHASE_LABEL[item ? vaultPhaseForItem(item) : 'statutory'],
+        section: DOC_CATEGORIES.find((c) => c.id === node.categoryId)?.name ?? 'Other',
+        fieldId: node.id,
+        fieldLabel: node.label,
+        fileName: node.fileName,
+        storagePath: node.ref.startsWith('m:') ? node.ref.slice(2) : '',
+        uploadedAt: node.date ?? null,
+        source: node.source,
+        documentId: node.ref.startsWith('d:') ? node.ref.slice(2) : undefined,
+        node,
+      },
+    ];
+  });
+}
+
 /** Map documents-table index rows onto the same checklist taxonomy. */
 export function collectIndexedVaultDocuments(
   rows: IndexedDocumentRow[],
@@ -434,38 +468,6 @@ function vaultDocMatchesQuery(doc: VaultDocument, query: string): boolean {
     (doc.milestoneTitle ?? '').toLowerCase().includes(q) ||
     (doc.companyName ?? '').toLowerCase().includes(q)
   );
-}
-
-/**
- * Filter entities by client name or document name.
- * A client-name hit keeps every file for that company; otherwise only matching files remain.
- */
-export function filterVaultEntityGroups(groups: VaultEntityGroup[], query: string): VaultEntityGroup[] {
-  const q = query.trim().toLowerCase();
-  if (!q) return groups;
-
-  const out: VaultEntityGroup[] = [];
-  for (const entity of groups) {
-    const companyHit = entity.companyName.toLowerCase().includes(q);
-    if (companyHit) {
-      out.push(entity);
-      continue;
-    }
-
-    const milestones = entity.milestones.flatMap((milestone) => {
-      const sections = milestone.sections.flatMap((section) => {
-        const docs = section.docs.filter((doc) => vaultDocMatchesQuery(doc, q));
-        return docs.length > 0 ? [{ ...section, docs }] : [];
-      });
-      const docCount = sections.reduce((sum, section) => sum + section.docs.length, 0);
-      return sections.length > 0 ? [{ ...milestone, sections, docCount }] : [];
-    });
-    const docCount = milestones.reduce((sum, milestone) => sum + milestone.docCount, 0);
-    if (milestones.length > 0) {
-      out.push(withEntityPhases({ ...entity, milestones, docCount }));
-    }
-  }
-  return out;
 }
 
 /** Group flat vault documents by entity → phase → checklist step → section. */

@@ -32,6 +32,7 @@ import {
   parseIsoDate,
   rowsInMonth,
   sortByDueDate,
+  todayIST,
   type FilingRow,
   type FilingStatus,
 } from '@/lib/compliance/filings';
@@ -114,7 +115,7 @@ export function ComplianceCalendarView({
   const params = useSearchParams();
   const router = useRouter();
   const now = useMemo(() => new Date(), []);
-  const todayIso = now.toISOString().slice(0, 10);
+  const todayIso = todayIST(now);
   const { engagements } = scope;
   const sole = soleCompany(engagements);
 

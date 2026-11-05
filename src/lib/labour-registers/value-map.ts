@@ -53,16 +53,10 @@ const VALUE_ALIASES: Record<string, Record<string, string[]>> = {
 };
 
 /** The canonical values a field allows, or null when it is not an enumerated field. */
-export function allowedValues(field: string): string[] | null {
+function allowedValues(field: string): string[] | null {
   if (field === 'attendanceGrid') return Object.keys(ATTENDANCE_CODES);
   const spec = fieldByKey(field);
   return spec?.values ?? null;
-}
-
-/** A short explanation of a canonical value, for the chooser's secondary line. */
-export function describeValue(field: string, value: string): string {
-  if (field === 'attendanceGrid') return ATTENDANCE_CODES[value as keyof typeof ATTENDANCE_CODES] ?? value;
-  return value;
 }
 
 /**

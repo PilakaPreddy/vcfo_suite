@@ -19,27 +19,46 @@ import { BookDemoDialog } from '@/components/marketing/BookDemoDialog';
  * they fill the email only. "Book a demo" opens the same Book a demo dialog as the landing.
  *
  * The Suspense fallback renders the real form (not null): on LAN or slow JS, a null fallback leaves an empty page.
+ *
+ * `variant="partner"` is the client partner login at `/receivables/login` (docs/specs/receivables/PLAN.md,
+ * Phase 8): the same form and Auth.js flow with the receivables heading, no demo accounts, no Microsoft
+ * button and no Book a demo, and `/receivables` as the destination when the page has no `?next=`.
  */
-export function SignInScreen() {
+export type SignInVariant = 'staff' | 'partner';
+
+type SignInPageProps = { resetNotice: string | null; profileError: string | null; variant: SignInVariant };
+
+export function SignInScreen({ variant = 'staff' }: { variant?: SignInVariant }) {
   return (
-    <Suspense fallback={<SignInPage resetNotice={null} profileError={null} />}>
-      <SignInWithSearchParams />
+    <Suspense fallback={<SignInPage resetNotice={null} profileError={null} variant={variant} />}>
+      <SignInWithSearchParams variant={variant} />
     </Suspense>
   );
 }
 
-function SignInWithSearchParams() {
+function SignInWithSearchParams({ variant }: { variant: SignInVariant }) {
   const searchParams = useSearchParams();
-  return <SignInPage resetNotice={searchParams.get('reset')} profileError={searchParams.get('error')} />;
+  return (
+    <SignInPage resetNotice={searchParams.get('reset')} profileError={searchParams.get('error')} variant={variant} />
+  );
 }
 
-function SignInPage({ resetNotice, profileError }: { resetNotice: string | null; profileError: string | null }) {
-  const form = useSignIn();
+const PARTNER_FOOT = (
+  <p className="text-[13px] leading-relaxed text-ink-muted">
+    Forgot your password, or never set one? Ask your SBC receivables contact to send you a new link.
+  </p>
+);
+
+function SignInPage({ resetNotice, profileError, variant }: SignInPageProps) {
+  const partner = variant === 'partner';
+  const form = useSignIn(partner ? { defaultNext: '/receivables' } : {});
   const { state } = form;
   const [demoOpen, setDemoOpen] = useState(false);
   // S-650: "Sign in with Microsoft" only when the server lists the provider (its env vars are set).
+  // A client partner cannot sign in with Microsoft, so the partner login never asks.
   const [microsoftOn, setMicrosoftOn] = useState(false);
   useEffect(() => {
+    if (partner) return;
     let live = true;
     getProviders()
       .then((p) => live && setMicrosoftOn(Boolean(p && 'microsoft-entra-id' in p)))
@@ -47,15 +66,23 @@ function SignInPage({ resetNotice, profileError }: { resetNotice: string | null;
     return () => {
       live = false;
     };
-  }, []);
+  }, [partner]);
 
   return (
     <div className="relative grid min-h-[100dvh] place-items-center overflow-hidden bg-side px-4 pb-[120px] pt-16 text-side-ink">
-      <SEO
-        title="Sign in | VCFO Suite"
-        description="Sign in to VCFO Suite for engagements, filings, and client collaboration."
-        path="/login"
-      />
+      {partner ? (
+        <SEO
+          title="Client partner sign in | SBC receivables"
+          description="Sign in to see your open SBC invoices, promise a payment date and download your statement."
+          path="/receivables/login"
+        />
+      ) : (
+        <SEO
+          title="Sign in | VCFO Suite"
+          description="Sign in to VCFO Suite for engagements, filings, and client collaboration."
+          path="/login"
+        />
+      )}
 
       <svg
         className="pointer-events-none absolute inset-x-0 bottom-0 h-[46vh] w-full"
@@ -86,7 +113,7 @@ function SignInPage({ resetNotice, profileError }: { resetNotice: string | null;
           Back to site
         </Link>
         {/* P-454: the mono hint, only in demo mode (seeded logins and sample firms). Hidden on phones. */}
-        {demoLoginsOn() ? <span className="hidden font-mono text-[12px] text-side-muted sm:inline">{DEMO_HINT}</span> : null}
+        {!partner && demoLoginsOn() ? <span className="hidden font-mono text-[12px] text-side-muted sm:inline">{DEMO_HINT}</span> : null}
       </div>
 
       <LoginFormCard
@@ -109,6 +136,15 @@ function SignInPage({ resetNotice, profileError }: { resetNotice: string | null;
         onForgotSubmit={form.submitForgotPassword}
         onOpenForgot={form.openForgot}
         headerAction={<ThemeToggle />}
+        {...(partner
+          ? {
+              title: 'Sign in to your receivables',
+              subtitle: 'For SBC client partners. Use the email address SBC invited you with.',
+              emailLabel: 'Email',
+              foot: PARTNER_FOOT,
+              showDemoAccounts: false,
+            }
+          : {})}
         demoHref="/contact"
         onBookDemo={() => setDemoOpen(true)}
         step={state.step}
@@ -116,9 +152,11 @@ function SignInPage({ resetNotice, profileError }: { resetNotice: string | null;
         onCodeChange={form.setCode}
         onCodeSubmit={form.submitCode}
         onBackToPassword={form.backToPassword}
-        onMicrosoft={microsoftOn ? () => void signIn('microsoft-entra-id', { callbackUrl: '/login' }) : undefined}
+        onMicrosoft={
+          microsoftOn && !partner ? () => void signIn('microsoft-entra-id', { callbackUrl: '/login' }) : undefined
+        }
       />
-      <BookDemoDialog open={demoOpen} onOpenChange={setDemoOpen} />
+      {partner ? null : <BookDemoDialog open={demoOpen} onOpenChange={setDemoOpen} />}
     </div>
   );
 }

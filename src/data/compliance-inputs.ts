@@ -165,7 +165,7 @@ const BY_REGISTRATION: Record<string, SubjectInputs> = {
 };
 
 /** The field lists of a registration step. Steps without a list get none. */
-export function registrationInputs(stepId: string): SubjectInputs {
+function registrationInputs(stepId: string): SubjectInputs {
   return BY_REGISTRATION[stepId] ?? { client: [], sbc: [] };
 }
 

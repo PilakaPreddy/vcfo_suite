@@ -44,8 +44,9 @@ describe('createRateLimiter', () => {
 });
 
 describe('clientIp', () => {
-  it('reads the first forwarded address', () => {
-    expect(clientIp(new Headers({ 'x-forwarded-for': '1.2.3.4, 10.0.0.1' }))).toBe('1.2.3.4');
+  it('reads the last forwarded address, the one App Runner appended', () => {
+    expect(clientIp(new Headers({ 'x-forwarded-for': '6.6.6.6, 1.2.3.4' }))).toBe('1.2.3.4');
+    expect(clientIp(new Headers({ 'x-forwarded-for': '1.2.3.4' }))).toBe('1.2.3.4');
     expect(clientIp(new Headers())).toBe('unknown');
   });
 });

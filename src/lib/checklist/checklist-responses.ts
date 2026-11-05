@@ -4,6 +4,7 @@ import type { OwnershipType } from '@/data/engagements';
 import { PART_A_STEP_ID, partAFieldsFor } from '@/lib/checklist/part-a-sections';
 import { expandDirectorSlotFields, withoutUnusedDirectorSlots } from '@/lib/incorporation/incorp-director-slots';
 import { PRE15_MAX_OTHER_INTERESTS } from '@/lib/incorporation/other-company-interests';
+import { isRepeatField, repeatEntries } from '@/lib/checklist/checklist-repeat';
 import { COUNTRY_OPTIONS, INDIAN_STATE_OPTIONS } from '@/lib/incorporation/countries';
 import {
   DIRECTOR_IDENTITY_PROOF_OPTIONS,
@@ -1982,6 +1983,17 @@ export function formatResponseSummary(
     case 'pre-11':
       summary = r.mcaRemarksSummary?.trim() ? truncateSummary(r.mcaRemarksSummary) : null;
       break;
+    case 'pre-15': {
+      // The repeat group stores entry ids ("e413…,e41b…"); show the directors' names instead.
+      const group = allFields.find((f) => f.id === 'directors');
+      const names = group && isRepeatField(group)
+        ? repeatEntries(r, group)
+            .map((e) => [e.values.firstName, e.values.middleName, e.values.lastName].map((v) => (v ?? '').trim()).filter(Boolean).join(' '))
+            .filter(Boolean)
+        : [];
+      summary = names.length ? truncateSummary(names.join(', ')) : null;
+      break;
+    }
     case 'pre-12':
       summary = joinSummaryParts([
         r.incorporatedCompanyName?.trim(),

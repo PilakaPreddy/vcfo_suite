@@ -52,8 +52,7 @@ and it is the single most load-bearing unread provision in the catalogue.
 employees whose minimum rate of wages is fixed under the Code. Most of a professional-services
 client's roll sits above any scheduled minimum, and the workbook this replaces applied 2× to
 everyone. `computeOvertime()` therefore refuses to produce a figure for an employee whose
-coverage is `unknown`, and `minimum-wage-coverage` is a payroll checklist head so the question
-is part of the monthly close. Do not default it.
+coverage is `unknown`, and an undecided employee blocks the close. Do not default it.
 
 **Retention is 3 years on the legacy rules and 5 under the codes**, not the 8 an earlier draft
 assumed — that number could not be sourced anywhere and may be contamination from section
@@ -66,21 +65,62 @@ amended in 2014 permits electronic registers provided a printout is produced to 
 demand. So the print bundle is a first-class output, not a convenience, and no labour rule found
 prescribes a digital signature class — make signing optional, not required.
 
-## The payroll checklist is load-bearing
+## Required, optional, and nil (the payroll checklist is gone — 2026-11-03)
 
-`labour_register_checklist` is the client's standing list of pay heads and activities. It is
-also what decides which columns the mapper demands. Two ways a column can be absent, and the
-difference is legal:
+There used to be a payroll checklist here: a client's standing list of the pay heads their
+payroll runs, which gated which columns the mapper demanded. It has been removed at the owner's
+instruction — it is a payroll concern, not a register one, and belongs in its own feature. The
+tables (`labour_register_checklist`, `labour_register_checklist_ticks`) are dropped by migration
+`0036`, and `ColumnSource` no longer has a `checklist` member.
 
-- A column the **prescribed form** carries always prints, with a nil in it when the head is off
-  (`nilColumns()`). Removing it would alter a statutory layout, and an electronic register may
-  change layout but not "integrity, serial number and column contents".
-- A column the **catalogue itself** marks `source: 'checklist'` simply does not appear
-  (`omittedColumns()`).
+What the gating does now, which is simpler and holds the same line:
 
-A field can be gated from either side — by `FormColumn.requiresHead` or by the field's own
-`FieldSpec.head` — and `requiredFields()` honours both. A prescribed form names an overtime
-column outright, so that gate lives on the field.
+- A field every payroll has — identity, days worked, basic, gross, deductions — is **required**.
+  `requiredFields(forms)` returns these, and an unmapped one blocks the close.
+- A field not every employer runs — a night shift allowance, a conveyance allowance, overtime —
+  carries `optional: true` on its `FieldSpec`. `optionalFields(forms)` returns these. They are
+  offered to the mapper but never demanded, so a client who pays no night shift allowance is
+  not held up over a column they will never fill.
+- An optional column with nothing mapped to it **still prints**, with a nil in it
+  (`nilColumns(form, mappedFields)`). Removing it would alter a statutory layout, and an
+  electronic register may change layout but not "integrity, serial number and column contents".
+  `assessReadiness` reports these as a short line so nothing goes out blank silently.
+
+So the distinction moved from "did somebody tick this head" to "is this field one every payroll
+has". That is the same judgement without a second thing to keep in sync, and it cannot go stale
+the way a standing checklist does.
+
+## The monthly close is a lock, not a save
+
+Nothing is generated until somebody marks the inputs ready. Before that the batch is being
+gathered; after it the uploads and the mapping are fixed, and the registers are built from
+exactly what was locked. `recordDocument` refuses on an unlocked batch for that reason — a
+register built from a half-gathered month looks exactly like a finished one, and the only way
+to tell them apart is to open the file.
+
+`assessReadiness()` decides what blocks and what is merely short, and the distinction is the
+interesting part:
+
+- **Blocks:** no paysheet; no attendance where a form carries a day grid; a required column
+  nobody mapped; an attendance code nobody matched; an employee with no minimum wage coverage
+  decision where overtime was worked. Each would put a figure in a statutory register that the
+  firm cannot stand behind.
+- **Does not block:** employees missing a field, optional columns that will print nil, a month
+  marked fully present rather than uploaded. These are judgement calls — a client really may
+  have two people with no PAN on file — so they are reported, the preparer decides, and the
+  decision is on the record.
+
+The readiness summary is stored on the batch verbatim at the moment of locking
+(`readiness_snapshot`). What somebody was told when they took responsibility is part of the
+record; recomputing it later answers a different question.
+
+Reopening is the only way back and it takes a reason (`reopen_reason`, `reopen_count`).
+Documents already generated are left alone: they keep their content address, so unchanged
+inputs mean the same files answer and nothing is rebuilt.
+
+`batchProvenance()` is that record said out loud — who locked it, when, how many registers
+exist and how many were served from storage rather than built. A saving nobody can see is a
+saving nobody believes.
 
 ## Caching: two lifecycles, not one
 
@@ -152,3 +192,73 @@ form scale.
 
 A grouped, keyboard-navigable list is the control. **Do not add the map back** without counsel
 sign-off on the boundary depiction and a licence that permits commercial use.
+
+
+## The screens' own design tokens (2026-11-03)
+
+The labour register screens do not use Spectrum. They use the reference design the owner
+supplied, which is a different system on nearly every count: `#1660d8` rather than the blurple,
+12 px cards with a single hairline and no shadow rather than 6 px with 2 px, 44 px controls
+rather than 36, content-width chips rather than the fixed 104, the system font stack rather
+than Roboto, and no ribbon.
+
+Those values live in `src/components/labour-registers/theme.ts` as custom properties and are
+applied by `LabourRegistersTheme`, which wraps each screen. They are **scoped to this feature
+on purpose**: putting them in `app/globals.css` or `tailwind.config.ts` would repaint
+incorporation, the compliance calendar, the client portal and all six shells — every screen in
+the product, most of which nobody has looked at in this light.
+
+The feature therefore has its own `LrCard`, `LrCardHead`, `LrHero`, `LrChip`, `LrStatTile` and
+`LrBanner` in `primitives.tsx`, which is a fork of `DashHero` / `DashSection` / `Chip` and is
+the one place the house rule against forking a primitive is deliberately broken. A `variant`
+prop on the shared components would have carried the reference's values into every other
+screen's props. A unit test in `labour-registers-page.test.ts` fails if anything outside the
+feature folder imports `theme.ts`, which is what keeps the scoping true.
+
+If the whole product ever moves to these values, delete `theme.ts` and the `LabourRegistersTheme`
+wrappers and the components fall back to the shared tokens.
+
+### Screens
+
+- `LabourRegistersPage` — the staff picker: hero and figures, the India map beside a list of the
+  same states, the side rail, then the catalogue act by act.
+- `ClientRegistersPage` — the client's own view. A separate screen, not the staff one with
+  buttons removed: a client asks "where do I employ people, and can I have last month's file",
+  which needs their establishments first and a download beside each register.
+- `BatchPage` — one batch: the provenance card (with the reopen and download actions in its
+  footer), what the batch cost, then the registers laid out as the folders they download as
+  (`ActDirectory`).
+
+### Verifying a change here
+
+jsdom will not catch the failure these screens are prone to. They hand Lucide icons to client
+components, and a function cannot cross the server-to-client boundary, so a screen that loses
+its `'use client'` throws on every request while every unit test still passes. Render through
+the real pipeline: `npm run e2e:smoke`, or a throwaway page under `app/` requested from a
+running `next dev` and screenshotted.
+
+
+## Opening a batch (2026-11-03)
+
+The picker is state-first: a preparer thinks "Telangana, September" before they think of a
+client. But a batch is one client, one state, one period, so the client is chosen on the same
+screen and `POST /api/labour-registers/open` puts the three together. `openBatch` is
+find-or-create, so pressing the button twice returns the same batch rather than a second one.
+
+Before that route existed the Open button was a link back to the same page, which is why
+pressing it appeared to do nothing.
+
+## The map's hit areas
+
+Every configured state is clickable on its own shape (an `onClick` on the `<g>`, which pushes
+the picker's own href). The small ones — Delhi, Chandigarh, Goa, Sikkim, Puducherry, the
+islands — also get a marker with a 44 px hit area over it, because their shapes are a few
+pixels across at page scale.
+
+**That overlay list must keep `pointer-events-none`.** It covers the whole map, and without it
+the list swallowed every click meant for a shape underneath, so clicking a large state did
+nothing. Only the links inside it take the pointer back (`pointer-events-auto`).
+
+The `<svg>` stays `aria-hidden` and its shapes are not focusable: a path is a poor focus target
+and announces nothing useful. The list of states the caller renders beside the map is the
+keyboard and screen-reader path, and both read the same rows.

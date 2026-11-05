@@ -76,7 +76,7 @@ export function DateTile({
 }
 
 /** The soft blurple tile of a later filing on a register band (prototype `DateTone` "accent"). */
-export const BAND_UPCOMING_TILE = 'bg-brand-soft text-brand-text';
+const BAND_UPCOMING_TILE = 'bg-brand-soft text-brand-text';
 
 /** "3 of 5 filed" with an 8px green bar (G1). The track is white because the band under it is grey. */
 export function FiledBar({ filed, total, className }: { filed: number; total: number; className?: string }) {
@@ -173,19 +173,6 @@ export function StatusDonutCard({
         ))}
       </ul>
     </section>
-  );
-}
-
-/** A stacked bar in status colours, sized by count. */
-export function StatusBar({ counts, label }: { counts: Record<FilingStatus, number>; label: string }) {
-  return (
-    <span className="flex h-2 min-w-0 flex-1 gap-0.5 overflow-hidden rounded-bar bg-surface-sunken" title={label}>
-      {CHART_STATUSES.map((s) =>
-        counts[s] ? (
-          <i key={s} className={cn('block h-full', STATUS_FILL[s])} style={{ flex: counts[s] }} title={`${FILING_WORD[s]} · ${counts[s]}`} />
-        ) : null,
-      )}
-    </span>
   );
 }
 

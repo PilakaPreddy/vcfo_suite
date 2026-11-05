@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
  * same colour on the super admin, admin, manager and lead screens. Every tone is a token pair
  * that flips in dark mode.
  */
-export const CLIENT_IDENTITY_TONES = [
+const CLIENT_IDENTITY_TONES = [
   'bg-brand-soft text-brand-text',
   'bg-identity-soft text-identity',
   'bg-waiting-soft text-waiting',

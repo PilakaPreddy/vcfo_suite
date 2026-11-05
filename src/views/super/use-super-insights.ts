@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import type { SuperInsights } from '@/components/super/insights/super-insights-model';
+import type { SuperInsights } from '@/lib/super/super-insights-model';
 
 /**
  * The read behind Practice areas, Team, Risks, Growth and Reports. Like `useSuperOverview`,

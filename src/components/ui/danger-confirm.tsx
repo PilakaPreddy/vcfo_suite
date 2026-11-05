@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 /** True when the typed text matches the word, ignoring case and outer spaces. */
-export function dangerWordMatches(typed: string, word: string): boolean {
+function dangerWordMatches(typed: string, word: string): boolean {
   return typed.trim().toUpperCase() === word.trim().toUpperCase();
 }
 

@@ -1,4 +1,9 @@
-export type Role = 'super_admin' | 'admin' | 'manager' | 'intern' | 'client' | 'developer';
+/**
+ * `partner` (3 Nov 2026, docs/specs/receivables/PLAN.md): a client's partner who reads their own
+ * receivables at /receivables. Like `developer`, the guards refuse it everywhere except the
+ * routes that ask for it (`requirePartner`), because many repositories predate it.
+ */
+export type Role = 'super_admin' | 'admin' | 'manager' | 'intern' | 'client' | 'developer' | 'partner';
 export type DbRole = Role;
 
 /** User-facing role labels. */
@@ -9,6 +14,7 @@ export const ROLE_UI_LABEL: Record<Role, string> = {
   intern: 'Project Lead',
   client: 'Client',
   developer: 'Developer',
+  partner: 'Client partner',
 };
 
 export interface AuthUser {
@@ -35,6 +41,7 @@ const DB_ROLES: readonly DbRole[] = [
   'intern',
   'client',
   'developer',
+  'partner',
 ];
 
 export function isValidDbRole(role: string): role is DbRole {

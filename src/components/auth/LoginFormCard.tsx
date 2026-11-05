@@ -50,10 +50,18 @@ export interface LoginFormCardProps {
   onBackToPassword?: () => void;
   /** Starts the Microsoft sign-in; the button shows only when this is set (the provider is configured). */
   onMicrosoft?: () => void;
+  /** The heading of the password step. Defaults to "Sign in to your workspace". */
+  title?: string;
+  /** The line under the heading on the password step. */
+  subtitle?: string;
+  /** Replaces the default foot (forgot password and Book a demo), for example on the partner login. */
+  foot?: React.ReactNode;
+  /** The email field's label. Defaults to "Work email"; the partner login says "Email". */
+  emailLabel?: string;
 }
 
 /** Plain words for the `?error=microsoft_*` codes the Auth.js `signIn` callback sends back. */
-export const MICROSOFT_ERRORS: Record<string, string> = {
+const MICROSOFT_ERRORS: Record<string, string> = {
   microsoft_no_profile: 'No VCFO Suite account uses this Microsoft email. Ask your firm admin to add you.',
   microsoft_not_allowed: 'This account cannot sign in with Microsoft. Use your email and password.',
   microsoft_linked_elsewhere: 'Your VCFO Suite account is linked to a different Microsoft account.',
@@ -132,6 +140,10 @@ export function LoginFormCard({
   onCodeSubmit,
   onBackToPassword,
   onMicrosoft,
+  title = 'Sign in to your workspace',
+  subtitle = 'Use the account your firm created for you.',
+  foot,
+  emailLabel = 'Work email',
 }: LoginFormCardProps) {
   const codeDigits = code.replace(/[\s-]/g, '');
   const footLink =
@@ -163,12 +175,12 @@ export function LoginFormCard({
         </div>
 
         <h1 id="sign-in-title" className="mt-1.5 text-[22px] font-semibold tracking-[-0.01em]">
-          {step === 'code' ? 'Enter your code' : 'Sign in to your workspace'}
+          {step === 'code' ? 'Enter your code' : title}
         </h1>
         <p className="-mt-1.5 mb-1 text-[14px] text-ink-muted">
           {step === 'code'
             ? `Open your authenticator app for ${email}.`
-            : 'Use the account your firm created for you.'}
+            : subtitle}
         </p>
 
         {profileError === 'no_profile' && (
@@ -224,7 +236,7 @@ export function LoginFormCard({
           <form onSubmit={onSubmit} className="grid gap-3.5" aria-labelledby="sign-in-title">
             <div className="grid gap-1.5">
               <Label htmlFor="email" className="text-[13px] font-medium text-ink-2">
-                Work email
+                {emailLabel}
               </Label>
               <Input
                 id="email"
@@ -306,27 +318,29 @@ export function LoginFormCard({
           </div>
         ) : null}
 
-        <p className="text-[13px] leading-relaxed text-ink-muted">
-          <button
-            type="button"
-            onClick={onOpenForgot}
-            className={footLink}
-          >
-            Forgot your password?
-          </button>{' '}
-          Ask your firm&apos;s admin to reset it.
-          <br />
-          No account yet?{' '}
-          {onBookDemo ? (
-            <button type="button" onClick={onBookDemo} className={footLink} aria-haspopup="dialog">
-              Book a demo
-            </button>
-          ) : (
-            <Link href={demoHref} className={footLink}>
-              Book a demo
-            </Link>
-          )}
-        </p>
+        {foot ?? (
+          <p className="text-[13px] leading-relaxed text-ink-muted">
+            <button
+              type="button"
+              onClick={onOpenForgot}
+              className={footLink}
+            >
+              Forgot your password?
+            </button>{' '}
+            Ask your firm&apos;s admin to reset it.
+            <br />
+            No account yet?{' '}
+            {onBookDemo ? (
+              <button type="button" onClick={onBookDemo} className={footLink} aria-haspopup="dialog">
+                Book a demo
+              </button>
+            ) : (
+              <Link href={demoHref} className={footLink}>
+                Book a demo
+              </Link>
+            )}
+          </p>
+        )}
         {/* P-470: the same demo hint as the top bar, under the form on phones. */}
         {showDemoAccounts ? <p className="font-mono text-[12px] text-ink-muted sm:hidden">{DEMO_HINT}</p> : null}
       </div>

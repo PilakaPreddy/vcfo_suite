@@ -28,7 +28,7 @@ export type HomeTrends = Record<string, number[]>;
 export const TREND_DAYS = 30;
 
 /** Past months on the super admin home, whose tiles compare against last month. */
-export const TREND_MONTHS = 4;
+const TREND_MONTHS = 4;
 
 const DAY_MS = 86_400_000;
 const IST_OFFSET_MS = 5.5 * 3_600_000;

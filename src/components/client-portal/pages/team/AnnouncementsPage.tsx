@@ -16,7 +16,7 @@ import { useAnnouncements } from '@/hooks/use-announcements';
 import { useClientOverview } from '@/hooks/use-client-overview';
 import { ANNOUNCEMENT_KIND_LABEL, type Announcement } from '@/lib/notifications/announcements';
 import { VCFO_PORTAL_TASKS, type VcfoPortalTask } from '@/lib/notifications/announcement-portals';
-import type { Regulator } from '@/components/ui/spectrum-chip';
+import type { Regulator } from '@/lib/ui/regulator';
 import { usePortal } from '../../PortalProvider';
 import { LinkButton } from '../../LinkButton';
 import { todayIST } from '../../hooks';

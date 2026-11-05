@@ -155,7 +155,7 @@ export function RecordMetaLine({ engagement }: { engagement: Engagement }) {
 const HOLDER_CHIP = { client: 'Waiting on client', mca: 'With MCA', sbc: 'With SBC' } as const;
 
 /** "pre-8" gives "Pre-8": the step code the lists and the step page show in mono. */
-export function stepCode(id: string): string {
+function stepCode(id: string): string {
   return id.charAt(0).toUpperCase() + id.slice(1);
 }
 

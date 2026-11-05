@@ -82,7 +82,7 @@ function istTime(at: string): string {
  * The Overdue tile's count: needs that are sent back or past due (`isOverdueNeed`), late steps
  * that are not done, and after the COI the overdue filings. A step counts once.
  */
-export function overdueCount(h: HomeData): number {
+function overdueCount(h: HomeData): number {
   const ids = new Set<string>();
   for (const n of h.needs) if (isOverdueNeed(n, h.today)) ids.add(n.stepId ?? n.key);
   for (const s of h.model.steps) if (s.late && s.kind !== 'done') ids.add(s.id);
@@ -402,7 +402,7 @@ export function HoldsCard({ h, className }: { h: HomeData; className?: string })
 /* ----------------------------------------------------------------- alerts */
 
 /** R-20: full-width rows, 44px date tile, chip on the right, the urgent row soft red with a navy action. */
-export function AttentionRows({ h, hero, rows, onRow }: { h: HomeData; hero?: AlertRow; rows: AlertRow[]; onRow?: (a: AlertRow) => void }) {
+function AttentionRows({ h, hero, rows, onRow }: { h: HomeData; hero?: AlertRow; rows: AlertRow[]; onRow?: (a: AlertRow) => void }) {
   if (!hero && rows.length === 0) return <Empty />;
   const chipOf = (a: AlertRow): { label: string; tone: ChipTone } => {
     const n = days(h.today, a.date);
@@ -503,7 +503,7 @@ export interface SbcRow {
   linkLabel: string;
 }
 
-export function buildSbcRows(h: HomeData): SbcRow[] {
+function buildSbcRows(h: HomeData): SbcRow[] {
   const work = h.home?.work ?? [];
   if (work.length) {
     return work.map((w) => {
@@ -721,7 +721,7 @@ export function DocsCard({
 /* ------------------------------------------------------------ activity */
 
 /** C1: the Recent activity card shows this many rows, then a link to the Audit page. */
-export const ACTIVITY_ROWS = 5;
+const ACTIVITY_ROWS = 5;
 
 export function ActivityCard({ h, className }: { h: HomeData; className?: string }) {
   const [tab, setTab] = useState('all');

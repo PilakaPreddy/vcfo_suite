@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 /* Small parts for the staff tables' row quick actions (E-02) and the bulk bar's Assign (E-01). */
 
 /** A ghost 28px icon button at the row end, with its name and key in a dark tip. */
-export function RowIconButton({
+function RowIconButton({
   label,
   shortcut,
   icon: Icon,

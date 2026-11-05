@@ -36,10 +36,6 @@ export const SIDEBAR_SOLIDS = [
   { id: 'glass', label: 'White', value: 'oklch(var(--surface-raised))' },
 ] as const;
 
-/* No gradient skins any more. Kept as an empty list so older callers and stored
-   preferences keep type-checking; `parseShellAppearance` folds `gradient` into solid. */
-export const SURFACE_GRADIENTS: readonly { id: string; label: string; value: string }[] = [];
-
 const LIGHT_SIDEBAR_IDS = new Set(['glass', 'white', 'mist', 'ice', 'sage']);
 
 /* Maps the ids the old pickers wrote (midnight, ocean, mist, ...) onto the two

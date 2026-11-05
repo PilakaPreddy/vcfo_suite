@@ -28,7 +28,7 @@ import { isUuid } from '@/lib/slug';
  * show them (`DEFAULT_NOTIFICATION_PREFS.email.weeklyDigest`, on).
  */
 
-export const DIGEST_EVENT = 'weekly_digest';
+const DIGEST_EVENT = 'weekly_digest';
 
 /** The roles that get a digest. Developers are left out on purpose. */
 const DIGEST_ROLES = ['super_admin', 'admin', 'manager', 'intern', 'client'] as const;

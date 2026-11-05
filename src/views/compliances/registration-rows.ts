@@ -59,7 +59,7 @@ export function workbookRowKey(item: Pick<ChecklistItem, 'title'>): string | und
 }
 
 /** "Due in the next 15 days" (owner decision for the Registrations rail). */
-export const REG_SOON_DAYS = 15;
+const REG_SOON_DAYS = 15;
 
 export type RegWord = SixWord | 'Not needed';
 
@@ -107,7 +107,7 @@ function isoOf(value: string | undefined | null): string | undefined {
 }
 
 /** The step's answers for its number and its registration date, when present. */
-export function answersOf(item: ChecklistItem, slice: ChecklistItemStateSlice | undefined): { number?: string; date?: string } {
+function answersOf(item: ChecklistItem, slice: ChecklistItemStateSlice | undefined): { number?: string; date?: string } {
   if (!slice?.responses) return {};
   const fields = getClientResponseFields(item);
   const resp = extractItemResponses(item, slice);

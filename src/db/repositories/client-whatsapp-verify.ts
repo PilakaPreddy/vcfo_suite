@@ -21,9 +21,9 @@ import type { SendWhatsAppDeps } from '@/lib/notify/send-whatsapp-shared';
  * stored. At most five codes go out per person per hour.
  */
 
-export const CODE_TTL_MS = 10 * 60 * 1000;
-export const MAX_ATTEMPTS = 5;
-export const MAX_SENDS_PER_HOUR = 5;
+const CODE_TTL_MS = 10 * 60 * 1000;
+const MAX_ATTEMPTS = 5;
+const MAX_SENDS_PER_HOUR = 5;
 
 export type SendCodeOutcome = { status: 'sent' } | { status: 'not_set_up' | 'invalid_phone' | 'too_many' | 'failed' };
 export type CheckCodeOutcome = { status: 'ok' } | { status: 'wrong' | 'expired' | 'locked' };

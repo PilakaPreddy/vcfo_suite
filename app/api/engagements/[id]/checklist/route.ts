@@ -1,3 +1,4 @@
+import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/auth/guards';
@@ -10,7 +11,6 @@ import {
 } from '@/db/repositories/engagements';
 import { engagementDbId } from '@/lib/projects/legacy-engagement-ids';
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
-import { notifyEngagementEvent } from '@/lib/email/notify-engagement-event';
 import { emptyEmailDispatch } from '@/lib/email/email-dispatch';
 import { leadManagerRequestNotifyPlan } from '@/lib/email/lead-manager-request-notify';
 import { leadWritablePatch } from '@/lib/checklist/checklist-item-review';
@@ -162,7 +162,7 @@ export async function POST(request: Request, context: RouteContext) {
     });
 
     const email = leadNotify.notify
-      ? await notifyEngagementEvent({
+      ? await notifyEngagementEventSoon({
           engagementId: id,
           itemId: body.data.itemId,
           event: 'lead_requested_review',
