@@ -289,3 +289,27 @@ Phase 0, 6 November:
   `app/app/admin/ask-vcfo/usage/`, linked from Question gaps and Sources.
 - `ROUTER_INTENTS` is live. `do_work` answers with a plain line on `router_refusal`; `fact` runs as a tool answer until
   phase 1 adds the metrics.
+
+Phase 1, 6 November:
+
+- `localMatch` runs before the daily budget and the rate limit, not after them as the seam order says. Those two guard
+  model spending, and a number that spends nothing should still be there on the day the budget runs out.
+- A strict match means every word of the question is accounted for: a question word, a period, an alias, and at most one
+  status, law area or company. Any other leftover word ("why", "penalty") sends the question to the router.
+- "This year" means the financial year, and the answer always names the year it counted.
+- A client asking `companies.incorporated` gets their company's own date, whatever period was asked, because a count of
+  one company in a period reads as a wrong answer.
+- The catalog holds 28 metrics: the 25 named above, plus `steps.remaining`, `projects.by_status` and `people.team`,
+  which the phase task asked for by subject. `companies.in_progress` reads incorporated state, so a company with the
+  certificate step closed but no date set counts as incorporated, while the dated periods of `companies.incorporated`
+  need the date.
+- `filings.*` use the rows and `filingStatus` of the Filings page. That page shows one financial year at a time, while
+  `filings.overdue` counts every year, because a filing missed last year is still overdue. The sentence names how many
+  are from an earlier year, and the link opens the page on its full-year view, so 9 in chat next to 8 on the tile reads
+  as the same fact. `filings.due_soon` keeps items the page words as Waiting, which its Due soon filter leaves out.
+- `invoices.overdue` leaves out disputed invoices and says so in the sentence. `invoices.outstanding` does not.
+- `metrics/types.ts` changed from phase 0: `byMonth` became `bars`, which also takes groups, and filters gained
+  `fyStartYear` and `client`. A `bars` visual joined the fixed set for code only; it is on neither allowed-visual list, so
+  the model cannot emit it. A `list` destination joined the links, with a client subset.
+- `useStaffBasePath` sent a Project Lead's Ask links to `/app/manager`. Ask now uses `useAskLinkBase`, and `resolveHref`
+  takes the lead's and the client's base.
