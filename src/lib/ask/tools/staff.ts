@@ -11,7 +11,7 @@ import { deriveStuckReason, STUCK_LABEL } from '@/lib/projects/project-stuck';
 import { numberArg, type AskTool } from './types';
 
 /**
- * STAFF TOOLS — admin / super admin, firm-wide, read-only. Pure functions over
+ * STAFF TOOLS — read-only, as far as the caller's scope reaches. Pure functions over
  * data loaded through scoped repositories (`staff-data.ts`), so they are
  * testable without a database. Results carry only company names, step titles,
  * counts and calendar dates — never identity numbers, addresses or people.
@@ -37,7 +37,7 @@ function active(data: StaffData): StaffEngagement[] {
 }
 
 /** Route key for project links: slug when present, else id. */
-function routeKey(e: StaffEngagement): string {
+export function routeKey(e: StaffEngagement): string {
   return e.engagement.slug || e.engagement.id;
 }
 
