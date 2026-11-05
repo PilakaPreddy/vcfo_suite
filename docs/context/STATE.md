@@ -24,6 +24,7 @@ Last updated: 2026-11-03 (receivables Phases 1 to 6 on `pr-13`, not committed (P
 | Vault toolbar on phones | fixed 2026-11-05 on `claude/keen-knuth-8on04j`: the client documents controls wrap (`.vdm-tools.wrap`) when staff view them inside the Vault card, so "By category" is no longer clipped at iPhone 13 width. |
 | Route error bodies (audit small item) | fixed 2026-11-05 on `claude/keen-knuth-8on04j`: route catch blocks call `publicErrorMessage(err, code)` (`src/lib/api-error.ts`), which keeps messages our own code threw and replaces driver, SDK and runtime error text with the fixed code, logging the detail on the server. |
 | Two-step lockout across instances (audit small item) | fixed 2026-11-05 on `claude/keen-knuth-8on04j`: the ten-wrong-codes lockout in `src/lib/totp/guard.ts` counts in the Postgres `rate_limits` store (key `totp-fail:<user>`, cleared on a correct code), so `checkTotpCode` is async; the replay guard stays in process memory. |
+| Labour register loader (audit small item) | moved 2026-11-05 on `claude/keen-knuth-8on04j`: `loadBatchDataset` now lives in `src/lib/labour-registers/load-dataset.ts`, so `app/api/labour-registers/generate` no longer imports from `src/views/`. |
 | Setup / seed / Auth.js login | done |
 | Phase 0 stubs (intern portfolio, welcome email, resend helper, supabase client) | done |
 | Phase 1 API ports | done — `_reference-supabase/` deleted; ~35 real routes |

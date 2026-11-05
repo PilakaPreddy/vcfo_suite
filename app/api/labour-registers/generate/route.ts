@@ -12,7 +12,7 @@ import { documentFileName, documentObjectKey, periodLabel } from '@/lib/labour-r
 import { isBuilt } from '@/lib/labour-registers/xlsx/layouts';
 import { renderForForm } from '@/lib/labour-registers/xlsx/renderers';
 import { templateVersionFor } from '@/lib/labour-registers/xlsx/version';
-import { loadBatchDataset } from '@/views/labour-registers/load-dataset';
+import { loadBatchDataset } from '@/lib/labour-registers/load-dataset';
 import { EXTENSION_TO_MIME } from '@/lib/upload-limits';
 import { putObject } from '@/storage/s3';
 
