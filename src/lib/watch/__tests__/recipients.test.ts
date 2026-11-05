@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { audienceFor, bellRecipients, importanceFor, isWatchStaff, reviewers, summaryFor, watchHref, type WatchPerson } from '../recipients';
+import { audienceFor, bellRecipients, changeTypeFor, importanceFor, isWatchStaff, reviewers, summaryFor, watchHref, type WatchPerson } from '../recipients';
 
 const people: WatchPerson[] = [
   { id: 's', role: 'super_admin' },
@@ -10,6 +10,12 @@ const people: WatchPerson[] = [
 ];
 
 describe('who gets what', () => {
+  it('treats a listed draft or proposal as a consultation, whatever the model called it', () => {
+    expect(changeTypeFor('form_change', 'CBDT has proposed the Income-tax (Seventh Amendment) Rules, 2026')).toBe('consultation');
+    expect(changeTypeFor('law_in_force', 'Priority Sector Lending – Draft')).toBe('consultation');
+    expect(changeTypeFor('form_change', 'CBDT has notified the Income-tax (Eighth Amendment) Rules, 2026')).toBe('form_change');
+  });
+
   it('derives importance from the change type and the source, never the model', () => {
     for (const change of ['due_date', 'penalty', 'law_in_force', 'form_change'] as const) {
       expect(importanceFor(change, 'everyone')).toBe('important');

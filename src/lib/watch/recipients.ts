@@ -26,6 +26,13 @@ export function importanceFor(changeType: RegChangeType, sourceAudience: string 
   return IMPORTANT_CHANGES.has(changeType) ? 'important' : 'normal';
 }
 
+const PROPOSAL = /\b(draft|proposed|proposes|proposal|(inviting|seeking|invites) (comments|suggestions))\b/i;
+
+/** A draft changes nothing yet, whatever it would change, so its listed title decides over the model's label. */
+export function changeTypeFor(changeType: RegChangeType, title: string): RegChangeType {
+  return PROPOSAL.test(title) ? 'consultation' : changeType;
+}
+
 /** The board and the chat card follow the same rule as the bell. */
 export function audienceFor(importance: RegImportance): 'everyone' | 'staff' {
   return importance === 'staff_only' ? 'staff' : 'everyone';

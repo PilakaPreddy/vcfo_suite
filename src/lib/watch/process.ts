@@ -13,9 +13,9 @@ import {
 } from '@/db/repositories/reg-updates';
 import { WatchBlockedError } from './fetch';
 import { readUpdateText, WatchReadError } from './read';
-import { importanceFor } from './recipients';
+import { changeTypeFor, importanceFor } from './recipients';
 import { summariseUpdate, WatchSummariseError, type SummariseResult } from './summarise';
-import { WATCH_PROCESS_EVENT, type RegArea, type RegChangeType } from './types';
+import { WATCH_PROCESS_EVENT, type RegArea } from './types';
 import { verifyRegSummary } from './verify';
 
 /**
@@ -48,7 +48,8 @@ export async function readStep(id: string): Promise<StepResult> {
       await systemMarkRegUpdateFailed(id, err.message);
       return 'stop';
     }
-    // A network failure is left to the job's retries, then to the next hourly sweep.
+    // A network failure is left to the job's retries, then to the hourly sweep, and the queue says so.
+    await systemNoteRegUpdate(id, 'The document could not be reached; it will be tried again.');
     throw err;
   }
 }
@@ -89,9 +90,10 @@ export async function verifyStep(id: string, result: SummariseResult): Promise<'
   const problems = verifyRegSummary(result.summary, row.update.sourceText);
   // The source knows its own area when the model can only say "general".
   const area = result.summary.area === 'general' && row.sourceArea ? (row.sourceArea as RegArea) : result.summary.area;
+  const changeType = changeTypeFor(result.summary.changeType, row.update.title);
   await systemSaveSummary(id, {
-    summary: { ...result.summary, area },
-    importance: importanceFor(result.summary.changeType as RegChangeType, row.sourceAudience),
+    summary: { ...result.summary, area, changeType },
+    importance: importanceFor(changeType, row.sourceAudience),
     problems,
     model: result.model,
     inputTokens: result.usage.inputTokens,
