@@ -23,6 +23,7 @@ Last updated: 2026-11-03 (receivables Phases 1 to 6 on `pr-13`, not committed (P
 | Project page opened by URL | fixed 2026-11-05 on `claude/keen-knuth-8on04j`: `ProjectDetail` (admin, manager), `EngagementDetail` (lead) and `ProjectEdit` wait for `engagementsSettled`, so a fresh load no longer redirects to the list or says "not found" while the session hydrates. |
 | Vault toolbar on phones | fixed 2026-11-05 on `claude/keen-knuth-8on04j`: the client documents controls wrap (`.vdm-tools.wrap`) when staff view them inside the Vault card, so "By category" is no longer clipped at iPhone 13 width. |
 | Route error bodies (audit small item) | fixed 2026-11-05 on `claude/keen-knuth-8on04j`: route catch blocks call `publicErrorMessage(err, code)` (`src/lib/api-error.ts`), which keeps messages our own code threw and replaces driver, SDK and runtime error text with the fixed code, logging the detail on the server. |
+| Two-step lockout across instances (audit small item) | fixed 2026-11-05 on `claude/keen-knuth-8on04j`: the ten-wrong-codes lockout in `src/lib/totp/guard.ts` counts in the Postgres `rate_limits` store (key `totp-fail:<user>`, cleared on a correct code), so `checkTotpCode` is async; the replay guard stays in process memory. |
 | Setup / seed / Auth.js login | done |
 | Phase 0 stubs (intern portfolio, welcome email, resend helper, supabase client) | done |
 | Phase 1 API ports | done — `_reference-supabase/` deleted; ~35 real routes |

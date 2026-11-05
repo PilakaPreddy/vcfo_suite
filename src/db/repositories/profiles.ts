@@ -1166,7 +1166,7 @@ export async function confirmOwnTwoStep(
   const row = await readOwnTwoStepRow(ctx);
   if (row.totpEnabledAt && row.totpSecretEnc) return { ok: false, error: 'already_on' };
   if (!row.totpSecretEnc) return { ok: false, error: 'not_started' };
-  const check = checkTotpCode(ctx.userId, row.totpSecretEnc, code);
+  const check = await checkTotpCode(ctx.userId, row.totpSecretEnc, code);
   if (check === 'locked') return { ok: false, error: 'locked' };
   if (check === 'invalid') return { ok: false, error: 'invalid_code' };
   const now = new Date();
@@ -1185,7 +1185,7 @@ export async function disableOwnTwoStep(
 ): Promise<{ ok: true } | { ok: false; error: 'not_on' | 'invalid_code' | 'locked' }> {
   const row = await readOwnTwoStepRow(ctx);
   if (!row.totpEnabledAt || !row.totpSecretEnc) return { ok: false, error: 'not_on' };
-  const check = checkTotpCode(ctx.userId, row.totpSecretEnc, code);
+  const check = await checkTotpCode(ctx.userId, row.totpSecretEnc, code);
   if (check === 'locked') return { ok: false, error: 'locked' };
   if (check === 'invalid') return { ok: false, error: 'invalid_code' };
   await db

@@ -84,7 +84,7 @@ const credentialsProvider = Credentials({
     if (twoStep) {
       const otp = String(creds?.otp ?? '').trim();
       if (!otp) throw new TwoStepRequired();
-      const check = checkTotpCode(twoStep.id, twoStep.totpSecretEnc, otp);
+      const check = await checkTotpCode(twoStep.id, twoStep.totpSecretEnc, otp);
       if (check === 'locked') throw new TwoStepLocked();
       if (check === 'invalid') throw new TwoStepInvalid();
     }

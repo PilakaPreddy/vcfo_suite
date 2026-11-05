@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { decryptTotpSecret } from './secret-box';
-import { acceptTotpCounter, isTotpLocked, recordTotpFailure } from './guard';
+import { acceptTotpCounter, clearTotpFailures, isTotpLocked, recordTotpFailure } from './guard';
 import { verifyTotp } from './totp';
 
 export type TotpCheck = 'ok' | 'invalid' | 'locked';
@@ -11,13 +11,14 @@ export type TotpCheck = 'ok' | 'invalid' | 'locked';
  * then the code (one step of drift either side), then the replay guard. Used
  * by sign-in, the setup confirmation and turning two-step off.
  */
-export function checkTotpCode(userId: string, secretEnc: string | null | undefined, code: string): TotpCheck {
-  if (isTotpLocked(userId)) return 'locked';
+export async function checkTotpCode(userId: string, secretEnc: string | null | undefined, code: string): Promise<TotpCheck> {
+  if (await isTotpLocked(userId)) return 'locked';
   const secret = decryptTotpSecret(userId, secretEnc);
   const counter = secret ? verifyTotp(secret, code) : null;
   if (counter === null || !acceptTotpCounter(userId, counter)) {
-    recordTotpFailure(userId);
+    await recordTotpFailure(userId);
     return 'invalid';
   }
+  await clearTotpFailures(userId);
   return 'ok';
 }
