@@ -19,9 +19,16 @@ function numbersIn(text: string, withParts: boolean): Set<string> {
   return found;
 }
 
-/** Unicode forms and whitespace only: ligatures from PDFs fold, and no word can change. */
+/** Unicode forms, typographic marks and whitespace only: ligatures and curly quotes fold, and no word can change. */
 export function foldText(text: string): string {
-  return text.normalize('NFKC').replace(/[\u200b-\u200d\ufeff]/g, '').replace(/\s+/g, ' ').trim();
+  return text
+    .normalize('NFKC')
+    .replace(/[\u200b-\u200d\ufeff]/g, '')
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201c\u201d]/g, '"')
+    .replace(/[\u2010-\u2015\u2212]/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 type Checked = Pick<RegSummary, 'act' | 'effectiveDate' | 'oldDueDate' | 'newDueDate' | 'affects' | 'summary' | 'quote'>;

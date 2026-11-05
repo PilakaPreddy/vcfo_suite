@@ -80,6 +80,9 @@ export interface SourceAdapter {
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable();
 
+/** A strict tool cannot limit a string's length, and a cut record beats a failed one: a person reads the source. */
+const cutTo = (max: number) => (text: string): string => (text.length > max ? text.slice(0, max).replace(/\s+\S*$/, '') : text);
+
 /**
  * What the model returns for one document, on a strict tool schema. Page text is data only, and
  * importance is not asked for: a hostile page must not be able to choose who gets notified.
@@ -92,9 +95,9 @@ export const regSummarySchema = z.object({
   oldDueDate: isoDate,
   newDueDate: isoDate,
   affects: z.string().trim().max(400),
-  summary: z.string().trim().min(1).max(1200),
+  summary: z.string().trim().min(1).transform(cutTo(1200)),
   /** Copied word for word from the source; the code check fails it otherwise. */
-  quote: z.string().trim().min(1).max(600),
+  quote: z.string().trim().min(1).transform(cutTo(600)),
 });
 export type RegSummary = z.infer<typeof regSummarySchema>;
 

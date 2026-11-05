@@ -21,6 +21,8 @@ export interface LlmRequest {
   maxTokens: number;
   /** Only sent when set — models without effort support reject it. */
   effort?: 'low' | 'medium' | 'high';
+  /** Asks for JSON matching this schema as the reply, which costs far fewer tokens than a tool call. */
+  outputSchema?: Record<string, unknown>;
   /** Per-request timeout (ms) for long jobs such as document transcription. */
   timeoutMs?: number;
 }
@@ -35,6 +37,16 @@ export interface LlmResult {
 export interface LlmProvider {
   readonly name: string;
   complete(req: LlmRequest): Promise<LlmResult>;
+}
+
+export function outputConfigFor(req: LlmRequest) {
+  if (!req.effort && !req.outputSchema) return {};
+  return {
+    output_config: {
+      ...(req.effort ? { effort: req.effort } : {}),
+      ...(req.outputSchema ? { format: { type: 'json_schema' as const, schema: req.outputSchema } } : {}),
+    },
+  };
 }
 
 let override: LlmProvider | null | undefined;

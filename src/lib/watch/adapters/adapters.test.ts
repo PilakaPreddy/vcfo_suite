@@ -22,6 +22,13 @@ describe('Watch adapters on saved copies', () => {
     expect(items[1]!.body).toMatch(/FEMA 23\(R\)\/\(2\)\/2026-RB/);
   });
 
+  it('drops RBI sanctions list amendments and directions to one named bank', () => {
+    const notice = { externalKey: 'k', url: 'https://www.rbi.org.in/a', publishedOn: null };
+    expect(noiseReason(adapterFor('rbi-notifications')!, { ...notice, title: 'Implementation of Section 51A of UAPA, 1967: Updates to the Sanctions List' })).toBe('sanctions_list');
+    expect(noiseReason(adapterFor('rbi-press')!, { ...notice, title: 'Directions under Section 35A read with Section 56 of the Banking Regulation Act' })).toBe('routine_market_data');
+    expect(noiseReason(adapterFor('rbi-notifications')!, { ...notice, title: 'Master Direction on External Commercial Borrowings' })).toBeNull();
+  });
+
   it('reads the RBI press feed and drops routine market data', () => {
     const { items, kept, adapter } = listed('rbi-press', 'rbi-press.xml', 'https://www.rbi.org.in/pressreleases_rss.xml');
     expect(items.length).toBeGreaterThan(3);

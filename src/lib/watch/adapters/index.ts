@@ -58,7 +58,9 @@ function tableAdapter(
 }
 
 const RBI_ROUTINE =
-  /money market operations|treasury bills?|government stock|state government (securities|stock)|government of india (securities|dated)|variable rate (repo|reverse repo)|reserve money|lending and deposit rates|weekly statistical|scheduled banks|foreign exchange (turnover|reserves)|overnight variable|monetary penalty|imposes? (a )?penalty|cancel(s|led)? (the )?certificate of registration|inflation expectations|consumer confidence|data on|survey/i;
+  /money market operations|treasury bills?|government stock|state government (securities|stock)|government of india (securities|dated)|variable rate (repo|reverse repo)|reserve money|lending and deposit rates|weekly statistical|scheduled banks|foreign exchange (turnover|reserves)|overnight variable|monetary penalty|imposes? (a )?penalty|cancel(s|led)? (the )?certificate of registration|inflation expectations|consumer confidence|data on|survey|directions under section 35a/i;
+/** Sanctions list amendments and notices to one named bank bind that bank, not a client company. */
+const RBI_SANCTIONS = /section 51a of uapa|sanctions list/i;
 
 /** SEBI's feed mixes rules with individual enforcement papers, told apart by the link's path. */
 function sebiNoise(item: ListedItem): string | null {
@@ -174,7 +176,7 @@ const icai: SourceAdapter = {
 
 const ADAPTERS: readonly SourceAdapter[] = [
   feedAdapter('feed'),
-  feedAdapter('rbi-notifications'),
+  feedAdapter('rbi-notifications', (item) => (RBI_SANCTIONS.test(item.title) ? 'sanctions_list' : null)),
   feedAdapter('rbi-press', (item) => (RBI_ROUTINE.test(item.title) ? 'routine_market_data' : null)),
   feedAdapter('sebi', sebiNoise),
   feedAdapter('pib', (item) => (PIB_RELEVANT.test(item.title) ? null : 'not_a_compliance_ministry')),

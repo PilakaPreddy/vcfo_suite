@@ -1,7 +1,7 @@
 import 'server-only';
 
 import Anthropic from '@anthropic-ai/sdk';
-import type { LlmProvider, LlmRequest, LlmResult } from './index';
+import { outputConfigFor, type LlmProvider, type LlmRequest, type LlmResult } from './index';
 import { anthropicApiKey } from '@/lib/secrets/app-secrets';
 import { withSecretRetry, type RuntimeSecret } from '@/lib/secrets/runtime-secret';
 
@@ -47,7 +47,7 @@ async function send(client: Anthropic, req: LlmRequest, refusalFallback: boolean
       system: req.system,
       messages: req.messages,
       ...(req.tools && req.tools.length > 0 ? { tools: req.tools, tool_choice: { type: 'auto' } } : {}),
-      ...(req.effort ? { output_config: { effort: req.effort } } : {}),
+      ...outputConfigFor(req),
       ...(refusalFallback
         ? {
             betas: ['server-side-fallback-2026-07-01'],

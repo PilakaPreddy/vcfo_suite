@@ -141,7 +141,7 @@ any path adds to `ask_usage_daily` through `systemRecordAskUsage`, and calls are
   fixtures come from a saved copy only; tests never touch the network. Empty list raises health `empty`.
 - Pipeline in Inngest: `watch-check.ts` (hourly, picks due sources, returns at once when `askFlags().watch` is
   off) emits `watch/update.process`; `watch-process.ts` steps are read (unpdf, then the model only for scans),
-  summarise (`summarise.ts`, `askConfig().models.watch`, one strict tool, no other tools, page text wrapped as
+  summarise (`summarise.ts`, `askConfig().models.watch`, strict output schema, no tools, page text wrapped as
   data), verify (`verify.ts`: every date and number in the summary is in `source_text`, the quote matches
   exactly after whitespace folding), merge (same `content_hash` adds a `reg_update_links` row; unsure stays
   separate).

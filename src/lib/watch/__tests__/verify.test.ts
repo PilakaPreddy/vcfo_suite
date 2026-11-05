@@ -38,6 +38,11 @@ describe('datesIn', () => {
 });
 
 describe('verifyRegSummary', () => {
+  it('accepts a quote whose only difference from the source is curly quotes or a long dash', () => {
+    const source = 'An investor\u2019s status \u2013 once recorded \u2013 stays valid.';
+    expect(verifyRegSummary({ ...good, act: null, effectiveDate: null, oldDueDate: null, newDueDate: null, summary: 'Status stays valid.', affects: '', quote: "An investor's status - once recorded - stays valid." }, source)).toEqual([]);
+  });
+
   it('passes a summary whose dates, numbers and quote are all in the source', () => {
     expect(verifyRegSummary(good, SOURCE)).toEqual([]);
   });
