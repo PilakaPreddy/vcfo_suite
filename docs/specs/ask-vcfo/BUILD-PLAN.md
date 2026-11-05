@@ -161,6 +161,16 @@ any path adds to `ask_usage_daily` through `systemRecordAskUsage`, and calls are
 - Update `docs/context/notes/notifications.md`, which says pages are not scraped and the bell is work alerts only.
 - Done: all pipeline steps tested on fixtures. Live portal checks only if run, and reported as such.
 
+### What Phase 3 built differently, and why
+
+- Adapters sit in one file, `src/lib/watch/adapters/index.ts`, because most share a table shape.
+- Importance comes from code (`importanceFor`), not the model, so a hostile page cannot pick recipients.
+- A `stale` health was added: CBIC's page answers but its newest row is from 2022, which reads as healthy otherwise.
+- The merge runs straight after the read, before the model, because that is the cheapest place for it.
+- Watch records its token use through `reg-updates.ts` (`systemRecordWatchUsage`, `systemTodayTokens`), because `ask-usage.ts` is on the answer track. The final merge can move them.
+- The chat seam is a short block in `pipeline.ts` before free text. `updatesThisWeekMetric` is ready for the answer track's catalog, which can replace that block.
+- `listRegUpdates` and the review routes keep to `app/api/watch/*`; the page is also at `app/app/intern/watch/`, read-only, since project leads may add an update.
+
 ## Phase 4: paste and file (do)
 
 - `field-catalog/build.ts` builds entries at module load from `CLIENT_RESPONSE_FIELDS`, `compliance-inputs`,

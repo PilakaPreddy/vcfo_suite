@@ -58,10 +58,10 @@ Gotchas already paid for once. Append when something costs more than a minute to
   still marks read.
 - Official RSS/Atom: staff paste a **feed URL** (not a homepage) from an allowlisted
   host (`src/lib/notifications/announcements.ts` `OFFICIAL_FEED_HOSTS`). Inngest `announcement-feeds`
-  runs once at 06:00 Asia/Kolkata. We do **not** scrape HTML listing or login pages
-  (MCA/GST/EPFO portals, Income Tax “What's New”). If a department has no RSS, open
-  the circular from the portals directory or post by hand. Tracking junk
-  (`utm_source=chatgpt.com`, gclid) is stripped from URLs.
+  runs once at 06:00 Asia/Kolkata while `WATCH_ENABLED` is off. With it on, Watch does this
+  work instead (see "Official updates (Watch)" below). We never read login pages, and MCA and
+  Income Tax India stay manual. Tracking junk (`utm_source=chatgpt.com`, gclid) is stripped from
+  URLs.
 - Portals catalog: `src/lib/notifications/announcement-portals.ts`, rendered on the Announcements
   page. LEI renewal uses `ccilindia-lei.co.in` (official LOU), not the ads agent at
   legalentityidentifier.in. The old once-per-IST-day dialog
@@ -74,6 +74,26 @@ Gotchas already paid for once. Append when something costs more than a minute to
   same bar replaces the notifications unread dot. Writer CTA goes to
   `/app/{role}/announcements?compose=1`. Storage is still
   `vcfo.announcements.read.{userId}`. Genie target: `[data-announcements-bell]`.
+
+## Official updates (Watch, 2026-11-06)
+
+- This changes two old rules. Public listing **pages** from official hosts are now read (feeds every
+  3 hours, pages twice a day, `src/lib/watch/`), and the **bell also carries** official updates, which
+  used to live only on the board. The chat never sends a notification; publishing does, by code.
+- Who gets what is fixed in `src/lib/watch/recipients.ts`. Important (due date, penalty, law in force,
+  form change): one bell row per person at publish. Normal: one daily summary row per person
+  (`watch-daily-summary`, 18:00 IST). Staff only (NFRA, ICAI): stays with staff. The model does not
+  choose: its output has no importance field. A reviewer may change it before publishing.
+- A clean update gets a staff-only board row at once with `unreviewed` set, so staff see it marked
+  "Not yet reviewed" and it pops up for them. Publishing opens the **same row** to its audience, so
+  staff get no second popup. `announcements.audience` is `staff` or `everyone`; `visibleTo` filters
+  list, head and client unread count. A failed code check (`needs_attention`) is not posted at all,
+  and cannot publish until a reviewer edits it or accepts the flags after reading the source.
+- The head poll fingerprint includes `latestUpdatedAt`, because publishing changes a row without
+  adding one. Bell rows carry no engagement (`engagementId: ''`).
+- Source health: `watch.alert` bell rows go to super admin, admin and manager once, when a source's
+  health changes to empty, stale, failing (3 in a row) or blocked. A blocked source is never retried
+  until a person presses Check again, and it goes to manual intake.
 
 ## Pre-incorporation direct flow events (2026-10-13)
 

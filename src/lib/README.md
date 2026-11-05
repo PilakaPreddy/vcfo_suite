@@ -29,6 +29,7 @@ Domain logic and helpers. Nothing here imports `db`; data access goes through
 - `notifications/` — in-app bell, announcements, popup cadence and the dock animation.
 - `notes/` — the wire type of a staff note on a client record (G-19).
 - `notify/` — WhatsApp nudges (outbound only; never blocks email).
+- `watch/` — official updates: the polite crawler, source adapters, the one model step, the code check, and publishing by fixed rules.
 - `obligations/` — the obligation About wire type and the due rule in one plain sentence (G-04).
 - `outlook/` — Microsoft Outlook OAuth and token encryption for sending mail as a user.
 - `projects/` — engagements (projects): create scope, DB helpers, change requests, step paths, stuck rules, schedule windows, deadlines and pending approvals.
