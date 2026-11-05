@@ -1,8 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import { listTopics } from '@/lib/ask/topics';
-import { matchTopics, shortlistTopics } from '@/lib/ask/topic-match';
+import { exactTopic, matchTopics, shortlistTopics } from '@/lib/ask/topic-match';
 
 const slugs = (query: string, audience: 'client' | 'staff' = 'client') => shortlistTopics(query, audience).map((t) => t.slug);
+
+describe('exactTopic', () => {
+  const topic = listTopics().find((t) => t.audience === 'client')!;
+
+  it('finds a question asked word for word, apart from case and punctuation', () => {
+    expect(exactTopic(`  ${topic.question.toUpperCase()}!! `, 'client')?.slug).toBe(topic.slug);
+  });
+
+  it('leaves a paraphrase, and another audience, to the router', () => {
+    expect(exactTopic(`${topic.question} please explain`, 'client')).toBeNull();
+    expect(exactTopic(topic.question, 'staff')).toBeNull();
+  });
+});
 
 describe('router shortlist', () => {
   it.each(listTopics().filter((t) => t.audience !== 'staff').map((t) => [t.slug, t.question] as const))(

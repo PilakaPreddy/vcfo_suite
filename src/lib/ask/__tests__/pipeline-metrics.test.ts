@@ -38,7 +38,14 @@ vi.mock('@/db/repositories/engagements', async (importOriginal) => ({
   listEngagements: (...a: unknown[]) => listEngagements(...a),
 }));
 
+let treatTopicsAsReviewed = false;
+vi.mock('@/lib/ask/topics', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/lib/ask/topics')>();
+  return { ...original, isReviewed: (topic: Parameters<typeof original.isReviewed>[0]) => treatTopicsAsReviewed || original.isReviewed(topic) };
+});
+
 const { runAskChat } = await import('@/lib/ask/pipeline');
+const { listTopics } = await import('@/lib/ask/topics');
 const { setAskProviderForTests } = await import('@/lib/ask/provider');
 
 const NOW = new Date('2026-11-06T06:00:00Z');
@@ -110,6 +117,7 @@ async function ask(role: AuthContext['role'], message: string, shell?: 'client' 
 
 beforeEach(() => {
   vi.clearAllMocks();
+  treatTopicsAsReviewed = false;
   vi.useFakeTimers({ toFake: ['Date'], now: NOW });
   process.env.ASK_VCFO_ENABLED = 'true';
   appendAskMessage.mockImplementation(async () => ({ id: 'msg-1' }));
@@ -197,6 +205,28 @@ describe('a strict metric question spends no model', () => {
     const { answer, path } = await ask('admin', QUESTION);
     expect(path).toBe('metric_local');
     expect(answer?.line).not.toContain('3 companies');
+  });
+});
+
+describe('a topic asked word for word', () => {
+  const question = () => listTopics().find((t) => t.audience !== 'client' && !/^(do|does|should|can|is|are)\b/i.test(t.question))!.question;
+
+  it('answers from the reviewed copy with no model', async () => {
+    treatTopicsAsReviewed = true;
+    const provider = failingProvider();
+    setAskProviderForTests(provider);
+    const { path, answer } = await ask('admin', question());
+    expect(provider.complete).not.toHaveBeenCalled();
+    expect(path).toBe('topic_local');
+    expect(answer?.topicSlug).toBeTruthy();
+  });
+
+  it('goes to the router while the topic is still a draft', async () => {
+    const provider = routerProvider({ intent: 'off_topic' });
+    setAskProviderForTests(provider);
+    const { path } = await ask('admin', question());
+    expect(provider.complete).toHaveBeenCalled();
+    expect(path).toBe('router_refusal');
   });
 });
 
