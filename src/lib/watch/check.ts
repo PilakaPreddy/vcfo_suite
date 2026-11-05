@@ -139,7 +139,10 @@ export async function checkWatchSource(
   await systemLogRegNoise(source.id, selection.dropped);
   const queuedIds = await systemQueueRegUpdates(source, queue);
 
-  const newest = listed.reduce((latest, item) => ((item.publishedOn ?? '') > latest ? (item.publishedOn ?? '') : latest), '');
+  const newest = listed.reduce((latest, item) => {
+    const day = item.publishedOn ?? item.listedMonth ?? '';
+    return day > latest ? day : latest;
+  }, '');
   const stale = newest !== '' && (now.getTime() - Date.parse(newest)) / DAY_MS > STALE_AFTER_DAYS;
   return settle(
     stale ? 'stale' : 'ok',

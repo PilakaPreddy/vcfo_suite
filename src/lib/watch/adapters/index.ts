@@ -32,7 +32,7 @@ function feedAdapter(id: string, noise?: SourceAdapter['noise']): SourceAdapter 
 /** A table with a title cell, a date cell and a link cell, the shape most listing pages share. */
 function tableAdapter(
   id: string,
-  columns: { title: number; date: number; link: number | 'any'; rowTitle?: (cells: string[]) => string },
+  columns: { title: number; date?: number; link: number | 'any'; rowTitle?: (cells: string[]) => string },
   noise?: SourceAdapter['noise'],
 ): SourceAdapter {
   return {
@@ -44,7 +44,13 @@ function tableAdapter(
         const href = (columns.link === 'any' ? row.links.flat() : (row.links[columns.link] ?? []))[0]?.href;
         const title = clean(columns.rowTitle?.(row.cells) ?? row.cells[columns.title] ?? '');
         if (!href || !title) continue;
-        items.push({ externalKey: href, title: title.slice(0, 300), url: href, publishedOn: firstDateIn(row.cells[columns.date] ?? '') });
+        items.push({
+          externalKey: href,
+          title: title.slice(0, 300),
+          url: href,
+          publishedOn: firstDateIn(row.cells[columns.date ?? -1] ?? ''),
+          listedMonth: /\/(\d{4}-\d{2})\//.exec(href)?.[1],
+        });
       }
       return items;
     },
@@ -69,12 +75,14 @@ const ICAI_ROUTINE = /\b(exam(ination)?s?|assessment test|eligibility test|quiz|
 
 const hasHindi = (text: string): boolean => /[ऀ-ॿ]/.test(text);
 
-const cbicGst = tableAdapter('cbic-gst', {
-  title: 3,
-  date: 0,
-  link: 1,
-  rowTitle: (cells) => (/\d+\/\d{4}/.test(cells[0] ?? '') ? `Notification ${cells[0]}: ${cells[3] ?? ''}` : ''),
-});
+/** The GST Council's own lists of CGST papers: a number cell, an English PDF cell and a subject cell. */
+const gstCouncilList = (id: string, cells: { number: number; link: number; subject: number; date?: number }): SourceAdapter =>
+  tableAdapter(id, {
+    title: cells.subject,
+    date: cells.date,
+    link: cells.link,
+    rowTitle: (row) => `${clean(row[cells.number] ?? '')}: ${row[cells.subject] ?? ''}`,
+  });
 
 const incomeTaxNews: SourceAdapter = {
   id: 'income-tax-news',
@@ -170,7 +178,9 @@ const ADAPTERS: readonly SourceAdapter[] = [
   feedAdapter('rbi-press', (item) => (RBI_ROUTINE.test(item.title) ? 'routine_market_data' : null)),
   feedAdapter('sebi', sebiNoise),
   feedAdapter('pib', (item) => (PIB_RELEVANT.test(item.title) ? null : 'not_a_compliance_ministry')),
-  cbicGst,
+  gstCouncilList('gst-council-notifications', { number: 1, link: 2, subject: 4 }),
+  gstCouncilList('gst-council-rates', { number: 0, link: 1, subject: 3 }),
+  gstCouncilList('gst-council-circulars', { number: 1, link: 2, subject: 4, date: 3 }),
   incomeTaxNews,
   esic,
   tableAdapter('gst-council', { title: 2, date: 1, link: 2, rowTitle: (cells) => (cells[2] ?? '').replace(/\(Size:[^)]*\)/i, '') }),

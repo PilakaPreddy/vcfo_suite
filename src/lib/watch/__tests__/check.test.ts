@@ -77,6 +77,15 @@ describe('checkWatchSource', () => {
     expect(notify).not.toHaveBeenCalled();
   });
 
+  it('calls an undated list stale from its upload folder, so an old list never reads as quiet', async () => {
+    const row = '<tr><td>1</td><td>11/2025-Central Tax</td><td><a href="/sites/default/files/2025-04/ct.pdf">View</a></td><td>H</td><td>Seeks to amend</td></tr>';
+    fetchMock.mockResolvedValue(page(`<table>${row}</table>`));
+    const outcome = await checkWatchSource(source({ adapter: 'gst-council-notifications', feedUrl: 'https://gstcouncil.gov.in/cgst-tax-notification' }), { now });
+    expect(outcome.health).toBe('stale');
+    expect(saveCheck.mock.calls[0]![1]).toMatchObject({ lastError: 'newest_item:2025-04' });
+    expect(alerted()[0]!.title).toBe('ESIC circulars looks out of date');
+  });
+
   it('holds items back under a limit and leaves the hash unset, so the next check sees them', async () => {
     const rss = (n: number) => `<item><title>Rule change ${n}</title><link>https://www.rbi.org.in/${n}</link><pubDate>Thu, 05 Nov 2026 10:00:00</pubDate></item>`;
     fetchMock.mockResolvedValue(page(`<rss>${[1, 2, 3].map(rss).join('')}</rss>`));

@@ -44,13 +44,20 @@ describe('Watch adapters on saved copies', () => {
     expect(kept.map((item) => item.title)).toEqual(['Finance Ministry notifies changes to GST return due dates']);
   });
 
-  it('reads CBIC notifications with number, date and English PDF', () => {
-    const { items } = listed('cbic-gst', 'cbic-gst.html', 'https://cbic-gst.gov.in/hindi/central-tax-notifications.html');
-    expect(items[0]).toMatchObject({
-      title: 'Notification 27/2022 - Central Tax dated 26.12.2022: Notification under sub-rule (4B) of rule 8 of CGST Rules, 2017',
-      url: 'https://cbic-gst.gov.in/pdf/central-tax/ct27-2022.pdf',
-      publishedOn: '2022-12-26',
+  it('reads the GST Council CGST lists with number, subject and English PDF', () => {
+    const notifications = listed('gst-council-notifications', 'gst-council-notifications.html', 'https://gstcouncil.gov.in/cgst-tax-notification').items;
+    expect(notifications[0]).toMatchObject({
+      title: '11/2025-Central Tax: Seeks to notify Central Goods and Services Tax (Second Amendment) Rules 2025',
+      url: 'https://gstcouncil.gov.in/sites/default/files/2025-04/gst-ct-11-2025.pdf',
+      publishedOn: null,
+      listedMonth: '2025-04',
     });
+    const rates = listed('gst-council-rates', 'gst-council-rates.html', 'https://gstcouncil.gov.in/cgst-rate-notification').items;
+    expect(rates[0]!.title).toMatch(/^08\/2025-Central Tax \(Rate\): Seeks to amend/);
+    expect(rates[0]!.url).toMatch(/ctr08-2025\.pdf$/);
+    const circulars = listed('gst-council-circulars', 'gst-council-circulars.html', 'https://gstcouncil.gov.in/cgst-circulars').items;
+    expect(circulars[0]).toMatchObject({ publishedOn: '2025-06-24', url: 'https://gstcouncil.gov.in/sites/default/files/2025-07/circular-no-250-2025_1.pdf' });
+    expect(circulars[0]!.title).toMatch(/^250\/07\/2025-GST: Reviewing authority/);
   });
 
   it('reads Income Tax news with its text and PDF', () => {

@@ -62,6 +62,8 @@ export interface ListedItem {
   title: string;
   url: string;
   publishedOn: string | null;
+  /** `YYYY-MM` from the file's upload folder, for the stale check when a list gives no date. */
+  listedMonth?: string;
   /** Text the listing already carries, such as a feed description; it can save a request. */
   body?: string;
   /** The department or division a page lists it under, for the noise rules. */
