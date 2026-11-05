@@ -25,6 +25,17 @@ export interface DirectoryFile {
   format: string;
   /** Where the file downloads from. Without one the row is a name, not a link. */
   href?: string;
+  /** The document row, where this file is one. Needed to attest it. */
+  documentId?: string;
+  /** draft | attested | superseded. Left out, nothing is claimed either way. */
+  status?: string;
+  /** Who signed the printout, and when, once it has been signed. */
+  attestedOn?: string;
+  signedByName?: string;
+  /** The signed scan, where one came back. */
+  signedHref?: string;
+  /** True when this file is the one a signature goes on: the printout, not the workbook. */
+  signable?: boolean;
 }
 
 export interface DirectoryFolder {
@@ -58,12 +69,18 @@ export function ActDirectory({
   folders,
   label = 'The zip, folder by folder',
   size,
+  onAttest,
   className,
 }: {
   folders: DirectoryFolder[];
   label?: string;
   /** "2.4 MB". Left out, nothing is claimed about the size. */
   size?: string;
+  /**
+   * Offered on a printout that has not been signed yet, and only to somebody who may sign.
+   * Left out, no row offers it — which is how a client sees this screen.
+   */
+  onAttest?: (file: DirectoryFile) => void;
   className?: string;
 }) {
   return (
@@ -98,7 +115,7 @@ export function ActDirectory({
               {folder.files.length ? (
                 <ul className="m-0 flex list-none flex-col gap-1.5 pb-2 pl-[50px] pr-4">
                   {folder.files.map((file) => (
-                    <li key={file.name} className="flex items-center gap-2 text-[13px]">
+                    <li key={file.name} className="flex flex-wrap items-center gap-2 text-[13px]">
                       <FileBadge format={file.format} />
                       {file.href ? (
                         <a
@@ -110,6 +127,42 @@ export function ActDirectory({
                       ) : (
                         <span className={cn(lr.code, 'min-w-0 break-all text-[var(--lr-ink-2)]')}>{file.name}</span>
                       )}
+
+                      {file.status === 'attested' ? (
+                        <span
+                          className="rounded-[4px] px-1.5 py-0.5 text-[10px] font-semibold"
+                          style={{ background: LR_TONES.ok.soft, color: LR_TONES.ok.ink }}
+                        >
+                          Signed{file.signedByName ? ` by ${file.signedByName}` : ''}
+                          {file.attestedOn ? ` · ${file.attestedOn}` : ''}
+                        </span>
+                      ) : null}
+                      {file.status === 'superseded' ? (
+                        <span
+                          className="rounded-[4px] px-1.5 py-0.5 text-[10px] font-semibold"
+                          style={{ background: LR_TONES.warn.soft, color: LR_TONES.warn.ink }}
+                        >
+                          Superseded
+                        </span>
+                      ) : null}
+
+                      {file.signedHref ? (
+                        <a href={file.signedHref} className="text-[12px] font-semibold text-[var(--lr-primary)] hover:underline">
+                          The signed copy
+                        </a>
+                      ) : null}
+
+                      {/* Offered on the printout alone. A signature goes on paper, and the
+                          workbook is the working copy it was produced from. */}
+                      {onAttest && file.signable && file.status !== 'attested' && file.documentId ? (
+                        <button
+                          type="button"
+                          onClick={() => onAttest(file)}
+                          className="text-[12px] font-semibold text-[var(--lr-primary)] hover:underline"
+                        >
+                          Record the signed copy
+                        </button>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

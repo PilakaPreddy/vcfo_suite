@@ -184,10 +184,33 @@ describe('attestation freezes a document', () => {
   it('attests an unattested document for a firm-wide admin', async () => {
     results = [[{ id: 'd1', batchId: 'b1', attestedAt: null }], [{ id: 'b1', engagementId: OURS }], [{ id: 'd1', status: 'attested' }]];
     allow();
-    const row = await repo.attestDocument(ctx('admin'), { documentId: 'd1', method: 'printed-wet-signature' });
+    const row = await repo.attestDocument(ctx('admin'), {
+      documentId: 'd1',
+      method: 'printed-wet-signature',
+      signedObjectKey: 'labour-registers/b1/signed/in-wages-iv-abc123',
+      signedFileName: 'Form IV signed.pdf',
+      signedSha256: 'ff'.repeat(32),
+      signedByName: 'R. Venkatesh, Director',
+    });
     expect(row).toEqual({ id: 'd1', status: 'attested' });
     const update = calls.find((c) => c.op === 'update');
     expect((update?.set as { status: string }).status).toBe('attested');
+    /* The scan is part of the same write. A row saying signed and an object store that has
+       nothing in it would be an attestation nobody can be shown. */
+    expect((update?.set as { signedObjectKey: string }).signedObjectKey).toContain('signed/');
+    expect((update?.set as { signedByName: string }).signedByName).toBe('R. Venkatesh, Director');
+  });
+
+  it('refuses a wet-signature attestation with no signed page behind it', async () => {
+    /* The firm's method is a signature on a printout. Recording that without the scan would
+       leave a row claiming a signature nobody can produce — the one thing an attestation must
+       not be. */
+    results = [[{ id: 'd1', batchId: 'b1', attestedAt: null }], [{ id: 'b1', engagementId: OURS }]];
+    allow();
+    await expect(
+      repo.attestDocument(ctx('admin'), { documentId: 'd1', method: 'printed-wet-signature' }),
+    ).rejects.toThrow('upload the signed printout');
+    expect(calls.filter((c) => c.op === 'update')).toHaveLength(0);
   });
 
   it('does not attest another firm\'s document', async () => {

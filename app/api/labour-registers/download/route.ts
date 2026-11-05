@@ -22,21 +22,50 @@ import { EXTENSION_TO_MIME } from '@/lib/upload-limits';
  * batch's registers were served rather than built, and a saving nobody can see is a saving
  * nobody believes.
  *
- * GET /api/labour-registers/download?document=<id>
+ * `?signed=1` serves the signed scan instead of the generated file, where one has been
+ * uploaded. Two files, one row: the generated register is what the figures came from, and the
+ * scan is what somebody put their name to. An inspector asking what was signed should be given
+ * the thing that was signed.
+ *
+ * GET /api/labour-registers/download?document=<id>[&signed=1]
  */
+/**
+ * The scan's own type, read off its name.
+ *
+ * The stored object's type is not asked for: `openObjectStream` signs a URL and streams what
+ * comes back, and what the upload route recorded is the name. A scan is a PDF or a photograph
+ * of a signed page, so the set is small and anything outside it downloads rather than opening
+ * in the browser — which is the safe way round for a file somebody else uploaded.
+ */
+function signedContentType(fileName: string | null): string {
+  const ext = (fileName ?? '').split('.').pop()?.toLowerCase() ?? '';
+  if (ext === 'pdf') return EXTENSION_TO_MIME.pdf;
+  if (ext === 'png') return EXTENSION_TO_MIME.png;
+  if (ext === 'jpg' || ext === 'jpeg') return EXTENSION_TO_MIME.jpg;
+  if (ext === 'webp') return EXTENSION_TO_MIME.webp;
+  return 'application/octet-stream';
+}
+
 export async function GET(request: Request) {
   const guard = await requireAuth();
   if (guard.ok === false) return NextResponse.json({ error: guard.error }, { status: guard.status });
 
-  const documentId = new URL(request.url).searchParams.get('document');
+  const url = new URL(request.url);
+  const documentId = url.searchParams.get('document');
   if (!documentId) return NextResponse.json({ error: 'document_required' }, { status: 400 });
 
   const doc = await getDocument(guard.ctx, documentId);
   if (!doc) return NextResponse.json({ error: 'not_found' }, { status: 404 });
 
+  const wantSigned = url.searchParams.get('signed') === '1';
+  if (wantSigned && !doc.signedObjectKey) {
+    return NextResponse.json({ error: 'This register has not been signed and scanned back.' }, { status: 404 });
+  }
+  const objectKey = wantSigned ? doc.signedObjectKey! : doc.objectKey;
+
   let object: Awaited<ReturnType<typeof openObjectStream>>;
   try {
-    object = await openObjectStream(doc.objectKey);
+    object = await openObjectStream(objectKey);
   } catch {
     return NextResponse.json({ error: 'storage_unavailable' }, { status: 502 });
   }
@@ -49,8 +78,9 @@ export async function GET(request: Request) {
      its batch does. */
   const form = formById(doc.formId);
   const batch = await getBatch(guard.ctx, doc.batchId);
-  const fileName =
-    form && batch
+  const fileName = wantSigned
+    ? doc.signedFileName || `${doc.formId} - signed.pdf`
+    : form && batch
       ? documentFileName(form, { from: batch.periodFrom, to: batch.periodTo }, doc.format)
       : `${doc.formId}.${doc.format}`;
 
@@ -58,7 +88,13 @@ export async function GET(request: Request) {
 
   return new Response(object.body, {
     headers: {
-      'content-type': doc.format === 'xlsx' ? EXTENSION_TO_MIME.xlsx : 'application/octet-stream',
+      'content-type': wantSigned
+        ? signedContentType(doc.signedFileName)
+        : doc.format === 'xlsx'
+          ? EXTENSION_TO_MIME.xlsx
+          : doc.format === 'pdf'
+            ? EXTENSION_TO_MIME.pdf
+            : 'application/octet-stream',
       'content-disposition': contentDisposition('attachment', fileName),
       ...(object.length ? { 'content-length': object.length } : {}),
       'cache-control': 'private, no-store, max-age=0, must-revalidate',

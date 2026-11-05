@@ -27,7 +27,8 @@
  *  - Once `attested_at` is set the row is frozen. A correction is a NEW row whose
  *    `supersedes_id` points at the old one; the old file is never replaced and never deleted.
  *    Rule 72 of the OSH (Central) Rules forbids destroying a register after its retention
- *    period unless it has been properly transferred, so there is no delete path at all.
+ *    period. That reading could not be corroborated in November 2026, so the absence of a
+ *    delete path stands as a conservative default rather than a cited requirement.
  */
 import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
 import * as base from './schema';
@@ -188,6 +189,21 @@ export const labourRegisterDocuments = pgTable(
     attestedAt: timestamp('attested_at', { withTimezone: true }),
     /** printed-wet-signature | dsc | aadhaar-esign. */
     attestationMethod: text('attestation_method'),
+    /**
+     * The signed scan, for the method the firm actually uses.
+     *
+     * The decision taken in November 2026 is that a register is attested by a wet signature on
+     * a printout: the PDF is downloaded, signed and sealed, and the scan comes back here. From
+     * that moment the scan is the attested document and the generated file is the draft it was
+     * made from — which is why the key is on this row rather than in a separate table. Both
+     * stay downloadable, because an inspector asking what was signed should get the thing that
+     * was signed, and a preparer asking what it was generated from should get that too.
+     */
+    signedObjectKey: text('signed_object_key'),
+    signedFileName: text('signed_file_name'),
+    signedSha256: text('signed_sha256'),
+    /** The name written under the signature, which need not be a user of this product. */
+    signedByName: text('signed_by_name').notNull().default(''),
     /** The attested document this one replaces, when a correction had to be issued. */
     supersedesId: uuid('supersedes_id'),
     /** How many times the stored file has been served, so the saving is observable. */
@@ -198,5 +214,94 @@ export const labourRegisterDocuments = pgTable(
   (t) => ({
     byKey: index('labour_register_document_key_idx').on(t.cacheKey),
     oneDraftPerForm: uniqueIndex('labour_register_document_form_idx').on(t.batchId, t.formId, t.cacheKey, t.format),
+  }),
+);
+
+/**
+ * A firm's own verification of a catalogue form.
+ *
+ * The catalogue ships with a `verification` block per form, written by whoever researched it.
+ * That block is a developer's claim, in a TypeScript file, changed only by a deploy. It is the
+ * wrong shape for the thing it holds: whether a statutory layout has been checked against the
+ * prescribed form is a professional judgement, made by a company secretary with the gazette
+ * open, and it should be recordable the moment they make it.
+ *
+ * So this table overrides the catalogue, per firm. A row here wins; no row means the
+ * catalogue's own claim stands. The notice printed at the head of every generated register
+ * reads from whichever applies, so verifying a form changes what the next sheet says about
+ * itself without touching the code.
+ *
+ * It is keyed on the form id alone rather than on an engagement, because a form's layout is a
+ * property of the law and not of a client. One firm, one answer.
+ */
+export const labourRegisterVerifications = pgTable(
+  'labour_register_verifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** The catalogue id of the form, never its number: a form number is not an identity. */
+    formId: text('form_id').notNull(),
+    /** unverified | disputed | checked-against-sample | gazette-verified. */
+    status: text('status').notNull(),
+    /** What it was checked against: a gazette page, a prescribed form PDF, a filed workbook. */
+    against: text('against').notNull().default(''),
+    /** Why the layout is contested, where it is. Printed on the sheet verbatim. */
+    disputedBecause: text('disputed_because').notNull().default(''),
+    /** What remains unresolved — signatory, seal, page initialling, column order. */
+    openItems: jsonb('open_items').notNull().default([]),
+    /** The evidence: a gazette extract or the prescribed form, in storage. */
+    evidenceKey: text('evidence_key'),
+    evidenceFileName: text('evidence_file_name'),
+    /**
+     * Whether this form may be generated at all.
+     *
+     * A disputed form still generates by default, carrying a loud notice — a missing statutory
+     * register is a failure nobody notices, where a flagged one is a draft somebody reviews.
+     * A firm that would rather withhold one sets this false and says why.
+     */
+    suppressed: boolean('suppressed').notNull().default(false),
+    suppressedReason: text('suppressed_reason').notNull().default(''),
+    verifiedBy: uuid('verified_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    oneVerdictPerForm: uniqueIndex('labour_register_verification_form_idx').on(t.formId),
+  }),
+);
+
+/**
+ * Where the firm says a state has got to, code by code.
+ *
+ * The catalogue's own figures in `src/data/labour-registers/code-rules.ts` are a research
+ * pass's reading of secondary trackers, changed only by a deploy. The thing they describe
+ * moves constantly and is checked by a company secretary reading a state gazette, so it has
+ * the same shape problem the form verification had and gets the same answer: a row here
+ * overrides the catalogue for one state and one code, and no row means the catalogue stands.
+ *
+ * Unlike a form's layout, this is not a property of the law alone — it is a fact about a state
+ * on a date. So the row carries when it was checked and against what, and the screen prints
+ * both. A tracker nobody dates is a tracker nobody trusts.
+ */
+export const labourRegisterCodeRules = pgTable(
+  'labour_register_code_rules',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    /** The two-letter state code, as `src/data/labour-registers/states.ts` spells it. */
+    stateCode: text('state_code').notNull(),
+    /** wages | osh | socialSecurity | relations. */
+    code: text('code').notNull(),
+    /** notified | draft | none. */
+    stage: text('stage').notNull(),
+    /** ISO date the rules were notified or the draft published. */
+    notifiedOn: text('notified_on').notNull().default(''),
+    /** Where the firm read it: a gazette citation, a department circular, a tracker. */
+    source: text('source').notNull().default(''),
+    note: text('note').notNull().default(''),
+    verifiedBy: uuid('verified_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    verifiedAt: timestamp('verified_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    oneRowPerStateCode: uniqueIndex('labour_register_code_rule_idx').on(t.stateCode, t.code),
   }),
 );

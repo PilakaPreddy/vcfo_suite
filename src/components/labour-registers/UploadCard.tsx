@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { AlertCircle, CheckCircle2, Columns3, FileSpreadsheet, Upload } from 'lucide-react';
+import type { UploadSlot } from '@/lib/labour-registers/parse';
 import { cn } from '@/lib/utils';
 import { maxUploadSizeLabel } from '@/lib/upload-limits';
 import { lr } from './theme';
@@ -22,7 +23,7 @@ import { LrCard, LrCardHead, LrChip } from './primitives';
  * signal — "it read the right sheet" is.
  */
 
-export type SlotKey = 'paysheet' | 'attendance' | 'overtime' | 'employees';
+export type SlotKey = UploadSlot;
 
 export interface SlotState {
   fileName: string;
@@ -63,6 +64,11 @@ const REGISTER_SLOTS: SlotSpec[] = [
     key: 'employees',
     label: 'Employee details',
     blurb: 'Addresses, guardian names, shift timings and minimum wage coverage — the columns no paysheet carries.',
+  },
+  {
+    key: 'leave',
+    label: 'Leave',
+    blurb: 'Days availed, the balance to credit and the category of leave. Leave registers cannot be built from a paysheet.',
   },
 ];
 

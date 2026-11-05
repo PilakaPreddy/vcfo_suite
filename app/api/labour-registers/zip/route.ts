@@ -50,26 +50,23 @@ export async function GET(request: Request) {
   const uniqueName = createUniqueNamer();
   const skipped: string[] = [];
 
-  /* One entry per document, newest first within a form: `listDocuments` orders by generation
-     time, and a superseded document keeps its row, so the first one seen for a form is the
-     current one. */
+  /* One entry per document, newest first within a form **and format**: `listDocuments` orders
+     by generation time, and a superseded document keeps its row, so the first one seen for a
+     pair is the current one. Keyed on both because a form now produces two files — the
+     workbook somebody works from and the printout somebody signs — and keying on the form
+     alone silently left whichever was generated second out of the archive. */
   const seen = new Set<string>();
   const entries: ZipEntrySource[] = [];
 
-  for (const doc of documents) {
-    if (seen.has(doc.formId)) continue;
-    seen.add(doc.formId);
-
-    const form = formById(doc.formId);
-    const fileName = form ? documentFileName(form, period, doc.format) : `${doc.formId}.${doc.format}`;
-    const path = uniqueName(zipEntryPath(form?.act ?? 'Other', fileName));
-
+  /** One entry, from whichever of a document's two objects is being added. */
+  function add(objectKey: string, fileName: string, act: string, modified: Date | null) {
+    const path = uniqueName(zipEntryPath(act, fileName));
     entries.push({
       name: path,
-      modified: doc.generatedAt ?? undefined,
+      modified: modified ?? undefined,
       open: async () => {
         try {
-          const object = await openObjectStream(doc.objectKey);
+          const object = await openObjectStream(objectKey);
           if (!object) {
             skipped.push(path);
             return null;
@@ -81,6 +78,36 @@ export async function GET(request: Request) {
         }
       },
     });
+  }
+
+  for (const doc of documents) {
+    const key = `${doc.formId}:${doc.format}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const form = formById(doc.formId);
+    const act = form?.act ?? 'Other';
+    add(
+      doc.objectKey,
+      form ? documentFileName(form, period, doc.format) : `${doc.formId}.${doc.format}`,
+      act,
+      doc.generatedAt,
+    );
+
+    /* The signed scan travels with the register it is a signature on. An inspection archive
+       that holds the generated file but not the signed one is missing the only copy that
+       carries a signature. */
+    if (doc.signedObjectKey) {
+      const ext = (doc.signedFileName ?? '').split('.').pop()?.toLowerCase() || 'pdf';
+      add(
+        doc.signedObjectKey,
+        form
+          ? documentFileName(form, period, `signed.${ext}`)
+          : `${doc.formId} - signed.${ext}`,
+        act,
+        doc.attestedAt,
+      );
+    }
   }
 
   const state = stateByCode(batch.stateCode);

@@ -18,7 +18,8 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
   if (!batch) return null;
 
   const period = { from: batch.periodFrom, to: batch.periodTo };
-  const forms = formsFor(batch.stateCode, period);
+  const assumptions = (batch.assumptions ?? {}) as { fullAttendanceAssumed?: boolean; sphere?: 'state' | 'central' };
+  const forms = formsFor(batch.stateCode, period, assumptions.sphere ?? 'state');
 
   const [provenance, uploads, documents, map] = await Promise.all([
     batchProvenance(ctx, batch.id),
@@ -45,8 +46,6 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
 
   const mapping = (map?.mapping ?? {}) as Record<string, string>;
   const mapped = new Set(Object.keys(mapping));
-  const assumptions = (batch.assumptions ?? {}) as { fullAttendanceAssumed?: boolean };
-
   const summary = assessReadiness({
     forms,
     uploads: bySlot,
@@ -96,16 +95,39 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
       }, {}),
     ).map(([act, items]) => ({ act, forms: items })),
     uploads: bySlot,
-    /* The current document per form. `listDocuments` is newest first, and a superseded
-       document keeps its row, so the first seen for a form is the one to offer. */
-    documents: documents.reduce<Array<{ id: string; formId: string; byteLength: number; format: string }>>(
-      (acc, d) => {
-        if (acc.some((x) => x.formId === d.formId)) return acc;
-        acc.push({ id: d.id, formId: d.formId, byteLength: d.byteLength, format: d.format });
-        return acc;
-      },
-      [],
-    ),
+    /* The current document per form **and format**. `listDocuments` is newest first, and a
+       superseded document keeps its row, so the first seen for a pair is the one to offer.
+       Keyed on both because a form now produces two files — the workbook somebody works from
+       and the printout somebody signs — and keying on the form alone hid whichever came
+       second. */
+    documents: documents.reduce<
+      Array<{
+        id: string;
+        formId: string;
+        byteLength: number;
+        format: string;
+        status: string;
+        attestedAt: string | null;
+        signedByName: string;
+        hasSignedCopy: boolean;
+      }>
+    >((acc, d) => {
+      if (acc.some((x) => x.formId === d.formId && x.format === d.format)) return acc;
+      acc.push({
+        id: d.id,
+        formId: d.formId,
+        byteLength: d.byteLength,
+        format: d.format,
+        status: d.status,
+        attestedAt: d.attestedAt ? d.attestedAt.toISOString().slice(0, 10) : null,
+        signedByName: d.signedByName,
+        hasSignedCopy: Boolean(d.signedObjectKey),
+      });
+      return acc;
+    }, []),
+    sphere: assumptions.sphere ?? 'state',
+    /* What the choice costs or saves, so the card can say it rather than imply it. */
+    centralFormCount: formsFor(batch.stateCode, period, 'central').filter((f) => f.regime !== 'state').length,
     needsAttendance: formsNeedingAttendance(forms).map((f) => `Form ${f.formNumber}`),
     attendanceAssumed: Boolean(assumptions.fullAttendanceAssumed),
     readiness: summary,

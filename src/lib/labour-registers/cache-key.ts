@@ -15,7 +15,9 @@
  * reason: they all change the bytes.
  *
  * **Two: a filed register must not be re-keyed.** The research found that electronic registers
- * may change layout but not "integrity, serial number and column contents", and that the
+ * may change layout but not its integrity, serial numbering or column contents — a design
+ * principle this product adopted rather than a rule anybody has cited, since a November 2026
+ * research pass could not find that phrasing in any rule text — and that the
  * admissibility certificate under section 63 of the Bharatiya Sakshya Adhiniyam 2023
  * reportedly has to disclose a hash value — every citation for which was secondary
  * commentary, so it needs checking against the enacted text before anyone relies on it. Either
@@ -56,6 +58,15 @@ export interface AssumptionSet {
   wageRateBasis?: 'monthly' | 'daily';
   /** Hours in a normal working day, where the client has said something other than eight. */
   dailyHours?: number;
+  /**
+   * Whose rules this establishment is under: the Centre (railways, mines, ports, banking,
+   * telecom, central PSUs) or the State (everything else).
+   *
+   * Keyed, because it decides which registers exist at all. Switching a client from state to
+   * central sphere does not change a figure on any existing sheet — it changes which sheets
+   * there are — so the registers already produced stay valid and the new ones build.
+   */
+  sphere?: 'state' | 'central';
 }
 
 export interface DocumentIdentity {

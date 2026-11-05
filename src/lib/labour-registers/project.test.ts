@@ -4,7 +4,7 @@ import { formById } from '@/data/labour-registers/forms';
 import { monthPeriod } from './catalogue';
 import { buildDataset, daysOf, employeesShort, joinKey, undecidedCoverage, type SlotInput } from './dataset';
 import { DERIVERS, num, wholeYears, workedDays } from './derive';
-import { assumedCode, ProjectionError, projectForm, projectForms } from './project';
+import { assumedCode, ProjectionError, projectForm, projectForms, weekOffNote, weekOffRule } from './project';
 import type { ParsedSheet } from './parse';
 
 /**
@@ -425,5 +425,29 @@ describe('projecting every form of a period', () => {
     const { tables, blocked } = projectForms([wages, muster], d);
     expect(tables.map((t) => t.form.id)).toEqual(['in-wages-ix']);
     expect(blocked.map((b) => b.formId)).toEqual(['in-wages-iv']);
+  });
+});
+
+describe('the footnote and the grid agree', () => {
+  it('does not claim a weekly off the grid did not apply', () => {
+    /* A value outside the four keys — the word 'Sunday' instead of 'sun' — used to print `P`
+       on every Sunday under a footnote saying Sundays were off. The register contradicted
+       itself in its own footnote. Now an unrecognised value says plainly what was printed. */
+    expect(weekOffRule('Sunday')).toBe('none');
+    expect(assumedCode({ from: '2026-09-01' }, 6, 'Sunday')).toBe('P');
+    expect(weekOffNote('Sunday')).toContain('every day is marked present');
+    expect(weekOffNote('Sunday')).not.toContain('Sundays are shown');
+  });
+
+  it('says what it did when the rule is one it knows', () => {
+    /* 6 September 2026 is a Sunday. */
+    expect(assumedCode({ from: '2026-09-01' }, 6, 'sun')).toBe('WO');
+    expect(assumedCode({ from: '2026-09-01' }, 7, 'sun')).toBe('P');
+    expect(weekOffNote('sun')).toContain('Sundays are shown as the weekly off');
+  });
+
+  it('treats an absent rule as none, not as Sundays', () => {
+    expect(weekOffRule(undefined)).toBe('none');
+    expect(weekOffNote(undefined)).toContain('every day is marked present');
   });
 });

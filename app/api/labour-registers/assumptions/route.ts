@@ -34,12 +34,17 @@ const bodySchema = z.object({
   batchId: z.string().min(1).max(64),
   assumptions: z.object({
     fullAttendanceAssumed: z.boolean().optional(),
-    weekOff: z.string().max(40).optional(),
+    /* The keys the grid understands, not free text. A value outside this set used to be
+       accepted and then silently ignored by the grid, which is how a register came to print
+       `P` on every Sunday under a footnote saying Sundays were off. */
+    weekOff: z.enum(['none', 'sun', 'sat-sun', 'alt-sat-sun']).optional(),
     holidayList: z.string().max(200).optional(),
     dateOrder: z.enum(['day-first', 'month-first']).optional(),
     doubleRateOvertime: z.boolean().optional(),
     wageRateBasis: z.enum(['monthly', 'daily']).optional(),
     dailyHours: z.number().min(1).max(24).optional(),
+    /* Whose rules this establishment is under. Decides which registers exist at all. */
+    sphere: z.enum(['state', 'central']).optional(),
     establishment: establishmentSchema.optional(),
   }),
 });

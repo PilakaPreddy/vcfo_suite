@@ -37,6 +37,10 @@ function g(heading: string, ordinal?: number): FormColumn {
 function sig(heading: string, ordinal?: number): FormColumn {
   return { field: 'signature', heading, source: 'signature', ordinal };
 }
+/** A figure over the whole roll: a head count, a total. Only a periodic return has these. */
+function agg(field: string, heading: string, ordinal?: number): FormColumn {
+  return { field, heading, source: 'aggregate', ordinal };
+}
 const UNVERIFIED = {
   status: 'unverified' as const,
   open: ['signatory', 'seal', 'page initialling', 'exact column order'],
@@ -196,15 +200,28 @@ const CODE_OSH: FormSpec[] = [
     jurisdiction: 'IN',
     regime: 'central-code',
     act: 'Occupational Safety, Health and Working Conditions Code, 2020',
-    rule: 'Rule 72, OSH&WC (Central) Rules, 2026',
+    /*
+     * Rule 75, not rule 72, and the difference matters more than a citation.
+     *
+     * The rule 72(3) deeming — which lets the Code on Wages registers stand in for the OSH
+     * ones — reaches only what rule 72 prescribes. The accident register is prescribed by
+     * rule 75, so it is outside that deeming and must be produced in its own right. A
+     * generator that suppressed it on the strength of rule 72(3) would leave a client short of
+     * a statutory register, which is exactly the kind of absence nobody notices until an
+     * inspection.
+     */
+    rule: 'Rule 75, OSH&WC (Central) Rules, 2026',
     formNumber: 'XIX',
     title: 'Register of accidents and dangerous occurrences',
     archetype: 'periodicReturn',
     period: 'perpetual',
     retentionYears: 5,
     effective: { from: '2026-05-08' },
-    authorityLine: 'OSH&WC Code, 2020 — Form XIX [Rule 72]',
-    verification: UNVERIFIED,
+    authorityLine: 'OSH&WC Code, 2020 — Form XIX [Rule 75]',
+    verification: {
+      status: 'unverified',
+      open: ['rule number corrected from 72 to 75 on secondary sources; confirm against the gazette'],
+    },
     columns: [
       d('serial', 'Sl. No.', 1),
       c('employeeId', 'Employee code', 2),
@@ -235,7 +252,7 @@ const EASE_2017: FormSpec[] = [
     archetype: 'employment',
     period: 'perpetual',
     retentionYears: 3,
-    effective: { from: '2017-02-21' },
+    effective: { from: '2017-02-21', to: '2026-05-07' },
     authorityLine: 'Ease of Compliance Rules, 2017 — Form A (Part A)',
     verification: UNVERIFIED,
     columns: [
@@ -265,7 +282,7 @@ const EASE_2017: FormSpec[] = [
     archetype: 'wages',
     period: 'monthly',
     retentionYears: 3,
-    effective: { from: '2017-02-21' },
+    effective: { from: '2017-02-21', to: '2026-05-07' },
     authorityLine: 'Ease of Compliance Rules, 2017 — Form B',
     verification: UNVERIFIED,
     columns: [
@@ -296,7 +313,7 @@ const EASE_2017: FormSpec[] = [
     archetype: 'wages',
     period: 'monthly',
     retentionYears: 3,
-    effective: { from: '2017-02-21' },
+    effective: { from: '2017-02-21', to: '2026-05-07' },
     authorityLine: 'Ease of Compliance Rules, 2017 — Form C',
     verification: UNVERIFIED,
     columns: [
@@ -320,7 +337,7 @@ const EASE_2017: FormSpec[] = [
     archetype: 'musterRoll',
     period: 'monthly',
     retentionYears: 3,
-    effective: { from: '2017-02-21' },
+    effective: { from: '2017-02-21', to: '2026-05-07' },
     authorityLine: 'Ease of Compliance Rules, 2017 — Form D',
     verification: {
       status: 'unverified',
@@ -347,7 +364,7 @@ const EASE_2017: FormSpec[] = [
     archetype: 'leave',
     period: 'annual',
     retentionYears: 3,
-    effective: { from: '2017-02-21' },
+    effective: { from: '2017-02-21', to: '2026-05-07' },
     authorityLine: 'Ease of Compliance Rules, 2017 — Form E',
     verification: UNVERIFIED,
     columns: [
@@ -390,8 +407,8 @@ const EQUAL_REMUNERATION: FormSpec[] = [
     columns: [
       c('department', 'Category of workers', 1),
       c('designation', 'Brief description of work', 2),
-      d('serial', 'No. of women employed', 3),
-      d('serial', 'No. of men employed', 4),
+      agg('countWomen', 'No. of women employed', 3),
+      agg('countMen', 'No. of men employed', 4),
       c('grossEarnings', 'Rate of remuneration paid', 5),
       c('basic', 'Basic wage or salary', 6),
       c('dearnessAllowance', 'Dearness allowance', 7),
@@ -619,10 +636,12 @@ const TELANGANA: FormSpec[] = [
     effective: {},
     authorityLine: 'Telangana Shops & Establishments Rules, 1990 — FORM XI',
     verification: {
-      status: 'checked-against-sample',
-      on: '2026-11-02',
-      against: 'filed Summit Consulting workbook, August 2026',
-      open: ['whether section 50(3) of the Code on Wages now governs the issue date instead'],
+      status: 'disputed',
+      on: '2026-11-04',
+      against: 'the department downloads page, which labels Form XI a wage slip',
+      disputedBecause:
+        'The rules text appears to prescribe Form XI as a register of deductions for damage or loss, not a wage slip. Only the department\u2019s downloads page calls it a wage slip. Resolve against the 1990 Rules before relying on this layout.',
+      open: ['whether Form XI is a wage slip or a register of deductions'],
     },
     columns: [
       d('wageRate', 'Rate of daily wages/price rate', 1),
@@ -647,7 +666,14 @@ const TELANGANA: FormSpec[] = [
     retentionYears: 3,
     effective: {},
     authorityLine: 'Telangana Shops & Establishments Rules, 1990 — FORM V',
-    verification: { status: 'checked-against-sample', on: '2026-11-02', against: 'filed Summit Consulting workbook, August 2026', open: ['signatory'] },
+    verification: {
+      status: 'disputed',
+      on: '2026-11-04',
+      against: 'a filed client workbook, which uses it as a muster roll',
+      disputedBecause:
+        'The rules text appears to title Form V \u201cRegister of Establishments \u2014 Eating Houses, Lodging Houses and Cafes\u201d. Only the department\u2019s downloads page calls it a muster roll. A filed client workbook uses it as one, which is why it is still produced \u2014 but the layout is not confirmed.',
+      open: ['whether Form V is the muster roll or a register of establishments'],
+    },
     columns: [
       d('serial', 'Sl. No.', 1),
       c('name', 'Name of the employee', 2),
@@ -664,15 +690,27 @@ const TELANGANA: FormSpec[] = [
     jurisdiction: 'TG',
     regime: 'state',
     act: 'Telangana Shops and Establishments Act, 1988',
-    rule: 'Telangana Shops and Establishments Rules, 1990',
+    /* Rule 33, not rule 29: filed by establishments of ten or more, by the tenth of the month
+       following the quarter end. */
+    rule: 'Rule 33, Telangana Shops and Establishments Rules, 1990',
     formNumber: 'XXVII',
-    title: 'Quarterly Return',
+    title: 'Periodical Returns',
     archetype: 'periodicReturn',
     period: 'quarterly',
     retentionYears: 3,
     effective: {},
-    authorityLine: 'Telangana Shops & Establishments Rules, 1990 — FORM XXVII',
-    verification: UNVERIFIED,
+    authorityLine: 'Telangana Shops & Establishments Rules, 1990 — FORM XXVII [Rule 33]',
+    verification: {
+      status: 'disputed',
+      on: '2026-11-04',
+      disputedBecause:
+        'Our title said \u201cQuarterly Return\u201d and cited rule 29. The rules appear to title it \u201cPeriodical Returns\u201d under rule 33. The column layout here is a placeholder and has never been checked against the prescribed form.',
+      open: ['the entire column layout', 'the prescribing rule'],
+    },
+    /* Nobody has seen this form. Producing seven columns headed [1] to [7] would be worse
+       than producing nothing: a sheet that looks filed and says nothing is a sheet an
+       inspector asks about. The generator blocks it and names the reason. */
+    layoutPlaceholder: true,
     columns: [
       d('serial', '[1]', 1),
       d('serial', '[2]', 2),
@@ -767,30 +805,6 @@ const KARNATAKA: FormSpec[] = [
     ],
   },
   {
-    id: 'ka-se-vii',
-    jurisdiction: 'KA',
-    regime: 'state',
-    act: 'Karnataka Shops and Commercial Establishments Act, 1961',
-    rule: 'Karnataka Shops and Commercial Establishments Rules, 1963',
-    formNumber: 'VII',
-    title: 'Muster Roll',
-    archetype: 'musterRoll',
-    period: 'monthly',
-    retentionYears: 3,
-    effective: {},
-    authorityLine: 'Karnataka Shops & Commercial Establishments Rules — FORM VII',
-    verification: { status: 'checked-against-sample', on: '2026-11-02', against: 'filed Summit Consulting workbook, July 2026', open: ['signatory'] },
-    columns: [
-      d('serial', 'Sl. No.', 1),
-      c('name', 'Name', 2),
-      m('guardianName', "Father's name", 3),
-      c('sex', 'Sex', 4),
-      c('dateOfJoining', 'Date of appointment', 5),
-      c('designation', 'Designation', 6),
-      g('Days of the month', 7),
-    ],
-  },
-  {
     id: 'ka-se-f',
     jurisdiction: 'KA',
     regime: 'state',
@@ -850,10 +864,13 @@ const KARNATAKA: FormSpec[] = [
     effective: {},
     authorityLine: 'Karnataka Shops & Commercial Establishments Rules — FORM 21',
     verification: UNVERIFIED,
+    /* These were bound to `serial` — the row-number deriver — so the return would have
+       printed 1, 2, 3 under three headings asking for head counts. A return is one row of
+       figures about an establishment, not a numbered list of people. */
     columns: [
-      d('serial', 'Adults — men', 1),
-      d('serial', 'Adults — women', 2),
-      d('serial', 'Total', 3),
+      agg('countMen', 'Adults — men', 1),
+      agg('countWomen', 'Adults — women', 2),
+      agg('countEmployees', 'Total', 3),
     ],
   },
 ];
@@ -1002,18 +1019,55 @@ const KERALA: FormSpec[] = [
 
 const HARYANA: FormSpec[] = [
   {
+    /*
+     * Rule 5 prescribes three registers together — C, D and E — and we carried only D and E.
+     * The same rule also requires that every register be "duly bound and page-marked in serial
+     * number" and "signed by the employer and the Inspector concerned". That inspector
+     * counter-signature is unusual and is the reason this state needs a signing override: the
+     * product's default of optional signing is wrong here.
+     */
+    id: 'hr-se-c',
+    jurisdiction: 'HR',
+    regime: 'state',
+    act: 'Punjab Shops and Commercial Establishments Act, 1958 (as applicable to Haryana)',
+    rule: 'Rule 5, Punjab Shops and Commercial Establishments Rules, 1958',
+    formNumber: 'C',
+    title: 'Register of Employees',
+    archetype: 'employment',
+    period: 'perpetual',
+    retentionYears: 3,
+    effective: {},
+    authorityLine: 'Punjab Shops and Commercial Establishments Rules, 1958 (as in force in Haryana) — FORM C [Rule 5]',
+    verification: {
+      status: 'unverified',
+      open: ['the entire column layout — added from a secondary description of rule 5, never seen'],
+    },
+    columns: [
+      d('serial', 'Sl. No.', 1),
+      c('name', 'Name of the employee', 2),
+      m('guardianName', 'Father\u2019s / Husband\u2019s name', 3),
+      c('sex', 'Sex', 4),
+      c('dateOfBirth', 'Date of birth', 5),
+      c('designation', 'Designation', 6),
+      c('dateOfJoining', 'Date of appointment', 7),
+      m('address', 'Residential address', 8),
+      c('dateOfLeaving', 'Date of leaving', 9),
+      c('remarks', 'Remarks', 10),
+    ],
+  },
+  {
     id: 'hr-se-d',
     jurisdiction: 'HR',
     regime: 'state',
     act: 'Punjab Shops and Commercial Establishments Act, 1958 (as applicable to Haryana)',
-    rule: 'Haryana Shops and Commercial Establishments Rules, 1958',
+    rule: 'Rule 5, Punjab Shops and Commercial Establishments Rules, 1958',
     formNumber: 'D',
     title: 'Register of Wages',
     archetype: 'wages',
     period: 'monthly',
     retentionYears: 3,
     effective: {},
-    authorityLine: 'Haryana Shops & Commercial Establishments Rules — FORM D',
+    authorityLine: 'Punjab Shops and Commercial Establishments Rules, 1958 (as in force in Haryana) — FORM D [Rule 5]',
     verification: {
       status: 'unverified',
       open: ['the form number itself — the filed workbook was labelled Form XIII, which research indicates is a central Contract Labour form, so this needs the Haryana rules read'],
@@ -1038,7 +1092,7 @@ const HARYANA: FormSpec[] = [
     jurisdiction: 'HR',
     regime: 'state',
     act: 'Punjab Shops and Commercial Establishments Act, 1958 (as applicable to Haryana)',
-    rule: 'Haryana Shops and Commercial Establishments Rules, 1958',
+    rule: 'Rule 5, Punjab Shops and Commercial Establishments Rules, 1958',
     formNumber: 'E',
     title: 'Register of Deductions',
     archetype: 'wages',
@@ -1065,7 +1119,7 @@ const HARYANA: FormSpec[] = [
     jurisdiction: 'HR',
     regime: 'state',
     act: 'Punjab Shops and Commercial Establishments Act, 1958 (as applicable to Haryana)',
-    rule: 'Haryana Shops and Commercial Establishments Rules, 1958',
+    rule: 'Rule 5, Punjab Shops and Commercial Establishments Rules, 1958',
     formNumber: 'V',
     title: 'Muster Roll',
     archetype: 'musterRoll',

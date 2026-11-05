@@ -26,8 +26,21 @@ import { normaliseHeader } from './normalise';
  */
 export type WorkbookInput = Parameters<ExcelJS.Workbook['xlsx']['load']>[0] | Uint8Array;
 
-/** The four inputs a batch takes. */
-export type UploadSlot = 'paysheet' | 'attendance' | 'overtime' | 'employees';
+/**
+ * The inputs a batch takes.
+ *
+ * Written once and exported, because the list was spelled out in seven places — the upload
+ * route, the mapping route, four role shells and the dataset loader — and adding a fifth meant
+ * finding all seven. A slot missing from one of them is a file that uploads and is then never
+ * read, which is the quietest way for a register to come out short.
+ *
+ * `leave` is the fifth. Five forms in the catalogue print a leave balance, days availed and a
+ * category of leave, and none of those is on a paysheet: leave is kept in an HR system, not a
+ * payroll run. Without the slot those forms could only ever be produced blank.
+ */
+export const UPLOAD_SLOTS = ['paysheet', 'attendance', 'overtime', 'employees', 'leave'] as const;
+
+export type UploadSlot = (typeof UPLOAD_SLOTS)[number];
 
 /**
  * Which reader to use. A payroll system exports a CSV about as often as a workbook, and the
@@ -190,6 +203,11 @@ export function guessSlot(headers: string[]): UploadSlot | null {
   if (has('total ot hours', 'ot hours', 'overtime hours') && !has('gross', 'net pay')) return 'overtime';
   if (has('gross', 'net pay', 'basic pay', 'basic')) return 'paysheet';
   if (has('residential address', 'father husband name', 'education qualification')) return 'employees';
+  /* Checked after the paysheet, not before: a paysheet often carries a leave-encashment
+     column, and a leave register never carries a gross or a net pay. */
+  if (has('leave balance', 'balance of leave to credit', 'leaves availed', 'leave availed', 'category of leave')) {
+    return 'leave';
+  }
   return null;
 }
 

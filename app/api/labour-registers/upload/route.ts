@@ -5,7 +5,7 @@ import { publicErrorMessage } from '@/lib/api-error';
 import { requireAnyRole } from '@/auth/guards';
 import { rejectLargeBody } from '@/lib/api/body-limit';
 import { getBatch, recordUpload } from '@/db/repositories/labour-registers';
-import { formatForFileName, parseWorkbook, type UploadSlot } from '@/lib/labour-registers/parse';
+import { formatForFileName, UPLOAD_SLOTS, parseWorkbook, type UploadSlot } from '@/lib/labour-registers/parse';
 import {
   LABOUR_REGISTER_EXTENSIONS,
   LABOUR_REGISTER_FILE_ERROR,
@@ -36,7 +36,7 @@ import { putObject } from '@/storage/s3';
  * POST /api/labour-registers/upload  multipart: `batchId`, `slot`, `file`, optional `sheet`
  *   → { upload, parsed: { sheetName, headerRow, headers, rowCount, grid } }
  */
-const SLOTS: UploadSlot[] = ['paysheet', 'attendance', 'overtime', 'employees'];
+const SLOTS: UploadSlot[] = [...UPLOAD_SLOTS];
 
 export async function POST(request: Request) {
   const guard = await requireAnyRole('super_admin', 'admin', 'manager', 'intern');
