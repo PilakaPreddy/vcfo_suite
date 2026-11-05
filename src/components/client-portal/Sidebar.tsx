@@ -172,6 +172,10 @@ export function portalNav({
       { k: 'obligations', t: 'Obligations' },
       { k: 'compliances', t: 'Calendar' },
       { k: 'filings', t: 'Filings' },
+      /* The statutory registers the firm produces each month. The page and its route have
+         existed since the feature was built; it had no way in from here, so a client could
+         reach it only by typing the URL. */
+      { k: 'labour-registers', t: 'Labour registers' },
     ],
   };
   const registrations: NavItem = { k: 'registrations', t: 'Registrations', i: 'badge-check' };
