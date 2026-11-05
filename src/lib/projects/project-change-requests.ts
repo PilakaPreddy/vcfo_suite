@@ -109,10 +109,11 @@ export async function applyChangeRequest(
     });
 
     if (previousManagerId && previousManagerId !== data.managerId) {
+      // The engagement already moved, so a failure here is logged rather than undoing it.
       await removeEngagementManager({
         engagementDbId: row.id,
         managerId: previousManagerId,
-      }).catch(() => undefined);
+      }).catch((e) => console.error('[project-change-requests] previous manager membership not removed', e));
     }
     if (data.managerId) {
       await ensureEngagementManager({

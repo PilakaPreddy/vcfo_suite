@@ -169,10 +169,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       };
 
       if (prevId && prevId !== nextId) {
+        // The engagement already moved, so a failure here is logged rather than undoing it.
         await removeEngagementManager({
           engagementDbId: row.id,
           managerId: prevId,
-        }).catch(() => undefined);
+        }).catch((e) => console.error('[engagements/:id] previous manager membership not removed', e));
         const prev = await systemGetProfileParty(prevId);
         if (prev) {
           const part = await notifyTeamAssignmentSoon({
