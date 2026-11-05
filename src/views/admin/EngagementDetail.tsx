@@ -132,6 +132,7 @@ export default function EngagementDetail() {
     getStateForEngagement,
     refreshEngagementChecklist,
     engagementsLoading,
+    engagementsSettled,
   } = useApp();
   const router = useRouter();
   const [checklistRefreshing, setChecklistRefreshing] = useState(false);
@@ -198,7 +199,9 @@ export default function EngagementDetail() {
     }
   }
 
-  if (!eng && engagementsLoading) {
+  // `engagementsLoading` is false while the session hydrates (the query is still idle), so a
+  // fresh page load would bounce; wait until the engagements query has settled.
+  if (!eng && !engagementsSettled) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <HexgridLoader />
