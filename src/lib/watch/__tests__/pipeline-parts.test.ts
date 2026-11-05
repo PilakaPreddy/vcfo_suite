@@ -97,7 +97,7 @@ describe('the board row', () => {
   it('leads with the summary and carries the quote', () => {
     const body = boardBody(fields);
     expect(body).toMatch(/^Moves the date\./);
-    expect(body).toContain('New due date: 2027-03-31');
+    expect(body).toContain('New due date: 31 Mar 2027');
     expect(body).toContain('From the source: "Extended to 31.03.2027."');
   });
 
@@ -112,8 +112,11 @@ describe('the board row', () => {
 const status = (name: string, over: Partial<WatchSourceStatus> = {}): WatchSourceStatus => ({
   id: name,
   name,
+  url: `https://www.rbi.org.in/${name}`,
   type: 'feed',
   area: 'gst',
+  audience: 'everyone',
+  lastError: null,
   health: 'ok',
   lastCheckedAt: null,
   lastSuccessAt: '2026-11-06T00:00:00Z',

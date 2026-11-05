@@ -37,7 +37,7 @@ export function bellRecipients(importance: RegImportance, people: readonly Watch
 
 /** Which of the day's published updates each person's one summary row covers. */
 export function summaryFor<T extends { importance: RegImportance }>(person: WatchPerson, updates: readonly T[]): T[] {
-  return person.role === 'client' ? updates.filter((update) => update.importance !== 'staff_only') : [...updates];
+  return isWatchStaff(person.role) ? [...updates] : updates.filter((update) => update.importance !== 'staff_only');
 }
 
 export function reviewers(people: readonly WatchPerson[]): WatchPerson[] {

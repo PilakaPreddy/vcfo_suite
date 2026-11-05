@@ -48,6 +48,11 @@ describe('verifyRegSummary', () => {
     expect(verifyRegSummary({ ...good, quote: 'the due date for filing Form 112A' }, SOURCE).map((p) => p.field)).toEqual(['quote']);
   });
 
+  it('accepts a quote cut short with a closing full stop, and flags a reworded one', () => {
+    expect(verifyRegSummary({ ...good, quote: 'A penalty of Rs. 5,000.' }, SOURCE)).toEqual([]);
+    expect(verifyRegSummary({ ...good, quote: 'A fine of Rs. 5,000 applies.' }, SOURCE).map((p) => p.field)).toEqual(['quote']);
+  });
+
   it('flags a due date that is not in the source', () => {
     const problems = verifyRegSummary({ ...good, newDueDate: '2027-04-30' }, SOURCE);
     expect(problems).toEqual([expect.objectContaining({ field: 'newDueDate', value: '2027-04-30' })]);

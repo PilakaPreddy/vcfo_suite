@@ -84,7 +84,7 @@ const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable();
  */
 export const regSummarySchema = z.object({
   area: z.enum(REG_AREAS),
-  act: z.string().trim().max(160).nullable(),
+  act: z.string().trim().max(400).nullable(),
   changeType: z.enum(REG_CHANGE_TYPES),
   effectiveDate: isoDate,
   oldDueDate: isoDate,
@@ -157,7 +157,7 @@ export interface RegUpdateDetail extends RegUpdateListItem {
 export const regReviewEditSchema = z.object({
   title: z.string().trim().min(1).max(300),
   area: z.enum(REG_AREAS),
-  act: z.string().trim().max(160).nullable(),
+  act: z.string().trim().max(400).nullable(),
   changeType: z.enum(REG_CHANGE_TYPES),
   importance: z.enum(REG_IMPORTANCE),
   effectiveDate: isoDate,

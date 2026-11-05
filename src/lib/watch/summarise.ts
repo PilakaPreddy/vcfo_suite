@@ -23,7 +23,7 @@ const RECORD_TOOL: LlmTool = {
     required: ['area', 'act', 'changeType', 'effectiveDate', 'oldDueDate', 'newDueDate', 'affects', 'summary', 'quote'],
     properties: {
       area: { type: 'string', enum: [...REG_AREAS], description: 'The law area.' },
-      act: { type: ['string', 'null'], description: 'The Act or rules it is made under, if named.' },
+      act: { type: ['string', 'null'], description: 'The short name of the Act or rules it is made under, if named.' },
       changeType: { type: 'string', enum: [...REG_CHANGE_TYPES] },
       effectiveDate: nullableDate,
       oldDueDate: nullableDate,
@@ -33,7 +33,7 @@ const RECORD_TOOL: LlmTool = {
         type: 'string',
         description: 'Two or three plain sentences for a busy professional: what changed and what to do. Every date and number must be written exactly as in the document.',
       },
-      quote: { type: 'string', description: 'One sentence copied word for word from the document that shows the change. No more than 300 characters.' },
+      quote: { type: 'string', description: 'One sentence copied character for character from the document, not from the listed title, that shows the change. Never tidy, join or reword it. No more than 300 characters.' },
     },
   },
 };
@@ -83,6 +83,9 @@ export async function summariseUpdate(
   const call = result.content.find((block) => block.type === 'tool_use' && block.name === RECORD_TOOL.name);
   if (!call || call.type !== 'tool_use') throw new WatchSummariseError(`The model returned no record (stop reason: ${result.stopReason ?? 'none'}).`);
   const parsed = regSummarySchema.safeParse(call.input);
-  if (!parsed.success) throw new WatchSummariseError('The model returned a record outside the schema.');
+  if (!parsed.success) {
+    const fields = [...new Set(parsed.error.issues.map((issue) => issue.path.join('.')))].join(', ');
+    throw new WatchSummariseError(`The model returned a record outside the schema (${fields}).`);
+  }
   return { summary: parsed.data, model: result.model, usage: result.usage };
 }

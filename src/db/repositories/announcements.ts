@@ -18,7 +18,7 @@ import {
   type AnnouncementSource,
   type ParsedFeedItem,
 } from '@/lib/notifications/announcements';
-import { audienceFor } from '@/lib/watch/recipients';
+import { audienceFor, isWatchStaff } from '@/lib/watch/recipients';
 import { boardBody, boardKind } from '@/lib/watch/board';
 import type { RegImportance } from '@/lib/watch/types';
 
@@ -70,9 +70,9 @@ function mapSource(row: SourceRow): AnnouncementSource {
   };
 }
 
-/** A client never sees a staff row: an unreviewed Watch update or a professional-body notice. */
+/** Only firm staff see a staff row: an unreviewed Watch update or a professional-body notice. */
 function visibleTo(ctx: AuthContext) {
-  return ctx.role === 'client' ? eq(announcements.audience, 'everyone') : undefined;
+  return isWatchStaff(ctx.role) ? undefined : eq(announcements.audience, 'everyone');
 }
 
 export async function listAnnouncements(

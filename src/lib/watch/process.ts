@@ -15,7 +15,7 @@ import { WatchBlockedError } from './fetch';
 import { readUpdateText, WatchReadError } from './read';
 import { importanceFor } from './recipients';
 import { summariseUpdate, WatchSummariseError, type SummariseResult } from './summarise';
-import { WATCH_PROCESS_EVENT, type RegChangeType } from './types';
+import { WATCH_PROCESS_EVENT, type RegArea, type RegChangeType } from './types';
 import { verifyRegSummary } from './verify';
 
 /**
@@ -41,7 +41,7 @@ export async function readStep(id: string): Promise<StepResult> {
     return mergedInto ? 'stop' : 'next';
   } catch (err) {
     if (err instanceof WatchBlockedError) {
-      await systemMarkRegUpdateFailed(id, 'The site refused automated reading of this document. Upload the PDF instead.');
+      await systemMarkRegUpdateFailed(id, `The site refused automated reading of this document (${err.message}). Upload the PDF instead.`);
       return 'stop';
     }
     if (err instanceof WatchReadError) {
@@ -87,8 +87,10 @@ export async function verifyStep(id: string, result: SummariseResult): Promise<'
   const row = await systemGetPipelineUpdate(id);
   if (!row?.update.sourceText) return 'stop';
   const problems = verifyRegSummary(result.summary, row.update.sourceText);
+  // The source knows its own area when the model can only say "general".
+  const area = result.summary.area === 'general' && row.sourceArea ? (row.sourceArea as RegArea) : result.summary.area;
   await systemSaveSummary(id, {
-    summary: result.summary,
+    summary: { ...result.summary, area },
     importance: importanceFor(result.summary.changeType as RegChangeType, row.sourceAudience),
     problems,
     model: result.model,

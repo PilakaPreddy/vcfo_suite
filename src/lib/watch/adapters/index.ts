@@ -32,7 +32,7 @@ function feedAdapter(id: string, noise?: SourceAdapter['noise']): SourceAdapter 
 /** A table with a title cell, a date cell and a link cell, the shape most listing pages share. */
 function tableAdapter(
   id: string,
-  columns: { title: number; date: number; link: number; rowTitle?: (cells: string[]) => string },
+  columns: { title: number; date: number; link: number | 'any'; rowTitle?: (cells: string[]) => string },
   noise?: SourceAdapter['noise'],
 ): SourceAdapter {
   return {
@@ -41,7 +41,7 @@ function tableAdapter(
     list(body, baseUrl) {
       const items: ListedItem[] = [];
       for (const row of tableRows(body, baseUrl)) {
-        const href = row.links[columns.link]?.[0]?.href;
+        const href = (columns.link === 'any' ? row.links.flat() : (row.links[columns.link] ?? []))[0]?.href;
         const title = clean(columns.rowTitle?.(row.cells) ?? row.cells[columns.title] ?? '');
         if (!href || !title) continue;
         items.push({ externalKey: href, title: title.slice(0, 300), url: href, publishedOn: firstDateIn(row.cells[columns.date] ?? '') });
@@ -63,8 +63,9 @@ function sebiNoise(item: ListedItem): string | null {
 const PIB_RELEVANT = /\b(tax|gst|cbic|cbdt|customs|finance|company|companies|corporate|mca|rbi|sebi|labour|epfo|esic|compliance|insolvency|audit|fema)\b/i;
 
 const ESIC_INTERNAL = /^(hrm|vigilance|ayush|nta|medical|rajbhasha|e-?i+|administration|finance|budget)/i;
+const ESIC_ROUTINE = /^(office order|user manual|office memorandum regarding (transfer|posting))/i;
 const EPFO_INTERNAL = /^(pdunass|exam|hrd|hdr|hrm|vigilance|procurement|conference)$/i;
-const ICAI_ROUTINE = /\b(exam(ination)?s?|assessment test|certificate course|campus|branch|convocation|election|webinar|awards?|brochure|observations of the candidates|skill|batch)\b/i;
+const ICAI_ROUTINE = /\b(exam(ination)?s?|assessment test|eligibility test|quiz|competition|winners?|certificate course|campus|branch|convocation|election|webinar|awards?|brochure|observations of the candidates|skill|batch)\b/i;
 
 const hasHindi = (text: string): boolean => /[ऀ-ॿ]/.test(text);
 
@@ -100,7 +101,7 @@ const incomeTaxNews: SourceAdapter = {
 
 const esic: SourceAdapter = {
   id: 'esic',
-  noise: (item) => (ESIC_INTERNAL.test(item.section ?? '') ? 'internal_division' : null),
+  noise: (item) => (ESIC_INTERNAL.test(item.section ?? '') || ESIC_ROUTINE.test(item.title) ? 'internal_division' : null),
   list(body, baseUrl) {
     const items: ListedItem[] = [];
     for (const row of tableRows(body, baseUrl)) {
@@ -110,7 +111,7 @@ const esic: SourceAdapter = {
       if (!link) continue;
       items.push({
         externalKey: link.href,
-        title: clean(link.text.replace(/-\s*PDF\s*$/i, '')).slice(0, 300),
+        title: clean(link.text).replace(/\s*-\s*PDF\b.*$/i, '').slice(0, 300),
         url: link.href,
         publishedOn: firstDateIn(row.cells[4] ?? '') ?? firstDateIn(row.cells[2] ?? ''),
         section: clean(row.cells[1] ?? ''),
@@ -172,11 +173,11 @@ const ADAPTERS: readonly SourceAdapter[] = [
   cbicGst,
   incomeTaxNews,
   esic,
-  tableAdapter('gst-council', { title: 2, date: 1, link: 2 }),
+  tableAdapter('gst-council', { title: 2, date: 1, link: 2, rowTitle: (cells) => (cells[2] ?? '').replace(/\(Size:[^)]*\)/i, '') }),
   tableAdapter('nfra', { title: 0, date: 1, link: 2 }),
   icai,
   epfo,
-  tableAdapter('ibbi', { title: 2, date: 1, link: 3 }),
+  tableAdapter('ibbi', { title: 2, date: 1, link: 'any' }),
 ];
 
 export function adapterFor(id: string | null): SourceAdapter | null {

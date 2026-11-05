@@ -78,7 +78,8 @@ export function pageText(html: string): string {
 }
 
 function finish(text: string): string {
-  const out = maskIdentityNumbers(text).trim().slice(0, MAX_SOURCE_CHARS);
+  // Some PDFs carry NUL bytes, which Postgres text refuses.
+  const out = maskIdentityNumbers(text.replace(/\0/g, '')).trim().slice(0, MAX_SOURCE_CHARS);
   if (out.length < 40) throw new WatchReadError('The document had no readable text.');
   return out;
 }

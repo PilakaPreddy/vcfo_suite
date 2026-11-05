@@ -74,6 +74,7 @@ describe('Watch adapters on saved copies', () => {
   it('reads GST Council press releases', () => {
     const { items } = listed('gst-council', 'gst-council.html', 'https://gstcouncil.gov.in/press-release');
     expect(items[0]!.publishedOn).toBe('2026-10-08');
+    expect(items[0]!.title).not.toMatch(/Size:/);
     expect(items[0]!.url).toBe('https://gstcouncil.gov.in/sites/default/files/2026-10/press_release.pdf');
   });
 
@@ -105,6 +106,13 @@ describe('Watch adapters on saved copies', () => {
     expect(items[0]!.title).toMatch(/^Compliance with RERA/);
     expect(items[0]!.url).toMatch(/\.pdf$/);
     expect(items[0]!.title).not.toMatch(/newwindow/);
+  });
+
+  it('reads IBBI notifications, whose link sits in the subject cell', () => {
+    const { items } = listed('ibbi', 'ibbi-notifications.html', 'https://ibbi.gov.in/legal-framework/notifications');
+    expect(items[2]!.publishedOn).toBe('2026-05-25');
+    expect(items[2]!.title).toMatch(/^Notification under sub-section \(2\) of section 1/);
+    expect(items[2]!.url).toMatch(/^https:\/\/ibbi\.gov\.in\/uploads\/.+\.pdf$/);
   });
 
   it('returns nothing for a page whose layout changed, which raises the alert', () => {

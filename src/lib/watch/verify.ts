@@ -21,7 +21,7 @@ function numbersIn(text: string, withParts: boolean): Set<string> {
 
 /** Unicode forms and whitespace only: ligatures from PDFs fold, and no word can change. */
 export function foldText(text: string): string {
-  return text.normalize('NFKC').replace(/[​-‍﻿]/g, '').replace(/\s+/g, ' ').trim();
+  return text.normalize('NFKC').replace(/[\u200b-\u200d\ufeff]/g, '').replace(/\s+/g, ' ').trim();
 }
 
 type Checked = Pick<RegSummary, 'act' | 'effectiveDate' | 'oldDueDate' | 'newDueDate' | 'affects' | 'summary' | 'quote'>;
@@ -54,7 +54,8 @@ export function verifyRegSummary(summary: Checked, sourceText: string): RegVerif
       if (!sourceNumbers.has(number)) problems.push({ field, value: number, message: 'This number is not in the source.' });
     }
   }
-  if (!source.includes(foldText(summary.quote))) {
+  // A closing full stop added to a cut-off sentence changes no word of the source.
+  if (!source.includes(foldText(summary.quote).replace(/[.;,:]$/, ''))) {
     problems.push({ field: 'quote', value: summary.quote.slice(0, 80), message: 'The quote is not word for word in the source.' });
   }
   return problems;

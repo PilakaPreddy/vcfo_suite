@@ -82,6 +82,7 @@ describe('read — every role', () => {
     expect(await repo.getAnnouncementBoardHead(ctx(role))).toEqual({
       latestId: null,
       latestCreatedAt: null,
+      latestUpdatedAt: null,
       count: 0,
     });
   });
