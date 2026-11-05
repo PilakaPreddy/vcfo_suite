@@ -49,6 +49,7 @@ export async function countUnreadAnnouncements(ctx: AuthContext): Promise<number
     .where(
       and(
         sql`${announcements.publishedAt} > now() - interval '90 days'`,
+        ctx.role === 'client' ? eq(announcements.audience, 'everyone') : undefined,
         notExists(
           db
             .select({ one: sql`1` })

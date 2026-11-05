@@ -1,6 +1,9 @@
 import 'server-only';
 import { complianceGenerate } from '@/jobs/compliance-generate';
 import { announcementFeeds } from '@/jobs/announcement-feeds';
+import { watchCheck } from '@/jobs/watch-check';
+import { watchProcess } from '@/jobs/watch-process';
+import { watchDailySummary } from '@/jobs/watch-daily-summary';
 import { whatsappSend } from '@/jobs/whatsapp-send';
 import { askIngest } from '@/jobs/ask-ingest';
 import { complianceReminders } from '@/jobs/compliance-reminders';
@@ -47,5 +50,8 @@ export function registeredJobs(): JobFunction[] {
     receivablesBankFeed,
     receivablesFxRates,
     receivablesDigest,
+    watchCheck,
+    watchProcess,
+    watchDailySummary,
   ]);
 }

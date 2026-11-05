@@ -23,6 +23,7 @@ import { gateActiveCatalog } from '@/lib/checklist/checklist-step-gate';
 import { generateAnswer } from '@/lib/ask/generate';
 import { runGuard, type GuardResult } from '@/lib/ask/guard';
 import { getAskProvider } from '@/lib/ask/provider';
+import { answerUpdatesQuestion, matchUpdatesQuestion } from '@/lib/watch/chat-updates';
 import { checkAskRateLimit } from '@/lib/ask/rate-limit';
 import {
   greetingAnswer,
@@ -254,6 +255,14 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
       await finish(answer);
       return;
     }
+  }
+
+  // ---- Watch: a list of the latest official updates is code, so it spends no model call ----
+  const updatesQuestion = request.message ? matchUpdatesQuestion(request.message) : null;
+  if (updatesQuestion) {
+    const { answer } = await answerUpdatesQuestion(ctx, shell, updatesQuestion, now);
+    await finish(answer);
+    return;
   }
 
   // ---- 3. Free text: guard → topic or generation ----

@@ -12,10 +12,21 @@ import {
   type AnnouncementSource,
 } from '@/lib/notifications/announcements';
 import { withRunNow } from '@/jobs/dev-controls';
+import { askFlags } from '@/lib/ask/config';
+import { systemGetWatchSource } from '@/db/repositories/reg-sources';
+import { checkWatchSource } from '@/lib/watch/check';
+import { hostOf, queueWatchProcess } from '@/lib/watch/process';
 
 export async function ingestAnnouncementSource(
   source: AnnouncementSource,
 ): Promise<{ inserted: number; error?: string }> {
+  // While Watch is on, a pulled feed goes through its review path and is not posted straight away.
+  const watched = askFlags().watch ? await systemGetWatchSource(source.id) : null;
+  if (watched) {
+    const { queuedIds, note, health } = await checkWatchSource(watched);
+    await queueWatchProcess(queuedIds.map((id) => ({ id, host: hostOf(source.feedUrl) })));
+    return { inserted: queuedIds.length, ...(health === 'ok' ? {} : { error: note ?? health }) };
+  }
   try {
     const xml = await fetchOfficialFeedXml(source.feedUrl);
     const items = parseRssOrAtom(xml);
@@ -68,11 +79,15 @@ async function ingestAllAnnouncementFeeds(): Promise<{
   return { sources: sources.length, catalogTried: catalogFeeds.length, results };
 }
 
-/** Pull official RSS/Atom once each morning IST. Staff can still Pull now. */
+/**
+ * Pull official RSS/Atom once each morning IST. Staff can still Pull now. While Watch is on, its
+ * hourly check reads these same feeds, so this returns early and nothing is posted twice.
+ */
 export const announcementFeeds = inngest.createFunction(
   { id: 'announcement-feeds' },
   withRunNow('announcement-feeds', 'TZ=Asia/Kolkata 0 6 * * *'),
   async ({ step }) => {
+    if (askFlags().watch) return { skipped: 'watch_enabled' };
     return step.run('ingest-all-feeds', async () => {
       const digest = await ingestAllAnnouncementFeeds();
       console.log('[announcement-feeds] morning ingest', {

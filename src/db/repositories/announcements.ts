@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { and, count, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, max } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { announcementSources, announcements } from '@/db/schema';
+import { announcementSources, announcements, regUpdates } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
 import {
   assertSafeFeedUrl,
@@ -18,6 +18,9 @@ import {
   type AnnouncementSource,
   type ParsedFeedItem,
 } from '@/lib/notifications/announcements';
+import { audienceFor } from '@/lib/watch/recipients';
+import { boardBody, boardKind } from '@/lib/watch/board';
+import type { RegImportance } from '@/lib/watch/types';
 
 type AnnouncementRow = typeof announcements.$inferSelect;
 type SourceRow = typeof announcementSources.$inferSelect;
@@ -45,6 +48,7 @@ function mapAnnouncement(
     sourceName: origin === 'feed' ? sourceName : null,
     sourceUrl: row.sourceUrl,
     linkPath: safePortalLinkPath(row.linkPath),
+    unreviewed: row.unreviewed,
     authorId: row.authorId,
     authorName: row.authorName,
     authorRole: row.authorRole,
@@ -66,8 +70,13 @@ function mapSource(row: SourceRow): AnnouncementSource {
   };
 }
 
+/** A client never sees a staff row: an unreviewed Watch update or a professional-body notice. */
+function visibleTo(ctx: AuthContext) {
+  return ctx.role === 'client' ? eq(announcements.audience, 'everyone') : undefined;
+}
+
 export async function listAnnouncements(
-  _ctx: AuthContext,
+  ctx: AuthContext,
   limit = 80,
 ): Promise<Announcement[]> {
   const cap = Math.min(Math.max(1, limit), 120);
@@ -78,6 +87,7 @@ export async function listAnnouncements(
     })
     .from(announcements)
     .leftJoin(announcementSources, eq(announcements.sourceId, announcementSources.id))
+    .where(visibleTo(ctx))
     .orderBy(desc(announcements.publishedAt))
     .limit(cap);
   return rows.map((row) => mapAnnouncement(row.announcement, row.sourceName));
@@ -85,17 +95,20 @@ export async function listAnnouncements(
 
 /** Cheap board signal for the 4s live poll — no announcement bodies. */
 export async function getAnnouncementBoardHead(
-  _ctx: AuthContext,
-): Promise<{ latestId: string | null; latestCreatedAt: string | null; count: number }> {
+  ctx: AuthContext,
+): Promise<{ latestId: string | null; latestCreatedAt: string | null; latestUpdatedAt: string | null; count: number }> {
   const [latest] = await db
     .select({ id: announcements.id, createdAt: announcements.createdAt })
     .from(announcements)
+    .where(visibleTo(ctx))
     .orderBy(desc(announcements.createdAt), desc(announcements.id))
     .limit(1);
-  const [agg] = await db.select({ n: count() }).from(announcements);
+  const [agg] = await db.select({ n: count(), updatedAt: max(announcements.updatedAt) }).from(announcements).where(visibleTo(ctx));
   return {
     latestId: latest?.id ?? null,
     latestCreatedAt: latest?.createdAt.toISOString() ?? null,
+    // A reviewed update keeps its id, and staff should see its mark go.
+    latestUpdatedAt: agg?.updatedAt?.toISOString() ?? null,
     count: Number(agg?.n ?? 0),
   };
 }
@@ -204,7 +217,6 @@ export async function getAnnouncementSourceForWrite(
   return row ? mapSource(row) : null;
 }
 
-/** Job-only: enabled sources, no session. Do not call from request handlers. */
 /** Job-only: persist a source after a catalog URL has already parsed as RSS/Atom. */
 export async function systemGetOrCreateAnnouncementSource(input: {
   name: string;
@@ -238,6 +250,7 @@ export async function systemGetOrCreateAnnouncementSource(input: {
   }
 }
 
+/** Job-only: enabled sources, no session. Do not call from request handlers. */
 export async function systemListEnabledAnnouncementSources(): Promise<AnnouncementSource[]> {
   const rows = await db
     .select()
@@ -293,4 +306,54 @@ export async function systemUpsertFeedAnnouncements(
       target: [announcements.sourceId, announcements.externalId],
     });
   return { inserted: fresh.length };
+}
+
+type BoardUpdate = typeof regUpdates.$inferSelect;
+
+/** Watch's staff-only row, marked "Not yet reviewed", which raises the same live popup as any post. */
+export async function systemPostWatchBoardRow(update: BoardUpdate, sourceName: string | null): Promise<string> {
+  const [row] = await db
+    .insert(announcements)
+    .values({
+      title: update.title.slice(0, 200),
+      body: boardBody(update),
+      kind: boardKind(update),
+      origin: 'feed',
+      sourceId: update.sourceId,
+      externalId: `reg:${update.id}`,
+      sourceUrl: update.sourceUrl,
+      audience: 'staff',
+      unreviewed: true,
+      authorName: sourceName ?? 'Official update',
+    })
+    .onConflictDoUpdate({
+      target: [announcements.sourceId, announcements.externalId],
+      set: { body: boardBody(update), kind: boardKind(update), updatedAt: new Date() },
+    })
+    .returning({ id: announcements.id });
+  return row!.id;
+}
+
+/** After review the same row opens to its audience, so staff do not get a second popup. */
+export async function systemPublishWatchBoardRow(update: BoardUpdate, sourceName: string | null): Promise<void> {
+  const announcementId = update.announcementId ?? (await systemPostWatchBoardRow(update, sourceName));
+  const now = new Date();
+  await db
+    .update(announcements)
+    .set({
+      title: update.title.slice(0, 200),
+      body: boardBody(update),
+      kind: boardKind(update),
+      audience: audienceFor((update.importance ?? 'normal') as RegImportance),
+      unreviewed: false,
+      publishedAt: now,
+      updatedAt: now,
+    })
+    .where(eq(announcements.id, announcementId));
+  if (!update.announcementId) await db.update(regUpdates).set({ announcementId }).where(eq(regUpdates.id, update.id));
+}
+
+/** A rejected update comes off the staff board. */
+export async function deleteWatchBoardRow(updateId: string): Promise<void> {
+  await db.delete(announcements).where(eq(announcements.externalId, `reg:${updateId}`));
 }
