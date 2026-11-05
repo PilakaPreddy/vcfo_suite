@@ -15,6 +15,7 @@ import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { EmptyState, SkeletonRows } from '@/components/ui/empty-state';
 import { CardHeadTile } from '@/components/common/CardHeadTile';
 import { sep } from '@/lib/date-format';
+import { TokenUseLink } from './TokenUseLink';
 
 type SourceRow = {
   id: string;
@@ -110,6 +111,7 @@ export default function AskSources() {
           <Link href="/app/admin/ask-vcfo/gaps" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
             Question gaps
           </Link>
+          <TokenUseLink />
         </div>
 
         <section aria-labelledby="src-add-title" className="surface min-w-0 overflow-hidden">
