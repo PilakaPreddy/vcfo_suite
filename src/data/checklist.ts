@@ -153,7 +153,7 @@ const preInc: ChecklistItem[] = [
     forms: ['RUN', 'Spice Part A'],
     infoRequired: [
       'Business Description — up to 100 words',
-      'Proposed Company Names — 2 names ending "India Private Limited"',
+      'Proposed Company Names — 2 names ending "Private Limited"',
       'Foreign Entity Details — Name, Address, Country and State of incorporation; Certificate of Incorporation (attachment)',
       'Proposed Directors — 2/3/4; First name + Last name (+ optional middle), Gender and India residency each; at least one India resident',
       'Proposed Share Capital Structure — Authorized and Initial Paid-up (INR), nominal value per equity share (e.g. 10,00,000 / 1,00,000 / INR 10)',

@@ -2,6 +2,7 @@ import type { Engagement } from '@/data/engagements';
 import type { ChecklistItemResponses } from '@/lib/checklist/checklist-responses';
 import {
   parseDirectorCount,
+  parsePre1BoardResolutionDate,
   PRE1_DIRECTOR_FIRST_NAME_IDS,
   PRE1_DIRECTOR_INDIA_RESIDENT_IDS,
   PRE1_DIRECTOR_LAST_NAME_IDS,
@@ -106,6 +107,7 @@ export function boardResolutionErrorJson(err: BoardResolutionError): BoardResolu
 const PRE1_FIELD_LABELS: Record<string, string> = {
   parentEntityName: 'Parent entity name',
   proposedName1: 'Proposed company name (option 1)',
+  boardResolutionDate: 'Board resolution date',
   signatoryName: 'Signatory name',
   signatoryFirstName: 'Signatory first name',
   signatoryLastName: 'Signatory last name',
@@ -125,6 +127,7 @@ const PRE1_FIELD_REFS: Record<string, { fieldId: string; section: string }> = {
   proposedName1: { fieldId: 'proposedName1', section: PART_A_SECTION.proposedNames },
   signatoryName: { fieldId: 'signatoryFirstName', section: PART_A_SECTION.boardResolutionSignatory },
   signatoryDesignation: { fieldId: 'signatoryDesignation', section: PART_A_SECTION.boardResolutionSignatory },
+  boardResolutionDate: { fieldId: 'boardResolutionDate', section: PART_A_SECTION.boardResolutionSignatory },
   authorisedShareCapital: { fieldId: 'authorisedShareCapital', section: PART_A_SECTION.shareCapital },
   paidUpShareCapital: { fieldId: 'paidUpShareCapital', section: PART_A_SECTION.shareCapital },
   nicCode: { fieldId: 'nicCode', section: PART_A_SECTION.nicCodes },
@@ -190,8 +193,9 @@ export function collectBoardResolutionMissingFieldRefs(
   if (!pre1.proposedName1?.trim()) {
     missing.push(pre1Ref('proposedName1'));
   }
-  // The resolution date is no longer a Part A answer (2026-11-02): the
-  // generator prints today's date and the project lead edits it in the editor.
+  if (!parsePre1BoardResolutionDate(pre1.boardResolutionDate)) {
+    missing.push(pre1Ref('boardResolutionDate'));
+  }
   if (!resolveSignatoryDisplayName(pre1)) {
     missing.push(pre1Ref('signatoryName'));
   }

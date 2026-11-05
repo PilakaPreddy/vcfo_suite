@@ -7,7 +7,8 @@ import {
   nicBusinessType,
 } from '@/lib/incorporation/nic-2008';
 
-const INDIA_PVT_SUFFIX = /india\s+private\s+limited\s*$/i;
+/** Every proposed name ends with "Private Limited" (owner, 2026-11-05; "India" is not required). */
+const PRIVATE_LIMITED_SUFFIX = /private\s+limited\s*$/i;
 
 export const PRE1_GENDER_OPTIONS = [
   { value: 'male', label: 'Male' },
@@ -74,9 +75,10 @@ const PRE1_PARENT_HAS_TRADEMARK_ID = 'parentEntityHasTrademark' as const;
 const PRE1_PARENT_TRADEMARK_URL_ID = 'parentEntityTrademarkUrl' as const;
 
 /**
- * Part A answers that must be filled (owner's list, 2026-11-02). Company mail,
- * mobile, registration number, signatory gender and the board resolution date
- * are no longer asked; old values stay stored and are never required.
+ * Part A answers that must be filled (owner's list, 2026-11-02; the board
+ * resolution date came back 2026-11-05, filled by the client). Company mail,
+ * mobile, registration number and signatory gender are no longer asked; old
+ * values stay stored and are never required.
  */
 const PRE1_BASE_REQUIRED_TEXT_IDS = [
   'businessDescription',
@@ -92,6 +94,7 @@ const PRE1_BASE_REQUIRED_TEXT_IDS = [
   'signatoryFirstName',
   'signatoryLastName',
   'signatoryDesignation',
+  'boardResolutionDate',
   'nicCode',
 ] as const;
 
@@ -222,9 +225,14 @@ export function validatePre1Responses(
 
   for (const id of ['proposedName1', 'proposedName2'] as const) {
     const value = (responses[id] ?? '').trim();
-    if (value && !INDIA_PVT_SUFFIX.test(value)) {
-      errors[id] = 'Name must end with "India Private Limited".';
+    if (value && !PRIVATE_LIMITED_SUFFIX.test(value)) {
+      errors[id] = 'Name must end with "Private Limited".';
     }
+  }
+
+  const boardResolutionDate = (responses.boardResolutionDate ?? '').trim();
+  if (boardResolutionDate && !isValidPre1Date(boardResolutionDate)) {
+    errors.boardResolutionDate = 'Enter a valid date.';
   }
 
   const nominalRaw = (responses.nominalValuePerEquityShare ?? '').trim();

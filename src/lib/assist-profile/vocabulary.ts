@@ -60,7 +60,7 @@ export interface CompanyStructure {
 
 /**
  * Company structure by the proposed name's legal suffix. Suite's Part A
- * validation requires every proposed name to end in "India Private Limited"
+ * validation requires every proposed name to end in "Private Limited"
  * (`checklist-pre1-validation.ts`), so the suffix is a Suite fact, not a guess.
  * Longest suffix first; a name matching none has no MCA equivalent mapped.
  */

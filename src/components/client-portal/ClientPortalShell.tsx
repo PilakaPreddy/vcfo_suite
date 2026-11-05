@@ -17,6 +17,7 @@ import { PortalProvider } from './PortalProvider';
 import { PortalSidebar } from './Sidebar';
 import { PortalTopBar } from './TopBar';
 import { AskLauncher } from './AskLauncher';
+import { ClientSubmittedNotice } from './ClientSubmittedNotice';
 import { SearchPalette } from './SearchPalette';
 import { PortalIntro } from './PortalIntro';
 import { IconTips } from './IconTips';
@@ -69,6 +70,7 @@ function ShellBody({ children }: { children: ReactNode }) {
       <div className="cp-ribbon" aria-hidden="true" />
       <IconTips />
       <AskLauncher />
+      <ClientSubmittedNotice />
       <SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
       {/* Tailwind islands (R-45 phone tab bar, the "?" shortcut sheet). */}
       <div className="cp-tw">

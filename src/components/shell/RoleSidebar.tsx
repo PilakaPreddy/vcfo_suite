@@ -565,9 +565,10 @@ export function RoleSidebar() {
 
   /* R-49: the kept mode is saved per browser. Read it before the first paint so the
      sidebar does not slide from one width to the other on every page load. With
-     nothing saved the sidebar starts pinned. */
+     nothing saved the sidebar starts as the rail and opens only while hovered
+     (owner, 2026-11-05); the pin button or "[" keeps it open. */
   useLayoutEffect(() => {
-    setSidebarMode(readSavedSidebarMode() ?? 'open');
+    setSidebarMode(readSavedSidebarMode() ?? 'auto');
   }, [setSidebarMode]);
 
   // Under 1100px the sidebar is always the rail, so pinning would cover the page.

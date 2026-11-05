@@ -61,7 +61,7 @@ describe('collectBoardResolutionMissingFields', () => {
     const missing = collectBoardResolutionMissingFields({});
     expect(missing).toContain('Parent entity name');
     expect(missing).toContain('Proposed company name (option 1)');
-    expect(missing).not.toContain('Board resolution date');
+    expect(missing).toContain('Board resolution date');
     expect(missing).toContain('Signatory name');
   });
 
