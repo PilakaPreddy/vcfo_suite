@@ -8,7 +8,12 @@ import { z } from 'zod';
 export const REG_SOURCE_TYPES = ['feed', 'page', 'manual', 'email'] as const;
 export type RegSourceType = (typeof REG_SOURCE_TYPES)[number];
 
-export const REG_SOURCE_HEALTH = ['unknown', 'ok', 'empty', 'failing', 'blocked'] as const;
+/**
+ * empty: the adapter found nothing, so the layout may have changed. stale: readable, but the newest
+ * item is over a year old, so the page is probably no longer the live list. failing: three checks in
+ * a row failed. blocked: a 403 or a robots refusal; it stays blocked until a person asks for a retest.
+ */
+export const REG_SOURCE_HEALTH = ['unknown', 'ok', 'empty', 'stale', 'failing', 'blocked'] as const;
 export type RegSourceHealth = (typeof REG_SOURCE_HEALTH)[number];
 
 /**
@@ -27,9 +32,13 @@ export const REG_UPDATE_STATUSES = [
 ] as const;
 export type RegUpdateStatus = (typeof REG_UPDATE_STATUSES)[number];
 
-/** Drives who gets what: fixed rules in code, never the model. */
+/** Drives who gets what: fixed rules in code (`recipients.ts`), never the model. */
 export const REG_IMPORTANCE = ['important', 'normal', 'staff_only'] as const;
 export type RegImportance = (typeof REG_IMPORTANCE)[number];
+
+/** Law areas the model may pick from; chat filters and the board's kind read these. */
+export const REG_AREAS = ['gst', 'tax', 'mca', 'fema', 'securities', 'labour', 'audit', 'insolvency', 'general'] as const;
+export type RegArea = (typeof REG_AREAS)[number];
 
 export const REG_CHANGE_TYPES = [
   'due_date',
@@ -53,6 +62,10 @@ export interface ListedItem {
   title: string;
   url: string;
   publishedOn: string | null;
+  /** Text the listing already carries, such as a feed description; it can save a request. */
+  body?: string;
+  /** The department or division a page lists it under, for the noise rules. */
+  section?: string;
 }
 
 export interface SourceAdapter {
@@ -65,12 +78,14 @@ export interface SourceAdapter {
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable();
 
-/** What the model returns for one document, on a strict tool schema. Page text is data only. */
+/**
+ * What the model returns for one document, on a strict tool schema. Page text is data only, and
+ * importance is not asked for: a hostile page must not be able to choose who gets notified.
+ */
 export const regSummarySchema = z.object({
-  area: z.string().trim().min(1).max(60),
+  area: z.enum(REG_AREAS),
   act: z.string().trim().max(160).nullable(),
   changeType: z.enum(REG_CHANGE_TYPES),
-  importance: z.enum(REG_IMPORTANCE),
   effectiveDate: isoDate,
   oldDueDate: isoDate,
   newDueDate: isoDate,
@@ -87,3 +102,71 @@ export interface RegVerifyProblem {
   value: string;
   message: string;
 }
+
+/** The background job that reads, summarises and checks one update. */
+export const WATCH_PROCESS_EVENT = 'watch/update.process';
+
+/** One source as staff see it: silence must never read as no news. */
+export interface WatchSourceStatus {
+  id: string;
+  name: string;
+  url: string;
+  type: RegSourceType;
+  area: string | null;
+  audience: string;
+  health: RegSourceHealth;
+  lastCheckedAt: string | null;
+  lastSuccessAt: string | null;
+  nextCheckAt: string | null;
+  lastError: string | null;
+}
+
+/** A row in the review queue, without the source text. */
+export interface RegUpdateListItem {
+  id: string;
+  title: string;
+  status: RegUpdateStatus;
+  sourceName: string | null;
+  sourceUrl: string | null;
+  intake: string;
+  area: string | null;
+  changeType: string | null;
+  importance: RegImportance | null;
+  publishedOn: string | null;
+  effectiveDate: string | null;
+  newDueDate: string | null;
+  summary: string | null;
+  problemCount: number;
+  error: string | null;
+  createdAt: string;
+}
+
+export interface RegUpdateDetail extends RegUpdateListItem {
+  act: string | null;
+  oldDueDate: string | null;
+  affects: string | null;
+  quote: string | null;
+  sourceText: string | null;
+  verifyProblems: RegVerifyProblem[];
+  links: Array<{ url: string; title: string; sourceName: string | null }>;
+  rejectReason: string | null;
+  fileUrl: string | null;
+}
+
+/** What a reviewer may change. Dates are `YYYY-MM-DD` or null. */
+export const regReviewEditSchema = z.object({
+  title: z.string().trim().min(1).max(300),
+  area: z.enum(REG_AREAS),
+  act: z.string().trim().max(160).nullable(),
+  changeType: z.enum(REG_CHANGE_TYPES),
+  importance: z.enum(REG_IMPORTANCE),
+  effectiveDate: isoDate,
+  oldDueDate: isoDate,
+  newDueDate: isoDate,
+  affects: z.string().trim().max(400),
+  summary: z.string().trim().min(1).max(1200),
+  quote: z.string().trim().min(1).max(600),
+  /** The reviewer read the source and accepts what the code check still flags. */
+  acceptProblems: z.boolean().optional(),
+});
+export type RegReviewEdit = z.infer<typeof regReviewEditSchema>;

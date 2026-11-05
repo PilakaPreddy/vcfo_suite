@@ -99,6 +99,8 @@ export interface Announcement {
   sourceUrl: string | null;
   /** In-app client portal page (`/app/client/...`) the detail's "Open" button goes to. */
   linkPath?: string | null;
+  /** A Watch update staff can already see; a reviewer has not checked it yet. */
+  unreviewed?: boolean;
   authorId: string | null;
   authorName: string;
   authorRole: string | null;
@@ -310,7 +312,7 @@ export function roleAnnouncementsPath(role: Role): string {
   }
 }
 
-/** Official hosts we will fetch RSS/Atom from. Homepages are not scraped. */
+/** Official hosts Watch may read: RSS/Atom feeds and public listing pages, never a login page. */
 export const OFFICIAL_FEED_HOSTS = [
   'incometaxindia.gov.in',
   'incometax.gov.in',
@@ -330,6 +332,12 @@ export const OFFICIAL_FEED_HOSTS = [
   'dor.gov.in',
   'epfindia.gov.in',
   'esic.gov.in',
+  'sebi.gov.in',
+  'nfra.gov.in',
+  'icai.org',
+  'ibbi.gov.in',
+  'epfo.gov.in',
+  'cdnbbsr.s3waas.gov.in',
   'icegate.gov.in',
   'dgft.gov.in',
   'stpi.in',
