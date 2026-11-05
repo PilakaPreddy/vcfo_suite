@@ -267,3 +267,25 @@ action from `ask_changeset_rows.status`; autonomy does not rise automatically.
 `npm run typecheck`, `npm run test` and `npm run lint` (0 errors). Fresh worktrees need `npm run css:portal` first, because the
 client-portal CSS is generated and three test files import it. Commit small, with full-sentence messages; no push, no
 deploy, no RDS. Report anything untested, stubbed or not run live in `gaps`.
+
+## Where the answer track left this plan
+
+Phase 0, 6 November:
+
+- The router answers through `output_config.format` (JSON), not a strict tool. A tool definition cost 575 input
+  tokens against 441 for the same schema as a format, and the reply fell from about 150 output tokens to about 50.
+  Mock providers therefore return the router's reply as a text block.
+- Thinking is off on the router, as the phase task asked, at effort low. A probe of the 29 messages at both settings
+  showed the same intents and almost the same tokens once the decision wording was tightened, so either would do.
+- Generated answers run on Haiku 5.5 at effort low, tool answers included, because the 29 cases passed on it. Raise a
+  route with `ASK_VCFO_MODEL_ANSWER`, `ASK_VCFO_MODEL_DOCUMENT` or `ASK_VCFO_ANSWER_EFFORT`.
+- `askBudgets()` gains `answerMaxTokens` (`ASK_ANSWER_MAX_TOKENS`, 40,000), because `runMaxTokens` is sized for a Do run
+  and could never stop a five-round chat answer.
+- The client `getProjectSnapshot` tool is gone. The snapshot is already in the system prompt, and the model spent a
+  round on calling the tool anyway. The citation id stays, so stored answers and suggestions keep their label.
+- Reviewed topics no longer sit in the fixed prefix; they reach the model through retrieval. No topic is published yet,
+  so this saves nothing today, and it stops the prefix growing as topics are published.
+- The token report is for a super admin, as the phase task says, not every firm-wide admin. It stays at
+  `app/app/admin/ask-vcfo/usage/`, linked from Question gaps and Sources.
+- `ROUTER_INTENTS` is live. `do_work` answers with a plain line on `router_refusal`; `fact` runs as a tool answer until
+  phase 1 adds the metrics.
