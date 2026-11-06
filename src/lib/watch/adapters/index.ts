@@ -75,6 +75,9 @@ const ESIC_ROUTINE = /^(office order|user manual|office memorandum regarding (tr
 const EPFO_INTERNAL = /^(pdunass|exam|hrd|hdr|hrm|vigilance|procurement|conference)$/i;
 const ICAI_ROUTINE = /\b(exam(ination)?s?|assessment test|eligibility test|quiz|competition|winners?|certificate course|campus|branch|convocation|election|webinar|awards?|brochure|observations of the candidates|skill|batch)\b/i;
 
+/** One commodity's trade policy moves often and binds only the firms trading it. */
+const DGFT_COMMODITY = /\b(import|export) policy\b|\bITC \(HS\)|\bexim code\b/i;
+
 const hasHindi = (text: string): boolean => /[ऀ-ॿ]/.test(text);
 
 /** The GST Council's own lists of CGST papers: a number cell, an English PDF cell and a subject cell. */
@@ -186,6 +189,7 @@ const ADAPTERS: readonly SourceAdapter[] = [
   incomeTaxNews,
   esic,
   tableAdapter('gst-council', { title: 2, date: 1, link: 2, rowTitle: (cells) => (cells[2] ?? '').replace(/\(Size:[^)]*\)/i, '') }),
+  tableAdapter('dgft', { title: 3, date: 4, link: 6, rowTitle: (cells) => `Notification ${clean(cells[1] ?? '')}: ${cells[3] ?? ''}` }, (item) => (DGFT_COMMODITY.test(item.title) ? 'commodity_trade_policy' : null)),
   tableAdapter('nfra', { title: 0, date: 1, link: 2 }),
   icai,
   epfo,

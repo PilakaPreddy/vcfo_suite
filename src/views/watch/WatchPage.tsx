@@ -51,6 +51,8 @@ function UpdateRow({ update, onOpen }: { update: RegUpdateListItem; onOpen: () =
   );
 }
 
+const SOURCE_NAME = 'order-first min-w-0 basis-full truncate text-[14px] text-ink hover:underline sm:order-none sm:flex-1 sm:basis-0';
+
 function SourceRow({ source, canRetest }: { source: WatchSourceStatus; canRetest: boolean }) {
   const retest = useWatchRetest();
   const manual = source.type === 'manual' || source.type === 'email';
@@ -60,13 +62,19 @@ function SourceRow({ source, canRetest }: { source: WatchSourceStatus; canRetest
     <li className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-line-soft px-4 py-2.5 first:border-t-0">
       <span className="flex-none">
         <Chip raw tone={manual ? 'idle' : HEALTH_TONE[source.health]} className="min-w-[116px]">
-          {manual ? 'Added by hand' : HEALTH_LABEL[source.health]}
+          {source.type === 'email' ? 'By alert mail' : manual ? 'Added by hand' : HEALTH_LABEL[source.health]}
         </Chip>
       </span>
-      <a href={source.url} target="_blank" rel="noreferrer" className="order-first min-w-0 basis-full truncate text-[14px] text-ink hover:underline sm:order-none sm:flex-1 sm:basis-0">
-        {source.name}
-      </a>
-      <span className="text-[12.5px] tabular-nums text-ink-muted">{manual ? 'Not read automatically' : lastGood ? `Last good check ${lastGood}` : 'No good check yet'}</span>
+      {source.url.startsWith('https:') ? (
+        <a href={source.url} target="_blank" rel="noreferrer" className={SOURCE_NAME}>
+          {source.name}
+        </a>
+      ) : (
+        <span className={SOURCE_NAME}>{source.name}</span>
+      )}
+      <span className="min-w-0 text-[12.5px] tabular-nums text-ink-muted">
+        {manual ? `Not read automatically${source.lastError ? `: ${source.lastError}` : ''}` : lastGood ? `Last good check ${lastGood}` : 'No good check yet'}
+      </span>
       {canRetest && stuck && !manual ? (
         <Button
           variant="quiet"

@@ -41,6 +41,7 @@ export async function systemEnsureWatchSources(seeds: readonly WatchSourceSeed[]
       area: seed.area,
       audience: seed.audience,
       checkEveryMinutes: everyMinutes(seed.type),
+      ...(seed.note ? { lastError: seed.note } : {}),
     };
     await db
       .insert(announcementSources)

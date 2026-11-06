@@ -348,6 +348,11 @@ export const OFFICIAL_FEED_HOSTS = [
   'team.msme.gov.in',
   'cdma.cgg.gov.in',
   'ccilindia-lei.co.in',
+  'icsi.edu',
+  'dpiit.gov.in',
+  'labour.gov.in',
+  'indiacode.nic.in',
+  'finmin.gov.in',
 ] as const;
 
 const OFFICIAL_FEED_HOST_SET = new Set<string>(OFFICIAL_FEED_HOSTS);

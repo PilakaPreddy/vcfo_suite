@@ -13,6 +13,16 @@ function listed(adapterId: string, file: string, base: string) {
 }
 
 describe('Watch adapters on saved copies', () => {
+  it('reads the DGFT table, encodes its file links and drops one commodity\'s trade policy', () => {
+    const { items, kept } = listed('dgft', 'dgft.html', 'https://www.dgft.gov.in/CP/?opt=notification');
+    expect(items.length).toBe(6);
+    expect(items[0]).toMatchObject({ publishedOn: '2026-10-30' });
+    expect(items[0]!.title).toMatch(/^Notification 46\/2026-27: Amendment in Export Policy of Agarwood/);
+    expect(items.every((item) => item.url.startsWith('https://content.dgft.gov.in/') && !item.url.includes(' '))).toBe(true);
+    expect(kept.length).toBeLessThan(items.length);
+    expect(kept.every((item) => !/agarwood/i.test(item.title))).toBe(true);
+  });
+
   it('reads the RBI notifications feed with its full text', () => {
     const { items } = listed('rbi-notifications', 'rbi-notifications.xml', 'https://www.rbi.org.in/notifications_rss.xml');
     expect(items.length).toBe(2);
