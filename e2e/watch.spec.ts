@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { login, type DemoRole } from './helpers/login';
+import { login, openAsk, type DemoRole } from './helpers/login';
 
 /**
  * Official updates, end to end: a reviewer publishes an important update from the queue and every
@@ -88,6 +88,27 @@ test.describe.serial('official updates', () => {
       if (role === 'client') await expect(page.locator('.nkind', { hasText: 'Announcement' }).first()).toBeVisible();
       await page.screenshot({ path: test.info().outputPath(`bell-${role}.png`) });
     }
+  });
+
+  test('the chat lists the published update with no model call', async ({ page }) => {
+    test.skip(!title, 'No update was published.');
+    await login(page, 'client');
+    await page.getByRole('button', { name: 'Open Ask VCFO chat' }).click({ timeout: 30_000 });
+    const chat = page.locator('#vp-chat');
+    await chat.getByRole('textbox', { name: 'Type a question' }).fill('What changed this week?');
+    await chat.getByRole('textbox', { name: 'Type a question' }).press('Enter');
+    await expect(chat.getByText(title.slice(0, 40)).first()).toBeVisible({ timeout: 60_000 });
+
+    await page.context().clearCookies();
+    await login(page, 'lead');
+    const panel = await openAsk(page);
+    await panel.locator('#ask-composer').fill('What changed in GST this week?');
+    await panel.getByRole('button', { name: 'Send' }).click();
+    const answer = panel.locator('article').last();
+    await expect(answer).toContainText('in the last 7 days', { timeout: 60_000 });
+    await expect(answer).toContainText(title.slice(0, 40));
+    await expect(answer.getByRole('link', { name: 'Open updates' })).toBeVisible();
+    await page.screenshot({ path: test.info().outputPath('chat-update.png') });
   });
 
   test('a rejected update needs a reason and never reaches a client', async ({ page }) => {

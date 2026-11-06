@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// A worktree on its own port sets PLAYWRIGHT_BASE_URL, and the server check follows it.
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
@@ -8,7 +11,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: "html",
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000",
+    baseURL,
     trace: "on-first-retry",
   },
   projects: [
@@ -17,8 +20,8 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["Pixel 7"] }, grep: /@mobile/ },
   ],
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
+    command: `npm run dev -- -p ${new URL(baseURL).port}`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     // Ask VCFO is on for browser tests. Suggestions are deterministic, so no
     // API key is needed; an already-running dev server keeps its own env.
