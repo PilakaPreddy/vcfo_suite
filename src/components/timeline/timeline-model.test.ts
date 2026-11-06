@@ -58,7 +58,7 @@ describe('buildRecordTimeline', () => {
     });
     const p1 = t.rows[0]!;
     expect(p1.bars.at(-1)).toEqual({ from: '2026-09-20', to: '2026-10-01', kind: 'late' });
-    expect(p1.note).toEqual({ text: 'Overdue', bad: true });
+    expect(p1.note).toEqual({ text: 'Stuck', bad: true });
   });
 
   it('switches to the after-COI rows with counts and the COI diamond on Incorporation', () => {

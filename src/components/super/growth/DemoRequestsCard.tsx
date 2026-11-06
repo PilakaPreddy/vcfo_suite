@@ -66,11 +66,11 @@ export function DemoRequestsCard({
     },
   ];
   return (
-    <DashSection title="Demo requests" meta={loading ? undefined : `${open} new · ${requests.length} in all`}>
+    <DashSection title="Demo requests" meta={loading ? undefined : `${open} new · ${requests.length} in all`} flush>
       {loading ? (
-        <SkeletonRows rows={3} />
+        <SkeletonRows rows={3} className="p-4" />
       ) : error ? (
-        <p className="text-[13.5px] text-danger">{error}</p>
+        <p className="p-4 text-[13.5px] text-danger">{error}</p>
       ) : (
         <EFilingGrid caption="Demo requests" columns={columns} rows={requests} rowKey={(r) => r.id} empty="No demo request yet" minWidth={720} pageSize={10} />
       )}

@@ -3,23 +3,19 @@
 /**
  * Announcements — prototype s/team/ann_redesign.dc.html (+ ann_detail, ann_empty).
  * List: `/api/announcements` (live head poll, `useAnnouncements`); read state:
- * NEW `announcement_reads` via `/api/client/announcements/reads`; next-deadline
- * row: `/api/client/overview` compliance runway; portals: `VCFO_PORTAL_TASKS`.
- * VCFO Spectrum: white card heads, the next deadline is the first row inside the
- * Latest card (R-38, R-48: no bar above the page), kinds are status chips or area
- * pills (R-13, R-43), no bot in the empty state (R-04).
+ * NEW `announcement_reads` via `/api/client/announcements/reads`; portals:
+ * `VCFO_PORTAL_TASKS`. VCFO Spectrum: white card heads, kinds are status chips or
+ * area pills (R-13, R-43), no bot in the empty state (R-04).
  */
 import { sep } from '@/lib/date-format';
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAnnouncements } from '@/hooks/use-announcements';
-import { useClientOverview } from '@/hooks/use-client-overview';
 import { ANNOUNCEMENT_KIND_LABEL, type Announcement } from '@/lib/notifications/announcements';
 import { VCFO_PORTAL_TASKS, type VcfoPortalTask } from '@/lib/notifications/announcement-portals';
 import type { Regulator } from '@/lib/ui/regulator';
 import { usePortal } from '../../PortalProvider';
 import { LinkButton } from '../../LinkButton';
-import { todayIST } from '../../hooks';
 import {
   CardHead,
   CloseBtn,
@@ -86,7 +82,6 @@ export function AnnouncementsPage() {
     queryKey: READS_KEY,
     queryFn: () => api<{ readIds: string[] }>('/api/client/announcements/reads'),
   });
-  const ov = useClientOverview();
   const sk = useSkeleton(list.isLoading);
   const isPhone = useIsPhone();
   const [tab, setTabRaw] = useState(0);
@@ -113,11 +108,6 @@ export function AnnouncementsPage() {
       .catch(() => qc.invalidateQueries({ queryKey: READS_KEY }));
   };
 
-  // next deadline (G10: only when there is one)
-  const next = ov.data?.overview?.compliance.upcoming?.[0];
-  const days = next ? Math.round((Date.parse(`${next.dueDate.slice(0, 10)}T00:00:00Z`) - Date.parse(`${todayIST()}T00:00:00Z`)) / 86_400_000) : 0;
-  const dueText = days > 1 ? `in ${days} days` : days === 1 ? 'tomorrow' : days === 0 ? 'today' : `${-days} days late`;
-
   // portals (real task list; a row needs at least one official link)
   const tasks = VCFO_PORTAL_TASKS.filter((t) => t.portalUrl || t.circularUrl);
   const setup = tasks.filter((t) => SETUP_HEADS.includes(t.head));
@@ -137,9 +127,6 @@ export function AnnouncementsPage() {
     if (a) markRead([a.id]);
   };
 
-  const nextDm = next ? dayMonth(`${next.dueDate.slice(0, 10)}T12:00:00Z`) : null;
-  const nextHref = next ? `/app/client/compliances/filings?open=${encodeURIComponent(next.id)}` : '';
-
   return (
     <div className="cp-team">
       <main className="pg tb-wrap tp-ann">
@@ -154,35 +141,6 @@ export function AnnouncementsPage() {
                 grid={false}
               />
             </CardHead>
-            {next && nextDm && tab !== 2 ? (
-              /* the next deadline, as a row inside the card it is about (R-48) */
-              <div className="sx-row tb-next">
-                <div className="dtile tb-dt-warn" data-tip={longDate(`${next.dueDate.slice(0, 10)}T12:00:00Z`)}>
-                  <span className="d">{nextDm.d}</span>
-                  <span className="m">{nextDm.m}</span>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <SChip tone={days < 0 ? 'bad' : 'warn'}>{days < 0 ? 'Overdue' : 'Due soon'}</SChip>
-                    <span className="cap">Next deadline · {dueText}</span>
-                  </div>
-                  <div className="rt" style={{ marginTop: 4, fontWeight: 500 }}>
-                    {next.title}
-                    {next.periodLabel ? ` for ${next.periodLabel}` : ''}
-                  </div>
-                </div>
-                <a
-                  href={nextHref}
-                  className="btn btn-o btn-sm"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    go(nextHref);
-                  }}
-                >
-                  Open
-                </a>
-              </div>
-            ) : null}
             {list.isLoading || flash ? (
               sk || flash ? (
                 [0, 1, 2, 3].map((i) => (
@@ -248,7 +206,7 @@ export function AnnouncementsPage() {
 
           <section className="sx-card tb-s4" aria-labelledby="ann-portals">
             <CardHead id="ann-portals" d={P.landmark} title="Official portals" />
-            <div style={{ padding: '12px 16px 4px' }}>
+            <div style={{ padding: '12px var(--cp-card-x) 4px' }}>
               <Seg
                 tabs={[
                   { label: 'Setup', cnt: setup.length },
@@ -261,7 +219,7 @@ export function AnnouncementsPage() {
                 grid={false}
               />
             </div>
-            <div style={{ padding: '0 16px 12px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '0 var(--cp-card-x) 12px', display: 'flex', flexDirection: 'column' }}>
               {groups.map((g) => (
                 <div key={g.h}>
                   <div className="lbl tb-ghead">{g.h}</div>
@@ -274,12 +232,16 @@ export function AnnouncementsPage() {
                         <a href={r.portalUrl} target="_blank" rel="noopener noreferrer" className="ibtn" aria-label={`Open portal for ${r.task}`} data-tip={`Open portal for ${r.task}`}>
                           <Svg d={P.ext} size={14} sw={1.8} />
                         </a>
-                      ) : null}
+                      ) : (
+                        <span className="ibtn tb-islot" aria-hidden="true" />
+                      )}
                       {r.circularUrl ? (
                         <a href={r.circularUrl} target="_blank" rel="noopener noreferrer" className="ibtn" aria-label={`Read circular for ${r.task}`} data-tip={`Read circular for ${r.task}`}>
                           <Svg d={P.circular} size={14} sw={1.8} />
                         </a>
-                      ) : null}
+                      ) : (
+                        <span className="ibtn tb-islot" aria-hidden="true" />
+                      )}
                     </div>
                   ))}
                 </div>

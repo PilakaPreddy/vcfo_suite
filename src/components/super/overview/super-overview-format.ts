@@ -1,5 +1,6 @@
 import { sep } from '@/lib/date-format';
 import { CHART_STATUS, type ChartColor } from '@/components/charts';
+import { getActiveCatalogItems } from '@/data/checklist';
 import type { SuperEngagementSummary } from '@/lib/super/super-overview';
 
 export const HEALTH_LABEL: Record<string, string> = {
@@ -108,4 +109,89 @@ export function superPhaseTrack(summary: SuperEngagementSummary): {
     totals: summary.phases.map((phase) => phase.total),
     names: summary.phases.map((phase) => phase.label),
   };
+}
+
+/* ---------- Step numbers and stage words (prototype `codeOf`, `stageLabel`, `INC_PIPELINE`) ---------- */
+
+/** Every active step's place in the catalog: its number over the whole journey and its code in its part. */
+const STEP_PLACES: Map<string, { n: number; code: string }> = (() => {
+  const seen: Record<string, number> = { Pre: 0, Post: 0, Reg: 0 };
+  const out = new Map<string, { n: number; code: string }>();
+  getActiveCatalogItems().forEach((item, i) => {
+    const part = item.id.startsWith('post') ? 'Post' : item.id.startsWith('reg') ? 'Reg' : 'Pre';
+    seen[part] = (seen[part] ?? 0) + 1;
+    out.set(item.id, { n: i + 1, code: `${part}-${seen[part]}` });
+  });
+  return out;
+})();
+
+/** The step's code in its part: "Pre-7", "Post-8", "Reg-6". */
+export function stepCode(stepId: string | null | undefined): string | null {
+  return stepId ? (STEP_PLACES.get(stepId)?.code ?? null) : null;
+}
+
+/** "Step 17" for the incorporation and post-incorporation steps, "Reg-6" for a registration. */
+export function stepWord(stepId: string | null | undefined): string | null {
+  if (!stepId) return null;
+  const place = STEP_PLACES.get(stepId);
+  if (!place) return null;
+  return place.code.startsWith('Reg') ? place.code : `Step ${place.n}`;
+}
+
+/** The stage pill: a client is Incorporating until it has its certificate, then in Compliance. */
+export function superStageWord(summary: Pick<SuperEngagementSummary, 'incorporated'>): 'Incorporating' | 'Compliance' {
+  return summary.incorporated ? 'Compliance' : 'Incorporating';
+}
+
+/** The practice area the client's live work sits in, for the Area filter on the clients grid. */
+export function superAreaOf(summary: Pick<SuperEngagementSummary, 'incorporated' | 'currentStep'>): 'Incorporation' | 'Registrations' | 'Compliances' {
+  if (!summary.incorporated) return 'Incorporation';
+  return summary.currentStep?.id.startsWith('reg') ? 'Registrations' : 'Compliances';
+}
+
+/** The named incorporation stages, read from the catalog's own steps. */
+export const INC_STAGES = [
+  { key: 'name', label: 'Name approval' },
+  { key: 'spice', label: 'SPICe+ forms' },
+  { key: 'mca', label: 'MCA review' },
+  { key: 'coi', label: 'Certificate (COI)' },
+] as const;
+
+export type IncStageKey = (typeof INC_STAGES)[number]['key'];
+
+const NAME_STEPS = new Set(['pre-1', 'pre-2', 'pre-3', 'pre-4', 'pre-5']);
+
+/** Which named stage a client not yet incorporated sits in, from its current step. */
+export function incStageOf(summary: Pick<SuperEngagementSummary, 'currentStep'>): IncStageKey {
+  const id = summary.currentStep?.id;
+  if (!id || !id.startsWith('pre-') || id === 'pre-12') return 'coi';
+  if (NAME_STEPS.has(id)) return 'name';
+  return id === 'pre-11' ? 'mca' : 'spice';
+}
+
+/** The four parts of the journey by name, in catalog order. */
+export const PHASE_NAMES = ['Name application', 'Incorporation', 'Post-incorporation', 'Registrations'];
+
+/** A phase's stage name from its stored short label, for cards fed by the metrics read. */
+export function phaseNameOf(label: string): string {
+  const i = ['Part A', 'Part B', 'Post-inc', 'Registration'].indexOf(label);
+  return i >= 0 ? PHASE_NAMES[i]! : label;
+}
+
+/** The step codes each phase runs over ("Pre-1–5"), from the real step counts. */
+export function phaseCodes(totals: readonly number[]): string[] {
+  const a = totals[0] ?? 0;
+  const b = totals[1] ?? 0;
+  return [`Pre-1\u2013${a}`, `Pre-${a + 1}\u2013${a + b}`, `Post-1\u2013${totals[2] ?? 0}`, `Reg-1\u2013${totals[3] ?? 0}`];
+}
+
+/** A registration's short name for a narrow head: "GST", "PF", "Shops". */
+export function shortRegistration(title: string): string {
+  if (/^shops\b/i.test(title)) return 'Shops';
+  return title.replace(/\s+(registrations?|filing|return|reporting|licence|renewal)$/i, '').trim() || title;
+}
+
+/** Signing in is not something an admin did to a client's work, so the feed leaves it out. */
+export function isAdminWork(entry: { action: string; label: string }): boolean {
+  return !/sign[._-]?in|login/i.test(entry.action) && !/^signed in\b/i.test(entry.label);
 }

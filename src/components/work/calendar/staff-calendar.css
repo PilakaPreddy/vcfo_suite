@@ -7,8 +7,8 @@
   --fc-page-bg-color: oklch(var(--surface-raised));
   --fc-neutral-bg-color: oklch(var(--surface-sunken));
   --fc-neutral-text-color: oklch(var(--ink-muted));
-  --fc-today-bg-color: oklch(var(--brand-soft) / 0.35);
-  --fc-now-indicator-color: oklch(var(--brand));
+  --fc-today-bg-color: oklch(var(--surface-sunken));
+  --fc-now-indicator-color: oklch(var(--highlight-bright));
   --fc-highlight-color: oklch(var(--brand-soft) / 0.7);
   --fc-non-business-color: oklch(var(--surface-sunken) / 0.6);
   --fc-bg-event-color: oklch(var(--brand-soft));
@@ -30,8 +30,7 @@
   border-color: oklch(var(--line-soft));
 }
 .vc-cal .fc-scrollgrid {
-  border-left: 0;
-  border-right: 0;
+  border: 0;
 }
 .vc-cal .fc-col-header-cell {
   padding: 6px 0;
@@ -47,7 +46,9 @@
   color: inherit;
   text-decoration: none;
 }
-.vc-cal .fc-day-today .fc-col-header-cell-cushion,
+.vc-cal .fc-col-header-cell.fc-day-today {
+  background: oklch(var(--surface-sunken));
+}
 .vc-cal .fc-day-today .fc-daygrid-day-number {
   color: oklch(var(--brand-text));
   font-weight: 600;
@@ -67,15 +68,20 @@
   font-variant-numeric: tabular-nums;
 }
 .vc-cal .fc-timegrid-slot {
-  height: 22px;
+  height: 44px;
 }
-.vc-cal .fc-timegrid-slot-minor {
-  border-top-style: dotted;
+.vc-cal .fc-timegrid-slot-label {
+  vertical-align: top;
 }
-/* The today line (R-21) in brand, with a square head. */
+.vc-cal .fc-timegrid-slot-label-cushion {
+  color: oklch(var(--ink-muted));
+  font-size: 11px;
+  white-space: nowrap;
+}
+/* The today line (R-21) in the orange brand colour, with a square head. */
 .vc-cal .fc-timegrid-now-indicator-line {
   border-width: 2px 0 0;
-  border-color: oklch(var(--brand));
+  border-color: oklch(var(--highlight-bright));
 }
 .vc-cal .fc-timegrid-now-indicator-arrow {
   border: 0;
@@ -83,7 +89,7 @@
   height: 8px;
   margin-top: -4px;
   border-radius: 1px;
-  background: oklch(var(--brand));
+  background: oklch(var(--highlight-bright));
 }
 .vc-cal .fc-highlight {
   background: oklch(var(--brand-soft) / 0.7);
@@ -110,6 +116,21 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
+}
+.vc-dayhead__date {
+  display: grid;
+  height: 24px;
+  min-width: 26px;
+  place-items: center;
+  padding: 0 4px;
+  border-radius: var(--radius-mark);
+  color: oklch(var(--ink));
+  font-size: 14px;
+  letter-spacing: 0;
+}
+.vc-dayhead__date--today {
+  background: oklch(var(--brand));
+  color: oklch(var(--on-brand));
 }
 .vc-dayhead__extra {
   min-height: 14px;
@@ -237,10 +258,35 @@
   border-radius: 1px;
 }
 
-/* External Work items that drag onto the calendar. */
-.vc-plan-chip {
+/* Blocks in the client's colour (R-35): a soft fill, no edge. An own block is dashed. */
+.vc-cal .fc-timegrid-event.vc-ev {
+  border-left: 0;
+  box-shadow: none;
+}
+.vc-cal .fc-timegrid-event.vc-client--brand { background: oklch(var(--brand-soft)); color: oklch(var(--brand-text)); }
+.vc-cal .fc-timegrid-event.vc-client--identity { background: oklch(var(--identity-soft)); color: oklch(var(--identity)); }
+.vc-cal .fc-timegrid-event.vc-client--waiting { background: oklch(var(--waiting-soft)); color: oklch(var(--waiting)); }
+.vc-cal .fc-timegrid-event.vc-client--warning { background: oklch(var(--warning-soft)); color: oklch(var(--warning)); }
+.vc-cal .fc-timegrid-event.vc-client--positive { background: oklch(var(--positive-soft)); color: oklch(var(--positive)); }
+.vc-cal .fc-timegrid-event.vc-client--upcoming { background: oklch(var(--surface-sunken)); color: oklch(var(--ink-2)); }
+.vc-cal .fc-timegrid-event.vc-ev--own {
+  border: 1.5px dashed currentColor;
+  background: oklch(var(--surface-raised));
+}
+.vc-cal .fc-timegrid-event.vc-ev--late {
+  box-shadow: 0 0 0 2px oklch(var(--warning-mid));
+}
+/* All-day row: a white tag with a coloured left edge. */
+.vc-cal .fc-daygrid-event.vc-ev {
+  background: oklch(var(--surface-raised));
+  box-shadow: inset 0 0 0 1px oklch(var(--line));
+  color: oklch(var(--ink));
+}
+
+/* To-do rows that drag onto the calendar. */
+[data-plan-key] {
   cursor: grab;
 }
-.vc-plan-chip:active {
+[data-plan-key]:active {
   cursor: grabbing;
 }

@@ -252,9 +252,6 @@ export function VaultFileRow({
         </span>
         {tag ? <Tag className="hidden sm:inline-flex">{tag}</Tag> : null}
         {replaced ? <Tag>Replaced</Tag> : null}
-        <span className="hidden flex-none text-[12.5px] tabular-nums text-ink-muted sm:inline">
-          {formatUploadDate(doc.uploadedAt)}
-        </span>
         {showStatus && !replaced ? (
           <VaultStatusGlyph reviewStatus={reviewStatus} companyName={doc.companyName} date={reviewedAt ?? doc.uploadedAt} />
         ) : null}
@@ -265,7 +262,7 @@ export function VaultFileRow({
           checked={Boolean(checked)}
           onCheckedChange={(v) => onCheck(v === true)}
           aria-label={`Select ${doc.fileName}`}
-          className="ml-1 flex-none"
+          className={cn('ml-1 flex-none focus-visible:opacity-100', !checked && 'opacity-0 group-hover:opacity-100')}
         />
       ) : null}
     </div>

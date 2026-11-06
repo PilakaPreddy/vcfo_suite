@@ -23,7 +23,6 @@ import {
 import { CompanyPicker } from '@/components/admin/CompanyPicker';
 import {
   PreIncorporationNotice,
-  PreIncorporationPortfolioNote,
   type PreIncorporationScope,
 } from '@/components/compliances/PreIncorporationNotice';
 import { isIncorporated } from '@/lib/compliance/incorporation-state';
@@ -540,8 +539,6 @@ export function StatutoryCalendar({
           scope={{ audience, companyName: company.companyName }}
           className="mb-3"
         />
-      ) : !company ? (
-        <PreIncorporationPortfolioNote count={preIncorporationCount} className="px-1 pb-3" />
       ) : null}
 
       <div className="stat-cal-stage">

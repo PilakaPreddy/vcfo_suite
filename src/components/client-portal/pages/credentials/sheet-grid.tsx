@@ -298,7 +298,8 @@ export function createSheetGrid(ctx: CredentialsState & CellControls) {
     const m = modeOf(scope);
     const id = `${S.id}|${row.key}`;
     const name = S.id === 'kyc' ? scopeLabel(sheets!, data!.ids, scope).split(' · ').slice(1).join(' · ') : row.cells[LABEL_COL]?.v || `Row ${ri + 1}`;
-    const num = m ? <span className="cr-rn on">{fmtS(until(scope) - now)}</span> : <span className="cr-rn">{ri + 1}</span>;
+    // The row number is gone (prototype); the countdown shows while a row is open.
+    const num = m ? <span className="cr-rn on">{fmtS(until(scope) - now)}</span> : null;
     const pv = rowHasSecret(S, row.key) ? (
       <button
         type="button"
@@ -390,9 +391,7 @@ export function createSheetGrid(ctx: CredentialsState & CellControls) {
             </caption>
             <thead>
               <tr className="cr-names">
-                <th className="cr-g" scope="col">
-                  #
-                </th>
+                <th className="cr-g" scope="col" aria-label="Row actions" />
                 {S.cols.map((_, i) => headCell(S, i))}
               </tr>
             </thead>

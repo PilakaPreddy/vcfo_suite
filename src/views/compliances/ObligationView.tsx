@@ -150,7 +150,7 @@ export function ObligationView({
       width: '14%',
       render: (row) => register.details.get(row.id)?.ownerName ?? <span className="text-ink-faint">—</span>,
     },
-    { key: 'status', header: 'Status', width: '128px', render: (row) => <WordChip word={filingWord(row, now)} /> },
+    { key: 'status', header: 'Status', width: '128px', render: (row) => <WordChip filing word={filingWord(row, now)} /> },
     { key: 'window', header: 'Window', width: '176px', render: (row) => <FilingWindowCell row={row} mayWrite={mayWrite} /> },
     {
       key: 'proof',
@@ -188,7 +188,7 @@ export function ObligationView({
       ),
     },
     { key: 'ref', header: 'Reference', render: refCell },
-    { key: 'status', header: 'Status', width: '128px', render: (row) => <WordChip word={filingWord(row, now)} /> },
+    { key: 'status', header: 'Status', width: '128px', render: (row) => <WordChip filing word={filingWord(row, now)} /> },
   ];
   const history = [...scoped].sort((a, b) => b.dueDate.localeCompare(a.dueDate) || a.companyName.localeCompare(b.companyName));
   const dueDays = daysUntil(group.dueDate, now);

@@ -9,6 +9,7 @@
  */
 import {
   buildRisks,
+  registrationCounts,
   type SuperInsights,
   type SuperMonth,
   type SuperTeamManager,
@@ -83,16 +84,34 @@ export interface ReportNumber {
   tone?: 'bad' | 'warn' | 'ok';
 }
 
-export function monthNumbers(m: SuperMonth): ReportNumber[] {
+/** What the six numbers need beyond the insights: the prospects closed and the firm's COI target. */
+export interface ReportExtras {
+  prospects: ReadonlyArray<{ stage: string; closedAt: string | null }>;
+  targetDays: number | null;
+}
+
+/** The six numbers of the month, shared by the Reports page, the PDF and the CSV. */
+export function monthNumbers(insights: SuperInsights, m: SuperMonth, extras: ReportExtras): ReportNumber[] {
+  const closed = extras.prospects.filter((p) => p.closedAt?.startsWith(m.key));
+  const filed = m.filedOnTime + m.filedLate;
+  const { targetDays } = extras;
   return [
-    { k: 'New engagements', v: m.engagementsStarted },
-    { k: 'Certificates issued', v: m.certificatesIssued, tone: m.certificatesIssued > 0 ? 'ok' : undefined },
-    { k: 'Average days to COI', v: m.avgDaysToCoi === null ? '–' : m.avgDaysToCoi },
-    { k: 'Filings due', v: m.filingsDue },
-    { k: 'Filed on time', v: m.filedOnTime, tone: m.filedOnTime > 0 ? 'ok' : undefined },
-    { k: 'Filed late', v: m.filedLate, tone: m.filedLate > 0 ? 'warn' : undefined },
-    { k: 'Overdue, not filed', v: m.overdue, tone: m.overdue > 0 ? 'bad' : undefined },
-    { k: 'Still to file', v: m.open },
+    { k: 'Active clients', v: insights.clients.length },
+    {
+      k: 'Client movement',
+      v: `${closed.filter((p) => p.stage === 'won').length} won · ${closed.filter((p) => p.stage === 'lost').length} lost`,
+    },
+    { k: 'Certificates (COI) issued', v: m.certificatesIssued },
+    {
+      k: `Average days to COI${targetDays !== null ? ` · target ${targetDays}` : ''}`,
+      v: m.avgDaysToCoi === null ? '–' : `${m.avgDaysToCoi} days`,
+      tone: m.avgDaysToCoi !== null && targetDays !== null && m.avgDaysToCoi > targetDays ? 'warn' : undefined,
+    },
+    {
+      k: `Filings on time (${m.filedLate} late)`,
+      v: filed ? `${Math.round((m.filedOnTime / filed) * 100)}%` : '–',
+    },
+    { k: 'Registrations completed', v: registrationCounts(insights).reduce((sum, c) => sum + c.done, 0) },
   ];
 }
 
@@ -148,12 +167,12 @@ export interface PartnerReportData {
 }
 
 /** Everything the PDF prints for one month, from the same insights the page shows. */
-export function buildPartnerReport(insights: SuperInsights, month: SuperMonth, now: Date): PartnerReportData {
+export function buildPartnerReport(insights: SuperInsights, month: SuperMonth, now: Date, extras: ReportExtras): PartnerReportData {
   return {
     monthKey: month.key,
     monthLabel: month.longLabel,
     generatedAt: insights.generatedAt,
-    numbers: monthNumbers(month),
+    numbers: monthNumbers(insights, month, extras),
     clientLine: clientLine(insights),
     managers: insights.team.managers.map((m) => ({
       name: m.name,

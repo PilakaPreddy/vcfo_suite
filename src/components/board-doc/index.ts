@@ -28,3 +28,4 @@ export { EvidenceTable } from './EvidenceTable';
 ;
 export { VariantTree } from './VariantTree';
 export { treePath, type NocNodeId } from './variant-tree';
+export { AuditLines } from './AuditLines';

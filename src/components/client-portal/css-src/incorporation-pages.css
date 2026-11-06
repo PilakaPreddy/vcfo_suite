@@ -236,7 +236,7 @@ button:where(:not(.cp-tw *)){font:inherit;color:inherit}
 .stg .o{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:none}
 .stg .o svg{width:14px;height:14px}
 .stg.ok .o{background:var(--ok);color:#fff}
-.stg.todo .o{border:1.5px solid oklch(var(--line-strong));background:oklch(var(--surface-raised))}
+.stg.todo .o{border:1.5px dashed oklch(var(--line-strong));background:oklch(var(--surface-raised))}
 .stg b{font-size:12.5px;font-weight:500;color:var(--fg);line-height:1.2}
 .stg.todo b{color:var(--muted)}
 .stg small{font-size:11.5px;color:var(--muted);line-height:1.2}

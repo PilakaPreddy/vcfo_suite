@@ -26,7 +26,7 @@ import { usePortalIncorporation } from '../../hooks';
 import { usePageTips } from '../compliances/bits';
 import { DateTile, Empty, GoLink, GroupHead, HeadSearch, Island, ListRow, SCard, StackedBar, WordPill, relativeDue, urgencyTint } from '../compliances/spectrum';
 import { GROUP_ORDER, buildRegistrations, regDueWithin, regWaiting, type RegItem, type RegStatus } from './model';
-import { REG_FILL, REG_ORDER, RegChip, regDate, registrationHref, useClientRegistrationFacts, useRegCredentials } from './parts';
+import { REG_FILL, REG_ORDER, RegChip, regWord, regDate, registrationHref, useClientRegistrationFacts, useRegCredentials } from './parts';
 import { renewalOf } from '@/lib/registrations/registration-facts';
 import { fmtDM } from '@/lib/client-portal/compliances';
 import '../../css/compliances-board.css';
@@ -52,7 +52,7 @@ export function RegistrationsList() {
   const shown = active.filter((r) => match(r) && (!status || r.status === status));
   const sections = [
     ...(view === 'status'
-      ? REG_ORDER.map((s) => ({ id: s, label: s, rows: shown.filter((r) => r.status === s) }))
+      ? REG_ORDER.map((s) => ({ id: s, label: regWord(s), rows: shown.filter((r) => r.status === s) }))
       : GROUP_ORDER.map((g) => ({ id: g, label: g, rows: shown.filter((r) => r.group === g) }))),
     { id: 'na', label: 'Not needed', rows: status ? [] : notNeeded.filter(match) },
   ].filter((s) => s.rows.length);
@@ -75,7 +75,7 @@ export function RegistrationsList() {
         onChange={(k) => setView(k as 'status' | 'group')}
         items={[
           { key: 'status', label: 'By status' },
-          { key: 'group', label: 'By group' },
+          { key: 'group', label: 'By regulator' },
         ]}
       />
     </span>
@@ -109,7 +109,7 @@ export function RegistrationsList() {
       {status ? (
         <div className="flex items-center gap-2 border-b border-line-soft px-4 py-2 md:px-5">
           <span className="inline-flex h-[30px] items-center gap-1.5 rounded-md border-1.5 border-brand-line bg-brand-soft pl-2.5 pr-1 text-[13px] font-medium text-brand-text">
-            {status}
+            {regWord(status)}
             <button type="button" className="grid h-5 w-5 place-items-center rounded-sm hover:bg-surface-raised" aria-label="Clear the status filter" onClick={() => setStatus(null)}>
               ×
             </button>
@@ -127,7 +127,7 @@ export function RegistrationsList() {
           <div key={g.id}>
             <GroupHead label={g.label} count={g.rows.length} open={Boolean(open)} onToggle={() => setClosed((c) => ({ ...c, [g.id]: !c[g.id] }))} />
             {open ? (
-              <ul className={`grid grid-cols-1 gap-3 px-4 pb-4 pt-1 sm:grid-cols-2 md:px-5 2xl:grid-cols-3${g.id === 'na' ? ' [&_a]:opacity-60' : ''}`}>
+              <ul className={`grid grid-cols-1 gap-3 px-4 py-4 sm:grid-cols-2 md:px-5 2xl:grid-cols-3${g.id === 'na' ? ' [&_a]:opacity-60' : ''}`}>
                 {g.rows.map((r) => (
                   <li key={r.stepId} className="min-w-0">
                     <RegTileCard r={r} today={today} />
@@ -217,7 +217,7 @@ export function RegistrationsList() {
             <SCard title="Progress flow">
               <StackedBar
                 onPick={(k) => setStatus((cur) => (cur === k ? null : (k as RegStatus)))}
-                segments={REG_ORDER.map((s) => ({ key: s, label: s, value: count(s), fill: REG_FILL[s] }))}
+                segments={REG_ORDER.map((s) => ({ key: s, label: regWord(s), value: count(s), fill: REG_FILL[s] }))}
               />
             </SCard>
           </div>
@@ -235,11 +235,11 @@ export function RegistrationsList() {
 function RegTileCard({ r, today }: { r: RegItem; today: string }) {
   const renewal = renewalOf(r.facts, new Date(`${today}T00:00:00`));
   const date = regDate(r);
-  const line = r.notNeeded ? 'Not needed' : r.status === 'Done' ? (date ? `Done ${fmtDM(date)}` : 'Done') : date ? `Due ${fmtDM(date)}` : r.needs[0] ?? r.group;
+  const line = r.notNeeded ? 'Not needed' : r.status === 'Done' ? (date ? `Granted ${fmtDM(date)}` : 'Granted') : date ? `Due ${fmtDM(date)}` : r.needs[0] ?? r.group;
   return (
     <GoLink
       href={registrationHref(r.id)}
-      label={`${r.name} · ${r.notNeeded ? 'Not needed' : r.status}`}
+      label={`${r.name} · ${r.notNeeded ? 'Not needed' : regWord(r.status)}`}
       className="grid h-full min-w-0 gap-2 rounded-md border-1.5 border-line bg-surface-raised px-3.5 py-3 text-ink hover:border-line-strong hover:bg-surface-sunken"
     >
       <span className="flex min-w-0 items-center gap-1">

@@ -74,7 +74,7 @@ function railProfilePath(role: Role): string {
    sidebar and a red badge on the rail. */
 const InternMyWorkBadge = memo(function InternMyWorkBadge() {
   const { kpis } = useInternPortfolio();
-  return <SidebarNavCountBadge count={kpis.action.total} hot />;
+  return <SidebarNavCountBadge count={kpis.action.total} />;
 });
 
 /* Steps waiting on a manager or admin decision are urgent too (Approvals). */

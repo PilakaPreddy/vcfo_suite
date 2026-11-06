@@ -35,7 +35,7 @@ export function EscalationsPanel({
   const shown = limit ? rows.slice(0, limit) : rows;
 
   return (
-    <DashSection title="Escalations" meta={query.isPending ? undefined : `${open} open`} bodyClassName="p-0">
+    <DashSection title="Escalations" meta={query.isPending ? undefined : `${open} open`} flush>
       {query.isPending ? (
         <div className="p-4">
           <SkeletonRows rows={2} />
@@ -71,7 +71,7 @@ function EscalationItem({ row, canResolve, showClient }: { row: EscalationRow; c
   };
 
   return (
-    <li className="border-t border-line-soft px-4 py-3 first:border-t-0">
+    <li className="border-t border-line-soft px-4 py-3 first:border-t-0 md:px-5">
       <div className="flex min-w-0 items-start gap-3">
         <PersonAvatar name={row.raisedByName ?? 'Someone'} />
         <span className="min-w-0 flex-1">

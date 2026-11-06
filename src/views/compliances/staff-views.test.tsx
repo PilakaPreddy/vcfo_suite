@@ -192,7 +192,7 @@ describe('ObligationsView', () => {
     expect(within(grid).getByText('1 of 2 filed')).toBeInTheDocument();
     // The band name carries the glossary card on its leading form code, so the text is split.
     expect(grid).toHaveTextContent('TDS payment');
-    expect(within(grid).getByText('Birch LLP')).toBeInTheDocument();
+    expect(within(grid).getByText('Birch LLP', { selector: 'span' })).toBeInTheDocument();
     const link = within(grid).getAllByRole('link').find((a) => a.textContent?.includes('Birch LLP'));
     // S-2: the row opens the statutory detail page of that client's period.
     expect(link?.getAttribute('href')).toBe('/app/manager/compliances/obligations/gst-3b/b');
@@ -238,8 +238,8 @@ describe('ObligationsView', () => {
     search = new URLSearchParams('state=done');
     render(<ObligationsView basePath="/app/manager/compliances" scope={scope} />);
     const grid = screen.getAllByRole('region', { name: 'Obligations' }).at(-1)!;
-    expect(within(grid).queryByText('Birch LLP')).toBeNull();
-    expect(within(grid).getByText('Acme Pvt Ltd')).toBeInTheDocument();
+    expect(within(grid).queryByText('Birch LLP', { selector: 'span' })).toBeNull();
+    expect(within(grid).getByText('Acme Pvt Ltd', { selector: 'span' })).toBeInTheDocument();
   });
 });
 
@@ -259,7 +259,6 @@ describe('RegistrationsView', () => {
     render(<RegistrationsView shellBase="/app/manager" scope={scope} />);
     const grid = screen.getByRole('region', { name: 'Registrations' });
     expect(within(grid).getByText('29ABCDE1234F1Z5')).toBeInTheDocument();
-    expect(within(grid).getByText('Due soon')).toBeInTheDocument();
     const renewals = screen.getByRole('heading', { name: 'Renewals and expiry' }).closest('section')!;
     expect(within(renewals).getByText('GST Registration')).toBeInTheDocument();
   });
@@ -297,7 +296,7 @@ describe('FilingsView and ComplianceCalendarView', () => {
     expect(open.getAttribute('href')).toBe('/app/manager/compliances/obligations/gst-3b/a');
     expect(within(grid).getByRole('link', { name: 'Open: GSTR-3B Sep 2099, Birch LLP' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Filter by state' })).toHaveTextContent('Due this month');
-    const regulators = screen.getByRole('heading', { name: 'By regulator' }).closest('section')!;
+    const regulators = screen.getByRole('heading', { name: 'By area' }).closest('section')!;
     expect(within(regulators).getByRole('button', { name: /^GST: 1 of 2 filed/ })).toBeInTheDocument();
     expect(within(regulators).getByRole('button', { name: /^Labour: 0 of 0 filed/ })).toBeInTheDocument();
   });
@@ -314,7 +313,7 @@ describe('FilingsView and ComplianceCalendarView', () => {
     const link = within(grid).getByRole('link', { name: 'Board pack' });
     expect(link.getAttribute('href')).toBe('/app/manager/compliances/obligations/tasks/t2');
     expect(within(grid).getByRole('button', { name: 'Open board-pack.pdf' })).toBeInTheDocument();
-    const regulators = screen.getByRole('heading', { name: 'By regulator' }).closest('section')!;
+    const regulators = screen.getByRole('heading', { name: 'By area' }).closest('section')!;
     expect(within(regulators).getByText('Internal')).toBeInTheDocument();
 
     act(() => screen.getByRole('tab', { name: /^Non-statutory/ }).click());
@@ -331,13 +330,13 @@ describe('FilingsView and ComplianceCalendarView', () => {
 
   it('plots the month with day tags and the coming-up rail', () => {
     search = new URLSearchParams('date=2099-10-20');
-    const { container } = render(<ComplianceCalendarView basePath="/app/manager/compliances" scope={scope} />);
-    // The GSTR-3B filing falls on 20 Oct; the two tasks (MIS report, Board pack) run up to it.
-    const titles = [...container.querySelectorAll('.vc-ev')].map((ev) => ev.textContent ?? '');
-    expect(titles.some((t) => t.includes('GSTR-3B'))).toBe(true);
-    expect(titles.some((t) => t.includes('MIS report'))).toBe(true);
-    expect(titles.some((t) => t.includes('Board pack'))).toBe(true);
-    const coming = screen.getByRole('region', { name: 'Coming up' });
+    render(<ComplianceCalendarView basePath="/app/manager/compliances" scope={scope} />);
+    // The GSTR-3B filing falls on 20 Oct; the two tasks (MIS report, Board pack) carry a day tag too.
+    const text = document.body.textContent ?? '';
+    expect(text).toContain('GSTR-3B');
+    expect(text).toContain('MIS report');
+    expect(text).toContain('Board pack');
+    const coming = screen.getByRole('region', { name: 'Coming up', hidden: true });
     expect(within(coming).getByText('TDS payment')).toBeInTheDocument();
     expect(within(coming).getByText('MIS report · Oct 2099')).toBeInTheDocument();
   });

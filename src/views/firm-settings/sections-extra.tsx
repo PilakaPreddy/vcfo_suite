@@ -173,7 +173,7 @@ export function PeopleRolesSection() {
           Add person
         </Button>
       }
-      bodyClassName="px-2 pb-2 pt-1"
+      flush
     >
       {people.isPending ? (
         <SkeletonRows rows={4} className="p-2" />
@@ -375,7 +375,7 @@ export function RolePermissionsSection({ settings, canChange, save }: { settings
   const pending = ask ? perms[ask.role][ask.perm] : false;
 
   return (
-    <DashSection title="Roles and permissions" icon={KeyRound} tone="violet" bodyClassName="px-2 pb-2 pt-1">
+    <DashSection title="Roles and permissions" headIcon={{ icon: KeyRound, tone: 'violet' }} flush>
       {ask ? (
         <ConfirmRow
           text={`${pending ? 'Remove' : 'Give'} "can ${ask.perm}" ${pending ? 'from' : 'to'} ${PERMISSION_ROLE_LABEL[ask.role]}?`}
@@ -425,8 +425,7 @@ export function ServiceTargetsSection({ settings, canEdit, save }: { settings: F
   return (
     <DashSection
       title="Service targets"
-      icon={Target}
-      tone="teal"
+      headIcon={{ icon: Target, tone: 'teal' }}
       right={
         canEdit ? (
           editing ? (
@@ -540,7 +539,7 @@ export function IntegrationsSection({ isSuper }: { isSuper: boolean }) {
   }
 
   return (
-    <DashSection title="Integrations" icon={Plug} tone="info" bodyClassName="p-0">
+    <DashSection title="Integrations" headIcon={{ icon: Plug, tone: 'blue' }} flush>
       {ask ? (
         <ConfirmRow
           text={`Disconnect Outlook mail${outlook.data?.msEmail ? ` (${outlook.data.msEmail})` : ''}? Mail you send from VCFO stops using your mailbox.`}
@@ -563,7 +562,7 @@ export function IntegrationsSection({ isSuper }: { isSuper: boolean }) {
             const status = mine ? (outlook.data!.connected ? 'Connected' : 'Needs sign-in') : i.status;
             const sub = mine && outlook.data!.connected && outlook.data!.msEmail ? `${i.provider} · ${outlook.data!.msEmail}` : `${i.provider} · ${i.what}`;
             return (
-              <li key={i.id} className="flex min-h-[56px] items-center gap-3 border-t border-line-soft px-4 py-2.5 first:border-t-0">
+              <li key={i.id} className="flex min-h-[56px] items-center gap-3 border-t border-line-soft px-4 py-2.5 first:border-t-0 md:px-5">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px] font-medium text-ink">{i.name}</span>
                   <span className="block truncate text-[12.5px] text-ink-muted">{sub}</span>

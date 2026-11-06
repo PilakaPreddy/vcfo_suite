@@ -2,38 +2,33 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, BookOpen, CalendarClock } from 'lucide-react';
+import { ArrowRight, BookOpen } from 'lucide-react';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
 import { DashSection } from '@/components/dash/DashSection';
 import { Button } from '@/components/ui/button';
-import { OwnerChip } from '@/components/ui/spectrum-chip';
-import { StepMark, type StepState } from '@/components/ui/step-track';
+import { AvatarStack } from '@/components/ui/avatar-stack';
+import type { StepState } from '@/components/ui/step-track';
 import { EmptyState } from '@/components/ui/empty-state';
 import { useApp } from '@/context/AppContext';
 import { getChecklistStepTimelineLabel, getRegistrationPhases } from '@/data/checklist';
 import { adminProjectStepPath, internEngagementStepPath } from '@/lib/projects/project-step-path';
-import { formatWindow } from '@/lib/projects/schedule-windows';
 import { cn } from '@/lib/utils';
 import type { ComplianceScope } from '@/views/compliances/compliance-scope';
-import { daysUntil, isIdentifier, plainDate } from '@/lib/compliance/spectrum-status';
-import { Fact, HeadRing, RailCard, TextCard, WordChip } from '@/views/compliances/spectrum-parts';
-import { PersonCell } from '@/views/compliances/identity';
+import { daysUntil, isIdentifier } from '@/lib/compliance/spectrum-status';
+import { Fact, HeadRing, WordChip } from '@/views/compliances/spectrum-parts';
 import { BeforeFilingCard } from '@/views/compliances/record-cards';
 import { AssistCard } from '@/components/compliances/AssistParts';
 import { AppliesCard, StaffFromClientCard, StaffSbcFieldsCard, StartsCard } from '@/views/compliances/input-cards';
 import { registrationChecklist } from '@/data/before-filing';
-import { CertificateButton, RegistrationDatesDialog, RenewByCell, renewalLine } from '@/views/compliances/registration-renewal';
+import { CertificateButton, RegistrationDatesDialog, renewalLine } from '@/views/compliances/registration-renewal';
 import { useRegistrationFacts } from '@/hooks/use-registration-facts';
-import { isoOfText } from '@/lib/registrations/registration-facts';
 import {
   parseRegistrationKey,
   regDateLabel,
   registrationRows,
   type RegistrationRow,
 } from '@/views/compliances/registration-rows';
-
-const OWNER_LABEL = { client: 'Client', sbc: 'SBC', mca: 'Authority', manager: 'Manager' } as const;
 
 /** Three workflow stages (Client, SBC, authority) as ST5 marks. */
 function stageMarks(row: RegistrationRow): StepState[] {
@@ -110,10 +105,7 @@ export function RegistrationView({
   const people = [...teamMembers, ...internOptions];
   const nameOf = (id: string | undefined) => (id ? people.find((p) => p.id === id)?.name : undefined);
   const lead = nameOf(engagement.internId);
-  const assignee = nameOf(row.assigneeId);
   const number = facts?.number ?? row.number ?? null;
-  const factDate = facts?.registeredOn ? (isoOfText(facts.registeredOn) ? plainDate(facts.registeredOn, now) : facts.registeredOn) : null;
-  const regDate = factDate ?? (row.registrationDate ? plainDate(row.registrationDate, now) : null);
   const renewal = renewalLine(facts, now);
   const date = regDateLabel(row, now);
   const stepHref =
@@ -124,7 +116,15 @@ export function RegistrationView({
   const stagesDone = marks.filter((m) => m === 'done').length;
   const lateDays = row.word === 'Overdue' && row.dueDate ? -(daysUntil(row.dueDate, now) ?? 0) : 0;
   const kbHref = `${shellBase}/knowledge-bank?q=${encodeURIComponent(row.name)}`;
-  const others = rows.filter((r) => r.key !== row.key && r.word !== 'Not needed' && r.word !== 'Done').slice(0, 6);
+  const contact = engagement.clientDisplayName?.trim();
+  const manager = engagement.managerId ? nameOf(engagement.managerId) : undefined;
+  const onIt = [contact, lead, manager].filter(Boolean) as string[];
+  // The two lanes of the Steps card: the authority on the left, SBC for the client on the right.
+  const lanes = [
+    { title: 'Documents from the client', side: 's', who: 'Client' },
+    { title: 'Application filed by SBC', side: 's', who: 'SBC' },
+    { title: `Review by ${row.authority}`, side: 'a', who: row.authority },
+  ];
 
   return (
     <PageTransition>
@@ -157,11 +157,8 @@ export function RegistrationView({
                 </p>
               </div>
             </div>
+            {onIt.length ? <AvatarStack people={onIt} size={30} label={`People on it: ${onIt.join(', ')}`} /> : null}
             <CertificateButton facts={facts} engagementId={engagement.id} size="default" />
-            <Button variant="secondary" onClick={() => setEditing(true)}>
-              <CalendarClock aria-hidden />
-              Renewal dates
-            </Button>
             <Button asChild>
               <Link href={stepHref}>
                 Open step
@@ -170,69 +167,50 @@ export function RegistrationView({
             </Button>
           </div>
           <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
+            <Fact k={row.word === 'Done' ? 'Done on' : 'Expected'} className={date.className}>
+              {date.text}
+            </Fact>
+            <Fact k="Number" className={cn(number && isIdentifier(number) && 'font-mono')}>
+              {number ?? '-'}
+            </Fact>
             <Fact k="Status">
               {row.word === 'Not needed' ? <span className="font-normal text-ink-muted">Not needed</span> : <WordChip word={row.word} />}
             </Fact>
-            {row.owner ? (
-              <Fact k="With">
-                <OwnerChip owner={row.owner} label={OWNER_LABEL[row.owner]} />
-              </Fact>
-            ) : null}
-            <Fact k="Number" className={cn(number && isIdentifier(number) && 'font-mono')}>
-              {number ?? <span className="font-normal text-ink-faint">Not recorded</span>}
-            </Fact>
-            <Fact k={row.word === 'Done' ? 'Done on' : 'Due'} className={date.className}>
-              {date.text}
-            </Fact>
-            {regDate ? <Fact k="Date of registration">{regDate}</Fact> : null}
-            {facts?.issuedOn ? <Fact k="Issued">{plainDate(facts.issuedOn, now)}</Fact> : null}
-            {facts?.expiresOn ? (
-              <Fact k="Renew by">
-                <RenewByCell facts={facts} now={now} />
-              </Fact>
-            ) : null}
-            {facts?.certificate ? <Fact k="Certificate">{facts.certificate.name}</Fact> : null}
-            {row.window ? <Fact k="Window">{formatWindow(row.window)}</Fact> : null}
-            <Fact k="Lead">
-              <PersonCell name={lead} />
-            </Fact>
-            {assignee && assignee !== lead ? (
-              <Fact k="Assigned to">
-                <PersonCell name={assignee} />
-              </Fact>
-            ) : null}
-            <Fact k="Step">{`${row.step} of registration`}</Fact>
           </div>
         </header>
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="grid min-w-0 gap-4">
-            <DashSection title="Progress" bodyClassName="p-0">
-              <ul>
-                {[
-                  ['Documents from the client', 'Client'],
-                  ['Application filed by SBC', 'SBC'],
-                  [`Review by ${row.authority}`, 'Authority'],
-                ].map(([label, who], i) => (
-                  <li key={label} className={cn('flex items-center gap-3 border-t border-line-soft px-4 py-2.5 first:border-t-0', marks[i] === 'now' && 'bg-surface-sunken/60')}>
-                    <StepMark state={marks[i]!} tone={row.word === 'Overdue' ? 'bad' : row.word === 'Waiting' ? 'teal' : 'prog'} size={20} />
-                    <span className="min-w-0 flex-1">
-                      <b className={cn('block truncate text-[14px]', marks[i] === 'now' ? 'font-medium text-ink' : 'font-normal text-ink-2')}>{label}</b>
-                      <span className="block text-[12.5px] text-ink-muted">
-                        {marks[i] === 'done' ? 'Done' : marks[i] === 'now' ? `With ${who}` : 'Next'}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
+            <DashSection title="Steps" right={<span className="text-[12.5px] text-ink-muted">{stagesDone} of {marks.length} done</span>}>
+              <div className="grid grid-cols-[minmax(0,1fr)_64px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 md:grid-cols-[minmax(0,1fr)_76px_minmax(0,1fr)]">
+                <div className="border-b-1.5 border-line pb-1.5 text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted">{row.authority}</div>
+                <div className="border-b-1.5 border-line pb-1.5">&nbsp;</div>
+                <div className="truncate border-b-1.5 border-line pb-1.5 text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted">SBC, for {engagement.companyName}</div>
+                {lanes.map((l, i) => {
+                  const mark = marks[i]!;
+                  const next = mark !== 'done';
+                  const late = mark === 'now' && row.word === 'Overdue';
+                  const card = (
+                    <div className={cn('min-w-0 rounded-md border-1.5 px-3 py-2', next && !late ? 'border-dashed border-line-strong' : late ? 'border-warning-mid bg-warning-soft' : 'border-line')}>
+                      <b className={cn('block truncate text-[13px] font-medium', late ? 'text-warning' : next ? 'text-ink-2' : 'text-ink')}>
+                        {mark === 'next' ? `Next: ${l.title}` : l.title}
+                      </b>
+                      <span className="block truncate text-[12px] text-ink-muted">{mark === 'done' ? 'Done' : mark === 'now' ? `With ${l.who}` : 'Next'}</span>
+                    </div>
+                  );
+                  return (
+                    <div key={l.title} className="contents">
+                      <div className="min-w-0">{l.side === 'a' ? card : null}</div>
+                      <div className={cn('grid place-items-center rounded-md px-1 py-1.5 text-center leading-tight', next ? 'border-1.5 border-dashed border-line-strong' : 'bg-surface-sunken')}>
+                        <b className="text-[13px] font-medium text-ink">{mark === 'now' ? 'Today' : mark === 'done' ? 'Done' : '-'}</b>
+                      </div>
+                      <div className="min-w-0">{l.side === 's' ? card : null}</div>
+                    </div>
+                  );
+                })}
+              </div>
             </DashSection>
 
-            {/* S-774-style From the client on the registration: asked documents, needs not asked yet, the client's details. */}
-            {row.word === 'Not needed' ? null : (
-              <StaffFromClientCard engagementId={engagement.id} kind="registration" subjectKey={item.id} clientName={engagement.companyName} />
-            )}
-            {/* S-811: the values SBC records on the registration. */}
-            <StaffSbcFieldsCard engagementId={engagement.id} kind="registration" subjectKey={item.id} />
             {/* S-809: VCFO Assist on the registration's portal form. */}
             {row.word === 'Not needed' ? null : (
               <AssistCard
@@ -244,6 +222,13 @@ export function RegistrationView({
                 mayStart={row.word !== 'Done'}
               />
             )}
+
+            {/* S-774-style From the client on the registration: asked documents, needs not asked yet, the client's details. */}
+            {row.word === 'Not needed' ? null : (
+              <StaffFromClientCard engagementId={engagement.id} kind="registration" subjectKey={item.id} clientName={engagement.companyName} />
+            )}
+            {/* S-811: the values SBC records on the registration. */}
+            <StaffSbcFieldsCard engagementId={engagement.id} kind="registration" subjectKey={item.id} />
           </div>
 
           <div className="grid min-w-0 gap-3">
@@ -258,6 +243,18 @@ export function RegistrationView({
                 </Link>
               </div>
             </DashSection>
+            <AppliesCard engagementId={engagement.id} stepId={item.id} companyName={engagement.companyName} notNeeded={row.word === 'Not needed'} />
+            <StartsCard engagementId={engagement.id} stepId={item.id} obligationsBase={`${shellBase}/compliances/obligations`} />
+            <DashSection
+              title="Renewal"
+              right={
+                <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+                  Renewal dates
+                </Button>
+              }
+            >
+              <p className={cn('text-[13.5px] leading-relaxed text-ink-2', !renewal && 'text-ink-faint')}>{renewal ?? 'No expiry recorded'}</p>
+            </DashSection>
             {row.word === 'Not needed' ? null : (
               <BeforeFilingCard
                 engagementId={engagement.id}
@@ -266,18 +263,6 @@ export function RegistrationView({
                 lines={registrationChecklist(row.category)}
               />
             )}
-            <AppliesCard engagementId={engagement.id} stepId={item.id} companyName={engagement.companyName} notNeeded={row.word === 'Not needed'} />
-            <StartsCard engagementId={engagement.id} stepId={item.id} obligationsBase={`${shellBase}/compliances/obligations`} />
-            <TextCard title="Renewal">
-              <p className={renewal ? undefined : 'text-ink-faint'}>{renewal ?? 'No expiry recorded'}</p>
-            </TextCard>
-            <RailCard
-              title={`Open for ${engagement.companyName}`}
-              items={others.map((r) => {
-                const d = regDateLabel(r, now);
-                return { key: r.key, title: r.name, sub: r.word, right: d.text, rightClass: d.className, href: `${basePath}/${encodeURIComponent(r.key)}` };
-              })}
-            />
           </div>
         </div>
       </div>

@@ -5,13 +5,12 @@
    search), desktop >=1280. The 3 px spectrum ribbon (20-shell.css .cp-ribbon) sits above it,
    so the sticky bar starts 3 px down; --cp-top-h is the height pages subtract. */
 :root{--cp-top-h:63px}
-@media (max-width:767px){:root{--cp-top-h:59px}}
 .tbar{height:60px;display:flex;align-items:center;gap:12px;padding:0 28px;border-bottom:1.5px solid oklch(var(--line));background:oklch(var(--surface-raised));box-sizing:border-box;min-width:0}
 .tbar-mw{display:none;flex:none;align-items:center;gap:6px}
 .tbar-menu{display:inline-flex;flex:none;width:40px;height:40px;margin-left:-6px;border:0;border-radius:6px;background:transparent;color:oklch(var(--ink-2));align-items:center;justify-content:center;cursor:pointer;padding:0}
 .tbar-menu:hover{background:oklch(var(--ink) / .06)}
 .tbar-logo{display:flex;flex:none;align-items:center;padding-right:12px;border-right:1px solid oklch(var(--line))}
-.tbar-nav{flex:1;min-width:0;display:flex;align-items:center;overflow:hidden}
+.tbar-nav{flex:0 1 auto;min-width:0;display:flex;align-items:center;overflow:hidden}
 .tbar-ol{display:flex;align-items:center;gap:8px;min-width:0;margin:0;padding:0;list-style:none;overflow:hidden;font:400 14px var(--font-sans),sans-serif;color:oklch(var(--ink-muted))}
 .tbar-ol li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .tbar-ol li.tbar-sep{flex:none;overflow:visible;color:oklch(var(--ink-faint))}
@@ -21,7 +20,7 @@
 .tbar-srch:hover{border-color:oklch(var(--line-strong))}
 .tbar-srch:focus-visible{outline:none;border-color:oklch(var(--brand));box-shadow:0 0 0 4px oklch(var(--focus-ring) / .24)}
 .tbar-srch .tbar-sl{flex:1;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tbar-kbd{flex:none;margin-left:auto;padding:0 5px;border-radius:4px;border:1px solid oklch(var(--line));background:oklch(var(--surface-raised));font:500 11px/18px var(--font-sans),sans-serif;color:oklch(var(--ink-muted))}
+.tbar-kbd{flex:none;margin-left:auto;padding:0 5px;border-radius:4px;border:1px solid oklch(var(--line));background:oklch(var(--surface-raised));font:500 11px/18px var(--font-mono),ui-monospace,monospace;color:oklch(var(--ink-muted))}
 /* icon-only buttons are 6 px squares (R-12) */
 .tbar-ib{position:relative;flex:none;width:36px;height:36px;border-radius:6px;border:0;background:transparent;color:oklch(var(--ink-2));display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer}
 .tbar-ib:hover,.tbar-ib.on{background:oklch(var(--ink) / .06);color:oklch(var(--ink))}
@@ -40,18 +39,15 @@
 }
 @media (max-width:767px){
   .tbar-mw{display:inline-flex}
-  .tbar-logo,.tbar-mid,.tbar-theme{display:none}
-  /* phone bar = s/home/mobile.html .bar (M-01): 56 px, 44 px buttons, 19 px muted icons */
-  .tbar{height:56px;padding:0 6px;gap:4px}
-  .tbar-menu{width:44px;height:44px;margin-left:0;color:oklch(var(--ink-muted))}
-  .tbar-mw{gap:8px}
-  .tbar-ol{font-size:15px}
-  .tbar-r{gap:0}
-  .tbar-srch,.tbar-ib{width:44px;height:44px;border-color:transparent;background:transparent}
-  .tbar-srch{flex:none;min-width:0;padding:0;justify-content:center}
+  .tbar-logo,.tbar-mid{display:none}
+  /* Phone bar, as in the prototype's TopBar: the same 60 px bar with 36 px buttons, the search a 36 px
+     boxed icon and the theme switch kept. */
+  .tbar{padding:0 16px;gap:12px}
+  .tbar-menu{width:36px;height:36px;margin-left:0}
+  .tbar-mw{gap:12px}
+  .tbar-srch{flex:none;width:36px;min-width:0;padding:0;justify-content:center}
   .tbar-srch .tbar-sl,.tbar-srch .tbar-kbd{display:none}
-  .tbar-srch svg,.tbar-ib svg{width:19px;height:19px}
-  .tbar-badge{top:6px;right:5px;min-width:17px;height:17px}
+  .tbar-r{gap:0}
 }
 
 /* sticky top bar (proto.js pinNav), under the 3 px ribbon */

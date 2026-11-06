@@ -17,7 +17,6 @@
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { usePortal } from '../../PortalProvider';
-import { InfoPopover } from '../../shared';
 import { portalHref } from '../../routes';
 import {
   AREAS,
@@ -40,7 +39,6 @@ import {
   nextDeadline,
   overdueRows,
   plural,
-  portalFor,
   sortByDue,
   statusOf,
   todayIso,
@@ -661,7 +659,8 @@ function NextDeadlineCard({
   const { today, remind } = useComp();
   const { toast } = usePortal();
   const days = next ? daysBetween(today, next.dueDate) : 0;
-  const firstOver = over[0];
+  // As in the prototype: a late filing of this month shows under the buttons; the rest stay in the donut and Filings.
+  const firstOver = over.find((r) => r.dueDate.startsWith(nowKey));
   const fyTitle = `Compliances · ${fyLabelOf(fyStartOfMonth(nowKey))}`;
   const drillNext = () =>
     next && openDrill({ kind: 'status', k: 'due', title: `Compliances · ${monthLabel(nowKey)}`, rows: todayMonthRows.length ? todayMonthRows : railRows });
@@ -692,10 +691,6 @@ function NextDeadlineCard({
               ) : (
                 <div className="nd-title flex min-w-0 flex-wrap items-center gap-1 text-[18px] font-bold leading-tight tracking-tight text-ink">
                   {next.name} · {next.period} <PortalLink f={next} />
-                  <InfoPopover askAbout={`${next.name} · ${next.period}`} label="About this">
-                    {next.name} for {next.period} · due {fmtWDM(next.dueDate)} · filed on the {portalFor(next)[0]}.
-                    {next.dataReceivedOn ? ` Data received ${fmtDM(next.dataReceivedOn)}.` : ''}
-                  </InfoPopover>
                 </div>
               )}
               <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -730,15 +725,14 @@ function NextDeadlineCard({
       {firstOver ? (
         <button
           type="button"
-          data-tip={`Overdue · ${over.length}`}
-          aria-label={`Overdue · ${over.length} · show the list`}
+          aria-label={`${firstOver.name} · overdue · show the list`}
           onClick={() => openDrill({ kind: 'status', k: 'over', title: fyTitle, rows: railRows })}
           className="flex w-full items-center gap-2 border-t border-line-soft px-4 py-2.5 text-left text-[13px] hover:bg-surface-sunken"
         >
           <i className="h-2 w-2 flex-none rounded-[2px] bg-danger-mid" aria-hidden />
           <b className="truncate font-semibold text-ink">{firstOver.name}</b>
           <span className="flex-none font-semibold text-danger">
-            {plural(-daysBetween(today, firstOver.dueDate), 'day')} late{over.length > 1 ? ` · +${over.length - 1} more` : ''}
+            {plural(-daysBetween(today, firstOver.dueDate), 'day')} late
           </span>
           <ChevronRight size={14} strokeWidth={1.6} className="ml-auto flex-none text-ink-muted" aria-hidden />
         </button>

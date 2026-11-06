@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Draggable } from '@fullcalendar/interaction';
-import { GripVertical, Plus } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { WorkField } from '@/components/work/WorkField';
@@ -14,8 +12,6 @@ import { StaffCalendar, type StaffCalEvent, type StaffMove } from '@/components/
 import { useTimeBlockActions, useTimeBlocks, useWindowRequestActions } from '@/components/work/use-work';
 import { useApp } from '@/context/AppContext';
 import {
-  PLAN_DAY_END,
-  PLAN_DAY_START,
   dayLoadHours,
   dayMonth,
   istIso,
@@ -38,6 +34,7 @@ import {
 } from '@/lib/work/calendar-moves';
 import { canRequestWindowChange } from '@/lib/work/work-access';
 import { errorMessage, toastError, toastSuccess } from '@/lib/toast-errors';
+import { identityTone } from '@/views/compliances/identity';
 import { cn } from '@/lib/utils';
 
 /** An open work item the planner can place on the calendar. */
@@ -57,21 +54,23 @@ export interface PlannerItem {
 
 const SELECT_CLASS =
   'box-border h-10 w-full rounded-md border-1.5 border-line-strong bg-surface-raised px-3 text-[14px] text-ink focus-visible:border-brand focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-focus-ring/25';
-const TRAY_MAX = 8;
+
+/** The prototype's hours, 9 AM to 7 PM; a block planned outside them widens the grid so it never hides. */
+const GRID_START = 9;
+const GRID_END = 19;
 
 type Draft = { id?: string; itemKey: string; title: string; date: string; start: string; end: string };
 
 /**
  * Planner calendar (prototype `PlanCalendar`, M6 G2): FullCalendar Day, Week and Month views
- * of the viewer's time blocks, 8 AM to 8 PM IST, through `StaffCalendar`.
+ * of the viewer's time blocks, 9 AM to 7 PM IST, through `StaffCalendar`.
  *   - Time blocks move and resize freely (drag, or the arrow keys); each change saves through
  *     `/api/work/time-blocks/:id` and offers Undo.
  *   - The all-day row holds the items due that day. A filing's statutory due date never moves.
  *     A manager-dated item (dates agreed with the client) opens a date-change request when a
  *     project lead drags it (`/api/work/window-requests`). Other deadlines stay in place.
  *   - Click or drag over an empty slot to plan a block there (the Time block form, prefilled).
- *   - Drag a Work item from the "To plan" tray onto a day or a time slot to plan it; Enter on
- *     an item opens the form for it, for keyboard users.
+ *   - Drag a row of the to-do list (`PlannerTodos`) onto a day or a time slot to plan it.
  * With `leadKey` it is a project lead's calendar for their manager: read only.
  */
 export function PlannerCalendar({
@@ -96,7 +95,7 @@ export function PlannerCalendar({
   leadKey?: string;
 }) {
   const readOnly = Boolean(leadKey);
-  const { user } = useApp();
+  const { user, engagements } = useApp();
   const rights = useMemo(
     () => ({ canEdit: !readOnly, canRequest: !readOnly && canRequestWindowChange(user?.role) }),
     [readOnly, user?.role],
@@ -136,13 +135,17 @@ export function PlannerCalendar({
     const out: StaffCalEvent[] = blocks.map((b) => {
       const item = b.itemKey ? itemsByKey.get(b.itemKey) : undefined;
       const late = Boolean(item?.dueYmd && istYmdOf(b.startsAt) > item.dueYmd);
+      const engagement = item ? engagements.find((e) => e.companyName === item.companyName) : undefined;
       return {
         id: `block:${b.id}`,
         title: b.title,
         start: toWallIso(b.startsAt),
         end: toWallIso(b.endsAt),
         kind: 'block',
-        tone: late ? 'overdue' : b.itemKey ? 'item' : 'block',
+        tone: b.itemKey ? 'item' : 'block',
+        client: identityTone(engagement?.id ?? item?.companyName ?? b.title),
+        own: !b.itemKey,
+        late,
         sub: item?.companyName,
         hint: `${b.title} · ${timeRangeLabel(b.startsAt, b.endsAt)}${late ? ' · after the due date' : ''}`,
       };
@@ -162,7 +165,7 @@ export function PlannerCalendar({
       });
     }
     return out;
-  }, [blocks, items, itemsByKey]);
+  }, [blocks, items, itemsByKey, engagements]);
 
   const blockOf = (ev: StaffCalEvent) => blocks.find((b) => `block:${b.id}` === ev.id);
   const itemOf = (ev: StaffCalEvent) => (ev.id.startsWith('due:') ? itemsByKey.get(ev.id.slice(4)) : undefined);
@@ -223,10 +226,12 @@ export function PlannerCalendar({
     commit(b, times, m.revert);
   };
 
-  /** Plan a Work item dropped from the tray: one hour at the drop time, or 10 AM on a day. */
-  const planDropped = (key: string, date: Date, allDay: boolean) => {
-    const item = itemsByKey.get(key);
-    if (!item || readOnly) return;
+  /** Plan a to-do dropped from the list: one hour at the drop time, or 10 AM on a day. A typed to-do has no work item. */
+  const planDropped = (key: string, dropped: string, date: Date, allDay: boolean) => {
+    if (readOnly) return;
+    const typed = key.startsWith('todo:');
+    const item = typed ? { title: dropped } : itemsByKey.get(key);
+    if (!item) return;
     const ymd = wallYmd(date);
     const start = allDay ? '10:00' : wallHhmm(date);
     const startsAt = istIso(ymd, start);
@@ -236,7 +241,7 @@ export function PlannerCalendar({
       toastError("Couldn't plan the item", 'Drop it earlier in the day.');
       return;
     }
-    create.mutate([{ itemKey: key, title: item.title, startsAt, endsAt: safeEnd }], {
+    create.mutate([{ itemKey: typed ? null : key, title: item.title, startsAt, endsAt: safeEnd }], {
       onSuccess: (made) =>
         toastUndo(`${item.title} · ${weekdayShort(ymd)} ${dayMonth(ymd)} · ${timeRangeLabel(startsAt, safeEnd)}`, () => {
           for (const b of made) remove.mutate(b.id);
@@ -261,26 +266,9 @@ export function PlannerCalendar({
     }
   };
 
-  // The tray of Work items that drag onto the calendar (FullCalendar's external Draggable).
-  const trayRef = useRef<HTMLDivElement>(null);
-  const tray = useMemo(
-    () =>
-      readOnly
-        ? []
-        : [...items]
-            .filter((i) => !blocks.some((b) => b.itemKey === i.key))
-            .sort((a, b) => (a.dueYmd ?? '9999').localeCompare(b.dueYmd ?? '9999')),
-    [items, blocks, readOnly],
-  );
-  const hasTray = tray.length > 0;
-  useEffect(() => {
-    if (!trayRef.current || readOnly || !hasTray) return;
-    const drag = new Draggable(trayRef.current, {
-      itemSelector: '[data-plan-key]',
-      eventData: (el) => ({ title: el.dataset.planTitle ?? '', duration: '01:00', create: false }),
-    });
-    return () => drag.destroy();
-  }, [readOnly, hasTray]);
+  const hours = (iso: string) => Number(istTimeOf(iso).slice(0, 2));
+  const dayStart = Math.min(GRID_START, ...blocks.map((b) => hours(b.startsAt)));
+  const dayEnd = Math.max(GRID_END, ...blocks.map((b) => hours(b.endsAt) + (istTimeOf(b.endsAt).endsWith('00') ? 0 : 1)));
 
   const shownBlocks = blocks.filter((b) => b.startsAt >= range.from && b.startsAt < range.to);
 
@@ -293,8 +281,8 @@ export function PlannerCalendar({
         now={now}
         initialDate={startYmd}
         initialMode="week"
-        dayStartHour={PLAN_DAY_START}
-        dayEndHour={PLAN_DAY_END}
+        dayStartHour={dayStart}
+        dayEndHour={dayEnd}
         onMove={readOnly ? undefined : onMove}
         onOpen={(ev) => {
           const b = blockOf(ev);
@@ -314,7 +302,7 @@ export function PlannerCalendar({
                 openNew(ymd, s, e < s ? '23:59' : e);
               }
         }
-        onExternalDrop={readOnly ? undefined : ({ key, date, allDay }) => planDropped(key, date, allDay)}
+        onExternalDrop={readOnly ? undefined : ({ key, title, date, allDay }) => planDropped(key, title, date, allDay)}
         onRange={({ from, to, mode }) => {
           setRange({ from: istIso(from, '00:00'), to: istIso(to, '00:00') });
           if (mode === 'week' && onDate && !days.includes(from)) onDate(from);
@@ -323,42 +311,9 @@ export function PlannerCalendar({
           const h = dayLoadHours(blocks, [ymd])[0] ?? 0;
           return h > 0 ? <span className={cn(h > HEAVY_DAY_HOURS && 'text-warning')}>{Math.round(h * 10) / 10} h</span> : ' ';
         }}
-        actions={
-          <>
-            {!readOnly ? (
-              <Button size="sm" variant="secondary" onClick={() => openNew(startYmd, '10:00', '11:00')}>
-                <Plus className="h-3.5 w-3.5" strokeWidth={1.6} /> Block
-              </Button>
-            ) : null}
-            {action}
-          </>
-        }
+        actions={action}
         emptyNote={!query.isLoading && shownBlocks.length === 0 && events.length === 0 ? <EmptyState title="No blocks this week" /> : undefined}
       />
-
-      {hasTray ? (
-        <div ref={trayRef} className="surface flex min-w-0 flex-wrap items-center gap-1.5 px-4 py-2" aria-label="To plan">
-          <span className="mr-1 text-[12.5px] font-medium text-ink-muted">To plan</span>
-          {tray.slice(0, TRAY_MAX).map((i) => (
-            <button
-              key={i.key}
-              type="button"
-              data-plan-key={i.key}
-              data-plan-title={i.title}
-              title={`${i.title} · ${i.companyName}. Drag onto the calendar, or press Enter to plan it.`}
-              onClick={() => openNew(startYmd, '10:00', '11:00', i.key)}
-              className={cn(
-                'vc-plan-chip inline-flex h-chip max-w-[220px] items-center gap-1 rounded-md border-1.5 border-line bg-surface-raised px-2 text-[12px] text-ink-2 hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
-                i.overdue && 'border-danger-mid',
-              )}
-            >
-              <GripVertical className="h-3 w-3 flex-none text-ink-faint" strokeWidth={1.6} aria-hidden />
-              <span className="truncate">{i.title}</span>
-            </button>
-          ))}
-          {tray.length > TRAY_MAX ? <span className="text-[12px] text-ink-muted tabular-nums">{tray.length - TRAY_MAX} more</span> : null}
-        </div>
-      ) : null}
 
       {!readOnly ? (
         <BlockDialog

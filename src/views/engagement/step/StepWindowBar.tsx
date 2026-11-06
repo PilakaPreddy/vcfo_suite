@@ -97,7 +97,6 @@ export function StepWindowBar({
       ) : (
         <span className="text-[14px] text-ink-muted">Not set</span>
       )}
-      {scopeLabel && value ? <span className="text-[12.5px] text-ink-muted">· {scopeLabel}</span> : null}
       {canEdit ? (
         <Button
           type="button"

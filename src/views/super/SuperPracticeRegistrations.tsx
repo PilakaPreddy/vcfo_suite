@@ -21,6 +21,7 @@ import {
   SuperPageSkeleton,
 } from '@/components/super/parts/super-parts';
 import { shortCompany } from '@/components/super/parts/super-text';
+import { shortRegistration } from '@/components/super/overview/super-overview-format';
 import {
   inRegistrations,
   registrationCounts,
@@ -37,17 +38,18 @@ import { cn } from '@/lib/utils';
  *
  * The registration-phase steps across every client, read through the checklist gate: a
  * matrix of clients by registration, and the open registrations as work items. A step marked
- * not applicable reads "Not needed". Read-only.
+ * not applicable reads "Not needed"; a client before its certificate shows framed cells
+ * ("After COI"). Read-only.
  */
 const SUPER_REGISTRATIONS_HREF = '/app/super/practice/registrations';
 
 const CELL_LABEL: Record<SuperRegCell, string> = {
   done: 'Done',
   progress: 'In progress',
-  waiting: 'Waiting',
+  waiting: 'Pending',
   overdue: 'Overdue',
   'not-needed': 'Not needed',
-  locked: 'Not started',
+  locked: 'After COI',
 };
 
 const CELL_TONE: Record<SuperRegCell, ChipTone> = {
@@ -66,7 +68,7 @@ const CELL_CLASS: Record<SuperRegCell, string> = {
   waiting: 'bg-waiting-soft text-waiting',
   overdue: 'bg-danger-soft text-danger',
   'not-needed': 'text-ink-faint',
-  locked: 'border-1.5 border-line',
+  locked: 'border-1.5 border-dashed border-line',
 };
 
 function CellMark({ cell }: { cell: SuperRegCell }) {
@@ -141,15 +143,20 @@ export default function SuperPracticeRegistrations() {
     );
   }
 
-  const managers = [...new Set(reached.map((c) => c.summary.managerName ?? 'Unassigned'))].sort((a, b) => a.localeCompare(b));
+  const managers = [...new Set(insights.clients.map((c) => c.summary.managerName ?? 'Unassigned'))].sort((a, b) => a.localeCompare(b));
   const byManager = (c: SuperInsightClient) => !manager || (c.summary.managerName ?? 'Unassigned') === manager;
   const total = (key: 'done' | 'progress' | 'waiting' | 'overdue') => counts.reduce((sum, c) => sum + c[key], 0);
   const open = total('progress') + total('waiting') + total('overdue');
 
-  const matrixRows = reached
+  // Every client is listed: those with a certificate first, then those still incorporating.
+  const matrixRows = insights.clients
     .filter(byManager)
     .filter((c) => !openOnly || neededTypes.some((t) => ['progress', 'waiting', 'overdue'].includes(c.registrations[t.id] ?? '')))
-    .sort((a, b) => a.summary.companyName.localeCompare(b.summary.companyName));
+    .sort(
+      (a, b) =>
+        Number(b.summary.incorporated) - Number(a.summary.incorporated) ||
+        a.summary.companyName.localeCompare(b.summary.companyName),
+    );
 
   const itemRows = items.filter((w) => byManager(w.client) && (!status || CELL_LABEL[w.cell] === status));
 
@@ -182,22 +189,24 @@ export default function SuperPracticeRegistrations() {
       const count = counts.find((c) => c.id === type.id);
       return {
         key: type.id,
-        width: '96px',
+        width: '104px',
         align: 'center',
         header: (
-          <span className="block whitespace-normal normal-case leading-tight tracking-normal" title={`${type.title}: ${count?.done ?? 0} done of ${count?.needed ?? 0} needed`}>
-            <span className="line-clamp-2">{type.title}</span>
-            <span className="block text-[11px] font-medium opacity-70">
+          <span className="block leading-tight" title={`${type.title}: ${count?.done ?? 0} done of ${count?.needed ?? 0} needed`}>
+            <span className="block truncate">{shortRegistration(type.title)}</span>
+            <span className="block text-[11.5px] font-medium opacity-70">
               {count?.done ?? 0}/{count?.needed ?? 0}
             </span>
           </span>
         ),
         render: (c) => {
           const cell = c.registrations[type.id] ?? 'locked';
+          // A framed cell means after the certificate; with the certificate in hand it has just not begun.
+          const word = cell === 'locked' && c.summary.incorporated ? 'Not started' : CELL_LABEL[cell];
           return (
             <span
-              title={`${type.title} · ${CELL_LABEL[cell]}`}
-              aria-label={`${type.title}: ${CELL_LABEL[cell]}`}
+              title={`${type.title} · ${word}`}
+              aria-label={`${type.title}: ${word}`}
               className={cn('grid h-6 w-full min-w-[44px] place-items-center rounded-sm text-[12px] font-medium', CELL_CLASS[cell])}
             >
               <CellMark cell={cell} />
@@ -261,42 +270,48 @@ export default function SuperPracticeRegistrations() {
         {view === 'matrix' ? (
           <DashSection
             title="Registrations · clients by type"
-            meta={`${total('progress')} in progress · ${total('waiting')} waiting`}
-            bodyClassName="px-2 pb-2 pt-3"
+            meta={`${total('progress')} in progress · ${total('waiting')} pending on documents`}
+            right={
+              <>
+                <SuperFilterChips
+                  onClear={() => {
+                    setManager('');
+                    setOpenOnly('');
+                  }}
+                  filters={[
+                    { key: 'manager', label: 'Manager', value: manager, options: managers, onChange: setManager },
+                    { key: 'open', label: 'Clients', value: openOnly, options: ['With open work'], onChange: setOpenOnly },
+                  ]}
+                />
+                {tabs}
+              </>
+            }
+            flush
           >
-            <div className="mb-2 flex flex-wrap items-center gap-2 px-2">
-              <SuperFilterChips
-                onClear={() => {
-                  setManager('');
-                  setOpenOnly('');
-                }}
-                filters={[
-                  { key: 'manager', label: 'Manager', value: manager, options: managers, onChange: setManager },
-                  { key: 'open', label: 'Clients', value: openOnly, options: ['With open work'], onChange: setOpenOnly },
-                ]}
-              />
-              <span className="ml-auto">{tabs}</span>
-            </div>
             <EFilingGrid
               caption="Registrations by client"
               columns={matrixColumns}
               rows={matrixRows}
               rowKey={(c) => c.summary.id}
               onRowClick={(c) => router.push(c.summary.href)}
-              empty="No client has reached registrations"
-              minWidth={220 + neededTypes.length * 96}
+              empty="No client yet"
+              minWidth={220 + neededTypes.length * 104}
               pageSize={17}
+              footer={
+                <ul className="hidden flex-wrap items-center gap-x-3 gap-y-1 sm:flex">
+                  {(['done', 'progress', 'waiting', 'overdue', 'locked', 'not-needed'] as SuperRegCell[])
+                    .filter((cell) => cell !== 'overdue' || total('overdue') > 0)
+                    .map((cell) => (
+                      <li key={cell} className="inline-flex items-center gap-1.5">
+                        <span className={cn('grid h-3 w-3 place-items-center rounded-[3px] text-[11px]', CELL_CLASS[cell])} aria-hidden>
+                          {cell === 'not-needed' ? '–' : null}
+                        </span>
+                        {CELL_LABEL[cell]}
+                      </li>
+                    ))}
+                </ul>
+              }
             />
-            <ul className="mt-2 hidden flex-wrap items-center gap-x-3 gap-y-1 px-2 text-[12.5px] text-ink-muted sm:flex">
-              {(['done', 'progress', 'waiting', 'overdue', 'not-needed', 'locked'] as SuperRegCell[]).map((cell) => (
-                <li key={cell} className="inline-flex items-center gap-1.5">
-                  <span className={cn('grid h-3 w-3 place-items-center rounded-[3px] text-[11px]', CELL_CLASS[cell])} aria-hidden>
-                    {cell === 'not-needed' ? '–' : null}
-                  </span>
-                  {CELL_LABEL[cell]}
-                </li>
-              ))}
-            </ul>
           </DashSection>
         ) : (
           // Work items: the grid, and a 360px rail with the status bar and the Stuck card (prototype).
@@ -310,20 +325,26 @@ export default function SuperPracticeRegistrations() {
                   { label: 'Done to date', value: total('done'), good: total('done') > 0 },
                 ]}
               />
-              <DashSection title="Open registrations" meta={`${itemRows.length} of ${items.length}`} bodyClassName="px-2 pb-2 pt-3">
-                <div className="mb-2 flex flex-wrap items-center gap-2 px-2">
-                  <SuperFilterChips
-                    onClear={() => {
-                      setManager('');
-                      setStatus('');
-                    }}
-                    filters={[
-                      { key: 'manager', label: 'Manager', value: manager, options: managers, onChange: setManager },
-                      { key: 'status', label: 'Status', value: status, options: ['In progress', 'Waiting', 'Overdue'], onChange: setStatus },
-                    ]}
-                  />
-                  <span className="ml-auto">{tabs}</span>
-                </div>
+              <DashSection
+                title="Open registrations"
+                meta={`${itemRows.length} of ${items.length}`}
+                right={
+                  <>
+                    <SuperFilterChips
+                      onClear={() => {
+                        setManager('');
+                        setStatus('');
+                      }}
+                      filters={[
+                        { key: 'manager', label: 'Manager', value: manager, options: managers, onChange: setManager },
+                        { key: 'status', label: 'Status', value: status, options: ['In progress', 'Pending', 'Overdue'], onChange: setStatus },
+                      ]}
+                    />
+                    {tabs}
+                  </>
+                }
+                flush
+              >
                 <EFilingGrid
                   caption="Open registrations"
                   columns={itemColumns}
@@ -343,7 +364,7 @@ export default function SuperPracticeRegistrations() {
                   segments={[
                     { label: 'Done', value: total('done'), tone: 'ok' },
                     { label: 'In progress', value: total('progress'), tone: 'prog' },
-                    { label: 'Waiting', value: total('waiting'), tone: 'teal' },
+                    { label: 'Pending', value: total('waiting'), tone: 'teal' },
                     { label: 'Overdue', value: total('overdue'), tone: 'bad' },
                   ]}
                 />
@@ -379,9 +400,11 @@ function StuckCard({
     .filter(({ w, days }) => w.cell === 'overdue' || (days !== undefined && days >= SUPER_STUCK_DAYS))
     .sort((a, b) => (b.days ?? 0) - (a.days ?? 0));
   return (
-    <DashSection title="Stuck" meta={String(stuck.length)} bodyClassName={stuck.length ? 'p-0' : 'p-4'}>
+    <DashSection title="Stuck" meta={String(stuck.length)} flush>
       {stuck.length === 0 ? (
-        <EmptyState title="None" />
+        <div className="p-4">
+          <EmptyState title="None" />
+        </div>
       ) : (
         <ul>
           {stuck.slice(0, 8).map(({ w, days }) => (
@@ -389,7 +412,7 @@ function StuckCard({
               <button
                 type="button"
                 onClick={() => onOpen(w)}
-                className="flex w-full min-w-0 items-center gap-3 px-4 py-3 text-left hover:bg-surface-sunken"
+                className="flex w-full min-w-0 items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-hover md:px-5"
               >
                 <ClientTile id={w.client.summary.id} name={w.client.summary.companyName} />
                 <span className="min-w-0 flex-1">

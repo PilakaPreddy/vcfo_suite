@@ -215,7 +215,6 @@ function FilingsBody({ st, tableRef }: { st: ReturnType<typeof useFilingsState>;
     {
       key: 'name',
       header: 'Filing',
-      width: '30%',
       render: (r) => (
         <span className="flex min-w-0 items-center gap-1">
           <button
@@ -227,31 +226,36 @@ function FilingsBody({ st, tableRef }: { st: ReturnType<typeof useFilingsState>;
               open(r);
             }}
           >
-            <span className="block truncate font-medium leading-tight text-ink">{isTaskRow(r) ? r.name : <Term>{r.name}</Term>}</span>
+            <span className="block truncate font-medium leading-tight text-ink" title={r.name}>
+              {isTaskRow(r) ? r.name : <Term code={/^Form\s/i.test(r.name) ? r.name.replace(/^Form\s+/i, '') : undefined}>{r.name}</Term>}
+            </span>
             <span className="block truncate text-[12.5px] leading-tight text-ink-muted">{isTaskRow(r) ? r.task.deliverable?.fileName ?? r.period : r.period}</span>
           </button>
           <RowPortalLink r={r} />
         </span>
       ),
     },
-    { key: 'freq', header: 'Frequency', width: '112px', render: (r) => <span className="text-ink-muted">{r.freqLabel}</span> },
-    { key: 'filed', header: 'Filed on', width: '120px', render: (r) => <FiledCell r={r} today={today} /> },
+    { key: 'freq', header: 'Frequency', width: '97px', render: (r) => <span className="text-ink-muted">{r.freqLabel}</span> },
+    { key: 'filed', header: 'Filed on', width: '104px', render: (r) => <FiledCell r={r} today={today} /> },
     { key: 'status', header: 'Status', width: '124px', render: (r) => <StatusChip s={statusOf(r, today)} /> },
+    { key: 'assist', header: 'VCFO Assist', width: '137px', render: (r) => (assist.isLoading || isTaskRow(r) ? <span className="text-ink-faint">-</span> : <AssistChip run={assistBy.get(r.id)} setUp={assistSetUp} />) },
     {
       key: 'ref',
       header: 'Reference',
-      width: '190px',
+      width: '196px',
       render: (r) => (r.acknowledgementNo ? <span className="whitespace-nowrap font-mono text-[12.5px]">{r.acknowledgementNo}</span> : <span className="text-ink-faint">-</span>),
     },
-    { key: 'assist', header: 'VCFO Assist', width: '140px', render: (r) => (assist.isLoading || isTaskRow(r) ? <span className="text-ink-faint">-</span> : <AssistChip run={assistBy.get(r.id)} setUp={assistSetUp} />) },
-    { key: 'proof', header: 'Proof', width: '136px', align: 'right', render: (r) => <ProofCell r={r} onProof={openProof} onDownload={downloadPrimary} /> },
+    { key: 'proof', header: 'Proof', width: '110px', align: 'right', render: (r) => <ProofCell r={r} onProof={openProof} onDownload={downloadPrimary} /> },
   ];
 
   const headBar = (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line-soft px-4 py-2.5 md:px-5">
+    <>
+    {/* The title on its own line, the filters on the line below, as in the prototype's grid. */}
+    <header className="flex min-h-head items-center gap-2.5 px-4 py-2 md:px-5">
       <CardHeadTile title="Filings" />
       <h2 className="text-[15px] font-medium text-ink">Filings</h2>
-      {after && all.length ? <span className="hidden text-[13px] tabular-nums text-ink-muted sm:inline">{table.length}</span> : null}
+    </header>
+    <div className="flex flex-wrap items-center gap-2 border-b border-line-soft px-4 pb-2.5 md:px-5">
       {after ? (
         <CategoryTabs
           allFirst
@@ -305,22 +309,21 @@ function FilingsBody({ st, tableRef }: { st: ReturnType<typeof useFilingsState>;
           Clear filters
         </button>
       ) : null}
-      <span className="ml-auto flex items-center gap-2">
-        <span className="inline-flex h-[30px] items-center overflow-hidden rounded-md border-1.5 border-line-strong bg-surface-raised">
-          <button type="button" className="grid h-7 w-7 place-items-center text-ink-muted hover:bg-surface-sunken hover:text-ink" aria-label="Previous financial year" onClick={() => set({ fy: String(fy - 1), period: null, filing: null })}>
-            <ChevronLeft size={15} strokeWidth={1.6} aria-hidden />
-          </button>
-          <b className="min-w-[84px] text-center text-[13px] font-medium tabular-nums text-ink">{fyLabelOf(fy)}</b>
-          <button
-            type="button"
-            className="grid h-7 w-7 place-items-center text-ink-muted hover:bg-surface-sunken hover:text-ink disabled:opacity-40"
-            aria-label="Next financial year"
-            disabled={fy >= st.curFy + 2}
-            onClick={() => set({ fy: String(fy + 1), period: null, filing: null })}
-          >
-            <ChevronRight size={15} strokeWidth={1.6} aria-hidden />
-          </button>
-        </span>
+      <span className="flex items-center gap-2">
+        <select
+          aria-label="Financial year"
+          value={fy}
+          onChange={(e) => set({ fy: e.target.value, period: null, filing: null })}
+          className="h-[30px] rounded-md border-1.5 border-line-strong bg-surface-raised px-2 text-[13px] font-medium text-ink hover:bg-surface-sunken"
+        >
+          {Array.from(new Set([fy, st.curFy + 2, st.curFy + 1, st.curFy, st.curFy - 1, st.curFy - 2, st.curFy - 3]))
+            .sort((a, b) => b - a)
+            .map((y) => (
+              <option key={y} value={y}>
+                {fyLabelOf(y)}
+              </option>
+            ))}
+        </select>
         <Button
           type="button"
           size="sm"
@@ -341,6 +344,7 @@ function FilingsBody({ st, tableRef }: { st: ReturnType<typeof useFilingsState>;
         </Button>
       </span>
     </div>
+    </>
   );
 
   const body = !after ? (
@@ -354,7 +358,7 @@ function FilingsBody({ st, tableRef }: { st: ReturnType<typeof useFilingsState>;
   ) : !all.length ? (
     <Empty>{cat === 'non-statutory' ? `No completed tasks in ${fyLabelOf(fy)}` : `No filings for ${fyLabelOf(fy)}`}</Empty>
   ) : (
-    <div className="px-2 pb-3 pt-1 md:px-3">
+    <div>
       <EFilingGrid
         caption={`Filings · ${winLabel}`}
         columns={columns}
@@ -362,7 +366,7 @@ function FilingsBody({ st, tableRef }: { st: ReturnType<typeof useFilingsState>;
         rowKey={(r) => r.id}
         onRowClick={open}
         pageSize={10}
-        minWidth={900}
+        minWidth={1100}
         stickyFirstColumn
         rowClassName={(r) =>
           cn(

@@ -4,23 +4,38 @@ import type { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { DashSection } from '@/components/dash/DashSection';
 import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
-import { Chip } from '@/components/ui/spectrum-chip';
-import { PhaseBar } from '@/components/ui/step-track';
-import { CompanyTile } from '@/components/staff/today/today-parts';
+import { ClientDot } from '@/components/staff/today/today-parts';
+import { shortCompany } from '@/components/super/parts/super-text';
 import type { PhaseProgressRow } from '@/components/staff/today/today-rows';
 import { cn } from '@/lib/utils';
 
-function rowStatus(r: PhaseProgressRow): { word: string; tone: 'bad' | 'ok' | 'prog' | 'idle' } {
-  if (r.stuck) return { word: 'Stuck', tone: 'bad' };
-  if (r.stepsTotal > 0 && r.stepsDone >= r.stepsTotal) return { word: 'Done', tone: 'ok' };
-  if (r.stepsDone === 0) return { word: 'Not started', tone: 'idle' };
-  return { word: 'In progress', tone: 'prog' };
+/* The prototype's three phase columns; a registration phase, when the row has one, is left out as there. */
+const PHASE_LABELS = ['Part A', 'Part B', 'Post-inc.'] as const;
+type CellKind = 'done' | 'current' | 'stuck' | 'next';
+const BAR: Record<CellKind, string> = {
+  done: 'bg-positive-mid',
+  current: 'bg-brand',
+  stuck: 'bg-danger-mid',
+  next: 'bg-ink-faint',
+};
+const LEGEND: { kind: CellKind; label: string }[] = [
+  { kind: 'done', label: 'Done' },
+  { kind: 'current', label: 'Current' },
+  { kind: 'stuck', label: 'Stuck' },
+  { kind: 'next', label: 'Next' },
+];
+
+function cellKind(r: PhaseProgressRow, i: number): CellKind {
+  if (r.done[i]! >= r.totals[i]!) return 'done';
+  const current = r.totals.findIndex((total, j) => r.done[j]! < total);
+  if (i !== current) return 'next';
+  return r.stuck ? 'stuck' : 'current';
 }
 
 /**
- * Phase progress (prototype PhaseProgress, ST5 compact form, R-22): one row per project with the
- * four phase bars sized by step count, the current step, steps done and days to the
- * incorporation date the manager set. Extra columns (manager, lead) come from the caller.
+ * Phase progress (prototype PhaseProgress): one row per project with a 6px bar and a count per
+ * phase, red when the project is stuck in that phase, and the days to the incorporation date the
+ * manager set. Extra columns (manager) come from the caller.
  */
 export function PhaseProgressGrid({
   rows,
@@ -50,62 +65,45 @@ export function PhaseProgressGrid({
       key: 'client',
       header: 'Client',
       render: (r) => (
-        <span className="flex min-w-0 items-center gap-2.5">
-          <CompanyTile name={r.companyName} />
-          <span className="flex min-w-0 flex-col">
-            <span className="truncate font-medium text-ink">{r.companyName}</span>
-            <span className="truncate text-[12px] text-ink-muted" title={r.currentLabel}>
-              {r.currentLabel}
+        <span className="inline-flex min-w-0 max-w-full items-center gap-2 font-medium text-ink" title={r.currentLabel}>
+          <ClientDot name={r.companyName} />
+          <span className="min-w-0 truncate">{shortCompany(r.companyName)}</span>
+        </span>
+      ),
+    },
+    ...PHASE_LABELS.map((label, i): EFilingColumn<PhaseProgressRow> => ({
+      key: `p${i}`,
+      header: label,
+      width: '140px',
+      render: (r) => {
+        const kind = cellKind(r, i);
+        const total = r.totals[i] ?? 0;
+        const done = r.done[i] ?? 0;
+        return (
+          <span className="grid gap-1 text-left" title={`${label} · ${done} of ${total}${kind === 'stuck' ? ' · stuck' : ''}`}>
+            <span className="block h-1.5 overflow-hidden rounded-bar bg-surface-sunken">
+              <i className={cn('block h-full rounded-bar', BAR[kind])} style={{ width: `${total ? Math.min(100, (done / total) * 100) : 0}%` }} />
+            </span>
+            <span className={cn('text-[12px]', kind === 'done' ? 'text-positive' : kind === 'stuck' ? 'font-medium text-danger' : 'text-ink-2')}>
+              {kind === 'done' ? '✓' : `${done}/${total}`}
             </span>
           </span>
-        </span>
-      ),
-    },
-    {
-      key: 'phases',
-      header: 'Phases',
-      width: '200px',
-      render: (r) => <PhaseBar done={r.done} totals={r.totals} names={r.names} />,
-    },
-    {
-      key: 'steps',
-      header: 'Steps',
-      width: '72px',
-      align: 'right',
-      render: (r) => (
-        <span className="tabular-nums text-ink-muted">
-          {r.stepsDone}/{r.stepsTotal}
-        </span>
-      ),
-    },
+        );
+      },
+    })),
     {
       key: 'coi',
       header: 'Days to COI',
-      width: '104px',
+      width: '100px',
       align: 'right',
       render: (r) =>
-        r.daysToCoi === null ? (
-          <span className="text-ink-faint">—</span>
-        ) : (
-          <span className={cn('tabular-nums font-medium', r.daysToCoi < 10 && 'text-danger')}>
+        r.daysToCoi === null ? null : (
+          <span className={cn('font-medium tabular-nums', r.daysToCoi < 10 && 'text-danger')}>
             {r.daysToCoi < 0 ? `${-r.daysToCoi} days late` : `${r.daysToCoi} days`}
           </span>
         ),
     },
     ...extraColumns,
-    {
-      key: 'status',
-      header: 'Status',
-      width: '124px',
-      render: (r) => {
-        const s = rowStatus(r);
-        return (
-          <Chip tone={s.tone} fixed>
-            {s.word}
-          </Chip>
-        );
-      },
-    },
   ];
 
   return (
@@ -114,7 +112,7 @@ export function PhaseProgressGrid({
       meta={meta ?? String(rows.length)}
       href={href}
       hrefLabel={hrefLabel}
-      bodyClassName="px-2 pb-3 pt-1"
+      flush
     >
       {before ? <div className="px-2 pb-3 pt-2">{before}</div> : null}
       <EFilingGrid
@@ -126,21 +124,17 @@ export function PhaseProgressGrid({
         pageSize={pageSize}
         minWidth={720}
         empty={empty}
+        footer={
+          <span className="hidden flex-wrap items-center gap-3 md:flex">
+            {LEGEND.map((k) => (
+              <span key={k.kind} className="flex items-center gap-1.5">
+                <i className={cn('h-2 w-2 rounded-[2px]', BAR[k.kind])} aria-hidden />
+                {k.label}
+              </span>
+            ))}
+          </span>
+        }
       />
-      <span className="mt-2 hidden flex-wrap items-center gap-x-4 gap-y-1 px-2 text-[12.5px] text-ink-muted md:flex">
-        <span className="flex items-center gap-1.5">
-          <i className="h-2 w-2 rounded-[2px] bg-positive-mid" aria-hidden />
-          Done
-        </span>
-        <span className="flex items-center gap-1.5">
-          <i className="h-2 w-2 rounded-[2px] bg-brand" aria-hidden />
-          Current phase
-        </span>
-        <span className="flex items-center gap-1.5">
-          <i className="h-2 w-2 rounded-[2px] bg-surface-sunken shadow-[inset_0_0_0_1px_oklch(var(--line-strong))]" aria-hidden />
-          Not started
-        </span>
-      </span>
     </DashSection>
   );
 }

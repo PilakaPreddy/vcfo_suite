@@ -31,13 +31,11 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { DashSection } from '@/components/dash/DashSection';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
-import { formatKnowledgeBankFileSize } from '@/lib/knowledge-bank/knowledge-bank-storage';
 import type {
   KnowledgeBankDeleteTarget,
   KnowledgeBankFile,
   KnowledgeBankFolder,
 } from '@/views/knowledge-bank/knowledge-bank-ui-state';
-import { maxUploadSizeLabel } from '@/lib/upload-limits';
 import { cn } from '@/lib/utils';
 import { ChevronRight, Download, Loader2, Search, Trash2, Upload } from 'lucide-react';
 
@@ -57,12 +55,6 @@ function plainDate(iso: string): string {
     month: 'short',
     ...(sameYear ? {} : { year: 'numeric' }),
   });
-}
-
-function uploaderLabel(file: KnowledgeBankFile): string {
-  if (file.uploaderName?.trim()) return file.uploaderName.trim();
-  if (file.uploaderEmail?.trim()) return file.uploaderEmail.trim();
-  return 'Unknown';
 }
 
 /* Spine colours come from the status and regulator tokens (R-25: no off-system colours). */
@@ -139,7 +131,7 @@ function FolderShelf({
             <button
               type="button"
               onClick={() => onDelete(folder)}
-              className="grid h-6 w-6 place-items-center rounded-mark text-ink-muted hover:bg-danger-soft hover:text-danger"
+              className="grid h-6 w-6 place-items-center rounded-mark text-ink-muted opacity-0 hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
               aria-label={`Delete ${folder.name}`}
               title="Delete folder"
             >
@@ -179,7 +171,7 @@ function DocumentRow({
     .join(' · ');
 
   return (
-    <li className="flex min-h-[56px] items-center gap-3 border-t border-line-soft px-4 py-2 text-[14px] first:border-t-0 hover:bg-surface-sunken">
+    <li className="group flex min-h-[56px] items-center gap-3 border-t border-line-soft px-4 py-2 text-[14px] first:border-t-0 hover:bg-surface-sunken md:px-5">
       <FileBadge name={file.fileName} />
       <span className="min-w-0 flex-1">
         <Link href={readerHref} className="block truncate font-medium text-ink hover:underline" title={file.title}>
@@ -189,16 +181,11 @@ function DocumentRow({
           {second}
         </span>
       </span>
-      <span className="hidden w-[180px] flex-none truncate text-right text-[12.5px] text-ink-muted md:block">
-        {uploaderLabel(file)}
-      </span>
-      <span className="hidden w-[64px] flex-none text-right text-[12.5px] tabular-nums text-ink-muted sm:block">
-        {formatKnowledgeBankFileSize(file.sizeBytes)}
-      </span>
       <time dateTime={file.createdAt} className="w-[72px] flex-none text-right text-[12.5px] tabular-nums text-ink-muted">
         {plainDate(file.createdAt)}
       </time>
-      <span className="flex flex-none items-center gap-1.5">
+      {/* The date alone stays on the row; the file actions show on hover and focus. */}
+      <span className="flex flex-none items-center gap-1.5 opacity-0 focus-within:opacity-100 group-hover:opacity-100 max-md:opacity-100">
         <button
           type="button"
           className={ICON_BTN}
@@ -458,7 +445,7 @@ export function KnowledgeBankPageView(props: KnowledgeBankPageViewProps) {
               className="grid gap-3"
             >
               <div className="grid gap-1.5">
-                <Label htmlFor="kb-title">Title</Label>
+                <Label htmlFor="kb-title" className="text-[13px] font-medium text-ink-2">Title</Label>
                 <Input
                   id="kb-title"
                   ref={titleRef}
@@ -502,7 +489,6 @@ export function KnowledgeBankPageView(props: KnowledgeBankPageViewProps) {
                         <Upload className="h-[18px] w-[18px]" strokeWidth={1.6} />
                       </span>
                       <span className="text-[15px] font-medium text-ink">Drop a file here</span>
-                      <span className="text-[12.5px] text-ink-muted">PDF, Office, text or image, up to {maxUploadSizeLabel()}</span>
                     </>
                   )}
                   <Button
@@ -528,7 +514,7 @@ export function KnowledgeBankPageView(props: KnowledgeBankPageViewProps) {
                 </div>
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="kb-description">When to use this document</Label>
+                <Label htmlFor="kb-description" className="text-[13px] font-medium text-ink-2">When to use this document…</Label>
                 <Textarea
                   id="kb-description"
                   value={description}

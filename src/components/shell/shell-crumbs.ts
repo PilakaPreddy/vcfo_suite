@@ -39,18 +39,18 @@ export type ShellCrumb = {
 
 const PAGE_LABEL: Record<string, string> = {
   today: 'Today',
-  tasks: 'My work',
+  tasks: 'Work',
   clients: 'Clients',
   vault: 'Vault',
-  'knowledge-bank': 'Knowledge Bank',
+  'knowledge-bank': 'Knowledge bank',
   announcements: 'Announcements',
   notifications: 'Notifications',
-  mail: 'Send email',
+  mail: 'Email',
   compliances: 'Compliances',
   calendar: 'Calendar',
   filings: 'Filings',
   analytics: 'Analytics',
-  'audit-log': 'Audit Log',
+  'audit-log': 'Audit',
   audit: 'Activity audit',
   dashboard: 'Home',
   overview: 'Home',
@@ -64,7 +64,7 @@ const PAGE_LABEL: Record<string, string> = {
   documents: 'Documents',
   settings: 'Profile',
   engagements: 'Clients',
-  'board-resolution': 'Board Resolution',
+  'board-resolution': 'Board resolution',
   library: 'Library',
   'ask-vcfo': 'Ask VCFO',
   ask: 'Ask VCFO',
@@ -203,65 +203,19 @@ function markLeaf(segments: ShellCrumbSegment[]): ShellCrumbSegment[] {
   );
 }
 
-function homeSegment(pathname: string): ShellCrumbSegment {
-  return { label: 'Home', href: shellRoleHomePath(pathname) };
+/** What the role's first sidebar row is called: staff work from Today, the client from Home. */
+function homeLabel(parts: string[]): string {
+  if (parts[1] === 'client') return 'Home';
+  if (parts[1] === 'super' || parts[1] === 'dev') return 'Overview';
+  return 'Today';
 }
 
-function trail(
-  pathname: string,
-  icon: ShellCrumbIcon,
-  rest: ShellCrumbSegment[],
-): ShellCrumb {
-  return {
-    icon,
-    segments: markLeaf([homeSegment(pathname), ...rest]),
-  };
-}
+/** A raw id in a path (a uuid or a registration key), which never reads as a page name. */
+const RAW_ID = /^[0-9a-f]{8}-|~/i;
 
-type PhaseTrail = {
-  phaseTitle: string;
-  phaseFirstSlug: string | null;
-  heading: { label: string; firstSlug: string } | null;
-  stepTitle: string;
-};
-
-function phaseTrailForItem(item: ChecklistItem, internRoute: boolean): PhaseTrail {
-  const phase = internOverviewPhaseForItem(item.id);
-  let heading: PhaseTrail['heading'] = null;
-  if (internRoute && phase?.id === 'registration-phase-4') {
-    const group = internRegistrationHeadingGroups(phase.items).find((entry) =>
-      entry.items.some((row) => row.id === item.id),
-    );
-    const first = group?.items[0];
-    if (group && first) heading = { label: group.heading, firstSlug: first.slug };
-  }
-  return {
-    phaseTitle: phase?.title ?? item.title,
-    phaseFirstSlug: phase?.items[0]?.slug ?? null,
-    heading,
-    stepTitle: item.title,
-  };
-}
-
-function pushPhaseAndStep(
-  segs: ShellCrumbSegment[],
-  entityHref: string,
-  item: ChecklistItem,
-  internRoute: boolean,
-  leafOverride?: string,
-): void {
-  const bits = phaseTrailForItem(item, internRoute);
-  segs.push({
-    label: bits.phaseTitle,
-    href: bits.phaseFirstSlug ? `${entityHref}/step/${bits.phaseFirstSlug}` : entityHref,
-  });
-  if (bits.heading) {
-    segs.push({
-      label: bits.heading.label,
-      href: `${entityHref}/step/${bits.heading.firstSlug}`,
-    });
-  }
-  segs.push({ label: leafOverride ?? bits.stepTitle, href: null });
+/** The short crumb of the prototype: the page and its parents, never a leading Home. */
+function trail(icon: ShellCrumbIcon, rest: ShellCrumbSegment[]): ShellCrumb {
+  return { icon, segments: markLeaf(rest) };
 }
 
 function listForEntityPage(
@@ -286,46 +240,23 @@ export function shellBreadcrumb(pathname: string): ShellCrumb {
   const base = roleBase(parts);
 
   if (isShellHomePath(path)) {
-    return { icon: 'home', segments: [{ label: 'Home', href: null }] };
+    return { icon: 'home', segments: [{ label: homeLabel(parts), href: null }] };
   }
 
   if ((page === 'engagements' || page === 'projects') && nested) {
     const internRoute = parts[1] === 'intern';
     const list = listForEntityPage(parts, page);
-    const entityHref = `${base}/${page}/${nested}`;
-    // The super admin has no step pages of its own; its step crumbs open the admin project steps.
-    const stepBase = parts[1] === 'super' ? `/app/admin/projects/${nested}` : entityHref;
-    const segs: ShellCrumbSegment[] = [
-      { label: list.label, href: list.href },
-      {
-        label: nested === 'new' ? 'New project' : titleCase(nested),
-        href: nested === 'new' ? null : entityHref,
-        engagementKey: nested === 'new' ? undefined : nested,
-      },
-    ];
+    // The prototype's short crumb: the sidebar row, with the page where it has no row of its own.
     const after = parts[4];
-    if (nested !== 'new' && after === 'step' && parts[5]) {
-      const item = resolveChecklistItemFromStepParam(parts[5]);
-      if (item) {
-        pushPhaseAndStep(segs, stepBase, item, internRoute);
-      } else {
-        segs.push({ label: titleCase(parts[5]), href: null });
-      }
-    } else if (nested !== 'new' && after === 'documents') {
-      segs.push({ label: 'Pre-incorporation documents', href: null });
-    } else if (nested !== 'new' && after === 'board-resolution') {
-      const draft = resolveChecklistItemFromStepParam('board-resolution-draft');
-      if (draft) {
-        pushPhaseAndStep(segs, stepBase, draft, internRoute, 'Board Resolution');
-      } else {
-        segs.push({ label: 'Board Resolution', href: null });
-      }
-    }
-    return trail(path, internRoute || page === 'engagements' ? 'users' : 'briefcase', segs);
+    const segs: ShellCrumbSegment[] = [{ label: list.label, href: list.href }];
+    if (nested === 'new') segs.push({ label: 'New project', href: null });
+    else if (after === 'documents') segs.push({ label: 'Documents', href: null });
+    else if (after === 'board-resolution') segs.push({ label: 'Board resolution', href: null });
+    return trail(internRoute || page === 'engagements' ? 'users' : 'briefcase', segs);
   }
 
   if (nested && page === 'people') {
-    return trail(path, 'users', [
+    return trail('users', [
       { label: 'People', href: `${base}/people` },
       { label: titleCase(nested), href: null },
     ]);
@@ -333,55 +264,32 @@ export function shellBreadcrumb(pathname: string): ShellCrumb {
 
   // Library item / topic reader: the leaf is the page itself, not a raw id or slug.
   if (parts[1] === 'client' && (page === 'library' || page === 'learn') && parts[3]) {
-    return trail(path, 'book', [
+    return trail('book', [
       { label: 'Library', href: '/app/client/library' },
       { label: page === 'learn' ? 'Explanation' : 'Saved explanation', href: null },
     ]);
   }
 
-  // `/app/client/incorporation/step/{slug}` — resolve the real step so the trail
-  // shows its title. Without this the generic segment labeller title-cased the
-  // slug, so `…/step/name-application` (which is "Client Details") read
-  // "Name Application" in the breadcrumb while the page rendered Client Details.
-  if (parts[1] === 'client' && page === 'incorporation' && parts[3] === 'step' && parts[4]) {
-    const item = resolveChecklistItemFromStepParam(parts[4]);
-    if (item) {
-      const phase = internOverviewPhaseForItem(item.id);
-      return trail(path, 'briefcase', [
-        { label: 'Incorporation', href: '/app/client/incorporation' },
-        {
-          label: phase?.title ?? 'Incorporation',
-          href: phase
-            ? `/app/client/incorporation?phase=${encodeURIComponent(phase.id)}`
-            : '/app/client/incorporation',
-        },
-        { label: item.title, href: null },
-      ]);
-    }
+  if (parts[1] === 'client' && page === 'incorporation' && parts[3] === 'step') {
+    return trail('briefcase', [{ label: 'Incorporation', href: '/app/client/incorporation' }]);
   }
 
   if (parts[1] === 'client' && page === 'board-resolution') {
-    const draft = resolveChecklistItemFromStepParam('board-resolution-draft');
-    const phase = draft ? internOverviewPhaseForItem(draft.id) : null;
-    return trail(path, 'briefcase', [
+    return trail('briefcase', [
       { label: 'Incorporation', href: '/app/client/incorporation' },
-      {
-        label: phase?.title ?? 'SPICe+ Part A',
-        href: '/app/client/incorporation',
-      },
-      { label: 'Board Resolution', href: null },
+      { label: 'Board resolution', href: null },
     ]);
   }
 
   const group = shellCrumbParent(page);
   if (group === 'Docs') {
-    return trail(path, pageIcon(page, group), [
+    return trail(pageIcon(page, group), [
       { label: 'Docs', href: `${base}/vault` },
       { label: pageLabel(page), href: `${base}/${page}` },
     ]);
   }
   if (group === 'Updates') {
-    return trail(path, pageIcon(page, group), [
+    return trail(pageIcon(page, group), [
       { label: 'Updates', href: `${base}/announcements` },
       { label: pageLabel(page), href: `${base}/${page}` },
     ]);
@@ -389,7 +297,7 @@ export function shellBreadcrumb(pathname: string): ShellCrumb {
   // Compliances is a nested group: `{base}/compliances/{calendar|filings}`.
   // The parent links to its landing child (the calendar), as Docs → Vault does.
   if (group === 'Compliances') {
-    return trail(path, 'calendar', [
+    return trail('calendar', [
       { label: 'Compliances', href: `${base}/compliances/calendar` },
       { label: pageLabel(nested ?? 'calendar'), href: `${base}/compliances/${nested ?? 'calendar'}` },
     ]);
@@ -400,13 +308,14 @@ export function shellBreadcrumb(pathname: string): ShellCrumb {
       { label: pageLabel(page), href: `${base}/${page}` },
     ];
     for (let i = 3; i < parts.length; i += 1) {
+      if (RAW_ID.test(decodeURIComponent(parts[i]!))) continue;
       const href = i === parts.length - 1 ? null : `/${parts.slice(0, i + 1).join('/')}`;
       rest.push({ label: pageLabel(parts[i]), href });
     }
-    return trail(path, pageIcon(page, group), rest);
+    return trail(pageIcon(page, group), rest);
   }
 
   // The super admin's project list is called Clients (K-45).
   const label = parts[1] === 'super' && page === 'projects' ? 'Clients' : pageLabel(page);
-  return trail(path, pageIcon(page, group), [{ label, href: `${base}/${page}` }]);
+  return trail(pageIcon(page, group), [{ label, href: `${base}/${page}` }]);
 }

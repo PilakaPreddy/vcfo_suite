@@ -18,7 +18,7 @@ const FOCUS = 'focus-visible:outline-none focus-visible:ring-4 focus-visible:rin
  * Filter chip (VCFO Spectrum R-10, Q3, B-05; prototype `FilterChip`), 28px.
  *
  * - Set: a soft blurple fill, "Label Value" and an × that clears the filter.
- * - Not set: a "+ Label" chip with a plain 1.5px edge (R-56: dashes only for drop zones and empty states).
+ * - Not set: a dashed "+ Label" chip.
  * Both open a light menu with 34px rows (D2). This is a superset of `WorkFilterChip`: a chip with
  * no options can only be cleared (for a filter that arrives from a link), and `valueLabel`
  * replaces the shown value.
@@ -112,7 +112,7 @@ export function FilterChip<V extends string | null = string>({
         <button
           type="button"
           className={cn(
-            'inline-flex h-7 flex-none items-center gap-1.5 whitespace-nowrap rounded-md border-1.5 border-line-strong px-2.5 text-[13px] font-medium text-ink-2',
+            'inline-flex h-7 flex-none items-center gap-1.5 whitespace-nowrap rounded-md border-1.5 border-dashed border-line-strong px-2.5 text-[13px] font-medium text-ink-2',
             'hover:bg-surface-sunken data-[state=open]:bg-surface-sunken',
             FOCUS,
             className,

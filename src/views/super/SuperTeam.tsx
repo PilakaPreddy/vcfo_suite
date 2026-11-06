@@ -1,13 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { ListPlus, UserCog, UserPlus } from 'lucide-react';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
 import { DashSection } from '@/components/dash/DashSection';
 import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
-import { Chip } from '@/components/ui/spectrum-chip';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { EmptyState, SkeletonRows } from '@/components/ui/empty-state';
 import { AvatarStack } from '@/components/ui/avatar-stack';
@@ -20,18 +18,17 @@ import { SuperCapacityCard } from '@/components/super/overview/SuperCapacityCard
 import { SuperReassignCard } from '@/components/super/overview/SuperReassignCard';
 import { medianResponse } from '@/lib/super/super-insights-model';
 import {
+  AdminFeedList,
   NameCell,
   PersonAvatar,
-  SuperNumberStrip,
   SuperPageError,
   SuperPageHead,
   SuperPageSkeleton,
 } from '@/components/super/parts/super-parts';
-import { plainDay } from '@/lib/date-format';
-import { formatSuperAgo } from '@/components/super/overview/super-overview-format';
-import type { SuperTeamLead, SuperTeamManager } from '@/lib/super/super-insights-model';
+import { formatSuperAgo, isAdminWork } from '@/components/super/overview/super-overview-format';
+import type { SuperTeamManager } from '@/lib/super/super-insights-model';
 import { useSuperInsights } from '@/views/super/use-super-insights';
-import { CapacityControl, LoadCell, OnTimeCell } from '@/components/metrics/people-cells';
+import { LoadCell, OnTimeCell } from '@/components/metrics/people-cells';
 import { indexPeople, usePeopleMetrics } from '@/components/metrics/use-metrics';
 import type { PersonMetrics } from '@/lib/metrics/practice-metrics';
 import { cn } from '@/lib/utils';
@@ -40,13 +37,13 @@ import { cn } from '@/lib/utils';
  * TEAM (prototype `TeamScreen`).
  *
  * Managers with the project leads who report to them, and the load on each: clients (primary
- * and co-assigned through the engagement memberships), open steps, overdue steps, approvals
- * waiting and overdue filings. On time, Load (open items against capacity), Last active
- * (`profiles.last_seen_at`, else the newest audit row the person wrote) and the capacity editor
- * come from `/api/metrics/people` (G-14). The admins grid adds this month's assignments,
- * reassignments and accepted reviews (insights) and the escalations sent to each admin. The
- * Capacity card bands each manager's load against the capacity an admin set. Assign client and
- * Assign task open the same dialogs as the Overview. People are managed on the admin People page.
+ * and co-assigned through the engagement memberships), open steps, overdue steps and overdue
+ * filings. On time, Load (open items against capacity) and Last active (`profiles.last_seen_at`,
+ * else the newest audit row the person wrote) come from `/api/metrics/people` (G-14). The admins
+ * grid adds this month's assignments, reassignments and accepted reviews (insights) and the
+ * escalations sent to each admin. The Capacity card bands each manager's load against the capacity
+ * an admin set. Assign client and Assign task open the same dialogs as the Overview. People, and
+ * the capacity editor, are on the admin People and Team pages.
  */
 const SUPER_TEAM_HREF = '/app/super/team';
 
@@ -59,16 +56,25 @@ function lastActive(person: PersonMetrics | undefined, auditIso: string | null):
   return iso ? formatSuperAgo(iso) : 'No activity';
 }
 
-type StaffRow = (SuperTeamLead & { kind: 'lead'; reportsTo: string }) | (SuperTeamManager & { kind: 'manager' });
+/** One row of the Staff grid, whichever role the person has. Admins carry no step counts. */
+type StaffRow = {
+  key: string;
+  id: string;
+  name: string;
+  role: 'Admin' | 'Manager' | 'Project lead';
+  reportsTo: string;
+  clients: number;
+  open: number | null;
+  overdue: number | null;
+  lastActiveAt: string | null;
+};
 
 /** One firm admin with the managers who report to them (`profiles.reports_to_admin_id`, G-20). */
 type AdminRow = {
   id: string;
   name: string;
-  email: string;
   managers: string[];
   clients: number;
-  actions30d: number | null;
   lastActiveAt: string | null;
   /** This calendar month, from the audit rows and the step reviews (insights). */
   assigned: number;
@@ -106,10 +112,8 @@ export default function SuperTeam() {
         return {
           id: a.id,
           name: a.name,
-          email: a.email,
           managers: managers.map((m) => m.name),
           clients: insights.clients.filter((c) => c.managerIds.some((id) => ids.has(id))).length,
-          actions30d: audit?.actions30d ?? null,
           lastActiveAt: audit?.lastActiveAt ?? null,
           assigned: audit?.assignedMonth ?? 0,
           reassigned: audit?.reassignedMonth ?? 0,
@@ -146,15 +150,14 @@ export default function SuperTeam() {
     );
   }
 
-  const { managers, admins } = insights.team;
-  const overdueAll = managers.reduce((sum, m) => sum + m.overdueSteps, 0);
-  const unassignedClients = insights.clients.filter((c) => c.managerIds.length === 0).length;
+  const { managers } = insights.team;
+  const feed = insights.adminFeed.filter(isAdminWork);
 
   const managerColumns: EFilingColumn<SuperTeamManager>[] = [
     {
       key: 'name',
       header: 'Manager',
-      width: '24%',
+      width: '22%',
       render: (m) => (
         <NameCell lead={<PersonAvatar name={m.name} />} title={m.name} sub={`${m.leads.length} project leads`} />
       ),
@@ -162,7 +165,6 @@ export default function SuperTeam() {
     {
       key: 'admin',
       header: 'Admin',
-      width: '120px',
       render: (m) => {
         const name = staff.adminOfManager.get(m.id)?.name;
         return name ? <span className="block truncate">{name}</span> : <span className="text-ink-faint">–</span>;
@@ -172,8 +174,8 @@ export default function SuperTeam() {
     { key: 'open', header: 'Open', width: '70px', align: 'right', render: (m) => <span className="tabular-nums">{m.openSteps}</span> },
     {
       key: 'late',
-      header: 'Overdue',
-      width: '84px',
+      header: 'Late',
+      width: '60px',
       align: 'right',
       render: (m) => (
         <span className={cn('tabular-nums', m.overdueSteps + m.overdueFilings > 0 ? 'font-medium text-danger' : 'text-ink-faint')}>
@@ -181,7 +183,6 @@ export default function SuperTeam() {
         </span>
       ),
     },
-    { key: 'approvals', header: 'Approvals', width: '92px', align: 'right', render: (m) => <span className="tabular-nums">{m.approvalsPending}</span> },
     { key: 'ontime', header: 'On time', width: '80px', align: 'right', render: (m) => <OnTimeCell person={people.byProfileId.get(m.id)} /> },
     {
       key: 'coi',
@@ -196,77 +197,46 @@ export default function SuperTeam() {
       ),
     },
     { key: 'load', header: 'Load', width: '150px', render: (m) => <LoadCell person={people.byProfileId.get(m.id)} /> },
-    { key: 'seen', header: 'Last active', width: '104px', render: (m) => lastActive(people.byProfileId.get(m.id), m.lastActiveAt) },
-    {
-      key: 'capacity',
-      header: 'Capacity',
-      width: '96px',
-      render: (m) => {
-        const person = people.byProfileId.get(m.id);
-        return person ? <CapacityControl person={person} /> : null;
-      },
-    },
   ];
 
   const staffColumns: EFilingColumn<StaffRow>[] = [
-    {
-      key: 'name',
-      header: 'Name',
-      width: '26%',
-      render: (s) => (
-        <NameCell
-          lead={<PersonAvatar name={s.name} />}
-          title={s.name}
-          sub={s.kind === 'lead' ? `Reports to ${s.reportsTo}` : s.email}
-        />
-      ),
-    },
-    { key: 'role', header: 'Role', width: '120px', render: (s) => (s.kind === 'lead' ? 'Project lead' : 'Manager') },
+    { key: 'name', header: 'Name', render: (s) => <NameCell lead={<PersonAvatar name={s.name} />} title={s.name} sub={s.reportsTo} /> },
+    { key: 'role', header: 'Role', width: '110px', render: (s) => s.role },
     { key: 'clients', header: 'Clients', width: '76px', align: 'right', render: (s) => <span className="tabular-nums">{s.clients}</span> },
-    { key: 'open', header: 'Open steps', width: '96px', align: 'right', render: (s) => <span className="tabular-nums">{s.openSteps}</span> },
+    {
+      key: 'open',
+      header: 'Open tasks',
+      width: '96px',
+      align: 'right',
+      render: (s) => (s.open === null ? <span className="text-ink-faint">–</span> : <span className="tabular-nums">{s.open}</span>),
+    },
     {
       key: 'overdue',
       header: 'Overdue',
       width: '84px',
       align: 'right',
-      render: (s) => (
-        <span className={cn('tabular-nums', s.overdueSteps > 0 ? 'font-medium text-danger' : 'text-ink-faint')}>{s.overdueSteps}</span>
-      ),
-    },
-    {
-      key: 'status',
-      header: 'Account',
-      width: '120px',
-      render: (s) => (
-        <Chip fixed tone={s.status === 'active' ? 'ok' : 'idle'}>
-          {s.status === 'active' ? 'Active' : s.status.charAt(0).toUpperCase() + s.status.slice(1)}
-        </Chip>
-      ),
+      render: (s) =>
+        s.overdue === null ? (
+          <span className="text-ink-faint">–</span>
+        ) : (
+          <span className={cn('tabular-nums', s.overdue > 0 ? 'font-medium text-danger' : 'text-ink-faint')}>{s.overdue}</span>
+        ),
     },
     {
       key: 'load',
       header: 'Load',
       width: '150px',
-      render: (s) => <LoadCell person={people.byProfileId.get(s.id)} />,
+      render: (s) => (s.role === 'Admin' ? <span className="text-ink-faint">–</span> : <LoadCell person={people.byProfileId.get(s.id)} />),
     },
-    { key: 'last', header: 'Last active', width: '110px', render: (s) => lastActive(people.byProfileId.get(s.id), s.lastActiveAt) },
-    {
-      key: 'capacity',
-      header: 'Capacity',
-      width: '96px',
-      render: (s) => {
-        const person = people.byProfileId.get(s.id);
-        return person ? <CapacityControl person={person} /> : null;
-      },
-    },
+    { key: 'last', header: 'Last active', width: '104px', render: (s) => lastActive(people.byProfileId.get(s.id), s.lastActiveAt) },
   ];
 
   const adminColumns: EFilingColumn<AdminRow>[] = [
-    { key: 'name', header: 'Admin', width: '28%', render: (a) => <NameCell lead={<PersonAvatar name={a.name} />} title={a.name} sub={a.email} /> },
+    { key: 'name', header: 'Admin', render: (a) => <NameCell lead={<PersonAvatar name={a.name} />} title={a.name} sub="Admin" /> },
     {
       key: 'managers',
       header: 'Managers',
-      width: '140px',
+      width: '120px',
       render: (a) =>
         a.managers.length ? (
           <AvatarStack people={a.managers} max={4} label={`Managers: ${a.managers.join(', ')}`} />
@@ -278,7 +248,7 @@ export default function SuperTeam() {
     { key: 'assigned', header: 'Assigned', width: '86px', align: 'right', render: (a) => <span className="tabular-nums">{a.assigned}</span> },
     { key: 'reassigned', header: 'Reassigned', width: '96px', align: 'right', render: (a) => <span className="tabular-nums">{a.reassigned}</span> },
     { key: 'approvals', header: 'Approvals', width: '90px', align: 'right', render: (a) => <span className="tabular-nums">{a.approvals}</span> },
-    { key: 'resolved', header: 'Esc. resolved', width: '104px', align: 'right', render: (a) => <span className="tabular-nums">{a.resolved}</span> },
+    { key: 'resolved', header: 'Escalations resolved', width: '170px', align: 'right', render: (a) => <span className="tabular-nums">{a.resolved}</span> },
     {
       key: 'open',
       header: 'Open',
@@ -286,19 +256,53 @@ export default function SuperTeam() {
       align: 'right',
       render: (a) => <span className={cn('tabular-nums', a.open > 0 && 'font-medium text-danger')}>{a.open}</span>,
     },
-    { key: 'response', header: 'Median response', width: '120px', align: 'right', render: (a) => <span className="tabular-nums">{a.response}</span> },
-    {
-      key: 'actions',
-      header: 'Actions, 30 days',
-      width: '136px',
-      align: 'right',
-      render: (a) => <span className="tabular-nums">{a.actions30d ?? '–'}</span>,
-    },
-    { key: 'seen', header: 'Last active', width: '120px', render: (a) => lastActive(people.byProfileId.get(a.id), a.lastActiveAt) },
+    { key: 'response', header: 'Median response', width: '140px', align: 'right', render: (a) => <span className="tabular-nums">{a.response}</span> },
   ];
 
-  const managerRows: StaffRow[] = managers.map((m) => ({ ...m, kind: 'manager' as const }));
-  const staffRows: StaffRow[] = tab === 'managers' ? managerRows : tab === 'leads' ? leads : [...managerRows, ...leads];
+  const managerRows: StaffRow[] = managers.map((m) => {
+    const admin = staff.adminOfManager.get(m.id)?.name;
+    return {
+      key: `manager:${m.id}`,
+      id: m.id,
+      name: m.name,
+      role: 'Manager',
+      reportsTo: admin ? `Reports to ${admin}` : 'No admin',
+      clients: m.clients,
+      open: m.openSteps,
+      overdue: m.overdueSteps,
+      lastActiveAt: m.lastActiveAt,
+    };
+  });
+  const leadRows: StaffRow[] = leads.map((l) => ({
+    key: `lead:${l.id}`,
+    id: l.id,
+    name: l.name,
+    role: 'Project lead',
+    reportsTo: `Reports to ${l.reportsTo}`,
+    clients: l.clients,
+    open: l.openSteps,
+    overdue: l.overdueSteps,
+    lastActiveAt: l.lastActiveAt,
+  }));
+  const adminStaffRows: StaffRow[] = adminRows.map((a) => ({
+    key: `admin:${a.id}`,
+    id: a.id,
+    name: a.name,
+    role: 'Admin',
+    reportsTo: 'Reports to the super admin',
+    clients: a.clients,
+    open: null,
+    overdue: null,
+    lastActiveAt: a.lastActiveAt,
+  }));
+  const staffRows =
+    tab === 'managers'
+      ? managerRows
+      : tab === 'leads'
+        ? leadRows
+        : tab === 'admins'
+          ? adminStaffRows
+          : [...adminStaffRows, ...managerRows, ...leadRows];
 
   return (
     <PageTransition>
@@ -306,22 +310,11 @@ export default function SuperTeam() {
       <div className="flex flex-col gap-5">
         <SuperPageHead title="Team" meta={`${managers.length} managers · ${leads.length} project leads`} />
 
-        <SuperNumberStrip
-          items={[
-            { label: 'Managers', value: managers.length, href: PEOPLE_HREF },
-            { label: 'Project leads', value: leads.length, href: PEOPLE_HREF },
-            { label: 'Overdue steps', value: overdueAll, bad: overdueAll > 0 },
-            { label: 'Clients without a manager', value: unassignedClients, bad: unassignedClients > 0 },
-          ]}
-        />
-
         <DashSection
           title="Admins · this month"
-          icon={UserCog}
-          tone="violet"
-          meta={
-            <span className="flex min-w-0 flex-wrap items-center gap-2">
-              {staff.isPending ? null : <span className="tabular-nums">{adminRows.length}</span>}
+          headIcon={{ icon: UserCog, tone: 'violet' }}
+          right={
+            <>
               <Button size="sm" variant="outline" onClick={() => setTaskOpen(true)}>
                 <ListPlus aria-hidden />
                 Assign task
@@ -330,89 +323,59 @@ export default function SuperTeam() {
                 <UserPlus aria-hidden />
                 Assign client
               </Button>
-            </span>
+            </>
           }
           href={PEOPLE_HREF}
           hrefLabel="People"
-          bodyClassName="px-2 pb-2 pt-1"
+          flush
         >
           {staff.isPending ? (
             <SkeletonRows rows={2} className="p-2" />
           ) : (
-            <EFilingGrid caption="Admins" columns={adminColumns} rows={adminRows} rowKey={(a) => a.id} empty="No firm admin yet" minWidth={1180} />
+            <EFilingGrid caption="Admins" columns={adminColumns} rows={adminRows} rowKey={(a) => a.id} empty="No firm admin yet" minWidth={1040} />
           )}
         </DashSection>
 
         {/* Managers and Staff on the left, a 360px rail from lg (prototype). */}
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex min-w-0 flex-col gap-5">
-            <DashSection title="Managers" meta={String(managers.length)} href={PEOPLE_HREF} hrefLabel="People" bodyClassName="px-2 pb-2 pt-1">
-              <EFilingGrid caption="Managers" columns={managerColumns} rows={managers} rowKey={(m) => m.id} empty="No manager yet" minWidth={1220} />
+            <DashSection title="Managers" flush>
+              <EFilingGrid caption="Managers" columns={managerColumns} rows={managers} rowKey={(m) => m.id} empty="No manager yet" minWidth={720} />
             </DashSection>
 
-            <DashSection title="Staff" meta={String(staffRows.length)} bodyClassName="px-2 pb-2 pt-3">
-              <div className="mb-2 px-2">
+            <DashSection
+              title="Staff"
+              right={
                 <SpectrumTabs
                   label="Staff"
                   items={[
-                    { key: 'managers', label: 'Managers', count: managers.length },
-                    { key: 'leads', label: 'Leads', count: leads.length },
-                    { key: 'all', label: 'All', count: managers.length + leads.length },
+                    { key: 'managers', label: 'Managers', count: managerRows.length },
+                    { key: 'leads', label: 'Leads', count: leadRows.length },
+                    { key: 'admins', label: 'Admins', count: adminStaffRows.length },
+                    { key: 'all', label: 'All', count: managerRows.length + leadRows.length + adminStaffRows.length },
                   ]}
                   value={tab}
                   onChange={setTab}
                 />
-              </div>
-              <EFilingGrid
-                caption="Staff"
-                columns={staffColumns}
-                rows={staffRows}
-                rowKey={(s) => `${s.kind}:${s.id}`}
-                empty="Nobody here yet"
-                minWidth={1020}
-                pageSize={15}
-              />
+              }
+              flush
+            >
+              <EFilingGrid caption="Staff" columns={staffColumns} rows={staffRows} rowKey={(s) => s.key} empty="Nobody here yet" minWidth={720} pageSize={15} />
             </DashSection>
           </div>
 
           <div className="flex min-w-0 flex-col gap-5">
-            <SuperCapacityCard managers={managers} people={people.byProfileId} />
-            <SuperReassignCard clients={insights.clients} managers={insights.team.managers} people={people.byProfileId} />
-
-            <DashSection title="What admins did" meta={admins.length ? `${admins.length} admins` : undefined} href="/app/admin/audit-log" hrefLabel="Firm log" bodyClassName="p-0">
-              {insights.adminFeed.length === 0 ? (
+            <DashSection title="What admins did" href="/app/admin/audit-log" hrefLabel="Firm log" flush>
+              {feed.length === 0 ? (
                 <div className="p-4">
                   <EmptyState title="No admin activity yet" />
                 </div>
               ) : (
-                <ul>
-                  {insights.adminFeed.map((entry) => {
-                    const body = (
-                      <>
-                        <PersonAvatar name={entry.actor ?? 'System'} />
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[13.5px] leading-snug text-ink">{entry.label}</span>
-                          <span className="block truncate text-[12.5px] text-ink-muted">
-                            {[entry.actor ?? 'System', entry.companyName, plainDay(entry.at)].filter(Boolean).join(' · ')}
-                          </span>
-                        </span>
-                      </>
-                    );
-                    return (
-                      <li key={entry.id} className="border-t border-line-soft first:border-t-0">
-                        {entry.href ? (
-                          <Link href={entry.href} className="flex items-start gap-3 px-4 py-3 hover:bg-surface-sunken/60">
-                            {body}
-                          </Link>
-                        ) : (
-                          <div className="flex items-start gap-3 px-4 py-3">{body}</div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
+                <AdminFeedList rows={feed} />
               )}
             </DashSection>
+            <SuperCapacityCard managers={managers} people={people.byProfileId} />
+            <SuperReassignCard clients={insights.clients} managers={insights.team.managers} people={people.byProfileId} />
           </div>
         </div>
       </div>

@@ -52,7 +52,7 @@ export function PublishBar({ data, actions }: { data: ManagerSheetDto; actions: 
     });
 
   return (
-    <section aria-label="Publish" className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-md border-2 border-line bg-surface-raised px-4 py-3">
+    <section aria-label="Publish" className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-md border border-line bg-surface-raised px-4 py-3">
       <div className="flex min-w-0 flex-[1_1_360px] flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[13px]">
         {dirty ? <Chip raw tone="warn">{`Draft · ${dirty} change${dirty === 1 ? '' : 's'}`}</Chip> : <Chip raw tone="ok">Published</Chip>}
         {dirty ? (

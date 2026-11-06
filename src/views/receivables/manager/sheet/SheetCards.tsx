@@ -68,7 +68,7 @@ function Card({ inv, s, data, today, todayRate }: { inv: ManagerInvoiceDto; s: S
   const foreign = isForeign(fxInput(inv));
   const partner = (inv.partnerId && data.partners.find((p) => p.id === inv.partnerId)?.name) || 'No partner';
   return (
-    <li className={cn('rounded-md border-2 px-3 py-2.5', picked ? 'border-brand/40 bg-brand-soft/40' : 'border-line bg-surface-raised')} data-invoice={inv.id}>
+    <li className={cn('rounded-md border px-3 py-2.5', picked ? 'border-brand/40 bg-brand-soft/40' : 'border-line bg-surface-raised')} data-invoice={inv.id}>
       <div className="flex items-start gap-2.5">
         <Checkbox className="mt-1" aria-label={`Pick ${name}`} checked={picked} onCheckedChange={() => s.toggle(inv.id)} />
         <div className="min-w-0 flex-1">

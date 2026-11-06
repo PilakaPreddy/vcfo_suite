@@ -9,12 +9,11 @@
 .tb-dt-warn{background:oklch(var(--warning-soft));color:oklch(var(--warning));border-color:transparent!important}
 html .tb-dt .m,html .tb-dt-warn .m{text-transform:uppercase;letter-spacing:.06em}
 html .tb-dt .m{color:oklch(var(--ink-muted))}
-.tp-ann .tb-next{min-height:72px;background:oklch(var(--warning-soft) / .35)}
 .tp-ann .tb-ttl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 html .tp-ann .tb-ghead{padding:14px 0 6px;border-bottom:1.5px solid oklch(var(--line));font-size:11.5px}
 .tp-ann .tb-prow{display:flex;align-items:center;gap:8px;min-height:44px;border-bottom:1px solid oklch(var(--line-soft))}
 .tp-ann .tb-prow:last-child{border-bottom:0}
 .tb-by{display:flex;align-items:center;gap:10px;padding-top:14px;border-top:1px solid oklch(var(--line-soft))}
 .tb-by .btn{position:relative}
-@media (max-width:767px){.tp-ann .tb-next{flex-wrap:wrap}.tp-ann .tb-next .btn{margin-left:auto}}
+.tp-ann .tb-islot{visibility:hidden}
 .tb-adt{font-size:15px!important}

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { GitCompare, RefreshCw, Replace, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Chip, Tag } from '@/components/ui/spectrum-chip';
+import { Tag } from '@/components/ui/spectrum-chip';
+import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { FilterSelect } from '@/components/ui/native-select';
@@ -39,12 +39,13 @@ export function NocTrackStrip({ noc, nowLabel }: { noc: NocState; nowLabel?: str
   return <DocTrack stages={type.stages} records={nocRecords(noc)} nowLabel={nowLabel} label="Progress of the board resolution" />;
 }
 
-function CardHead({ title, right }: { title: string; right?: React.ReactNode }) {
+function CardHead({ title, meta, right }: { title: string; meta?: React.ReactNode; right?: React.ReactNode }) {
   return (
-    <div className="flex min-h-[52px] items-center gap-2.5 border-b border-line-soft px-4 py-2">
+    <div className="flex min-h-[52px] min-w-0 items-center gap-2.5 border-b border-line-soft px-4 py-2 md:px-5">
       <CardHeadTile title={title} />
-      <h2 className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">{title}</h2>
-      {right}
+      <h2 className="min-w-0 truncate text-[15px] font-medium text-ink">{title}</h2>
+      {meta ? <span className="truncate text-[13px] text-ink-muted">{meta}</span> : null}
+      {right ? <span className="ml-auto flex flex-none items-center">{right}</span> : null}
     </div>
   );
 }
@@ -110,44 +111,10 @@ export function NocTemplateCard({
 
   return (
     <section className="surface min-w-0 overflow-hidden" aria-label="Template">
-      <CardHead title="Template" right={noc.version ? <Tag>Version {noc.version}</Tag> : undefined} />
-      <div className="grid gap-3 px-4 py-3 text-[13.5px]">
-        <div className="min-w-0">
-          <div className="font-medium text-ink">{noc.variantLabel}</div>
-          <div className="truncate font-mono text-[12.5px] text-ink-muted" title={staff.templateFileName}>
-            {staff.templateFileName}
-          </div>
-        </div>
-        {staff.override ? (
-          <p className="m-0 text-[12.5px] text-ink-muted">
-            Changed{staff.override.byName ? ` by ${staff.override.byName}` : ''} · {docDay(staff.override.at)}
-            {staff.override.reason ? ` · ${staff.override.reason}` : ''}
-          </p>
-        ) : null}
-        {staff.outOfDate ? (
-          <div className="grid gap-2">
-            <Chip tone="warn" raw fixed={false}>
-              Answers changed after release
-            </Chip>
-            <ul className="m-0 grid list-none gap-0.5 p-0 text-[12.5px] text-ink-muted" aria-label="Changed answers">
-              {staff.outOfDate.changes.slice(0, 4).map((c) => (
-                <li key={c.key} className="truncate">
-                  {c.label}: {c.after || 'Not given yet'}
-                </li>
-              ))}
-            </ul>
-            <Button size="sm" disabled={makingAgain || accepted} onClick={() => void onMakeAgain()}>
-              <RefreshCw size={14} strokeWidth={1.6} aria-hidden />
-              {makingAgain ? 'Making the draft…' : 'Make the draft again'}
-            </Button>
-          </div>
-        ) : null}
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={() => void openCompare()}>
-            <GitCompare size={14} strokeWidth={1.6} aria-hidden />
-            Compare versions
-          </Button>
-          {staff.canChangeTemplate && !accepted ? (
+      <CardHead
+        title="Template"
+        right={
+          staff.canChangeTemplate && !accepted ? (
             <Button
               size="sm"
               variant="outline"
@@ -156,24 +123,59 @@ export function NocTemplateCard({
                 setChangeOpen(true);
               }}
             >
-              <Replace size={14} strokeWidth={1.6} aria-hidden />
               Change template
             </Button>
-          ) : null}
-        </div>
-        {staff.canChangeTemplate && noc.foreignParent && !accepted ? (
-          <div className="flex items-center justify-between gap-3 border-t border-line-soft pt-3 text-[13px] text-ink">
-            <span>Notary and apostille steps</span>
-            <Switch
-              checked={!noc.notaryStepsOff}
-              disabled={busy === 'notary_steps'}
-              aria-label="Notary and apostille steps"
-              onCheckedChange={(on) => {
-                act({ action: 'notary_steps', off: !on }).catch((err) => onError(err instanceof Error ? err.message : 'Could not save'));
-              }}
-            />
-          </div>
+          ) : undefined
+        }
+      />
+      <dl className="m-0 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2 px-4 py-3 text-[14px] md:px-5">
+        <dt className="text-[13px] text-ink-muted">Variant</dt>
+        <dd className="min-w-0 font-medium text-ink">{noc.variantLabel}</dd>
+        <dt className="text-[13px] text-ink-muted">File</dt>
+        <dd className="min-w-0 truncate font-mono text-[12.5px] text-ink-2" title={staff.templateFileName}>
+          {staff.templateFileName}
+        </dd>
+        {staff.override ? (
+          <>
+            <dt className="text-[13px] text-ink-muted">Changed</dt>
+            <dd className="min-w-0 text-[13px] text-ink-2">
+              {staff.override.byName ? `${staff.override.byName} · ` : ''}
+              {docDay(staff.override.at)}
+              {staff.override.reason ? ` · ${staff.override.reason}` : ''}
+            </dd>
+          </>
         ) : null}
+        {noc.foreignParent ? (
+          <>
+            <dt className="text-[13px] text-ink-muted">Notary and apostille</dt>
+            <dd className="flex items-center gap-2 text-[14px] text-ink">
+              <Switch
+                checked={!noc.notaryStepsOff}
+                disabled={!staff.canChangeTemplate || accepted || busy === 'notary_steps'}
+                aria-label="Notary and apostille steps"
+                onCheckedChange={(on) => {
+                  act({ action: 'notary_steps', off: !on }).catch((err) => onError(err instanceof Error ? err.message : 'Could not save'));
+                }}
+              />
+              {noc.notaryStepsOff ? 'Off for this client' : 'On for this client'}
+            </dd>
+          </>
+        ) : null}
+      </dl>
+      <div className="flex flex-wrap items-center gap-2 border-t border-line-soft px-4 py-3 md:px-5">
+        {staff.outOfDate ? (
+          <>
+            <span title={staff.outOfDate.changes.map((c) => `${c.label}: ${c.after || 'Not given yet'}`).join(', ')}>
+              <Tag tone="warn">Answers changed after release</Tag>
+            </span>
+            <Button size="sm" disabled={makingAgain || accepted} onClick={() => void onMakeAgain()}>
+              {makingAgain ? 'Making the draft…' : 'Make the draft again'}
+            </Button>
+          </>
+        ) : null}
+        <Button size="sm" variant="outline" onClick={() => void openCompare()}>
+          Compare versions
+        </Button>
       </div>
 
       <Dialog open={changeOpen} onOpenChange={setChangeOpen}>
@@ -272,32 +274,32 @@ export function NocReceiveCard({
 }
 
 /** C8 for staff: the full decision tree (D5, the same part the client sees) and the evidence behind the template. */
-export function NocWhyCard({ noc }: { noc: NocState }) {
+export function NocWhyCard({ noc, className }: { noc: NocState; className?: string }) {
   const ev = nocEvidence(noc.answers);
   const [replayKey, setReplayKey] = useState(0);
   const added = noc.foreignParent && !noc.notaryStepsOff;
   return (
-    <section className="surface min-w-0 overflow-hidden" aria-label="Why VCFO chose this template">
+    <section className={cn('surface min-w-0 overflow-hidden', className)} aria-label="Why VCFO chose this template">
       <CardHead
         title="Why VCFO chose this template"
+        meta={`${ev.rows.length} project answers`}
         right={
-          <Button variant="quiet" size="sm" onClick={() => setReplayKey((k) => k + 1)} aria-label="Replay the chosen path">
-            <RotateCcw size={15} strokeWidth={1.6} aria-hidden />
+          <Button variant="outline" size="sm" onClick={() => setReplayKey((k) => k + 1)} aria-label="Replay the chosen path">
             Replay
           </Button>
         }
       />
       <VariantTree answers={noc.answers} replayKey={replayKey} />
-      <div className="p-4 pt-2">
+      <div className="p-4 pt-2 md:px-5">
         <EvidenceTable
           rows={ev.rows}
-          result={
-            <>
-              <span>{noc.staff?.override ? `Changed by staff to ${noc.variantLabel}` : noc.variantLabel}</span>
-              {added ? <Tag tone="prog">This choice adds 2 steps · Notarise · Apostille</Tag> : null}
-            </>
-          }
+          result={noc.staff?.override ? <span>Changed by staff to {noc.variantLabel}</span> : undefined}
         />
+        {added ? (
+          <p className="m-0 mt-3 flex flex-wrap items-center gap-2 text-[14px] text-ink-2">
+            This choice adds <Tag tone="prog">2 steps</Tag> <span className="text-ink-muted">Notarise · Apostille</span>
+          </p>
+        ) : null}
       </div>
     </section>
   );

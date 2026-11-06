@@ -2,24 +2,27 @@
 
 import Link from 'next/link';
 import { DashSection } from '@/components/dash/DashSection';
-import { DashDataTable, type DashColumn } from '@/components/dash/DashDataTable';
-import { STATE_WORD_CLASS, TONE_TEXT, type IconChipTone } from '@/components/common/IconChip';
+import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
+import { Chip, type ChipTone } from '@/components/ui/spectrum-chip';
 import { useSpiceAttachments } from '@/hooks/use-spice-attachments';
 import {
   SPICE_ATTACHMENT_STATUS_LABEL,
   type SpiceAttachment,
   type SpiceAttachmentStatus,
 } from '@/lib/spice-attachments/derive';
-import { cn } from '@/lib/utils';
 
-const TONE: Record<SpiceAttachmentStatus, IconChipTone> = {
-  done: 'success',
-  waiting: 'warning',
-  'not-started': 'neutral',
+const TONE: Record<SpiceAttachmentStatus, ChipTone> = {
+  done: 'ok',
+  waiting: 'teal',
+  'not-started': 'idle',
 };
 
-function StatusWord({ status }: { status: SpiceAttachmentStatus }) {
-  return <span className={cn(STATE_WORD_CLASS, TONE_TEXT[TONE[status]])}>{SPICE_ATTACHMENT_STATUS_LABEL[status]}</span>;
+function StatusChip({ status }: { status: SpiceAttachmentStatus }) {
+  return (
+    <Chip tone={TONE[status]} fixed>
+      {SPICE_ATTACHMENT_STATUS_LABEL[status]}
+    </Chip>
+  );
 }
 
 /**
@@ -31,7 +34,7 @@ function StatusWord({ status }: { status: SpiceAttachmentStatus }) {
 export function SpiceAttachmentsCard({
   engagementId,
   shellBase,
-  className = 'mt-4',
+  className,
 }: {
   engagementId: string;
   shellBase: string;
@@ -43,15 +46,15 @@ export function SpiceAttachmentsCard({
   const vaultHref = (row: SpiceAttachment) =>
     row.vaultDocumentId ? `${shellBase}/vault/view/${encodeURIComponent(row.vaultDocumentId)}` : null;
 
-  const columns: DashColumn<SpiceAttachment>[] = [
-    { key: 'label', header: 'Document', width: 'minmax(0,2fr)', render: (row) => <span className="truncate text-ink">{row.label}</span> },
-    { key: 'step', header: 'From', width: 'minmax(0,1fr)', render: (row) => <span className="truncate text-ink-muted">{row.stepTitle}</span> },
-    { key: 'detail', header: 'State', width: 'minmax(0,1fr)', render: (row) => <span className="truncate text-ink-muted">{row.detail}</span> },
-    { key: 'status', header: 'Status', width: '104px', render: (row) => <StatusWord status={row.status} /> },
+  const columns: EFilingColumn<SpiceAttachment>[] = [
+    { key: 'label', header: 'Document', render: (row) => <span className="text-ink">{row.label}</span> },
+    { key: 'step', header: 'From', width: '22%', render: (row) => <span className="text-ink-muted">{row.stepTitle}</span> },
+    { key: 'detail', header: 'State', width: '18%', render: (row) => <span className="text-ink-muted">{row.detail}</span> },
+    { key: 'status', header: 'Status', width: '134px', render: (row) => <StatusChip status={row.status} /> },
     {
       key: 'open',
       header: '',
-      width: '88px',
+      width: '100px',
       align: 'right',
       render: (row) => {
         const href = vaultHref(row);
@@ -75,32 +78,7 @@ export function SpiceAttachmentsCard({
       {query.isError ? (
         <p className="px-4 py-6 text-center text-[12.5px] text-ink-muted">Could not load the attachments.</p>
       ) : (
-        <DashDataTable
-          bare
-          columns={columns}
-          rows={list?.items ?? []}
-          rowKey={(row) => row.key}
-          empty="No attachments."
-          mobile={(row) => {
-            const href = vaultHref(row);
-            return (
-              <div className="flex min-w-0 items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate text-[14px] text-ink">{row.label}</div>
-                  <div className="truncate text-[12.5px] text-ink-muted">
-                    {row.stepTitle} · {row.detail}
-                  </div>
-                  {href ? (
-                    <Link href={href} className="text-[12.5px] font-medium text-brand-text hover:underline">
-                      Open copy
-                    </Link>
-                  ) : null}
-                </div>
-                <StatusWord status={row.status} />
-              </div>
-            );
-          }}
-        />
+        <EFilingGrid caption="SPICe+ attachments" columns={columns} rows={list?.items ?? []} rowKey={(row) => row.key} pageSize={20} empty="No attachments." />
       )}
     </DashSection>
   );

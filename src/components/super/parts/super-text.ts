@@ -24,5 +24,5 @@ export function companyInitials(name: string): string {
 
 /** Short company name without the legal suffix, for dense rows. */
 export function shortCompany(name: string): string {
-  return name.replace(/\s+(private limited|pvt\.? ltd\.?|limited|llp)$/i, '').trim() || name;
+  return name.replace(/\s+(private limited|pvt\.? ltd\.?|limited|llp)$/i, '').replace(/\s+India$/i, '').trim() || name;
 }

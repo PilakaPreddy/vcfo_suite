@@ -137,7 +137,6 @@ export default function DocPackView() {
         <div className="min-w-0 flex-[1_1_260px]">
           <h1 className="text-[28px] font-medium leading-9 tracking-[-0.01em] text-ink">Document pack</h1>
           <p className="flex flex-wrap items-center gap-1.5 pt-1 text-[13.5px] text-ink-muted">
-            <span className="mr-1">{eng.companyName}</span>
             {summary
               ? (['ready', 'needs-inputs', 'waiting-release'] as const).map((status) => (
                   <Tag key={status} tone={DOC_STATUS_TAG_TONE[status]}>
@@ -235,8 +234,6 @@ export default function DocPackView() {
                             item={item}
                             picked={picked?.key === item.key}
                             downloadUrl={docPackItemUrl(eng.id, item.key)}
-                            hrefForMissing={(input) => hrefForStep(input.stepId, input.tabId)}
-                            hrefForStep={(stepId) => hrefForStep(stepId)}
                             onPreview={(next) => setPickedKey(next.key)}
                           />
                         ))}

@@ -81,7 +81,7 @@ export function SuperReassignCard({
   }
 
   return (
-    <DashSection title="Reassign" icon={Repeat} tone="violet" meta={suggestions.length ? String(suggestions.length) : undefined} bodyClassName="p-0">
+    <DashSection title="Reassign" headIcon={{ icon: Repeat, tone: 'violet' }} flush>
       {rows.length === 0 ? (
         <div className="p-4">
           <EmptyState title="Nothing to move" />
@@ -91,7 +91,7 @@ export function SuperReassignCard({
           {rows.map((s) => {
             const isDone = done.some((d) => d.id === s.id);
             return (
-              <li key={s.id} className="flex min-h-[56px] items-center gap-3 border-t border-line-soft px-4 py-2.5 first:border-t-0">
+              <li key={s.id} className="flex min-h-[56px] items-center gap-3 border-t border-line-soft px-4 py-2.5 first:border-t-0 md:px-5">
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13.5px] font-medium text-ink">{shortCompany(s.companyName)}</span>
                   <span className="block truncate text-[12.5px] text-ink-muted">

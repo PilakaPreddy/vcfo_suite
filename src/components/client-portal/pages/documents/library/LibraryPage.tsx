@@ -134,6 +134,42 @@ function LibraryInner() {
       <div className="vlib">
         <div className="vlib-col">
           <main className="vlib-main">
+            {/* The controls sit above the shelves, as in the prototype. */}
+            <div className="vlib-tools">
+              <label className="sx-in sm">
+                <select aria-label="Shelf" value={c} onChange={(e) => setC(Number(e.target.value))}>
+                  {[null, ...cats].map((cat, i) => {
+                    const cnt = cat ? items.filter((b) => b.category === cat.id).length : items.length;
+                    return (
+                      <option key={cat?.id ?? 'all'} value={i}>
+                        {cat ? `${cat.tab(company)} · ${cnt}` : `All shelves · ${cnt}`}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+              <div className="vlib-acts">
+                {engagementId && lib.data?.features?.statusBrief ? (
+                  <a className="sx-btn" href={`/api/ask/brief?engagementId=${encodeURIComponent(engagementId)}`}>
+                    Monthly status brief
+                  </a>
+                ) : null}
+                <a className="sx-btn" href={libraryExportHref(shownIds)} aria-disabled={!shownIds.length}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M12 4v11 M7.5 10.5 12 15l4.5-4.5 M5 19.5h14" />
+                  </svg>
+                  PDF brief
+                </a>
+              </div>
+            </div>
+            <div className="vlib-search">
+              <label className="sx-in">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
+                  <path d="M11 4.5a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13Z M16 16l4 4" />
+                </svg>
+                <input type="search" aria-label="Search books" placeholder="Search books" value={q} onChange={(e) => setQ(e.target.value)} />
+              </label>
+            </div>
             {recent.length ? (
               <section className="vlib-recent">
                 <h2>Recently read</h2>
@@ -166,44 +202,6 @@ function LibraryInner() {
             ) : null}
 
             <section className="sx-card vlib-shelves" aria-label="Shelves">
-              <div className="sx-head vlib-head">
-                <LibTile />
-                <h2>{company}’s library</h2>
-                <span className="sx-meta">{items.length} books</span>
-                <div className="sx-right vlib-tools">
-                  <label className="sx-in sm">
-                    <select aria-label="Shelf" value={c} onChange={(e) => setC(Number(e.target.value))}>
-                      {[null, ...cats].map((cat, i) => {
-                        const cnt = cat ? items.filter((b) => b.category === cat.id).length : items.length;
-                        return (
-                          <option key={cat?.id ?? 'all'} value={i}>
-                            {cat ? `${cat.tab(company)} · ${cnt}` : `All shelves · ${cnt}`}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </label>
-                  {engagementId && lib.data?.features?.statusBrief ? (
-                    <a className="sx-btn" href={`/api/ask/brief?engagementId=${encodeURIComponent(engagementId)}`}>
-                      Monthly status brief
-                    </a>
-                  ) : null}
-                  <a className="sx-btn" href={libraryExportHref(shownIds)} aria-disabled={!shownIds.length}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M12 4v11 M7.5 10.5 12 15l4.5-4.5 M5 19.5h14" />
-                    </svg>
-                    PDF brief
-                  </a>
-                </div>
-              </div>
-              <div className="vlib-search">
-                <label className="sx-in">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
-                    <path d="M11 4.5a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13Z M16 16l4 4" />
-                  </svg>
-                  <input type="search" aria-label="Search books" placeholder="Search books" value={q} onChange={(e) => setQ(e.target.value)} />
-                </label>
-              </div>
               {shelves.map(({ cat, books }) => (
                 <section key={cat.id} aria-label={cat.title(company)}>
                   <div className="vlib-sh" style={{ ['--bc' as string]: cat.color }}>
@@ -216,7 +214,7 @@ function LibraryInner() {
                       <Book key={b.id} b={b} company={company} />
                     ))}
                   </div>
-                  <div className="plank" style={{ margin: '0 16px' }} />
+                  <div className="plank" style={{ margin: '0 24px' }} />
                 </section>
               ))}
               {shelves.length === 0 ? (

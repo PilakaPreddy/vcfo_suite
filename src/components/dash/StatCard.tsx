@@ -113,7 +113,7 @@ export function StatCard({
     </>
   );
   const shell = cn(
-    'block rounded-lg border-2 border-line p-4 shadow-card',
+    'block rounded-lg border border-line p-4 shadow-card',
     tinted ? TINT[tone] : 'bg-surface-raised',
     href && 'transition-shadow hover:shadow-float focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
     className,

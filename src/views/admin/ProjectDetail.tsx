@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useRouter, redirect } from 'next/navigation';
 import { RedirectTo } from '@/components/routing/RedirectTo';
 import { useApp } from '@/context/AppContext';
@@ -8,28 +8,19 @@ import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
 import { TimelineRequestsPanel } from '@/components/incorporation/TimelineRequestsPanel';
 import { WorkItemsPanel } from '@/components/incorporation/WorkItemsPanel';
-import { Chip, type ChipTone } from '@/components/ui/spectrum-chip';
 import { RecordStat, RecordStats, RecordTile } from '@/components/incorporation/RecordHead';
-import { STAGE_LABEL, type Stage } from '@/lib/projects/stage';
-import { DocPackPhasePill } from '@/components/doc-pack/DocPackPhasePill';
-import { useDocPack } from '@/hooks/use-doc-pack';
-import { docPackPagePath } from '@/lib/doc-pack/paths';
 import { HexgridLoader } from '@/components/common/HexgridLoader';
-import { getActiveCatalogItems, type ChecklistItem } from '@/data/checklist';
+import type { ChecklistItem } from '@/data/checklist';
 import { adminProjectPath, adminProjectStepPath } from '@/lib/projects/project-step-path';
-import {
-  gateActiveCatalog,
-  isChecklistStepSequentiallyComplete,
-} from '@/lib/checklist/checklist-step-gate';
+import { gateActiveCatalog } from '@/lib/checklist/checklist-step-gate';
 import { formatDate } from '@/lib/projects/deadlines';
 import { resolveEngagementFromRouteParam } from '@/lib/slug';
 import { useStaffBasePath } from '@/hooks/use-staff-base-path';
 import { RaiseEscalationButton } from '@/components/super/escalations/RaiseEscalationButton';
-import { phaseWindowMeta } from '@/components/schedule/phase-window-meta';
 import { canSetScheduleWindows } from '@/lib/projects/schedule-windows';
 import { RecordTabBar, RecordTabPanel, useRecordTab } from '@/views/client-record/RecordTabs';
 import { RecordStepsCard } from '@/views/client-record/RecordStepsCard';
-import { RecordDocumentsButton, RecordMetaLine, RecordNumbers } from '@/views/client-record/RecordHeadParts';
+import { RecordDocumentsButton, RecordMetaLine, RecordNumbers, RecordStageChip, recordOverviewCount } from '@/views/client-record/RecordHeadParts';
 import { RecordTimelineCard } from '@/components/timeline';
 
 /**
@@ -45,12 +36,6 @@ import { RecordTimelineCard } from '@/components/timeline';
  * Underline tabs under the head switch the record in place (G-19): Incorporation, then
  * Registrations, Obligations, Documents and Notes (`src/views/client-record/RecordTabs.tsx`).
  */
-const STAGE_TONE: Record<string, ChipTone> = {
-  'Pre-Incorporation': 'violet',
-  'Post-Incorporation': 'prog',
-  'Operational Readiness': 'teal',
-};
-
 export default function ProjectDetail() {
   const params = useParams();
   const slugParam = params.slug as string;
@@ -71,16 +56,6 @@ export default function ProjectDetail() {
     () => resolveEngagementFromRouteParam(engagements, slugParam),
     [engagements, slugParam],
   );
-  const docPack = useDocPack(eng?.id);
-  const docPackPill = useCallback(
-    (phaseId: string) => {
-      const part = phaseId === 'pre-inc-phase-1' ? 'part-a' : phaseId === 'pre-inc-phase-2' ? 'part-b' : null;
-      if (!part || !eng) return null;
-      return <DocPackPhasePill summary={docPack.data} href={docPackPagePath(eng, staffBase, part)} />;
-    },
-    [docPack.data, eng, staffBase],
-  );
-
   useEffect(() => {
     if (!eng?.id) return;
     void refreshEngagementChecklist(eng.id);
@@ -109,11 +84,6 @@ export default function ProjectDetail() {
 
   if (!eng) return <RedirectTo href={`${staffBase}/projects`} />;
 
-  const catalog = getActiveCatalogItems();
-  const totalSteps = catalog.length;
-  const totalDone = catalog.filter((item) =>
-    isChecklistStepSequentiallyComplete(state[item.id]?.status ?? 'not-started', state[item.id], item.id),
-  ).length;
   const stepHref = (item: ChecklistItem) => adminProjectStepPath(eng, item, staffBase);
   const leadName = teamMembers.find((m) => m.id === eng.internId)?.name ?? null;
   const incorporationDate = eng.incorporationDate;
@@ -128,18 +98,16 @@ export default function ProjectDetail() {
 
       {/* Plain record head (VCFO Spectrum C-0108): no band, no back link (R-09). */}
       <header className="mb-5 grid gap-3">
-        <div className="flex min-w-0 flex-wrap items-start gap-3">
-          <RecordTile name={eng.companyName} identityId={eng.id} />
-          <div className="min-w-0 flex-[1_1_320px]">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-              <h1 className="min-w-0 text-[28px] font-medium leading-9 tracking-[-0.01em] text-ink">{eng.companyName}</h1>
-              {eng.stage ? (
-                <Chip tone={STAGE_TONE[eng.stage] ?? 'idle'} dot={false} fixed>
-                  {STAGE_LABEL[eng.stage as Stage] ?? eng.stage}
-                </Chip>
-              ) : null}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
+          <div className="flex min-w-0 flex-[1_1_320px] items-start gap-3">
+            <RecordTile name={eng.companyName} identityId={eng.id} />
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                <h1 className="min-w-0 text-[28px] font-medium leading-9 tracking-[-0.01em] text-ink">{eng.companyName}</h1>
+                <RecordStageChip engagement={eng} state={state} />
+              </div>
+              <RecordMetaLine engagement={eng} />
             </div>
-            <RecordMetaLine engagement={eng} />
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             {/* G-20: raise the client to an admin or the super admin. */}
@@ -157,7 +125,7 @@ export default function ProjectDetail() {
         engagement={eng}
         value={recordTab}
         onChange={setRecordTab}
-        overviewCount={`${totalDone}/${totalSteps}`}
+        overviewCount={recordOverviewCount(gates)}
         className="mb-5"
       />
       {recordTab === 'overview' ? (
@@ -172,8 +140,6 @@ export default function ProjectDetail() {
             hrefFor={stepHref}
             onOpen={(item) => router.push(stepHref(item))}
             leadName={leadName}
-            metaForPhase={phaseWindowMeta(eng.schedule)}
-            trailingForPhase={docPackPill}
             onOpenRegistrations={() => setRecordTab('registrations')}
           />
           <WorkItemsPanel engagementId={eng.id} />

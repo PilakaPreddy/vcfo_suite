@@ -69,7 +69,7 @@ export function SuperRegistrationsPanel({ detail }: { detail: SuperEngagementDet
     },
   ];
   return (
-    <DashSection title="Registrations" meta={`${done} of ${needed} done${notNeeded ? ` · ${notNeeded} not needed` : ''}`} bodyClassName="px-2 pb-2 pt-1">
+    <DashSection title="Registrations" meta={`${done} of ${needed} done${notNeeded ? ` · ${notNeeded} not needed` : ''}`} flush>
       <EFilingGrid caption="Registrations" columns={columns} rows={steps} rowKey={(step) => step.id} pageSize={25} minWidth={560} empty="None" />
     </DashSection>
   );
@@ -79,7 +79,7 @@ export function SuperActivityPanel({ detail }: { detail: SuperEngagementDetail }
   const entries = detail.activity;
 
   return (
-    <DashSection title="Audit" href="/app/admin/audit-log" hrefLabel="Full log" bodyClassName="p-0">
+    <DashSection title="Audit" flush>
       {entries.length === 0 ? (
         <div className="p-4">
           <EmptyState title="No activity yet" />
@@ -87,7 +87,7 @@ export function SuperActivityPanel({ detail }: { detail: SuperEngagementDetail }
       ) : (
         <ul>
           {entries.map((entry) => (
-            <li key={entry.id} className="flex min-w-0 items-start gap-3 border-t border-line-soft px-4 py-3 first:border-t-0">
+            <li key={entry.id} className="flex min-w-0 items-start gap-3 border-t border-line-soft px-4 py-3 first:border-t-0 md:px-5">
               <PersonAvatar name={entry.actor ?? 'System'} />
               <span className="min-w-0 flex-1">
                 <span className="block text-[13.5px] leading-snug text-ink">{entry.label}</span>

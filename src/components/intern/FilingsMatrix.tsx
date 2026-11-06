@@ -3,7 +3,8 @@
 import { useMemo } from 'react';
 import { DashSection } from '@/components/dash/DashSection';
 import { EmptyState } from '@/components/ui/empty-state';
-import { CompanyTile } from '@/components/staff/today/today-parts';
+import { ClientDot } from '@/components/staff/today/today-parts';
+import { shortCompany } from '@/components/super/parts/super-text';
 import type { ComplianceFiling } from '@/data/compliance';
 import type { Engagement } from '@/data/engagements';
 import { ymdInIst } from '@/lib/intern/intern-work';
@@ -11,6 +12,13 @@ import { cn } from '@/lib/utils';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 const MAX_FORMS = 9;
+const LEGEND = [
+  ['Filed', 'bg-positive-mid'],
+  ['Due soon', 'bg-warning-mid'],
+  ['Overdue', 'bg-danger-mid'],
+  ['Upcoming', 'bg-upcoming-mid'],
+  ['Not applicable', 'border-1.5 border-dashed border-line-strong'],
+] as const;
 
 type Cell = { state: 'filed' | 'soon' | 'late' | 'upcoming'; day: number };
 
@@ -19,7 +27,7 @@ const CELL: Record<Cell['state'] | 'na', string> = {
   soon: 'bg-warning-soft text-warning',
   late: 'bg-danger-soft text-danger',
   upcoming: 'bg-surface-sunken text-ink-2',
-  na: 'text-ink-faint',
+  na: 'border-1.5 border-dashed border-line',
 };
 
 /**
@@ -59,39 +67,37 @@ export function FilingsMatrix({ filings, engagements, now }: { filings: Complian
   }, [filings, engagements, month, today]);
 
   const legend = (
-    <span className="hidden flex-wrap items-center gap-3 text-[12px] text-ink-muted md:flex">
-      {(
-        [
-          ['filed', 'Filed'],
-          ['soon', 'Due soon'],
-          ['late', 'Overdue'],
-          ['upcoming', 'Upcoming'],
-        ] as const
-      ).map(([k, label]) => (
-        <span key={k} className="flex items-center gap-1.5">
-          <i className={cn('h-2.5 w-2.5 rounded-[2px]', CELL[k])} aria-hidden />
-          {label}
-        </span>
-      ))}
-      <span>— Not applicable</span>
-    </span>
+    <footer className="flex flex-wrap items-center gap-3 px-4 py-2 text-[13px] text-ink-muted md:px-5">
+      <span className="tabular-nums">
+        {rows.length ? `1–${rows.length} of ${rows.length}` : ''}
+      </span>
+      <span className="hidden flex-wrap items-center gap-3 md:flex">
+        {LEGEND.map(([label, dot]) => (
+          <span key={label} className="flex items-center gap-1.5">
+            <i className={cn('h-2 w-2 rounded-[2px]', dot)} aria-hidden />
+            {label}
+          </span>
+        ))}
+      </span>
+    </footer>
   );
 
   return (
-    <DashSection title={`Clients × filings · ${MONTHS[Number(month.slice(5, 7)) - 1]}`} meta={rows.length || undefined} right={legend}>
+    <DashSection title={`Clients × filings · ${MONTHS[Number(month.slice(5, 7)) - 1]}`} meta={String(rows.length)} flush>
       {rows.length === 0 ? (
-        <EmptyState title="No filings due this month" />
+        <EmptyState title="No filings due this month" className="m-4" />
       ) : (
+        <>
         <div className="max-w-full overflow-x-auto">
-          <table className="border-collapse text-[12.5px]" style={{ minWidth: 200 + forms.length * 48 }}>
+          <table className="w-full border-collapse text-[12.5px]" style={{ minWidth: 200 + forms.length * 58 }}>
             <caption className="sr-only">Clients by filings due this month</caption>
             <thead>
               <tr>
-                <th scope="col" className="h-9 border-b-1.5 border-line pr-3 text-left text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted">
+                <th scope="col" className="h-9 border-b-1.5 border-line pl-4 pr-3 text-left md:pl-5 text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted">
                   Client
                 </th>
                 {forms.map((form) => (
-                  <th key={form} scope="col" className="h-9 whitespace-nowrap border-b-1.5 border-line px-1 text-center font-mono text-[11px] font-medium text-ink-muted">
+                  <th key={form} scope="col" className="h-9 w-[58px] whitespace-nowrap border-b-1.5 border-line px-1 text-center text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted">
                     {form}
                   </th>
                 ))}
@@ -100,10 +106,10 @@ export function FilingsMatrix({ filings, engagements, now }: { filings: Complian
             <tbody>
               {rows.map((r) => (
                 <tr key={r.id}>
-                  <td className="h-10 border-b border-line-soft pr-3">
+                  <td className="h-11 border-b border-line-soft pl-4 pr-3 md:pl-5">
                     <span className="flex min-w-0 items-center gap-2">
-                      <CompanyTile name={r.name} />
-                      <span className="max-w-[160px] truncate font-medium text-ink">{r.name}</span>
+                      <ClientDot name={r.name} />
+                      <span className="truncate text-[14px] font-medium text-ink">{shortCompany(r.name)}</span>
                     </span>
                   </td>
                   {forms.map((form) => {
@@ -114,7 +120,7 @@ export function FilingsMatrix({ filings, engagements, now }: { filings: Complian
                           className={cn('mx-auto grid h-6 w-10 place-items-center rounded-sm font-medium tabular-nums', CELL[c?.state ?? 'na'])}
                           title={c ? `${form} · ${c.state === 'filed' ? 'filed' : c.state === 'late' ? 'overdue' : `due ${c.day}`}` : `${form} · not applicable`}
                         >
-                          {!c ? '—' : c.state === 'filed' ? '✓' : c.state === 'late' ? '!' : c.day}
+                          {!c ? '' : c.state === 'filed' ? '✓' : c.state === 'late' ? '!' : c.day}
                         </span>
                       </td>
                     );
@@ -124,6 +130,8 @@ export function FilingsMatrix({ filings, engagements, now }: { filings: Complian
             </tbody>
           </table>
         </div>
+        {legend}
+        </>
       )}
     </DashSection>
   );

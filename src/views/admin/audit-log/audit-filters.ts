@@ -40,6 +40,28 @@ export const AUDIT_AREAS: AuditArea[] = ['documents', 'checklist', 'engagement',
 
 const SIGN_IN_ACTIONS = /^(auth|session)\.|^account\.(two_step|session|sessions|password|sign)/;
 
+const EVENT_TITLE: Record<string, string> = {
+  'engagement.checklist.save_draft': 'Step saved',
+  'engagement.checklist.submit': 'Step submitted',
+  'engagement.checklist.review': 'Step reviewed',
+  'engagement.checklist.complete': 'Step updated',
+  'engagement.checklist.deliver': 'Step delivered',
+  'document.upload': 'Document uploaded',
+  'document.review': 'Document reviewed',
+  'document.delete': 'Document deleted',
+  'document.restore': 'Document restored',
+  'auth.sign_in': 'Signed in',
+  'notify.email': 'Email sent',
+  'email.sent': 'Email sent',
+  'email.failed': 'Email failed',
+  'email.skipped': 'Email skipped',
+};
+
+/** The event's title in the prototype's words ("Step updated"); other actions keep their stored label. */
+export function auditEventTitle(action: string): string {
+  return EVENT_TITLE[action.trim()] ?? formatAuditActionLabel(action);
+}
+
 /** The area of one action, for the pill, the filter and the export. */
 export function auditAreaOf(action: string): AuditArea {
   const a = action.trim();

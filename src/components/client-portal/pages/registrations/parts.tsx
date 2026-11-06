@@ -60,6 +60,11 @@ const REG_TONE: Record<RegStatus, ChipTone> = {
 };
 export const REG_ORDER: RegStatus[] = ['Overdue', 'Waiting', 'In progress', 'Not started', 'Done'];
 
+/** The word a registration shows: a finished one is Granted, as in the prototype. */
+export function regWord(s: RegStatus): string {
+  return s === 'Done' ? 'Granted' : s;
+}
+
 export function RegChip({ r, className }: { r: Pick<RegItem, 'status' | 'notNeeded'>; className?: string }) {
   if (r.notNeeded)
     return (
@@ -68,8 +73,8 @@ export function RegChip({ r, className }: { r: Pick<RegItem, 'status' | 'notNeed
       </Chip>
     );
   return (
-    <Chip tone={REG_TONE[r.status]} fixed className={className}>
-      {r.status}
+    <Chip tone={REG_TONE[r.status]} fixed raw className={className}>
+      {regWord(r.status)}
     </Chip>
   );
 }

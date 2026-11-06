@@ -8,10 +8,10 @@ export type DbRole = Role;
 
 /** User-facing role labels. */
 export const ROLE_UI_LABEL: Record<Role, string> = {
-  super_admin: 'Super Admin',
+  super_admin: 'Super admin',
   admin: 'Admin',
-  manager: 'Project Manager',
-  intern: 'Project Lead',
+  manager: 'Manager',
+  intern: 'Project lead',
   client: 'Client',
   developer: 'Developer',
   partner: 'Client partner',

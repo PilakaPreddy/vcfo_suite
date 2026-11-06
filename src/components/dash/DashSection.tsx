@@ -107,7 +107,8 @@ export function DashSection({
       <CardLoadBody
         loading={loading || switching}
         variant={loadingVariant}
-        className={cn(!flush && 'px-4 py-4 md:px-5', bodyClassName)}
+        // `p-0` on the body means flush: tailwind-merge alone leaves `md:px-5` behind and insets the rows.
+        className={cn(!flush && bodyClassName !== 'p-0' && 'px-4 py-4 md:px-5', bodyClassName)}
       >
         {children}
       </CardLoadBody>
@@ -126,6 +127,38 @@ function HeadLink({ href, children }: { href: string; children: ReactNode }) {
       <span aria-hidden>›</span>
     </Link>
   );
+}
+
+/** Full-width list row with a hairline between rows (R-19); a link or button row fills on hover. */
+export function ListRow({
+  children,
+  className,
+  href,
+  onClick,
+}: {
+  children: ReactNode;
+  className?: string;
+  href?: string;
+  onClick?: () => void;
+}) {
+  const base = cn(
+    'flex items-center gap-3 border-t border-line-soft px-4 py-3 text-[14px] first:border-t-0 md:px-5',
+    (href || onClick) && 'transition-colors hover:bg-hover',
+    className,
+  );
+  if (href)
+    return (
+      <Link href={href} className={base}>
+        {children}
+      </Link>
+    );
+  if (onClick)
+    return (
+      <button type="button" onClick={onClick} className={cn(base, 'w-full text-left')}>
+        {children}
+      </button>
+    );
+  return <div className={base}>{children}</div>;
 }
 
 /**

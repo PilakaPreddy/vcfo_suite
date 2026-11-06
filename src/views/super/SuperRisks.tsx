@@ -82,7 +82,7 @@ export default function SuperRisks() {
     return (
       <PageTransition>
         {seo}
-        <DashSection title="Risks" bodyClassName="px-2 pb-2 pt-3">
+        <DashSection title="Risks" flush>
           <SkeletonRows rows={8} className="p-2" />
         </DashSection>
       </PageTransition>
@@ -103,9 +103,9 @@ export default function SuperRisks() {
     {
       key: 'kind',
       header: 'Kind',
-      width: '132px',
+      width: '140px',
       render: (r) => (
-        <Tag tone={KIND_TONE[r.kind]} className="w-[112px]">
+        <Tag tone={KIND_TONE[r.kind]} className="w-[104px]">
           {SUPER_RISK_LABEL[r.kind]}
         </Tag>
       ),
@@ -139,7 +139,7 @@ export default function SuperRisks() {
         </span>
       ),
     },
-    { key: 'age', header: 'Age', width: '90px', align: 'right', render: (r) => <span className="whitespace-nowrap tabular-nums">{riskAgeLabel(r.ageDays)}</span> },
+    { key: 'age', header: <span className="block text-left">Age</span>, width: '90px', align: 'right', render: (r) => <span className="whitespace-nowrap tabular-nums">{riskAgeLabel(r.ageDays)}</span> },
     {
       key: 'action',
       header: <span className="sr-only">Action</span>,
@@ -181,21 +181,19 @@ export default function SuperRisks() {
       {/* R-09: no page title over the card; the kind tabs sit in the card head (R-08). */}
       <DashSection
         title="Risks"
-        meta={
-          <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-            <span className="tabular-nums">{rows.length}</span>
-            <SpectrumTabs
-              label="Kind"
-              items={[
-                { key: 'all', label: 'All', count: risks.length },
-                ...KINDS.map((k) => ({ key: k, label: SUPER_RISK_LABEL[k], count: risks.filter((r) => r.kind === k).length })),
-              ]}
-              value={kind}
-              onChange={setKind}
-            />
-          </span>
+        meta={String(rows.length)}
+        right={
+          <SpectrumTabs
+            label="Kind"
+            items={[
+              { key: 'all', label: 'All', count: risks.length },
+              ...KINDS.map((k) => ({ key: k, label: SUPER_RISK_LABEL[k], count: risks.filter((r) => r.kind === k).length })),
+            ]}
+            value={kind}
+            onChange={setKind}
+          />
         }
-        bodyClassName="px-2 pb-2 pt-1"
+        flush
       >
         <EFilingGrid caption="Risks" columns={columns} rows={rows} rowKey={(r) => r.id} empty="No risk of this kind" minWidth={820} pageSize={10} />
       </DashSection>

@@ -153,6 +153,9 @@ export function useSessionAuth({
     setRequests([]);
     setActivity([]);
     setDbChecklistState({});
+    // A full load so the shell never sits on its loading screen with no user. The proxy then
+    // lets the signed-out request through to the login page.
+    window.location.assign('/login');
   }, [
     queryClient,
     dismissedIdsRef,

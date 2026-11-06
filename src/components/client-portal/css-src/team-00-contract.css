@@ -3,7 +3,7 @@
    byte-identical in ann/notif/audit/settings). The board's sidebar/launcher placeholders
    (.tb-root/.tb-side/.tb-launch) are the shell's job and are left out; .tb-ov keeps the
    runtime's stacking (21-runtime.css .ov) instead of z-index 60 so it sits above the shell. */
-.pg.tb-wrap{width:100%;max-width:1600px;margin-inline:auto;box-sizing:border-box;padding:clamp(16px,2vw,24px) clamp(16px,2vw,24px) 96px}
+.pg.tb-wrap{width:100%;max-width:1440px;margin-inline:auto;box-sizing:border-box;padding:var(--cp-gut-t) var(--cp-gut) var(--cp-gut-b)}
 .tb-segx{max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;border-radius:6px;-webkit-overflow-scrolling:touch}
 .tb-segx::-webkit-scrollbar{display:none}
 .tb-segx>.seg{width:max-content;min-width:100%;box-sizing:border-box}
@@ -17,7 +17,6 @@ html .dtile .m{font-size:11px;letter-spacing:.06em}
 .tb-ov.tb-top{--ovt:min(140px,16vh);align-items:flex-start!important}
 .tb-ov>.dlg{max-width:calc(100vw - 24px);max-height:calc(100dvh - var(--ovt,12px) - 12px);overflow:auto;flex:none;box-sizing:border-box}
 @media (max-width:767px){
-  .pg.tb-wrap{padding:16px 16px 104px}
   .tb-d{display:none!important}
   .tb-m{display:revert!important}
   .tb-m.tb-flex{display:flex!important}
@@ -159,7 +158,7 @@ input[type="checkbox"]{width:16px;height:16px;border-radius:4px}
 .tb-sel svg{position:absolute;right:9px;pointer-events:none;color:oklch(var(--ink-muted))}
 @media (max-width:767px){.tb-sel select.inp{height:40px}}
 /* grid footer: count, extra buttons, page numbers (the picked page blurple) */
-.tb-pager{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 16px;border-top:1px solid oklch(var(--line-soft));font-size:13px;color:oklch(var(--ink-muted))}
+.tb-pager{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px var(--cp-card-x);border-top:1px solid oklch(var(--line-soft));font-size:13px;color:oklch(var(--ink-muted))}
 .tb-pages{display:flex;align-items:center;gap:4px;margin-left:auto}
 .tb-pg{display:grid;place-items:center;height:28px;min-width:28px;padding:0 6px;border:0;border-radius:6px;background:none;color:oklch(var(--ink-2));font:500 13px var(--font-sans),sans-serif;cursor:pointer}
 .tb-pg:hover{background:oklch(var(--ink) / .06)}

@@ -140,7 +140,7 @@ function LatestList({
           {shown.map((item) => {
             const unread = !readIds.has(item.id);
             return (
-              <li key={item.id} className="flex items-stretch border-t border-line-soft first:border-t-0">
+              <li key={item.id} className="group flex items-stretch border-t border-line-soft first:border-t-0">
                 <div className="min-w-0 flex-1">
                   <AnnouncementRow item={item} unread={unread} onActivate={() => open(item)} />
                 </div>
@@ -150,7 +150,7 @@ function LatestList({
                     onClick={() => onRemove(item.id)}
                     aria-label="Remove announcement"
                     title="Remove"
-                    className="mr-3 grid h-[30px] w-[30px] shrink-0 place-items-center self-center rounded-md text-ink-muted hover:bg-danger-soft hover:text-danger"
+                    className="mr-3 grid h-[30px] w-[30px] shrink-0 place-items-center self-center rounded-md text-ink-muted opacity-0 hover:bg-danger-soft hover:text-danger focus-visible:opacity-100 group-hover:opacity-100"
                   >
                     <Trash2 className="h-[15px] w-[15px]" aria-hidden />
                   </button>

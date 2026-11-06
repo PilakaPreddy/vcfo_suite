@@ -164,7 +164,7 @@ describe('robot launcher and sidebar link (owner decision 2 Nov 2026)', () => {
   it('makes the sidebar Ask VCFO a link to the full page', () => {
     role = 'intern';
     render(wrap(<AskShellMount userRole="intern"><AskLauncher variant="sidebar" withShortcut={false} /></AskShellMount>));
-    expect(screen.getByRole('link', { name: 'Ask VCFO' })).toHaveAttribute('href', '/app/intern/ask');
+    expect(screen.getByRole('link', { name: /Ask VCFO/ })).toHaveAttribute('href', '/app/intern/ask');
   });
 });
 

@@ -1,12 +1,10 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Download, Printer, Save } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
-import { DashSection } from '@/components/dash/DashSection';
 import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
-import { CHART_STATUS, ChartLegend, DashBarChart, type ChartRow, type ChartSeries } from '@/components/charts';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,20 +33,22 @@ import { SavedReportsCard } from '@/components/super/reports/SavedReportsCard';
 import { useApp } from '@/context/AppContext';
 import { SBC_LOCKUP_DARK_SRC, SBC_LOCKUP_LIGHT_SRC } from '@/components/brand/SbcLogo';
 import { clientLine, monthNumbers, onTimePct, recentMonths, type SavedReport } from '@/lib/reports/partner-report';
+import { useProspects } from '@/views/super/growth/use-growth-data';
+import { useFirmSettings } from '@/views/firm-settings/use-firm-settings';
 import { errorMessage, toastError, toastSuccess } from '@/lib/toast-errors';
 import { useSavedReportMutations, useSavedReports } from '@/views/super/reports/use-saved-reports';
 
 /**
  * REPORTS (prototype `ReportsScreen`, the monthly partner report), counts only.
  *
- * Each month reads from stored dates: engagements started, certificates issued, and the
- * filings due that month split into filed on time (`filed_on` on or before `due_date`), filed
- * late, and overdue. Below the report, filings on time and late per month as stacked columns
- * (R-25, C4). Print opens the browser's print dialog for the report.
+ * Six numbers read from stored rows: active clients, prospects won and lost that month,
+ * certificates issued, the average days to COI against the firm's target, filings filed on time
+ * that month (`filed_on` on or before `due_date`), and registrations done so far. Items store
+ * no finish date, so that last one is a running count. On time and late by month is on Filings.
  *
- * G-21: "Download PDF" renders the same report on the server (`/api/super/reports/pdf`, built
- * from the same insights through `src/lib/reports/partner-report.ts`, which this page also
- * uses for its numbers). "Save report" stores the report with its month, a schedule (none,
+ * G-21: "Download PDF" renders the report on the server (`/api/super/reports/pdf`, built from
+ * the same insights through `src/lib/reports/partner-report.ts`). "Save report", in the Saved
+ * reports head, stores the report with its month, a schedule (none,
  * weekly, monthly) and recipients in `saved_reports`; the Inngest function
  * `saved-reports-send` emails due schedules with the PDF attached. The prototype's fee report
  * stays out (R-37: no money).
@@ -77,17 +77,6 @@ const managerColumnsFor = (adminOf: (managerId: string) => string | null): EFili
   { key: 'clients', header: 'Clients', width: '80px', align: 'right', render: (m) => <span className="tabular-nums">{m.clients}</span> },
   { key: 'ontime', header: 'On time', width: '84px', align: 'right', render: (m) => <span className="tabular-nums">{onTimePct(m)}</span> },
   {
-    key: 'overdue',
-    header: 'Overdue',
-    width: '84px',
-    align: 'right',
-    render: (m) => (
-      <span className={cn('tabular-nums', m.overdueFilings + m.overdueSteps > 0 && 'font-medium text-danger')}>
-        {m.overdueFilings + m.overdueSteps}
-      </span>
-    ),
-  },
-  {
     key: 'coi',
     header: 'Days to COI',
     width: '104px',
@@ -96,8 +85,6 @@ const managerColumnsFor = (adminOf: (managerId: string) => string | null): EFili
   },
 ];
 
-const TONE_TEXT = { bad: 'text-danger', warn: 'text-warning', ok: 'text-positive' } as const;
-
 export default function SuperReports() {
   const query = useSuperInsights();
   const insights = query.data;
@@ -105,6 +92,8 @@ export default function SuperReports() {
   const { user } = useApp();
   const staff = useSuperStaff();
   const saved = useSavedReports();
+  const prospects = useProspects().data?.prospects;
+  const targetDays = useFirmSettings().settings?.serviceTargets.daysToCoi ?? null;
   const { save, remove } = useSavedReportMutations();
   const [saving, setSaving] = useState<SavedReport | 'new' | null>(null);
   const [deleting, setDeleting] = useState<SavedReport | null>(null);
@@ -142,17 +131,7 @@ export default function SuperReports() {
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  const data: ChartRow[] = insights.months.map((m) => ({
-    month: m.label,
-    onTime: m.filedOnTime,
-    late: m.filedLate,
-    overdue: m.overdue,
-  }));
-  const series: ChartSeries[] = [
-    { key: 'onTime', label: 'Filed on time', color: CHART_STATUS.done, stackId: 'filings' },
-    { key: 'late', label: 'Filed late', color: CHART_STATUS.due, stackId: 'filings' },
-    { key: 'overdue', label: 'Overdue', color: CHART_STATUS.overdue, stackId: 'filings' },
-  ];
+  const numbers = month ? monthNumbers(insights, month, { prospects: prospects ?? [], targetDays }) : [];
 
   return (
     <PageTransition>
@@ -173,24 +152,14 @@ export default function SuperReports() {
             }}
           />
           <span className="text-[12.5px] text-ink-muted">Partner report · prepared on {plainDay(insights.generatedAt)}</span>
-          <span className="ml-auto flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => window.print()}>
-              <Printer aria-hidden />
-              Print
+          {month ? (
+            <Button asChild className="ml-auto">
+              <a href={`/api/super/reports/pdf?month=${month.key === latestKey ? 'latest' : month.key}`}>
+                <Download aria-hidden />
+                Download PDF
+              </a>
             </Button>
-            <Button variant="outline" onClick={() => setSaving('new')} disabled={!month}>
-              <Save aria-hidden />
-              Save report
-            </Button>
-            {month ? (
-              <Button asChild>
-                <a href={`/api/super/reports/pdf?month=${month.key === latestKey ? 'latest' : month.key}`}>
-                  <Download aria-hidden />
-                  Download PDF
-                </a>
-              </Button>
-            ) : null}
-          </span>
+          ) : null}
         </div>
 
         {month ? (
@@ -208,13 +177,13 @@ export default function SuperReports() {
             </header>
             <section>
               <h3 className="mb-2 text-[15px] font-medium text-ink">The month in numbers</h3>
-              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-                {monthNumbers(month).map((n) => (
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                {numbers.map((n) => (
                   <div key={n.k} className="flex min-w-0 flex-col gap-1.5 rounded-md border-1.5 border-line px-4 py-3.5">
                     <span className="truncate text-[13px] font-medium text-ink-2" title={n.k}>
                       {n.k}
                     </span>
-                    <b className={cn('text-[26px] font-medium leading-none tabular-nums', n.tone && TONE_TEXT[n.tone])}>{n.v}</b>
+                    <b className={cn('text-[26px] font-medium leading-none tabular-nums', n.tone === 'warn' && 'text-warning')}>{n.v}</b>
                   </div>
                 ))}
               </div>
@@ -225,7 +194,9 @@ export default function SuperReports() {
             </section>
             <section>
               <h3 className="mb-2 text-[15px] font-medium text-ink">Managers</h3>
-              <EFilingGrid caption="Managers" columns={managerColumnsFor((id) => staff.adminOfManager.get(id)?.name ?? null)} rows={insights.team.managers} rowKey={(m) => m.id} empty="No manager yet" minWidth={680} />
+              <div className="overflow-hidden rounded-md border-1.5 border-line">
+                <EFilingGrid caption="Managers" columns={managerColumnsFor((id) => staff.adminOfManager.get(id)?.name ?? null)} rows={insights.team.managers} rowKey={(m) => m.id} empty="No manager yet" minWidth={600} />
+              </div>
             </section>
             <section>
               <h3 className="mb-1 text-[15px] font-medium text-ink">Top risks for {nextMonthName(month.key)}</h3>
@@ -255,12 +226,8 @@ export default function SuperReports() {
           openId={openId}
           onSchedule={setSaving}
           onDelete={setDeleting}
+          onSave={month ? () => setSaving('new') : undefined}
         />
-
-        <DashSection title="Filings on time and late" meta="Last 12 months, by due month">
-          <DashBarChart data={data} categoryKey="month" series={series} height={220} emptyLabel="No filings yet" />
-          <ChartLegend className="mt-2" items={series.map((s) => ({ label: s.label, color: s.color }))} />
-        </DashSection>
       </div>
 
       <SaveReportDialog

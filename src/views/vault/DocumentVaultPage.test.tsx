@@ -187,7 +187,7 @@ describe('DocumentVaultPage', () => {
     expect(screen.queryByText('Client documents of acme')).toBeNull();
     expect(screen.getByRole('tab', { name: 'Manage' })).toHaveAttribute('aria-selected', 'true');
     expect(localStorage.getItem('vcfo.vault-mode')).toBe('manage');
-    expect(screen.getByRole('link', { name: /Open project/ })).toHaveAttribute('href', expect.stringContaining('/app/manager/projects/'));
+    expect(screen.queryByRole('link', { name: /Open project/ })).toBeNull();
   });
 
   it('remembers Manage from the last visit', async () => {
@@ -200,7 +200,7 @@ describe('DocumentVaultPage', () => {
     renderPage();
     await openManage();
     expect(fileNames()).toEqual(['acme-pan.pdf', 'acme-board-draft.docx']);
-    expect(within(tree()).getByRole('treeitem', { name: /Pre-incorporation/ })).toHaveAttribute('aria-expanded', 'true');
+    expect(within(tree()).getByRole('treeitem', { name: /Phase 1 · Name application/ })).toHaveAttribute('aria-expanded', 'true');
     expect(within(screen.getByRole('complementary', { name: 'Preview' })).getAllByText('acme-pan.pdf').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Filter documents').closest('label')).toHaveTextContent('2');
 

@@ -7,9 +7,9 @@ import { useApp } from '@/context/AppContext';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
 import { DashHero } from '@/components/dash/DashHero';
-import { DashSection, DashDonut, DashLegendRow } from '@/components/dash/DashSection';
+import { DashSection } from '@/components/dash/DashSection';
 import { EFilingGrid } from '@/components/dash/EFilingGrid';
-import { Activity, AlertTriangle, Building2, Clock, ListPlus, Rocket, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Building2, Clock, Plus, Rocket, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AssignTaskDialog } from '@/components/staff/today/AssignTaskDialog';
 import { deriveStuckReason, primaryPhaseItems } from '@/lib/projects/project-stuck';
@@ -201,8 +201,16 @@ export default function FirmDashboard() {
                 how: 'Incorporated clients with a filing calendar.',
               },
               {
-                label: 'Stuck',
+                label: 'Overdue',
                 icon: AlertTriangle,
+                value: pulse.overdue,
+                href: '/app/admin/projects?view=overdue',
+                hot: pulse.overdue > 0,
+                how: 'Clients with a step or filing past its due date, across all managers.',
+              },
+              {
+                label: 'Stuck',
+                icon: Clock,
                 value: pulse.pending,
                 href: '/app/admin/projects?view=stuck',
                 hot: pulse.pending > 0,
@@ -210,21 +218,11 @@ export default function FirmDashboard() {
                 note: pulse.waitingClient > 0 ? `${pulse.waitingClient} on clients` : undefined,
                 how: 'Clients whose current step waits on the client, the manager or the lead, or is blocked.',
               },
-              {
-                label: 'Awaiting approval',
-                icon: Clock,
-                value: pendingApprovals,
-                href: '/app/admin/approvals',
-                hot: pendingApprovals > 0,
-                trend: trendWithLive(trends, 'awaitingApproval', pendingApprovals),
-                trendTone: 'warn',
-                note: approvalClients > 0 ? plural(approvalClients, 'client', 'clients') : undefined,
-                how: 'Steps waiting for a manager decision before they move on.',
-              },
             ]}
           >
-            <Button onClick={() => setAssignOpen(true)}>
-              <ListPlus className="h-4 w-4" strokeWidth={1.6} /> Assign task
+            {/* On a phone the action is a 36px icon button. */}
+            <Button onClick={() => setAssignOpen(true)} className="max-sm:w-9 max-sm:px-0" title="Assign task">
+              <Plus className="h-4 w-4" strokeWidth={1.6} aria-hidden /> <span className="max-sm:sr-only">Assign task</span>
             </Button>
           </DashHero>
         ) : null}
@@ -249,13 +247,13 @@ export default function FirmDashboard() {
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2.4fr)_minmax(300px,1fr)]">
           {/* Managers (K-37, C-0034): a T1 grid. */}
-          <DashSection title="Managers" meta={managerStrip.length || undefined} bodyClassName="px-2 pb-3 pt-1">
+          <DashSection title="Managers" meta={managerStrip.length || undefined} flush>
             <EFilingGrid
               caption="Managers"
               rows={managerStrip}
               rowKey={(row) => row.managerId}
               empty="No open Pre/Post projects."
-              minWidth={canSetCapacity ? 1000 : 900}
+              minWidth={canSetCapacity ? 860 : 760}
               columns={[
                 {
                   key: 'name',
@@ -270,25 +268,17 @@ export default function FirmDashboard() {
                     ),
                 },
                 { key: 'leads', header: 'Project leads', width: '120px', align: 'right', render: (row) => <span className="tabular-nums">{row.leads.size}</span> },
-                { key: 'open', header: 'Clients', width: '84px', align: 'right', render: (row) => <span className="tabular-nums">{row.open}</span> },
+                { key: 'open', header: 'Clients', width: '90px', align: 'right', render: (row) => <span className="tabular-nums">{row.open}</span> },
                 {
                   key: 'overdue',
                   header: 'Overdue',
-                  width: '88px',
+                  width: '90px',
                   align: 'right',
                   render: (row) => <span className={cn('tabular-nums', row.overdue > 0 && 'font-medium text-danger')}>{row.overdue || ''}</span>,
                 },
-                {
-                  key: 'stuck',
-                  header: 'Stuck',
-                  width: '80px',
-                  align: 'right',
-                  render: (row) => <span className={cn('tabular-nums', row.stuck > 0 && 'font-medium text-danger')}>{row.stuck}</span>,
-                },
-                { key: 'awaiting', header: 'Awaiting PM', width: '112px', align: 'right', render: (row) => <span className="tabular-nums">{row.awaitingPm}</span> },
-                { key: 'ontime', header: 'On time', width: '80px', align: 'right', render: (row) => <OnTimeCell person={people.byProfileId.get(row.managerId)} /> },
+                { key: 'ontime', header: 'On time', width: '90px', align: 'right', render: (row) => <OnTimeCell person={people.byProfileId.get(row.managerId)} /> },
                 { key: 'load', header: 'Load', width: '150px', render: (row) => <LoadCell person={people.byProfileId.get(row.managerId)} /> },
-                { key: 'seen', header: 'Last active', width: '104px', render: (row) => (row.managerId === 'unassigned' ? null : <LastSeenCell person={people.byProfileId.get(row.managerId)} />) },
+                { key: 'seen', header: 'Last active', width: '110px', render: (row) => (row.managerId === 'unassigned' ? null : <LastSeenCell person={people.byProfileId.get(row.managerId)} />) },
                 ...(canSetCapacity
                   ? [
                       {
@@ -309,24 +299,6 @@ export default function FirmDashboard() {
           <div className="flex min-w-0 flex-col gap-5">
             <FirmDecisionsCard engagements={engagements} />
             <BoardMeetingsCard />
-            <DashSection icon={Activity} tone="success" title="Portfolio health">
-              <div className="flex min-w-0 items-center gap-4">
-                <DashDonut
-                  segments={[
-                    { n: pulse.good, color: 'oklch(var(--positive-mid))' },
-                    { n: pulse.pending, color: 'oklch(var(--danger-mid))' },
-                    { n: pendingApprovals, color: 'oklch(var(--waiting-mid))' },
-                  ]}
-                  centerLabel={pulse.total}
-                  centerCaption="projects"
-                />
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <DashLegendRow swatchClassName="bg-positive-mid" label="On track" count={pulse.good} />
-                  <DashLegendRow swatchClassName="bg-danger-mid" label="Stuck" count={pulse.pending} />
-                  <DashLegendRow swatchClassName="bg-waiting-mid" label="Awaiting PM" count={pendingApprovals} />
-                </div>
-              </div>
-            </DashSection>
           </div>
         </div>
 

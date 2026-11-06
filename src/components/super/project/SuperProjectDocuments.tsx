@@ -1,6 +1,5 @@
 'use client';
 
-import { FolderClosed } from 'lucide-react';
 import { DashSection } from '@/components/dash/DashSection';
 import { DashDataTable, type DashColumn } from '@/components/dash/DashDataTable';
 import { FileBadge } from '@/components/ui/file-badge';
@@ -19,13 +18,11 @@ export function SuperProjectDocuments({ detail }: { detail: SuperEngagementDetai
 
   return (
     <DashSection
-      icon={FolderClosed}
-      tone="amber"
       title="Documents"
       meta={documents.length === 0 ? undefined : `${shared} of ${documents.length} shared`}
-      href={detail.enterAs.firm}
-      hrefLabel="Firm view"
-      bodyClassName="px-0 pb-0 pt-1"
+      href="/app/super/vault"
+      hrefLabel="All documents"
+      flush
     >
       <DashDataTable
         bare

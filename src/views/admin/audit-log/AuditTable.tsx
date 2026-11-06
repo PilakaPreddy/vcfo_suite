@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import type { AuditEventRow } from '@/lib/audit/audit-log';
-import { formatAuditActionLabel, formatAuditMetadata, getAuditTargetType } from '@/lib/audit/audit-log';
+import { formatAuditMetadata, getAuditTargetType } from '@/lib/audit/audit-log';
 import { mapDbRoleToAppRole, ROLE_UI_LABEL } from '@/lib/auth';
 import {
   AUDIT_AREAS,
@@ -27,6 +27,7 @@ import {
   filterAuditEvents,
   type AuditFilters,
   type AuditResultWord,
+  auditEventTitle,
 } from '@/views/admin/audit-log/audit-filters';
 import { auditEventsCsv, downloadCsv } from '@/views/admin/audit-log/audit-csv';
 import { logBrowserExport } from '@/lib/exports/log-export-client';
@@ -156,7 +157,7 @@ function AuditEventPanel({
                 {format(new Date(ev.created_at), 'd MMM yyyy · HH:mm')} ·{' '}
                 {formatDistanceToNow(new Date(ev.created_at), { addSuffix: true })}
               </p>
-              <SheetTitle className="mt-1 text-[18px] font-medium leading-snug">{formatAuditActionLabel(ev.action)}</SheetTitle>
+              <SheetTitle className="mt-1 text-[18px] font-medium leading-snug">{auditEventTitle(ev.action)}</SheetTitle>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <AreaPill area={AUDIT_CATEGORY_LABELS[auditAreaOf(ev.action)]} />
                 <ResultChip ev={ev} />
@@ -281,7 +282,7 @@ function AuditDayDialog({
             >
               <span className="w-12 flex-none text-[13px] tabular-nums text-ink-muted">{format(new Date(ev.created_at), 'HH:mm')}</span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-medium text-ink">{formatAuditActionLabel(ev.action)}</span>
+                <span className="block truncate text-[14px] font-medium text-ink">{auditEventTitle(ev.action)}</span>
                 <span className="block truncate text-[12.5px] text-ink-muted">
                   {ev.summary ? `${ev.summary} · ` : ''}
                   {actorName(ev)}
@@ -364,7 +365,7 @@ export function AuditTable({
       key: 'event',
       header: 'Event',
       render: (ev) => {
-        const label = formatAuditActionLabel(ev.action);
+        const label = auditEventTitle(ev.action);
         return (
           <span className="block min-w-0">
             <button
@@ -428,7 +429,7 @@ export function AuditTable({
 
   return (
     <section className="surface min-w-0 overflow-hidden">
-      <header className="flex min-h-[52px] flex-wrap items-center gap-2.5 border-b border-line-soft px-4 py-2">
+      <header className="flex min-h-[52px] flex-wrap items-center gap-2.5 border-b border-line-soft px-4 py-2 md:px-5">
         <CardHeadTile title="Audit log" />
         <h2 className="whitespace-nowrap text-[15px] font-medium text-ink">{title}</h2>
         {!loading ? (
@@ -456,22 +457,15 @@ export function AuditTable({
         </div>
       ) : null}
 
-      <div className="px-4 pb-3 pt-1">
+      <div>
         {loading ? (
-          <EFilingGrid
-            columns={columns}
-            rows={[] as AuditEventRow[]}
-            rowKey={(ev) => ev.id}
-            minWidth={showTarget ? 944 : 764}
-            caption={title}
-            loading
-          />
+          <EFilingGrid columns={columns} rows={[] as AuditEventRow[]} rowKey={(ev) => ev.id} minWidth={showTarget ? 944 : 764} caption={title} loading />
         ) : events.length === 0 ? (
-          <EmptyState title={emptyMessage} className="mt-2" />
+          <EmptyState title={emptyMessage} className="m-4" />
         ) : filtered.length === 0 ? (
           <EmptyState
             title="No events match these filters"
-            className="mt-2"
+            className="m-4"
             action={
               <Button size="sm" variant="outline" onClick={() => onFiltersChange(defaultAuditFilters())}>
                 Clear filters
@@ -479,33 +473,31 @@ export function AuditTable({
             }
           />
         ) : (
-          <>
-            <EFilingGrid
-              columns={columns}
-              rows={filtered}
-              rowKey={(ev) => ev.id}
-              pageSize={25}
-              minWidth={showTarget ? 944 : 764}
-              caption={title}
-              stickyFirstColumn
-              onRowClick={(ev: AuditEventRow) => setPicked(ev)}
-            />
-            {isFiltered ? (
-              <div className="mt-2">
-                <Button size="sm" variant="ghost" onClick={() => onFiltersChange(defaultAuditFilters())}>
-                  Clear filters
-                </Button>
-              </div>
-            ) : null}
-          </>
+          <EFilingGrid
+            columns={columns}
+            rows={filtered}
+            rowKey={(ev) => ev.id}
+            pageSize={10}
+            minWidth={showTarget ? 944 : 764}
+            caption={title}
+            stickyFirstColumn
+            onRowClick={(ev: AuditEventRow) => setPicked(ev)}
+            footer={
+              <span className="flex items-center gap-2">
+                {isFiltered ? (
+                  <Button size="sm" variant="ghost" onClick={() => onFiltersChange(defaultAuditFilters())}>
+                    Clear filters
+                  </Button>
+                ) : null}
+                {onLoadOlder ? (
+                  <Button size="sm" variant="outline" disabled={loadingOlder} onClick={onLoadOlder}>
+                    {loadingOlder ? 'Loading…' : 'Load older'}
+                  </Button>
+                ) : null}
+              </span>
+            }
+          />
         )}
-        {!loading && onLoadOlder ? (
-          <div className="mt-3 flex justify-center">
-            <Button size="sm" variant="outline" disabled={loadingOlder} onClick={onLoadOlder}>
-              {loadingOlder ? 'Loading…' : 'Load older'}
-            </Button>
-          </div>
-        ) : null}
       </div>
 
       <AuditEventPanel

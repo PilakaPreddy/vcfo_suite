@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import type { FilingStatus } from '@/lib/compliance/filings';
 import {
   CHART_STATUSES,
-  FILING_WORD,
+  FILING_SHOWN, FILING_WORD,
   SIX_TONE,
   STATUS_FILL,
   STATUS_STROKE,
@@ -28,10 +28,10 @@ import { exactDate } from '@/lib/relative-due';
  */
 
 /** R-13 status chip with one of the six words. */
-export function WordChip({ word, fixed = true, className }: { word: SixWord; fixed?: boolean; className?: string }) {
+export function WordChip({ word, fixed = true, className, filing }: { word: SixWord; /** Say Filed and Upcoming. */ filing?: boolean; fixed?: boolean; className?: string }) {
   return (
     <Chip tone={SIX_TONE[word]} fixed={fixed} className={className}>
-      {word}
+      {filing ? FILING_SHOWN[word] : word}
     </Chip>
   );
 }
@@ -167,7 +167,7 @@ export function StatusDonutCard({
         {CHART_STATUSES.map((s) => (
           <li key={s} className="flex items-center gap-2 text-[12.5px] font-medium text-ink-2">
             <Swatch className={STATUS_FILL[s]} />
-            <span className="flex-1">{FILING_WORD[s]}</span>
+            <span className="flex-1">{FILING_SHOWN[FILING_WORD[s]]}</span>
             <b className="font-medium tabular-nums text-ink">{counts[s]}</b>
           </li>
         ))}

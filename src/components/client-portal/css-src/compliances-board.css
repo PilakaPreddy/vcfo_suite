@@ -172,7 +172,7 @@ circle[data-dd]{transition:stroke-width .15s}circle[data-dd]:hover{stroke-width:
 .pv-top{position:absolute;z-index:60;left:0;right:0;top:0;min-height:56px;display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding:8px clamp(12px,2vw,20px);color:#fff}
 .pv-top>div{min-width:0}
 /* --- live (fluid) board rules (I:306-349, html.comp-live prefix dropped) --- */
-.page{width:100%;max-width:1600px;margin-inline:auto;padding:clamp(14px,1.6vw,22px) clamp(12px,1.8vw,24px) 120px;min-width:0}
+.page{width:100%;max-width:1440px;margin-inline:auto;padding:var(--cp-gut-t) var(--cp-gut) var(--cp-gut-b);gap:20px;min-width:0;box-sizing:border-box}
 .row-wrap{display:flex;align-items:center;gap:10px 12px!important;flex-wrap:wrap}
 .row-wrap>.end{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0;max-width:100%}
 .cal-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
@@ -369,7 +369,7 @@ circle[data-dd]{transition:stroke-width .15s}circle[data-dd]:hover{stroke-width:
 .ask{color:oklch(var(--brand-text))}
 .modal,.dpop,.dd{border:1.5px solid var(--border)}
 .dd-top{background:oklch(var(--surface-sunken))!important}
-.cal{border:1.5px solid var(--border);border-bottom:0}
+.cal{border:1px solid var(--border);border-bottom:0}
 .cal .ev{background:oklch(var(--surface-sunken))}
 .more{color:oklch(var(--brand-text))}
 .dtile b{font-weight:500}

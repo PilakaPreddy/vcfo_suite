@@ -2,6 +2,10 @@
 /* Portal layout (the prototype's board frame): side placeholder + content column.
    Plus the Search ⌘K filter chips; the palette frame itself is a Tailwind island. */
 body{margin:0}
+/* One page frame for every client page, as in the prototype's Shell main: 1440 px at most, 32 px
+   sides, 28 px on top; on phones 16 px sides and 20 px on top. */
+:root{--cp-gut:32px;--cp-gut-t:28px;--cp-gut-b:80px;--cp-card-x:20px}
+@media (max-width:767px){:root{--cp-gut:16px;--cp-gut-t:20px;--cp-gut-b:112px;--cp-card-x:16px}}
 .cp-body{display:flex;min-height:100vh;min-width:0;background:var(--bg)}
 .cp-sidepad{width:var(--vp-side-w,248px);flex:none}
 .cp-main{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -86,8 +90,8 @@ html.vp-chat-on{overscroll-behavior:contain}
    pages draw them the same way (R-07, R-10, R-11, R-12, R-15, R-16, R-47, R-48).
    Status chips, file badges and area pills come from the shared React parts inside a
    `.cp-tw` island. Colours are shared tokens only. */
-.sx-card{position:relative;min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:oklch(var(--surface-raised));border:1.5px solid oklch(var(--line));border-radius:6px;color:oklch(var(--ink))}
-.sx-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;min-height:52px;padding:8px 16px;box-sizing:border-box;border-bottom:1px solid oklch(var(--line-soft))}
+.sx-card{position:relative;min-width:0;display:flex;flex-direction:column;box-sizing:border-box;background:oklch(var(--surface-raised));border:1px solid oklch(var(--line));border-radius:6px;color:oklch(var(--ink))}
+.sx-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px;min-height:52px;padding:8px var(--cp-card-x);box-sizing:border-box;border-bottom:1px solid oklch(var(--line-soft))}
 .sx-head>h2,.sx-head>h3,.sx-head .sx-title{margin:0;min-width:0;font:500 15px/1.3 var(--font-sans),sans-serif;color:oklch(var(--ink));overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sx-head .sx-meta{font-size:13px;color:oklch(var(--ink-muted));white-space:nowrap}
 .sx-head .sx-right{margin-left:auto;display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:8px;min-width:0}
@@ -101,7 +105,7 @@ html.vp-chat-on{overscroll-behavior:contain}
 .sx-tile[data-tone=violet]{background:oklch(var(--identity-soft));color:oklch(var(--identity))}
 .sx-tile[data-tone=red]{background:oklch(var(--danger-soft));color:oklch(var(--danger))}
 /* list rows that run the full card width with a hairline between them (R-19) */
-.sx-row{display:flex;align-items:center;gap:12px;min-height:44px;padding:8px 16px;box-sizing:border-box;border-top:1px solid oklch(var(--line-soft));font-size:14px;color:oklch(var(--ink))}
+.sx-row{display:flex;align-items:center;gap:12px;min-height:44px;padding:8px var(--cp-card-x);box-sizing:border-box;border-top:1px solid oklch(var(--line-soft));font-size:14px;color:oklch(var(--ink))}
 .sx-row:first-child{border-top:0}
 :where(a,button).sx-row{width:100%;border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;font:inherit;font-size:14px;cursor:pointer;text-decoration:none}
 :where(a,button).sx-row:hover{background:oklch(var(--surface-sunken))}
@@ -141,7 +145,7 @@ html.vp-chat-on{overscroll-behavior:contain}
 .sx-in input::placeholder,.sx-in textarea::placeholder{color:oklch(var(--ink-faint))}
 .sx-in .n{flex:none;font-size:12.5px;color:oklch(var(--ink-muted));font-variant-numeric:tabular-nums}
 /* filter chips (R-10): set = soft blurple fill, addable = a plain 1.5px edge (R-56: dashes only for drop zones and empty states) */
-.sx-filter{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;box-sizing:border-box;border-radius:6px;border:1.5px solid oklch(var(--line-strong));background:none;color:oklch(var(--ink-2));font:500 13px var(--font-sans),sans-serif;white-space:nowrap;cursor:pointer}
+.sx-filter{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 10px;box-sizing:border-box;border-radius:6px;border:1.5px dashed oklch(var(--line-strong));background:none;color:oklch(var(--ink-2));font:500 13px var(--font-sans),sans-serif;white-space:nowrap;cursor:pointer}
 .sx-filter:hover{background:oklch(var(--surface-sunken))}
 .sx-filter.on,.sx-filter[aria-pressed=true]{border-style:solid;border-color:oklch(var(--brand-line));background:oklch(var(--brand-soft));color:oklch(var(--brand-text))}
 /* segmented switch for filters (R-11): quiet track, the picked option blurple with white text */
@@ -167,9 +171,8 @@ html.vp-chat-on{overscroll-behavior:contain}
 .sx-kv>:first-child{flex:none;color:oklch(var(--ink-muted))}
 .sx-kv>:last-child{min-width:0;text-align:right;font-weight:500;overflow-wrap:anywhere}
 @media (prefers-reduced-motion: reduce){.sx-sk{animation:none}}
-/* R-55: every card, panel and section has a 2px edge. The page boards still carry the
-   prototype's 1px or 1.5px frame on these classes; this one rule sets the width for all of them. */
-.card,.kpi,.cr-wb,.cr-ctile,.vrd-visual,.vrd-box,.vrd-facts,.tb-note,.tb-chg-b,.tb-chg-a,.dtile.tb-dt,.dtile.tb-dt-warn{border-width:2px!important}
+/* Every card, panel and section has a 1px edge, as in the prototype. This one rule sets the width for all of them. */
+.card,.kpi,.cr-wb,.cr-ctile,.vrd-visual,.vrd-box,.vrd-facts,.tb-note,.tb-chg-b,.tb-chg-a,.dtile.tb-dt,.dtile.tb-dt-warn{border-width:1px!important}
 /* R-56: the one dashed edge, 3px dash and 3px gap, drawn with gradients so every browser shows the
    same dash. Only drop zones and empty states use it. A rule sets the colour in --dash-color and
    keeps a transparent solid border for the width; a drag-over state sets its own background. */
@@ -183,8 +186,13 @@ input[type="checkbox"]:checked{background-image:url("data:image/svg+xml,%3Csvg x
 input[type="checkbox"]:indeterminate{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E")}
 input[type="checkbox"]:disabled{cursor:not-allowed;opacity:.5}
 
-/* R-54 / R-55 in the client portal. The portal redefines --panel and --border as full colours, so the
+/* The NOC tree on the client page: the path labels sit beside the vertical line, not on it, and the
+   step numbers stay white on their blurple circles (the lit-node rule otherwise paints them blurple). */
+[data-testid=noc-tree]>text{transform:translateX(8px);text-anchor:start}
+[data-testid=noc-tree] g[data-node] g text{fill:oklch(var(--on-brand))}
+
+/* Cards in the client portal. The portal redefines --panel and --border as full colours, so the
    shared .surface / .noir-card rule (oklch(var(--panel))) resolved to nothing here and DashSection
    cards (Timeline, Incorporation, This week) drew no background and no edge. Paint them with the
    portal's own colours. */
-.surface,.surface-raised,.surface-flat,.surface-flat-raised,.noir-card,.noir-card-raised,.card-surface{background:var(--panel)!important;border:2px solid var(--border)!important}
+.surface,.surface-raised,.surface-flat,.surface-flat-raised,.noir-card,.noir-card-raised,.card-surface{background:var(--panel)!important;border:1px solid var(--border)!important}

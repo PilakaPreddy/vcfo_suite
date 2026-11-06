@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, type FormEvent } from 'react';
-import { ImagePlus, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { BellRing, Building2, ImagePlus, Loader2, Palette, Plus, Trash2, X } from 'lucide-react';
 import { DashSection } from '@/components/dash/DashSection';
 import { EFilingGrid, type EFilingColumn } from '@/components/dash/EFilingGrid';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,6 @@ import { cn } from '@/lib/utils';
 import {
   MAX_REMINDER_DAYS,
   reminderDaysLabel,
-  WEEKDAYS,
   workingDaysLabel,
   type FirmHoliday,
   type FirmSettings,
@@ -79,7 +78,8 @@ export function FirmProfileSection({ settings, canEdit, save, saving }: { settin
   return (
     <DashSection
       title="Firm profile"
-      meta={
+      headIcon={{ icon: Building2, tone: 'blue' }}
+      right={
         canEdit ? (
           editing ? (
             <span className="flex gap-2">
@@ -110,7 +110,7 @@ export function FirmProfileSection({ settings, canEdit, save, saving }: { settin
             <Input id="fs-email" type="email" className="mt-1" value={draft.supportEmail ?? ''} onChange={(e) => setDraft({ ...draft, supportEmail: e.target.value })} />
           </div>
           <div>
-            <Label htmlFor="fs-phone" className="text-[12.5px] text-ink-muted">Phone</Label>
+            <Label htmlFor="fs-phone" className="text-[12.5px] text-ink-muted">Help desk</Label>
             <Input id="fs-phone" type="tel" className="mt-1" value={draft.supportPhone ?? ''} onChange={(e) => setDraft({ ...draft, supportPhone: e.target.value })} />
           </div>
           <div>
@@ -129,7 +129,7 @@ export function FirmProfileSection({ settings, canEdit, save, saving }: { settin
             </Select>
           </div>
           <div className="sm:col-span-2">
-            <Label htmlFor="fs-address" className="text-[12.5px] text-ink-muted">Address</Label>
+            <Label htmlFor="fs-address" className="text-[12.5px] text-ink-muted">Office</Label>
             <Textarea id="fs-address" rows={3} className="mt-1" value={draft.address ?? ''} onChange={(e) => setDraft({ ...draft, address: e.target.value })} />
           </div>
           <button type="submit" className="sr-only">
@@ -141,9 +141,9 @@ export function FirmProfileSection({ settings, canEdit, save, saving }: { settin
           rows={[
             { k: 'Firm name', v: settings.firmName },
             { k: 'Support email', v: settings.supportEmail },
-            { k: 'Phone', v: settings.supportPhone },
+            { k: 'Help desk', v: settings.supportPhone },
             { k: 'Timezone', v: settings.timezone },
-            { k: 'Address', v: settings.address },
+            { k: 'Office', v: settings.address },
           ]}
         />
       )}
@@ -151,17 +151,21 @@ export function FirmProfileSection({ settings, canEdit, save, saving }: { settin
   );
 }
 
-/** Working days (saved on each click) and the firm's holidays. */
+/** The working weeks the prototype offers; `workingDays` stores them as weekday numbers (Monday is 1). */
+const WORK_WEEKS: Array<{ label: string; days: number[] }> = [
+  { label: 'Mon to Fri', days: [1, 2, 3, 4, 5] },
+  { label: 'Mon to Sat', days: [1, 2, 3, 4, 5, 6] },
+];
+
+/** The working week (saved as it changes) and the firm's holidays. */
 export function WorkingCalendarSection({ settings, canEdit, save }: { settings: FirmSettings; canEdit: boolean; save: Save }) {
   const [date, setDate] = useState('');
   const [label, setLabel] = useState('');
 
-  const toggleDay = (day: number) => {
-    const on = settings.workingDays.includes(day);
-    const next = on ? settings.workingDays.filter((d) => d !== day) : [...settings.workingDays, day];
-    if (next.length === 0) return;
-    save({ workingDays: next });
-  };
+  const sameDays = (a: number[], b: number[]) => a.length === b.length && [...a].sort().every((d, i) => d === [...b].sort()[i]);
+  const week = WORK_WEEKS.find((w) => sameDays(w.days, settings.workingDays));
+  // A week set before this control keeps showing what it is, until someone picks one of the two.
+  const custom = week ? null : workingDaysLabel(settings.workingDays);
   const add = (e: FormEvent) => {
     e.preventDefault();
     if (!date || !label.trim()) return;
@@ -192,30 +196,38 @@ export function WorkingCalendarSection({ settings, canEdit, save }: { settings: 
   ];
 
   return (
-    <DashSection title="Working calendar" meta={workingDaysLabel(settings.workingDays)} bodyClassName="px-2 pb-2 pt-3">
-      <div className="flex flex-wrap gap-1.5 px-2" role="group" aria-label="Working days">
-        {WEEKDAYS.map((d) => {
-          const on = settings.workingDays.includes(d.day);
-          return (
-            <button
-              key={d.day}
-              type="button"
-              aria-pressed={on}
-              disabled={!canEdit}
-              onClick={() => toggleDay(d.day)}
-              className={cn(
-                'h-8 min-w-12 rounded-md border-1.5 px-2.5 text-[13px] font-medium transition-colors disabled:cursor-default',
-                on ? 'border-brand-line bg-brand-soft text-brand-text' : 'border-line bg-surface-raised text-ink-muted',
-                canEdit && !on && 'hover:bg-surface-sunken',
-              )}
-            >
-              {d.short}
-            </button>
-          );
-        })}
-      </div>
+    <DashSection
+      title="Working calendar"
+      right={
+        <Select
+          value={week?.label ?? 'custom'}
+          disabled={!canEdit}
+          onValueChange={(v) => {
+            const next = WORK_WEEKS.find((w) => w.label === v);
+            if (next) save({ workingDays: next.days });
+          }}
+        >
+          <SelectTrigger className="h-8 w-[140px] text-[13px]" aria-label="Working week">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {custom ? (
+              <SelectItem value="custom" disabled>
+                {custom}
+              </SelectItem>
+            ) : null}
+            {WORK_WEEKS.map((w) => (
+              <SelectItem key={w.label} value={w.label}>
+                {w.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      }
+      flush
+    >
       {canEdit ? (
-        <form className="mt-3 flex flex-wrap items-end gap-2 px-2" onSubmit={add}>
+        <form className="flex flex-wrap items-end gap-2 border-b border-line-soft px-4 py-3 md:px-5" onSubmit={add}>
           <div>
             <Label htmlFor="fs-hol-date" className="text-[12.5px] text-ink-muted">Date</Label>
             <Input id="fs-hol-date" type="date" className="mt-1 w-40" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -230,9 +242,7 @@ export function WorkingCalendarSection({ settings, canEdit, save }: { settings: 
           </Button>
         </form>
       ) : null}
-      <div className="mt-2">
-        <EFilingGrid caption="Holidays" columns={columns} rows={settings.holidays} rowKey={(h) => h.date} pageSize={12} minWidth={360} empty="No holidays listed" />
-      </div>
+      <EFilingGrid caption="Holidays" columns={columns} rows={settings.holidays} rowKey={(h) => h.date} pageSize={12} minWidth={360} empty="No holidays listed" />
     </DashSection>
   );
 }
@@ -252,7 +262,7 @@ export function ReminderSection({ settings, canEdit, save }: { settings: FirmSet
   };
 
   return (
-    <DashSection title="Default reminders" meta={reminderDaysLabel(days)}>
+    <DashSection title="Reminder rules" meta={reminderDaysLabel(days)} headIcon={{ icon: BellRing, tone: 'amber' }}>
       <ul className="flex flex-wrap gap-2" aria-label="Reminder days">
         {days.length === 0 ? <li className="text-[13px] text-ink-muted">No default reminders</li> : null}
         {days.map((d) => (
@@ -287,7 +297,14 @@ export function ReminderSection({ settings, canEdit, save }: { settings: FirmSet
   );
 }
 
-/** The firm logo: shows the stored one, uploads a new one, removes it. */
+/** The product's own colours, from the design tokens. */
+const BRAND_COLOURS = [
+  { name: 'Brand blue', cls: 'bg-brand' },
+  { name: 'Navy', cls: 'bg-side' },
+  { name: 'Orange', cls: 'bg-highlight-bright' },
+];
+
+/** The firm name, the swatches and the logo: shows the stored one, uploads a new one, removes it. */
 export function BrandingSection({
   settings,
   canEdit,
@@ -305,7 +322,11 @@ export function BrandingSection({
   const busy = uploadLogo.isPending || removeLogo.isPending;
 
   return (
-    <DashSection title="Branding" meta={settings.firmName ?? undefined}>
+    <DashSection title="Branding" headIcon={{ icon: Palette, tone: 'violet' }}>
+      <dl className="mb-3">
+        <dt className="text-[12.5px] text-ink-muted">Firm name</dt>
+        <dd className="mt-0.5 text-[14px] text-ink">{settings.firmName?.trim() || <span className="text-ink-faint">Not set</span>}</dd>
+      </dl>
       <div className="flex flex-wrap items-center gap-4">
         <span className="grid h-20 w-40 place-items-center overflow-hidden rounded-md border-1.5 border-line bg-surface-sunken">
           {settings.hasLogo ? (
@@ -340,6 +361,14 @@ export function BrandingSection({
           </div>
         ) : null}
       </div>
+      <div className="mt-3">
+        <div className="text-[12px] text-ink-muted">Brand colours</div>
+        <div className="mt-1.5 flex items-center gap-2">
+          {BRAND_COLOURS.map((b) => (
+            <span key={b.name} title={b.name} aria-label={b.name} className={cn('h-6 w-6 rounded-sm border-1.5 border-line', b.cls)} />
+          ))}
+        </div>
+      </div>
     </DashSection>
   );
 }
@@ -347,7 +376,7 @@ export function BrandingSection({
 /** The latest settings changes, from the audit trail. */
 export function SettingsHistorySection({ rows }: { rows: FirmSettingsHistoryRow[] }) {
   return (
-    <DashSection title="Settings history" meta={rows.length || undefined} bodyClassName="p-0">
+    <DashSection title="Settings history" flush>
       {rows.length === 0 ? (
         <div className="p-4">
           <EmptyState title="No changes yet" />
@@ -355,7 +384,7 @@ export function SettingsHistorySection({ rows }: { rows: FirmSettingsHistoryRow[
       ) : (
         <ul>
           {rows.map((r) => (
-            <li key={r.id} className="flex min-w-0 items-start gap-3 border-t border-line-soft px-4 py-3 first:border-t-0">
+            <li key={r.id} className="flex min-w-0 items-start gap-3 border-t border-line-soft px-4 py-3 first:border-t-0 md:px-5">
               <span className="min-w-0 flex-1">
                 <span className="block text-[13.5px] leading-snug text-ink">{r.summary}</span>
                 <span className="block truncate text-[12.5px] text-ink-muted">

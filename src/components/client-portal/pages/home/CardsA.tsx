@@ -265,7 +265,7 @@ export function HomeCard({ h, onUpload }: { h: HomeData; onUpload: (n?: NeedRow)
 
   return (
     <DashHero
-      title={company}
+      title={h.companyName || company}
       settings={false}
       lead={<DashHeroCompanyTile name={h.companyName || company} />}
       stage={
@@ -284,8 +284,6 @@ export function HomeCard({ h, onUpload }: { h: HomeData; onUpload: (n?: NeedRow)
           {after ? `${ring.done} of ${ring.total} done` : `${ring.done} of ${ring.total} steps`}
         </button>
       }
-      // M-30: the lead's name leaves the phone layout so the chip, steps and actions fit one line.
-      subtitle={h.lead ? <span title="Project lead" className="max-sm:hidden">· {h.lead}</span> : undefined}
       stats={stats}
     >
       {h.engagementId ? (
@@ -416,13 +414,12 @@ function AttentionRows({ h, hero, rows, onRow }: { h: HomeData; hero?: AlertRow;
         <li>
           <div className="flex items-center gap-3 bg-danger-soft px-4 py-3 md:px-5">
             <DateTile iso={hero.date} tint="bad" />
+            {/* The 360 px rail cannot hold the title, a status chip and the action on one line, so the
+                urgent row keeps the title and the action; its soft red already says overdue. */}
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13.5px] font-medium text-ink">{hero.title}</span>
+              <span className="line-clamp-2 text-[13.5px] font-medium text-ink">{hero.title}</span>
               {hero.meta ? <span className="block truncate text-[12.5px] text-ink-muted">{hero.meta}</span> : null}
             </span>
-            <Chip tone="bad" fixed className="max-sm:hidden">
-              Overdue
-            </Chip>
             <Button variant="strong" size="sm" onClick={() => h.portal.go(hero.href)}>
               {hero.action ?? 'Open'}
             </Button>

@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Building2, CircleCheck, Timer, User, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, Building2, CircleCheck, User, type LucideIcon } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { DashDonut, DashSection } from '@/components/dash/DashSection';
@@ -161,8 +161,8 @@ export default function Analytics() {
   const [period, setPeriod] = useState<'6' | '12'>('6');
   const metrics = useAnalyticsMetrics(period === '6' ? 6 : 12);
   const months = metrics.data?.months ?? [];
-  const data = months.map((m) => ({ m: m.label, completion: m.completionPct, delay: m.avgDelayDays }));
-  // Month words only ("Oct"); twelve months never repeat one, and the tooltip keeps the counts.
+  // Month words only ("Oct") on the axes; twelve months never repeat one.
+  const data = months.map((m) => ({ m: m.label.split(' ')[0] ?? m.label, completion: m.completionPct, delay: m.avgDelayDays }));
   const filingRows = months.map((m) => ({ key: m.key, label: m.label.split(' ')[0] ?? m.label, onTime: m.onTime, late: m.late }));
   const filedTotal = months.reduce((n, m) => n + m.onTime + m.late, 0);
   const onTimeTotal = months.reduce((n, m) => n + m.onTime, 0);
@@ -181,7 +181,6 @@ export default function Analytics() {
   const live = useMemo(() => analyticsKpis(projects.map((p) => p.state), ITEM_IDS), [projects]);
   const snapshot = useKpiSnapshot();
   const prev = snapshot.data?.values ?? {};
-  const onTimePct = metrics.data?.onTime.pct ?? null;
 
   const weeks = useMemo(() => stepsCompletedPerWeek(projects, ITEM_IDS, new Date()), [projects]);
   const weeksTotal = weeks.reduce((sum, w) => sum + w.steps, 0);
@@ -239,7 +238,6 @@ export default function Analytics() {
           {
             label: 'Steps completed',
             value: live.stepsDone,
-            of: live.stepsTotal ? `/ ${live.stepsTotal}` : undefined,
             Icon: CircleCheck,
             change: kpiChange(live.stepsDone, prev.steps_done),
           },
@@ -249,13 +247,6 @@ export default function Analytics() {
             Icon: User,
             change: kpiChange(live.awaitingClient, prev.awaiting_client),
             upIsGood: false,
-          },
-          {
-            label: 'Filed on time · 12 months',
-            value: onTimePct === null ? '–' : `${onTimePct}%`,
-            Icon: Timer,
-            // Compared only on the 12-month view, the window the snapshot stores.
-            change: period === '12' ? kpiChange(onTimePct, prev.on_time_pct) : null,
           },
           {
             label: 'Overdue steps',
@@ -272,7 +263,7 @@ export default function Analytics() {
         <div className="grid items-start gap-5 md:grid-cols-2">
           <DashSection
             title="Compliance completion rate"
-            meta={lastRated ? `${lastRated.completionPct}% in ${lastRated.label} · target 95%` : 'Target 95%'}
+            meta={lastRated ? `${lastRated.completionPct}% in ${lastRated.label.split(' ')[0]} · target 95%` : 'Target 95%'}
             loading={metrics.isPending}
             loadingVariant="block"
           >
@@ -330,7 +321,7 @@ export default function Analytics() {
         </div>
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <DashSection title="Time in step" meta="Open and finished steps" loading={metrics.isPending} bodyClassName="px-2 pb-2 pt-1">
+          <DashSection title="Time in step" meta="Open and finished steps" loading={metrics.isPending} flush>
             <EFilingGrid
               caption="Time in step"
               columns={STEP_TIME_COLUMNS}
@@ -356,7 +347,7 @@ export default function Analytics() {
                     size={96}
                     segments={healthRows.map((h) => ({ n: health[h.key], color: h.color }))}
                     centerLabel={projects.length}
-                    centerCaption="clients"
+                    centerCaption=""
                   />
                   <ChartLegend
                     layout="stack"

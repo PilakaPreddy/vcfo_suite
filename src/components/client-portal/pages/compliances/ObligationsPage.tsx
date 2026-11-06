@@ -175,7 +175,7 @@ function ObligationsBody({ today }: { today: string }) {
             <div key={g.id}>
               <GroupHead label={g.label} count={g.rows.length} open={Boolean(open)} onToggle={() => setClosed((c) => ({ ...c, [g.id]: !c[g.id] }))} />
               {open ? (
-                <ul className="grid grid-cols-1 gap-3 px-4 pb-4 pt-1 sm:grid-cols-2 md:px-5 2xl:grid-cols-3">
+                <ul className="grid grid-cols-1 gap-3 px-4 py-4 sm:grid-cols-2 md:px-5 2xl:grid-cols-3">
                   {g.rows.map((o) => (
                     <li key={o.id} className="min-w-0">
                       <BeforeTile o={o} />
@@ -231,7 +231,7 @@ function ObligationsBody({ today }: { today: string }) {
           <div key={g.id}>
             <GroupHead label={g.label} count={g.rows.length} open={Boolean(open)} onToggle={() => setClosed((c) => ({ ...c, [g.id]: !c[g.id] }))} />
             {open ? (
-              <ul className="grid grid-cols-1 gap-3 px-4 pb-4 pt-1 sm:grid-cols-2 md:px-5 2xl:grid-cols-3">
+              <ul className="grid grid-cols-1 gap-3 px-4 py-4 sm:grid-cols-2 md:px-5 2xl:grid-cols-3">
                 {g.rows.map((o) => (
                   <li key={o.id} className="min-w-0">
                     <ObligationTile o={o} fy={fy} today={today} />

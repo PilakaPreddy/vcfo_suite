@@ -68,7 +68,7 @@ export function SheetTable({
   const partners = data.partners;
 
   return (
-    <div className="overflow-x-auto rounded-md border-2 border-line bg-surface-raised xl:overflow-visible">
+    <div className="overflow-x-auto rounded-md border border-line bg-surface-raised xl:overflow-visible">
       <table className={cn('w-full table-fixed border-separate border-spacing-0 text-[13px]', fx ? 'min-w-[1150px]' : 'min-w-[980px]')} aria-label={label}>
         <colgroup>
           <col className="w-9" />

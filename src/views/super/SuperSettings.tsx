@@ -1,20 +1,19 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { PageTransition } from '@/components/shell/PageTransition';
 import { SEO } from '@/components/SEO';
-import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import AccountSettings from '@/views/settings/AccountSettings';
 import { FirmSettingsBody } from '@/views/firm-settings/FirmSettings';
 
 /**
  * SUPER ADMIN SETTINGS — the sidebar's "Firm settings" and the account row both land here
- * (`roleSettingsPath('super_admin')`). Two tabs: Firm (the firm settings store, G-02) and
- * Your profile (the existing `AccountSettings`, kept whole).
+ * (`roleSettingsPath('super_admin')`). The firm cards start at once (the firm settings store,
+ * G-02), with no tab row over them.
  *
- * The profile tab opens by itself for `?tab=profile`, the Outlook connect return (`?outlook=`)
- * and the profile section hashes (`#appearance` from the greeting card, and the others), so
+ * The profile (the existing `AccountSettings`, kept whole) opens for `?tab=profile`, the Outlook
+ * connect return (`?outlook=`) and the profile section hashes (`#appearance` from the greeting card, and the others), so
  * every link that used to reach the profile still does. `/app/super/profile` is the profile on
  * its own page (prototype route).
  */
@@ -25,56 +24,25 @@ const PATH = '/app/super/settings';
 
 function SuperSettingsInner() {
   const params = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const fromQuery: TabKey | null =
     params.get('tab') === 'profile' || params.has('outlook') ? 'profile' : params.get('tab') === 'firm' ? 'firm' : null;
-  const [tab, setTab] = useState<TabKey>(fromQuery ?? 'firm');
+  const [fromHash, setFromHash] = useState(false);
 
   // The hash only exists in the browser, so it is read after mount.
   useEffect(() => {
     if (fromQuery) return;
     const hash = window.location.hash.replace('#', '');
-    if (PROFILE_HASHES.has(hash)) setTab('profile');
+    if (PROFILE_HASHES.has(hash)) setFromHash(true);
   }, [fromQuery]);
 
-  const pick = (key: string) => {
-    const next = key === 'profile' ? 'profile' : 'firm';
-    setTab(next);
-    router.replace(next === 'profile' ? `${pathname}?tab=profile` : pathname, { scroll: false });
-  };
-
-  const tabs = (
-    <SpectrumTabs
-      variant="underline"
-      label="Settings"
-      items={[
-        { key: 'firm', label: 'Firm' },
-        { key: 'profile', label: 'Your profile' },
-      ]}
-      value={tab}
-      onChange={pick}
-    />
-  );
-
-  if (tab === 'profile') {
-    return (
-      <div className="flex flex-col gap-4">
-        {tabs}
-        <AccountSettings path={PATH} />
-      </div>
-    );
-  }
+  if (fromQuery === 'profile' || (!fromQuery && fromHash)) return <AccountSettings path={PATH} />;
 
   return (
     <PageTransition>
       <SEO title="Firm settings — VCFO Suite" description="The firm's profile, calendar, branding and reminders." path={PATH} />
-      <div className="flex flex-col gap-4">
-        {/* R-09: the top bar crumb names the page; the heading stays for screen readers. */}
-        <h1 className="sr-only">Firm settings</h1>
-        {tabs}
-        <FirmSettingsBody />
-      </div>
+      {/* R-09: the top bar crumb names the page; the heading stays for screen readers. */}
+      <h1 className="sr-only">Firm settings</h1>
+      <FirmSettingsBody />
     </PageTransition>
   );
 }

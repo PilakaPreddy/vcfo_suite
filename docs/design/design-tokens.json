@@ -18,12 +18,12 @@
       {
         "name": "surface",
         "value": {
-          "light": "#edf1f6",
+          "light": "#f6f8fb",
           "dark": "#0b0c10"
         },
-        "usage": "Page canvas behind everything. One step darker than surface-raised in both themes, so every card reads as raised (R-54). Cool grey; deep navy in dark. Never pure white, never pure black.",
+        "usage": "Page canvas behind everything. Cool off-white; deep navy in dark. Never pure white, never pure black.",
         "oklch": {
-          "light": "95.7% 0.008 254",
+          "light": "97.8% 0.005 258",
           "dark": "15.5% 0.009 274"
         }
       },
@@ -33,7 +33,7 @@
           "light": "#ffffff",
           "dark": "#13151a"
         },
-        "usage": "Cards, tables, dialogs, popovers, the top bar. Sits on surface with a 2px line edge (R-55). A card never sits on a ground of its own colour (R-54).",
+        "usage": "Cards, tables, dialogs, popovers, the top bar. Sits on surface with a 1px line edge.",
         "oklch": {
           "light": "100.0% 0.000 0",
           "dark": "19.6% 0.011 268"
@@ -66,12 +66,12 @@
       {
         "name": "line",
         "value": {
-          "light": "#d3dae4",
+          "light": "#e3e8ef",
           "dark": "#242830"
         },
-        "usage": "2px edge around every card, panel and section (R-55). Must stay clearly darker than the page (surface), so every card reads as a separate object.",
+        "usage": "1px hairline around cards. Decorative; never the only edge of a control.",
         "oklch": {
-          "light": "88.9% 0.016 257",
+          "light": "92.9% 0.011 257",
           "dark": "27.6% 0.016 264"
         }
       },
@@ -90,12 +90,12 @@
       {
         "name": "line-strong",
         "value": {
-          "light": "#b9c3d0",
+          "light": "#cbd3de",
           "dark": "#323742"
         },
         "usage": "Borders of inputs, checkboxes and secondary buttons. Holds 3:1 on surface and surface-raised.",
         "oklch": {
-          "light": "81.5% 0.022 256",
+          "light": "86.4% 0.018 256",
           "dark": "33.7% 0.021 266"
         }
       },

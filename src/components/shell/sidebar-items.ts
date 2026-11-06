@@ -4,6 +4,7 @@ import {
   BadgeCheck,
   BarChart3,
   Bell,
+  ListChecks,
   BookMarked,
   BookOpen,
   Briefcase,
@@ -13,7 +14,7 @@ import {
   Clock,
   Columns3,
   Database,
-  FileBarChart,
+  FileText,
   FolderClosed,
   FolderOpen,
   History as HistoryIcon,
@@ -87,7 +88,7 @@ function docsGroup(base: string, vaultIcon: NavIcon = FolderClosed): NavGroupDef
     iconTone: TONE.files,
     items: [
       { to: `${base}/vault`, label: 'Vault', icon: vaultIcon, iconTone: TONE.files },
-      { to: `${base}/knowledge-bank`, label: 'Knowledge Bank', icon: BookOpen, iconTone: TONE.knowledge },
+      { to: `${base}/knowledge-bank`, label: 'Knowledge bank', icon: BookOpen, iconTone: TONE.knowledge },
     ],
   };
 }
@@ -107,7 +108,7 @@ function updatesGroup(base: string): NavGroupDef {
   return {
     id: `updates:${base}`,
     label: 'Updates',
-    icon: Bell,
+    icon: Megaphone,
     iconTone: TONE.news,
     items: [
       { to: `${base}/announcements`, label: 'Announcements', icon: Megaphone, iconTone: TONE.news },
@@ -167,7 +168,7 @@ function receivablesItem(): NavItem {
 /* Sidebars in priority order (K-15, rule R-32): daily work, the practice block (R-51), dated
    work, messages, documents, then reports and settings below the break. */
 const firmAdminItems: NavEntry[] = [
-  { to: '/app/admin/dashboard', label: 'Home', icon: LayoutDashboard, iconTone: TONE.home },
+  { to: '/app/admin/dashboard', label: 'Today', icon: LayoutDashboard, iconTone: TONE.home },
   { to: '/app/admin/projects', label: 'Projects', icon: Briefcase, iconTone: TONE.work },
   { to: '/app/admin/approvals', label: 'Approvals', icon: ClipboardCheck, iconTone: TONE.queue },
   { to: '/app/admin/people', label: 'People', icon: Users, iconTone: TONE.people },
@@ -202,12 +203,12 @@ const clientItems: NavEntry[] = [
 const superAdminItems: NavEntry[] = [
   { to: '/app/super/dashboard', label: 'Overview', icon: LayoutDashboard, iconTone: TONE.home },
   { to: '/app/super/risks', label: 'Risks', icon: TriangleAlert, iconTone: TONE.queue },
-  { to: '/app/super/projects', label: 'Clients', icon: Briefcase, iconTone: TONE.work },
+  { to: '/app/super/projects', label: 'Clients', icon: Building2, iconTone: TONE.work },
   ...practiceBlock('super_admin', '/app/super'),
   labourRegistersItem('/app/super/practice'),
   { to: '/app/super/team', label: 'Team', icon: Users, iconTone: TONE.people },
   { to: '/app/super/growth', label: 'Growth', icon: TrendingUp, iconTone: TONE.analytics },
-  { to: '/app/super/reports', label: 'Reports', icon: FileBarChart, iconTone: TONE.analytics },
+  { to: '/app/super/reports', label: 'Reports', icon: FileText, iconTone: TONE.analytics },
   { to: '/app/super/vault', label: 'Documents', icon: FolderOpen, iconTone: TONE.files },
   updatesGroup('/app/super'),
   NAV_TOOLS_BREAK,
@@ -237,8 +238,8 @@ export const developerItems: NavEntry[] = [
 
 function managerItems(staffBase: string): NavEntry[] {
   return [
-    { to: `${staffBase}/dashboard`, label: 'Home', icon: LayoutDashboard, iconTone: TONE.home },
-    { to: `${staffBase}/work`, label: 'Work', icon: Columns3, iconTone: TONE.work },
+    { to: `${staffBase}/dashboard`, label: 'Today', icon: LayoutDashboard, iconTone: TONE.home },
+    { to: `${staffBase}/work`, label: 'Work', icon: ListChecks, iconTone: TONE.work },
     { to: `${staffBase}/projects`, label: 'Projects', icon: Briefcase, iconTone: TONE.work },
     { to: `${staffBase}/approvals`, label: 'Approvals', icon: ClipboardCheck, iconTone: TONE.queue },
     { to: `${staffBase}/people`, label: 'People', icon: Users, iconTone: TONE.people },
@@ -262,8 +263,8 @@ const INTERN_CLIENTS = '/app/intern/clients';
    "No incorporated clients yet" instead of sending the lead to Today. */
 const internItems: NavEntry[] = [
   { to: '/app/intern/today', label: 'Today', icon: LayoutDashboard, iconTone: TONE.home },
-  { to: '/app/intern/tasks', label: 'Work', icon: Columns3, iconTone: TONE.work },
-  { to: INTERN_CLIENTS, label: 'Clients', icon: UserSquare2, iconTone: TONE.people },
+  { to: '/app/intern/tasks', label: 'Work', icon: ListChecks, iconTone: TONE.work },
+  { to: INTERN_CLIENTS, label: 'Clients', icon: Building2, iconTone: TONE.people },
   ...practiceBlock('intern', '/app/intern'),
   labourRegistersItem('/app/intern'),
   updatesGroup('/app/intern'),

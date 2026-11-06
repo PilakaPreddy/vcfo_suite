@@ -22,14 +22,25 @@ export function RaiseEscalationButton({
   companyName,
   admins,
   size = 'default',
+  open: openProp,
+  onOpenChange,
 }: {
   engagementId: string;
   companyName?: string;
   admins?: Array<{ id: string; name: string; role: string }>;
   size?: 'default' | 'sm';
+  /** Controlled from a menu: the dialog opens on this and the button is not drawn. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const raise = useRaiseEscalation();
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : ownOpen;
+  const setOpen = (next: boolean) => {
+    if (controlled) onOpenChange?.(next);
+    else setOwnOpen(next);
+  };
   const [reason, setReason] = useState('');
   const [to, setTo] = useState(SUPER);
 
@@ -51,10 +62,12 @@ export function RaiseEscalationButton({
 
   return (
     <>
-      <Button variant="outline" size={size} onClick={() => setOpen(true)}>
-        <TriangleAlert aria-hidden />
-        Escalate
-      </Button>
+      {controlled ? null : (
+        <Button variant="outline" size={size} onClick={() => setOpen(true)}>
+          <TriangleAlert aria-hidden />
+          Escalate
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

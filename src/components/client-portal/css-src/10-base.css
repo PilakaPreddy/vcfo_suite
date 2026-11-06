@@ -123,7 +123,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{
 @keyframes v7pulse{0%,100%{box-shadow:0 0 0 0 oklch(80% 0.12 85 / .7)}50%{box-shadow:0 0 0 5px oklch(80% 0.12 85 / 0)}}.pulse{animation:v7pulse 1.8s ease-in-out infinite}@media (prefers-reduced-motion: reduce){.pulse{animation:none}}
 /* ---- client pages additions (Team · Updates · Audit · Settings) ---- */
 html,body{background:var(--bg)}
-.pg{padding:24px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.pg{padding:24px;display:flex;flex-direction:column;gap:20px;min-width:0}
 .ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .ph h1{margin:0;font:500 22px/1.2 var(--font-sans),sans-serif;letter-spacing:-.02em;color:var(--navy-ink,var(--navy))}
 .ph .acts{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}

@@ -31,10 +31,16 @@
 .vps .vps-sub>div{overflow:hidden;position:relative}
 .vps .vps-sub:not(.open)>div{visibility:hidden}
 .vps .vps-sub>div:before{content:"";position:absolute;left:18px;top:4px;bottom:4px;width:1px;background:rgba(255,255,255,.14)}
-.vps .vps-sub .vps-i{height:32px;padding-left:37px;font-size:13px;margin-top:2px}
+/* The prototype's rows sit 2 px apart. A folded group must add no second gap, so the sub list pulls back the nav's gap and its rows carry the space under them. */
+.vps .vps-nav>.vps-sub{margin-top:-2px}
+.vps .vps-sub .vps-i{height:32px;padding-left:37px;font-size:13px;margin-bottom:2px}
+.vps .vps-sub .vps-i:last-child{margin-bottom:4px}
+/* The open or closed parent of the current page reads bold (prototype Sidebar `holds`). */
+.vps .vps-g[data-holds]{color:#fff;font-weight:500}
+.vps .vps-g[data-holds] .vps-ic{color:oklch(var(--side-active-ink))}
 .vps .vps-sub .vps-i:after{content:"";position:absolute;left:16px;top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:2px;background:oklch(var(--side-muted));transition:background .15s,box-shadow .15s}
 .vps .vps-sub .vps-i[aria-current=page]:after{background:oklch(var(--brand-line));box-shadow:0 0 0 3px rgba(255,255,255,.12)}
-.vps .vps-team{margin-top:auto;padding:10px 8px 8px;border-top:1px solid oklch(var(--side-line))}
+.vps .vps-team{margin-top:auto;padding:10px 0 4px;border-top:1px solid oklch(var(--side-line))}
 .vps .vps-lbl{font:500 11.5px var(--font-sans),sans-serif;letter-spacing:.07em;text-transform:uppercase;color:oklch(var(--side-muted));margin:0 8px 6px}
 .vps .vps-p{position:relative;display:flex;align-items:center;gap:9px;height:38px;padding:0 8px;border-radius:6px;transition:background .15s}
 .vps .vps-p:hover,.vps .vps-p:focus-within{background:rgba(255,255,255,.06)}
@@ -150,7 +156,7 @@ body:has(#vp-side) [data-vp="side"]:not(.vps){visibility:hidden}
 .vps .vps-ask[aria-current=page]{background:oklch(var(--side-hover));border-color:oklch(var(--brand))}
 .vps .vps-ask .vps-ask-i{flex:none;width:22px;height:22px;display:grid;place-items:center;border-radius:4px;background:oklch(var(--brand));color:#fff}
 .vps .vps-ask .vps-ask-t{flex:1;text-align:left}
-.vps .vps-ask kbd{border-radius:4px;border:1px solid oklch(var(--side-line));background:rgba(255,255,255,.07);padding:0 5px;font:500 11px/18px var(--font-sans),sans-serif;color:oklch(var(--side-muted))}
+.vps .vps-ask kbd{border-radius:4px;border:1px solid oklch(var(--side-line));background:rgba(255,255,255,.07);padding:0 5px;font:500 11px/18px var(--font-sans),sans-serif;color:oklch(var(--side-muted));text-transform:none}
 .vps.vps-icons .vps-ask{justify-content:center;padding:0}
 .vps.vps-icons .vps-ask .vps-ask-t,.vps.vps-icons .vps-ask kbd{display:none}
 .cp-ribbon{position:fixed;left:0;right:0;top:0;height:3px;z-index:2147482600;pointer-events:none;background:linear-gradient(90deg,oklch(var(--data-3)) 0 16.667%,oklch(var(--data-1)) 0 33.333%,oklch(var(--data-2)) 0 50%,oklch(var(--data-5)) 0 66.667%,oklch(var(--data-4)) 0 83.333%,oklch(var(--data-6)) 0)}

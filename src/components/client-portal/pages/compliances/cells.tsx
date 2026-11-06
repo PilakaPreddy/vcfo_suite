@@ -4,7 +4,6 @@
 import { Download } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Chip as SChip } from '@/components/ui/spectrum-chip';
 import { daysBetween, fmtDM, plural, statusOf, type PortalFiling } from '@/lib/client-portal/compliances';
 
 export function FiledCell({ r, today }: { r: PortalFiling; today: string }) {
@@ -23,9 +22,9 @@ export function ProofCell({ r, onProof, onDownload }: { r: PortalFiling; onProof
   if (!r.filedOn) return <span className="text-ink-faint">-</span>;
   if (r.proofCount === 0)
     return (
-      <SChip tone="warn" title="SBC will upload the proof">
+      <span className="whitespace-nowrap text-[12.5px] text-ink-muted" title="SBC will upload the proof">
         Proof pending
-      </SChip>
+      </span>
     );
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
@@ -42,9 +41,8 @@ export function ProofCell({ r, onProof, onDownload }: { r: PortalFiling; onProof
       </button>
       <Button
         type="button"
-        size="sm"
-        variant="quiet"
-        className="w-[30px] min-w-0 px-0"
+        size="iconSm"
+        variant="ghost"
         aria-label={`Download proof for ${r.name} ${r.period}`}
         onClick={(e) => {
           e.stopPropagation();

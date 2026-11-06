@@ -5,7 +5,8 @@
  * src/screens/client/StepScreen.tsx and step-parts.tsx): a plain page head (title, status
  * chip, meta line, owner and the official portal forms), underline tabs for the Answers and
  * Documents views, the ST5 list of the phase on the right, and the prev and next pager. The
- * approval row sits at the foot of the Answers card (it was a sticky bar).
+ * approval row sits at the foot of the Answers card (it was a sticky bar). A step the client
+ * fills in the direct flow keeps the shared form, the only place those answers can be entered.
  *
  * Real actions: client approve (`POST /api/client/steps/:id/approve`, deferred
  * until the 3.2 s Undo toast closes), request a change
@@ -15,7 +16,7 @@
  * client fills (`POST /api/client/steps/:id/draft`, C-218), and message the lead about a step
  * SBC holds (`POST /api/client/messages` with the step's item key, C-219).
  */
-import { Check, CircleHelp, Download, ExternalLink, Eye, ListChecks, MessageSquare, MoreVertical, PenLine } from 'lucide-react';
+import { Check, CircleHelp, Download, ExternalLink, Eye, ListChecks, MessageSquare, PenLine } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { getActiveCatalogItems, getChecklistStepTimelineLabel, type ChecklistField } from '@/data/checklist';
@@ -45,7 +46,6 @@ import { Chip, OwnerChip } from '@/components/ui/spectrum-chip';
 import { StepLink, StepMark } from '@/components/ui/step-track';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { FileBadge } from '@/components/ui/file-badge';
-import { threadDate } from '@/components/dash/thread';
 import { SkeletonRows } from '@/components/ui/empty-state';
 import { portalHref } from '../../routes';
 import { usePortal, usePortalCrumbs } from '../../PortalProvider';
@@ -54,7 +54,6 @@ import { triggerDownload } from '../documents/file-types';
 import { IncFrame, fmt, fmtL, istDay, kb } from './ui';
 import {
   INC_EXTRAS_KEY,
-  KL,
   PHL,
   firstName,
   kd,
@@ -207,7 +206,7 @@ const PHASE_PART: Record<number, string> = { 1: 'SPICe+ Part A', 2: 'SPICe+ Part
 export default function StepPage({ stepParam }: { stepParam: string }) {
   const d = useIncData();
   const { engagementsSettled } = useApp();
-  const { go, openChat, toast, drill } = usePortal();
+  const { go, openChat, toast } = usePortal();
   const goTo = useGo();
   const qc = useQueryClient();
   const viewer = useDocViewer();
@@ -507,7 +506,7 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
   const chip = stepChip(s);
   const late = s.late && k !== 'done';
   const inPhase = phase.steps;
-  const portalLink = s.owner !== 'client' && s.n !== 2 ? portalFor(s.item) : null;
+  const portalLink = s.n !== 2 ? portalFor(s.item) : null;
   const forms = (s.item.forms ?? []).slice(0, 3);
   const showDocs = view === 'docs' && docsCount > 0;
   // C-218: the client edits text answers on a step it fills that is still open. The draft route
@@ -523,21 +522,16 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
     (!s.slice?.locked || unlocked.has(r.field.id));
   const editable = rows.some(canEditRow);
   /**
-   * Every step: the client's page is the project lead's page — the same tabbed
-   * form card on its own (one tab per section; the client's own steps are
-   * filled here, the rest read). No "What this step captures" card, sub-steps
-   * or Answers / Documents views. The client's actions (approve, file requests,
-   * message the lead, request a change) sit under the card. Two cases keep the
-   * old answer list: a step with no answer fields for the client, and a
-   * client-owned step outside the direct flow that the client edits as rows
-   * (the shared form is read-only for the client there).
+   * The prototype's Answers and Documents views show every step the client reads. The shared
+   * tabbed form stays for a direct-flow step the client is filling now, because repeating fields
+   * and uploads can only be entered there; the client's actions sit under it.
    */
   const clientFormFields = filterFieldsByViewer(
     fieldsForOwnership(s.id, getClientResponseFields(s.item), d.ownershipType),
     'client',
     s.id,
   ).filter((f) => !isStepRemarksField(f));
-  const leadLayout = Boolean(d.engagementId) && clientFormFields.length > 0 && (direct || !editable);
+  const leadLayout = Boolean(d.engagementId) && clientFormFields.length > 0 && direct && editStep;
   const reqDone = requests.filter((r) => r.fulfilledAt).length;
   const dirty = Object.keys(draft).length > 0;
   // C-219: a step SBC or MCA holds gets "Message <lead>" in the card foot.
@@ -623,35 +617,6 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
       </section>
     ) : null;
 
-  const moreFor = (y: PortalStep) => {
-    const fs = stepFiles(y, d.ownershipType);
-    const resp = extractItemResponses(y.item, y.slice);
-    const need = getClientResponseFields(y.item).filter((f) => f.type === 'file' && !String(resp[f.id] ?? '').trim());
-    drill({
-      title: `Step ${y.n} · ${y.title}`,
-      sub: `${KL[kd(y)]} · attachments`,
-      tabs: [
-        {
-          label: 'Attached',
-          color: 'oklch(var(--positive-mid))',
-          rows: fs.map((f) => ({
-            title: f.label,
-            meta: f.fileName,
-            chip: 'Open',
-            chipColor: 'oklch(var(--brand))',
-            onOpen: () => viewer.open(fs.map((x) => ({ id: `${y.id}:${x.fieldId}`, name: x.fileName, url: () => signedUrlFor(x.path), meta: `Step ${y.n} · ${y.title}` })), fs.indexOf(f)),
-          })),
-        },
-        {
-          label: 'Still needed',
-          color: 'oklch(var(--warning-mid))',
-          rows: need.map((f) => ({ title: f.label, meta: y.owner === 'client' ? `From ${d.short}` : 'SBC prepares', href: stepHrefOf(y) })),
-        },
-      ],
-      active: fs.length ? 0 : 1,
-    });
-  };
-
   const approval = (
     <div className="flex flex-col gap-3 border-t border-line-soft px-4 py-3 sm:flex-row sm:items-center md:px-5" role="region" aria-label="Approval">
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
@@ -703,27 +668,38 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
             {leadFirst ? `Message ${leadFirst}` : 'Message your team'}
           </Button>
         </div>
-      ) : k === 'done' ? (
-        <div className="flex justify-end">
-          <Button variant="secondary" onClick={requestChange}>
-            <MessageSquare size={16} strokeWidth={1.6} aria-hidden />
-            Request a change
-          </Button>
-        </div>
-      ) : k === 'up' && prev ? (
-        <div className="flex justify-end">
-          <Button variant="secondary" onClick={() => go(stepHrefOf(prev))}>
-            Go to step {prev.n}
-          </Button>
-        </div>
       ) : null}
     </div>
   ) : null;
 
-  // Same look as the lead's page: a plain card of the step's answers — no status
-  // block, sub-steps or description (used where the shared form has nothing to show).
+  // The status line at the top of the Answers card (prototype step-parts.tsx statusLine).
+  const stLine: { state: 'done' | 'now' | 'next'; title: string; sub: string; bad?: boolean } =
+    k === 'done'
+      ? {
+          state: 'done',
+          title: s.owner === 'client' ? 'Approved' : 'Completed',
+          sub: `${s.owner === 'client' ? 'Accepted after submission on' : 'Delivered by SBC on'} ${s.doneOn ? fmtL(s.doneOn) : '-'}`,
+        }
+      : k === 'you'
+        ? { state: 'now', title: `Waiting on ${d.short}${s.due ? ` · due ${fmt(s.due)}` : ''}`, sub: 'Check the answers, then approve and submit', bad: late }
+        : k === 'prog'
+          ? { state: 'now', title: `In progress${s.due ? ` · due ${fmt(s.due)}` : ''}`, sub: s.due ? `Fill the remaining answers and submit by ${fmt(s.due)}` : 'Fill the remaining answers and submit', bad: late }
+          : k === 'with'
+            ? { state: 'now', title: `With ${s.owner === 'mca' ? 'MCA' : 'SBC'}${s.due ? ` · due ${fmt(s.due)}` : ''}`, sub: s.owner === 'mca' ? 'MCA reviews the filing' : `${leadFirst || 'SBC'} is working on it` }
+            : { state: 'next', title: 'Not started', sub: prev ? `Opens after step ${prev.n} · ${prev.title}` : 'Opens later' };
+
   const answersCard = (
-    <SCard title={s.title} flush>
+    <SCard title={k === 'done' || k === 'you' ? 'Answers' : 'What this step captures'} flush>
+      <div className="flex items-start gap-3 border-b border-line-soft px-4 py-3 md:px-5">
+        <span className="mt-0.5 inline-grid">
+          <StepMark state={stLine.state} tone={markTone(s)} label={chip.label} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <b className={cn('block text-[14px] font-medium text-ink', stLine.bad && 'text-danger')}>{stLine.title}</b>
+          <span className="block text-[12.5px] text-ink-muted">{stLine.sub}</span>
+        </span>
+      </div>
+      {s.item.description && !/\bintern\b/i.test(s.item.description) ? <p className="m-0 border-b border-line-soft px-4 py-3 text-[13.5px] text-ink-2 md:px-5">{s.item.description}</p> : null}
       <dl className="m-0">
         {rows.map((r, i) => (
           <KvRow
@@ -800,23 +776,8 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
                   <span className="flex-none font-mono text-[12px] font-normal text-ink-muted">Step {y.n}</span>
                   <span className={cn('truncate text-[14px] text-ink', cur ? 'font-medium' : 'font-normal')}>{y.title}</span>
                 </span>
-                {/* F-216: a done step shows its date at the right (shared Thread date format). */}
-                {kd(y) === 'done' && threadDate(y.doneOn) ? (
-                  <span className="flex-none text-[12.5px] tabular-nums text-ink-muted">{threadDate(y.doneOn)}</span>
-                ) : (
-                  <span className={cn('hidden flex-none text-[12px] font-medium sm:inline', ownerTone[y.owner])}>{o === 'You' ? d.short : o}</span>
-                )}
+                <span className={cn('hidden flex-none text-[12px] font-medium sm:inline', ownerTone[y.owner])}>{o === 'You' ? d.short : o}</span>
               </a>
-              <button
-                type="button"
-                className="grid h-[30px] w-[30px] flex-none place-items-center rounded-md text-ink-muted hover:bg-surface-sunken hover:text-ink"
-                aria-label={`More for step ${y.n} · ${y.title}`}
-                data-tt="Attachments"
-                data-notip=""
-                onClick={() => moreFor(y)}
-              >
-                <MoreVertical size={15} strokeWidth={1.6} aria-hidden />
-              </button>
             </li>
           );
         })}

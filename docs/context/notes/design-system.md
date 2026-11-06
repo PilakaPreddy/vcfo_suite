@@ -156,6 +156,8 @@ shared component from those two and delete both.
 
 ## Round 1 rules R-54 to R-60 (owner approved, 2026-10-30)
 
+**R-54, R-55 and R-56 were reverted on 2026-11-05 at the owner's word:** the page is `#f6f8fb`, card edges are 1 px and filter chips and upcoming marks are dashed, as in the prototype. Read the table below with that in mind. Prototype: `~/Documents/vcfo-prototype`.
+
 | Rule | Subject | Do this | Do not do this | Where it lives |
 |---|---|---|---|---|
 | R-54 | Depth | Put the page on `surface`. Put every card on `surface-raised`. `surface` is one step darker than `surface-raised` in light and dark mode (light `#edf1f6` on `#ffffff`, dark `#0b0c10` on `#13151a`). | Do not put a card on a ground of its own colour. Do not give a card `bg-surface` or no background. | `docs/design/design-tokens.json`, `app/globals.css`, portal `--bg` / `--panel` |

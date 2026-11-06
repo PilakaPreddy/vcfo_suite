@@ -6,7 +6,7 @@
  * page. Columns: the ST5 mark, the step, the owner, the status, the date, the portal and
  * proof. A row opens its step page.
  */
-import { CircleHelp, ExternalLink, Paperclip } from 'lucide-react';
+import { ExternalLink, Paperclip } from 'lucide-react';
 import { Fragment } from 'react';
 import type { PortalPhase, PortalStep } from '@/lib/client-portal/step-model';
 import { internRegistrationHeadingForTitle } from '@/lib/intern/intern-overview-progress';
@@ -14,11 +14,12 @@ import { extractItemResponses } from '@/lib/checklist/checklist-responses';
 import { getStepAttachmentRequirements } from '@/lib/checklist/checklist-step-attachments';
 import type { OwnershipType } from '@/data/engagements';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { Chip, OwnerChip } from '@/components/ui/spectrum-chip';
 import { StepMark } from '@/components/ui/step-track';
 import { usePortal } from '../../PortalProvider';
 import type { ViewerDoc } from '../documents/DocViewer';
-import { PH, PHL, PH_WAIT, dateCell, kd, ownKey, signedUrlFor, stepAnswer, stepHrefOf, tipTxt } from './data';
+import { PH, PHL, PH_WAIT, dateCell, kd, ownKey, signedUrlFor, stepHrefOf, tipTxt } from './data';
 import { portalFor } from './portals';
 import { markState, markTone, stepChip, useGo } from './spectrum';
 
@@ -45,8 +46,6 @@ function viewerDocsFor(s: PortalStep, files: StepFile[]): ViewerDoc[] {
     meta: `Step ${s.n} · ${s.title}`,
   }));
 }
-
-const ICON_BTN = 'grid h-[30px] w-[30px] flex-none place-items-center rounded-md text-ink-muted hover:bg-surface-sunken hover:text-ink';
 
 /** The sticky cells keep the row's fill: white, grey on hover, blurple on the focus row. */
 const STICKY_BG = '!bg-surface-raised group-hover/row:!bg-surface-sunken';
@@ -86,9 +85,9 @@ export function StepTable({
     return (
       <span className="flex items-center gap-1.5">
         {portal ? (
-          <button
-            type="button"
-            className={ICON_BTN}
+          <Button
+            size="iconSm"
+            variant="ghost"
             aria-label={`Open ${portal.form} on the official portal`}
             data-tt={`${portal.form} · official portal`}
             data-notip=""
@@ -99,12 +98,12 @@ export function StepTable({
             }}
           >
             <ExternalLink size={15} strokeWidth={1.6} aria-hidden />
-          </button>
+          </Button>
         ) : null}
         {files.length ? (
-          <button
-            type="button"
-            className="inline-flex h-[30px] items-center gap-1 rounded-md px-1.5 text-[12.5px] font-medium text-brand-text hover:bg-surface-sunken"
+          <Button
+            size="sm"
+            variant="ghost"
             aria-label={`${done ? 'Proof' : 'Attachments'} of step ${x.n} · ${x.title}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -113,11 +112,11 @@ export function StepTable({
           >
             <Paperclip size={14} strokeWidth={1.6} aria-hidden />
             {done ? 'Proof' : files.length}
-          </button>
+          </Button>
         ) : portal && done ? (
-          <Chip tone="warn" data-tt="Proof pending · SBC uploads it">
+          <span className="whitespace-nowrap text-[12.5px] text-ink-muted" data-tt="SBC uploads the proof">
             Proof pending
-          </Chip>
+          </span>
         ) : null}
       </span>
     );
@@ -150,7 +149,6 @@ export function StepTable({
               <th className="w-[124px]">Status</th>
               <th className="w-[128px]">Date</th>
               <th className="w-[110px]">Portal</th>
-              {landing ? null : <th className="w-10" aria-label="Ask" />}
             </tr>
           </thead>
           <tbody>
@@ -167,7 +165,7 @@ export function StepTable({
                 <Fragment key={x.id}>
                   {showHead ? (
                     <tr>
-                      <td colSpan={landing ? 6 : 7} className="!h-9 bg-surface-sunken text-[11.5px] font-medium uppercase tracking-[.07em] !text-ink-muted">
+                      <td colSpan={6} className="!h-9 bg-surface-sunken text-[11.5px] font-medium uppercase tracking-[.07em] !text-ink-muted">
                         {head}
                       </td>
                     </tr>
@@ -200,26 +198,9 @@ export function StepTable({
                       </Chip>
                     </td>
                     <td>
-                      <span className={cn('whitespace-nowrap text-[13px]', late ? 'font-medium text-danger' : 'text-ink-muted')}>{dt}</span>
+                      <span className={cn('whitespace-nowrap', late ? 'font-medium text-danger' : 'font-normal text-ink-muted')}>{dt}</span>
                     </td>
                     <td>{portalCell(x)}</td>
-                    {landing ? null : (
-                      <td>
-                        <button
-                          type="button"
-                          className={ICON_BTN}
-                          aria-label={`What’s this? ${x.title}`}
-                          data-tt="What’s this? · ask VCFO"
-                          data-notip=""
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openChat(`What’s this: ${x.title}?`, stepAnswer(x, short));
-                          }}
-                        >
-                          <CircleHelp size={15} strokeWidth={1.6} aria-hidden />
-                        </button>
-                      </td>
-                    )}
                   </tr>
                 </Fragment>
               );

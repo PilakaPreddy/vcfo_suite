@@ -13,17 +13,18 @@ import { AssignClientDialog } from '@/components/super/assign/AssignClientDialog
 import { useSuperStaff } from '@/components/super/assign/use-super-staff';
 import { AreaPill, Chip } from '@/components/ui/spectrum-chip';
 import { PhaseBar } from '@/components/ui/step-track';
-import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import {
   attentionReason,
   HEALTH_LABEL,
   idleLabel,
+  stepCode,
+  superAreaOf,
   superPhaseTrack,
+  superStageWord,
   superStateChip,
 } from '@/components/super/overview/super-overview-format';
 import {
   ClientTile,
-  NameCell,
   PersonAvatar,
   SuperFilterChips,
   SuperPageError,
@@ -37,7 +38,6 @@ import {
   needsAttention,
   SUPER_PROJECTS_HREF,
   type SuperEngagementSummary,
-  type SuperOverview,
 } from '@/lib/super/super-overview';
 import { cn } from '@/lib/utils';
 
@@ -48,21 +48,24 @@ import { cn } from '@/lib/utils';
  * dashboard can never disagree; filtering is client-side over rows the server
  * already ranked by urgency. Read-only, like the rest of this surface.
  *
- * The table is the shared `EFilingGrid` (Spectrum T1 rows). The state switch and
- * the stage chip live in the URL (`?filter=`, `?stage=`), so the Overview's
- * links keep landing on the right slice; admin, manager and lead chips are local.
- * The Admin column reads the manager's reporting line (G-20), and "Assign client"
- * opens the same assign dialog as the Overview.
+ * The table is the shared `EFilingGrid` (Spectrum T1 rows). The chips are Admin,
+ * Manager, Stage and Area (prototype); a link with `?filter=` lands on a slice, shown
+ * as one more chip, and Clear all drops it. The Admin column reads the
+ * manager's reporting line (G-20), and "Assign client" opens the same assign dialog
+ * as the Overview.
  */
 
 type Filter = 'all' | 'attention' | 'firm' | 'client';
 
-const FILTERS: { id: Filter; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'attention', label: 'Needs attention' },
-  { id: 'firm', label: 'With SBC' },
-  { id: 'client', label: 'With the client' },
-];
+const STAGES = ['Incorporating', 'Compliance'];
+const AREAS = ['Incorporation', 'Registrations', 'Compliances'];
+
+/** The word a `?filter=` slice shows on its chip, so the narrowed list says why it is short. */
+const SLICE_WORD: Record<Exclude<Filter, 'all'>, string> = {
+  attention: 'Needs attention',
+  firm: 'With SBC',
+  client: 'With client',
+};
 
 function parseFilter(value: string | null): Filter {
   return value === 'attention' || value === 'firm' || value === 'client' ? value : 'all';
@@ -82,10 +85,10 @@ function SuperProjectsInner() {
   const overview = query.data;
 
   const filter = parseFilter(params.get('filter'));
-  const stage = params.get('stage');
+  const [stage, setStage] = useState('');
+  const [area, setArea] = useState('');
   const [admin, setAdmin] = useState('');
   const [manager, setManager] = useState('');
-  const [lead, setLead] = useState('');
   const [assignOpen, setAssignOpen] = useState(false);
   const staff = useSuperStaff();
   const adminOf = staff.adminNameOf;
@@ -95,12 +98,12 @@ function SuperProjectsInner() {
     return overview.engagements.filter(
       (summary) =>
         matchesFilter(summary, filter) &&
-        (!stage || summary.stage === stage) &&
+        (!stage || superStageWord(summary) === stage) &&
+        (!area || superAreaOf(summary) === area) &&
         (!admin || (adminOf(summary.managerId) ?? 'Unassigned') === admin) &&
-        (!manager || (summary.managerName ?? 'Unassigned') === manager) &&
-        (!lead || (summary.leadName ?? 'Unassigned') === lead),
+        (!manager || (summary.managerName ?? 'Unassigned') === manager),
     );
-  }, [overview, filter, stage, admin, manager, lead, adminOf]);
+  }, [overview, filter, stage, area, admin, manager, adminOf]);
 
   /**
    * The client's next date: the end of the current step's window (insights), else the earliest
@@ -121,16 +124,6 @@ function SuperProjectsInner() {
     }
     return out;
   }, [overview, insights]);
-
-  const go = (next: { filter?: Filter; stage?: string | null }) => {
-    const search = new URLSearchParams();
-    const nextFilter = next.filter ?? filter;
-    const nextStage = next.stage === undefined ? stage : next.stage;
-    if (nextFilter !== 'all') search.set('filter', nextFilter);
-    if (nextStage) search.set('stage', nextStage);
-    const qs = search.toString();
-    router.replace(qs ? `${SUPER_PROJECTS_HREF}?${qs}` : SUPER_PROJECTS_HREF, { scroll: false });
-  };
 
   const seo = (
     <SEO
@@ -158,10 +151,6 @@ function SuperProjectsInner() {
     );
   }
 
-  const counts = countsFor(overview);
-  const names = (pick: (s: SuperEngagementSummary) => string | null) =>
-    [...new Set(overview.engagements.map((s) => pick(s) ?? 'Unassigned'))].sort((a, b) => a.localeCompare(b));
-  const stageLabel = overview.charts.byStage.find((bar) => bar.stage === stage)?.label ?? '';
   const columns = columnsFor(nextDue, adminOf);
   // Picking an admin narrows the manager list to the managers who report to that admin.
   const managerNames = [
@@ -179,61 +168,57 @@ function SuperProjectsInner() {
     <PageTransition>
       {seo}
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <SpectrumTabs
-          label="Show"
-          size="md"
-          items={FILTERS.map((entry) => ({ key: entry.id, label: entry.label, count: counts[entry.id] }))}
-          value={filter}
-          onChange={(key) => go({ filter: parseFilter(key) })}
-        />
-        <SuperFilterChips
-          onClear={() => {
-            setAdmin('');
-            setManager('');
-            setLead('');
-            go({ stage: null });
-          }}
-          filters={[
-            {
-              key: 'admin',
-              label: 'Admin',
-              value: admin,
-              options: adminNames,
-              onChange: (v) => {
-                setAdmin(v);
-                setManager('');
-              },
+      <SuperFilterChips
+        className="mb-3"
+        onClear={() => {
+          setAdmin('');
+          setManager('');
+          setStage('');
+          setArea('');
+          if (filter !== 'all') router.replace(SUPER_PROJECTS_HREF, { scroll: false });
+        }}
+        filters={[
+          ...(filter !== 'all'
+            ? [
+                {
+                  key: 'slice',
+                  label: 'Showing',
+                  value: SLICE_WORD[filter],
+                  options: Object.values(SLICE_WORD),
+                  onChange: (word: string) => {
+                    const next = Object.entries(SLICE_WORD).find(([, w]) => w === word)?.[0];
+                    router.replace(next ? `${SUPER_PROJECTS_HREF}?filter=${next}` : SUPER_PROJECTS_HREF, { scroll: false });
+                  },
+                },
+              ]
+            : []),
+          {
+            key: 'admin',
+            label: 'Admin',
+            value: admin,
+            options: adminNames,
+            onChange: (v) => {
+              setAdmin(v);
+              setManager('');
             },
-            { key: 'manager', label: 'Manager', value: manager, options: managerNames, onChange: setManager },
-            { key: 'lead', label: 'Lead', value: lead, options: names((s) => s.leadName), onChange: setLead },
-            {
-              key: 'stage',
-              label: 'Stage',
-              value: stageLabel,
-              options: overview.charts.byStage.map((bar) => bar.label),
-              onChange: (label) =>
-                go({ stage: overview.charts.byStage.find((bar) => bar.label === label)?.stage ?? null }),
-            },
-          ]}
-        />
-      </div>
+          },
+          { key: 'manager', label: 'Manager', value: manager, options: managerNames, onChange: setManager },
+          { key: 'stage', label: 'Stage', value: stage, options: STAGES, onChange: setStage },
+          { key: 'area', label: 'Area', value: area, options: AREAS, onChange: setArea },
+        ]}
+      />
 
       {/* R-09: no page title; the count and "Assign client" sit in the grid card head. */}
       <DashSection
         title="All clients"
-        meta={
-          <span className="flex min-w-0 items-center gap-3">
-            <span className="tabular-nums">
-              {rows.length} of {overview.engagements.length}
-            </span>
-            <Button size="sm" onClick={() => setAssignOpen(true)}>
-              <UserPlus aria-hidden />
-              Assign client
-            </Button>
-          </span>
+        meta={`${rows.length} of ${overview.engagements.length}`}
+        right={
+          <Button size="sm" onClick={() => setAssignOpen(true)}>
+            <UserPlus aria-hidden />
+            Assign client
+          </Button>
         }
-        bodyClassName="px-2 pb-2 pt-1"
+        flush
       >
         <div className="hidden md:block">
           <EFilingGrid
@@ -243,7 +228,7 @@ function SuperProjectsInner() {
             rowKey={(row) => row.id}
             onRowClick={(row) => router.push(row.href)}
             empty="No client matches these filters"
-            minWidth={1080}
+            minWidth={1040}
             pageSize={17}
           />
         </div>
@@ -265,15 +250,6 @@ function SuperProjectsInner() {
   );
 }
 
-function countsFor(overview: SuperOverview): Record<Filter, number> {
-  return {
-    all: overview.engagements.length,
-    attention: overview.engagements.filter(needsAttention).length,
-    firm: overview.engagements.filter((row) => row.currentStep?.owner === 'firm').length,
-    client: overview.engagements.filter((row) => row.currentStep?.owner === 'client').length,
-  };
-}
-
 /* The clients grid (K-45, C-0109): Spectrum T1 rows with the ST5 phase bars, the area pill
    for the stage and the status chip in one of the six words. */
 function columnsFor(
@@ -285,32 +261,36 @@ function columnsFor(
     {
       key: 'company',
       header: 'Client',
-      width: '19%',
+      width: '200px',
+      wrap: true,
       render: (row) => (
-        <NameCell
-          lead={<ClientTile id={row.id} name={row.companyName} />}
-          title={
-            // A real link, so the record can open in a new tab; the row click still opens it.
-            <Link href={row.href} className="hover:underline" onClick={(e) => e.stopPropagation()}>
-              {shortCompany(row.companyName)}
-            </Link>
-          }
-        />
+        <span className="flex min-w-0 items-center gap-2.5">
+          <ClientTile id={row.id} name={row.companyName} />
+          {/* A real link, so the record can open in a new tab; the row click still opens it. */}
+          <Link href={row.href} className="min-w-0 font-medium leading-snug text-ink hover:underline" onClick={(e) => e.stopPropagation()}>
+            {shortCompany(row.companyName)}
+          </Link>
+        </span>
       ),
     },
     {
       key: 'now',
       header: 'Now at',
-      width: '20%',
+      wrap: true,
       render: (row) => (
-        <NameCell title={row.currentStep?.title ?? 'Every step is done'} sub={row.leadName ?? 'No lead'} />
+        <span className="block min-w-[160px]">
+          <span className="line-clamp-2 font-medium leading-snug text-ink">{row.currentStep?.title ?? 'Every step is done'}</span>
+          <span className="block truncate text-[12px] text-ink-muted">
+            {[stepCode(row.currentStep?.id), row.leadName ?? 'No lead'].filter(Boolean).join(' · ')}
+          </span>
+        </span>
       ),
     },
     { key: 'progress', header: 'Progress', width: '150px', render: (row) => <ProgressTrack summary={row} /> },
     {
       key: 'admin',
       header: 'Admin',
-      width: '11%',
+      width: '110px',
       render: (row) => {
         const name = adminOf(row.managerId);
         return name ? <span className="block min-w-0 truncate">{name}</span> : <span className="text-ink-faint">–</span>;
@@ -319,11 +299,12 @@ function columnsFor(
     {
       key: 'manager',
       header: 'Manager',
-      width: '14%',
+      width: '150px',
+      wrap: true,
       render: (row) => (
         <span className="flex min-w-0 items-center gap-2">
           <PersonAvatar name={row.managerName ?? '?'} />
-          <span className="min-w-0 truncate">{row.managerName ?? 'Unassigned'}</span>
+          <span className="min-w-0 leading-snug">{row.managerName ?? 'Unassigned'}</span>
         </span>
       ),
     },
@@ -331,7 +312,7 @@ function columnsFor(
       key: 'stage',
       header: 'Stage',
       width: '124px',
-      render: (row) => <AreaPill area={row.stageLabel} reg={row.incorporated ? undefined : 'mca'} />,
+      render: (row) => <AreaPill area={superStageWord(row)} reg={row.incorporated ? undefined : 'mca'} />,
     },
     {
       key: 'next',
@@ -357,17 +338,6 @@ function columnsFor(
           </Chip>
         );
       },
-    },
-    {
-      key: 'idle',
-      header: 'Last move',
-      width: '88px',
-      align: 'right',
-      render: (row) => (
-        <span className={cn('tabular-nums', row.idleDays !== null && row.idleDays >= 14 && 'font-medium text-danger')}>
-          {row.idleDays === null ? '–' : row.idleDays === 0 ? 'Today' : `${row.idleDays}d`}
-        </span>
-      ),
     },
   ];
 }

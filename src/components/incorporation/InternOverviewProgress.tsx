@@ -186,6 +186,8 @@ export type InternPhaseTab = {
   total: number;
   /** "Steps 1–5" under the phase bar. */
   range?: string;
+  /** The name over the phase bar; the catalog's phase title when absent. */
+  label?: string;
 };
 
 /**
@@ -196,8 +198,7 @@ export function InternPhaseTabs({
   engagementId,
   currentPhaseId,
   phases,
-  metaForPhase,
-  trailingForPhase,
+  openPhaseId,
   headAction,
   headMeta,
   children,
@@ -205,10 +206,8 @@ export function InternPhaseTabs({
   engagementId: string;
   currentPhaseId: string | null;
   phases: readonly InternPhaseTab[];
-  /** Quiet metadata in the card head for the picked phase (the manager's window). */
-  metaForPhase?: (phaseId: string) => ReactNode;
-  /** A link in the card head for the picked phase (the document pack pill). */
-  trailingForPhase?: (phaseId: string) => ReactNode;
+  /** Opens on this phase (`?phase=n` from a phase bar in a list). */
+  openPhaseId?: string | null;
   /** Right-hand head action, such as "Open current step". */
   headAction?: ReactNode;
   /** The head's muted count; "x of y done" by default. */
@@ -229,12 +228,12 @@ export function InternPhaseTabs({
   useLayoutEffect(() => {
     setTab(
       internEngagementPhaseTabDefault(
-        readInternEngagementPhaseTab(engagementId),
+        openPhaseId ?? readInternEngagementPhaseTab(engagementId),
         currentPhaseIdRef.current,
         phaseIdsRef.current,
       ),
     );
-  }, [engagementId]);
+  }, [engagementId, openPhaseId]);
 
   if (phases.length === 0) return null;
 
@@ -251,44 +250,35 @@ export function InternPhaseTabs({
     writeInternEngagementPhaseTab(engagementId, next);
   };
 
-  const meta = metaForPhase?.(selected.id) ?? null;
-  const trailing = trailingForPhase?.(selected.id) ?? null;
-
   return (
     <section className="surface min-w-0 overflow-hidden" aria-label="Incorporation phases">
-      <div className="flex min-h-[52px] min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-line-soft px-4 py-2">
+      <div className="flex min-h-[52px] min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-line-soft px-4 py-2 md:px-5">
         <CardHeadTile title="Steps" />
-        <h2 className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">Steps</h2>
-        <span className="shrink-0 text-[12.5px] tabular-nums text-ink-muted">
+        <h2 className="whitespace-nowrap text-[15px] font-medium text-ink">Steps</h2>
+        <span className="truncate text-[13px] tabular-nums text-ink-muted">
           {headMeta ?? `${totalDone} of ${total} done`}
         </span>
-        {headAction}
+        <span className="ml-auto flex items-center">{headAction}</span>
       </div>
-      <div className="px-4 pb-3 pt-4">
+      <div className="p-4 md:px-5">
         <RecordPhaseTrack
-          phases={phases.map((p) => ({ id: p.id, label: internOverviewPhaseTitle(p.id, p.title), done: p.done, total: p.total, range: p.range }))}
+          phases={phases.map((p) => ({ id: p.id, label: p.label ?? internOverviewPhaseTitle(p.id, p.title), done: p.done, total: p.total, range: p.range }))}
           picked={selected.id}
           onPick={onValueChange}
         />
-        {meta || trailing ? (
-          <div className="mt-3 flex min-w-0 flex-wrap items-center gap-3 text-[12.5px] text-ink-muted">
-            <span className="min-w-0 flex-1">{meta}</span>
-            {trailing}
-          </div>
-        ) : null}
-      </div>
-      <div className="border-t border-line-soft" role="region" aria-label={internOverviewPhaseTitle(selected.id, selected.title)}>
-        <AnimatePresence mode="wait" initial={false}>
-          <m.div
-            key={value}
-            initial={panelMotion.initial}
-            animate={panelMotion.animate}
-            exit={panelMotion.exit}
-            transition={panelMotion.transition}
-          >
-            {children(value)}
-          </m.div>
-        </AnimatePresence>
+        <div className="mt-4 border-t border-line-soft pt-3" role="region" aria-label={internOverviewPhaseTitle(selected.id, selected.title)}>
+          <AnimatePresence mode="wait" initial={false}>
+            <m.div
+              key={value}
+              initial={panelMotion.initial}
+              animate={panelMotion.animate}
+              exit={panelMotion.exit}
+              transition={panelMotion.transition}
+            >
+              {children(value)}
+            </m.div>
+          </AnimatePresence>
+        </div>
       </div>
     </section>
   );

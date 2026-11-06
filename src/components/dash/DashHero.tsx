@@ -176,7 +176,7 @@ export function DashHero({
     ) : null;
 
   return (
-    <section style={skin} data-hero-image={hero.image ? 'true' : undefined} className="bg-wash flex flex-col gap-3 rounded-md border-2 border-line px-4 pb-4 pt-3.5 md:px-5" aria-label="Summary">
+    <section style={skin} data-hero-image={hero.image ? 'true' : undefined} className="bg-wash flex flex-col gap-3 rounded-md border border-line px-4 pb-4 pt-3.5 md:px-5" aria-label="Summary">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         {lead ? (
           // M-30: on a phone the name takes the first line; the chip, step count and actions share the second.

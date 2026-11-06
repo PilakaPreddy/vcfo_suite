@@ -9,7 +9,7 @@ export function Kbd({ children, dark, className }: { children: ReactNode; dark?:
   return (
     <kbd
       className={cn(
-        'inline-flex flex-none items-center rounded-mark px-[5px] font-sans text-[11px] font-medium',
+        'inline-flex flex-none items-center rounded-mark px-[5px] font-mono text-[11px] font-medium',
         dark ? 'bg-white/10 leading-4 text-side-ink' : 'border border-line bg-surface-sunken leading-[18px] text-ink-muted',
         className,
       )}

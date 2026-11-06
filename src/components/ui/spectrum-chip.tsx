@@ -140,6 +140,9 @@ const SWATCH: Record<Regulator, string> = {
   labour: 'bg-reg-labour',
 };
 
+/** The short name of a regulator: an area pill and an area tab read "MCA", never the act's name. */
+export const REG_WORD: Record<Regulator, string> = { mca: 'MCA', gst: 'GST', it: 'Income tax', payroll: 'Payroll', fema: 'FEMA', labour: 'Labour' };
+
 /** R-43: area pill. 24px, 6px corners, 1.5px edge, white fill, 104px, 8px swatch. The text stays ink. */
 export function AreaPill({ area, reg, className }: { area: string; reg?: Regulator; className?: string }) {
   const r = reg ?? regOf(area);
@@ -151,7 +154,7 @@ export function AreaPill({ area, reg, className }: { area: string; reg?: Regulat
       )}
     >
       <i className={cn('h-2 w-2 flex-none rounded-[2px]', r ? SWATCH[r] : 'bg-upcoming-mid')} aria-hidden />
-      <span className="min-w-0 truncate">{area}</span>
+      <span className="min-w-0 truncate">{r ? REG_WORD[r] : area}</span>
     </span>
   );
 }

@@ -9,6 +9,7 @@ import { gateDisplayStatus, getStepGate, type ChecklistStepGate } from '@/lib/ch
 import type { BoardResolutionProgressSnapshot } from '@/lib/client/client-progress-board';
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
 import { directFlowRoleLabel } from '@/lib/incorporation/pre-inc-direct-flow';
+import { recordStepPlace } from '@/views/client-record/RecordHeadParts';
 
 /** "Last edited by Kiran Rao (Client), 12 Oct 2026, 4:05 pm" — IST, like every other time in the app. */
 export function lastEditedLine(slice: ChecklistItemStateSlice | undefined): string | null {
@@ -32,13 +33,15 @@ export function journeyRailItems(
   brSnapshot: BoardResolutionProgressSnapshot | null | undefined,
   ownershipType: OwnershipType | undefined,
   schedule: EngagementSchedule | undefined,
+  viewerIsClient: boolean,
 ): JourneyRailItem[] {
   return steps.map((step, index) => {
     const gate = getStepGate(gates, step.id);
     const slice = checklistState[step.id];
     const window = windowForStep(schedule, step.id);
     return {
-      ...(window ? { windowLabel: formatWindow(window) } : {}),
+      ...(window && viewerIsClient ? { windowLabel: formatWindow(window) } : {}),
+      ...(!viewerIsClient ? { stepCode: recordStepPlace(step.id)?.code } : {}),
       item: step,
       gate,
       status: gateDisplayStatus(

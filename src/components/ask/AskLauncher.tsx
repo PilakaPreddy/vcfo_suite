@@ -7,6 +7,7 @@ import { MessageCircleQuestion, Sparkles } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { roleAskPath } from '@/lib/auth-routes';
 import { isAskShortcut } from '@/lib/ask/shortcut';
+import { Kbd } from '@/components/ui/kbd';
 import { cn } from '@/lib/utils';
 import { useAskOptional } from './ask-context';
 
@@ -76,6 +77,7 @@ export function AskLauncher({
           <Sparkles className="h-[13px] w-[13px]" strokeWidth={1.6} />
         </span>
         <span className={cn('flex-1 text-left', !expanded && 'sr-only')}>Ask VCFO</span>
+        {expanded ? <Kbd dark>/</Kbd> : null}
       </Link>
     );
   }
