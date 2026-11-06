@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { Client } from 'pg';
 
 /**
  * Demo users. `npm run db:seed` creates the `@vcfo.local` set and
@@ -40,12 +41,26 @@ export async function closeLivePopups(page: Page): Promise<void> {
 }
 
 /**
+ * The sign-in limit counts every attempt, ten per address in fifteen minutes, and a test run signs
+ * in far more often than that. So a test forgets the counts first, on a local database only: no
+ * connection is made for any other host.
+ */
+async function forgetSignInCounts(): Promise<void> {
+  const url = process.env.DATABASE_URL;
+  if (!url || !['localhost', '127.0.0.1'].includes(new URL(url).hostname)) return;
+  const client = new Client({ connectionString: url });
+  await client.connect();
+  await client.query(`delete from rate_limits where key like 'sign-in:%' or key like 'two-step:%'`).finally(() => client.end());
+}
+
+/**
  * Sign in through the login page. The page renders the form twice (one copy
  * hidden) and hydration can clear an early fill, so fill the visible inputs
  * and re-fill until the values stick.
  */
 export async function login(page: Page, role: DemoRole): Promise<void> {
   const { email, password } = USERS[role];
+  await forgetSignInCounts();
   await closeLivePopups(page);
   await page.goto('/login');
   await page.waitForLoadState('networkidle');

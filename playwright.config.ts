@@ -1,5 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// The login helper reads DATABASE_URL, and a machine with no local env file simply goes without it.
+try {
+  process.loadEnvFile(".env.local");
+} catch {}
+
 // A worktree on its own port sets PLAYWRIGHT_BASE_URL, and the server check follows it.
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 
