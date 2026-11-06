@@ -11,7 +11,7 @@ export interface GlossaryTerm {
   by: string;
 }
 
-const GLOSSARY: GlossaryTerm[] = [
+export const GLOSSARY: GlossaryTerm[] = [
   { term: "GSTR-3B", text: "Monthly summary return. File by the 20th with the tax paid.", by: "GST · GSTN" },
   { term: "GSTR-1", text: "Monthly return of sales invoices. File by the 11th.", by: "GST · GSTN" },
   { term: "GSTR-9", text: "Yearly GST return. File by 31 Dec after the year.", by: "GST · GSTN" },

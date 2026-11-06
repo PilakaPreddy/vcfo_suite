@@ -267,3 +267,87 @@ action from `ask_changeset_rows.status`; autonomy does not rise automatically.
 `npm run typecheck`, `npm run test` and `npm run lint` (0 errors). Fresh worktrees need `npm run css:portal` first, because the
 client-portal CSS is generated and three test files import it. Commit small, with full-sentence messages; no push, no
 deploy, no RDS. Report anything untested, stubbed or not run live in `gaps`.
+
+## Where the answer track left this plan
+
+Phase 0, 6 November:
+
+- The router answers through `output_config.format` (JSON), not a strict tool. A tool definition cost 575 input
+  tokens against 441 for the same schema as a format, and the reply fell from about 150 output tokens to about 50.
+  Mock providers therefore return the router's reply as a text block.
+- Thinking is off on the router, as the phase task asked, at effort low. A probe of the 29 messages at both settings
+  showed the same intents and almost the same tokens once the decision wording was tightened, so either would do.
+- Generated answers run on Haiku 5.5 at effort low, tool answers included, because the 29 cases passed on it. Raise a
+  route with `ASK_VCFO_MODEL_ANSWER`, `ASK_VCFO_MODEL_DOCUMENT` or `ASK_VCFO_ANSWER_EFFORT`.
+- `askBudgets()` gains `answerMaxTokens` (`ASK_ANSWER_MAX_TOKENS`, 40,000), because `runMaxTokens` is sized for a Do run
+  and could never stop a five-round chat answer.
+- The client `getProjectSnapshot` tool is gone. The snapshot is already in the system prompt, and the model spent a
+  round on calling the tool anyway. The citation id stays, so stored answers and suggestions keep their label.
+- Reviewed topics no longer sit in the fixed prefix; they reach the model through retrieval. No topic is published yet,
+  so this saves nothing today, and it stops the prefix growing as topics are published.
+- The token report is for a super admin, as the phase task says, not every firm-wide admin. It stays at
+  `app/app/admin/ask-vcfo/usage/`, linked from Question gaps and Sources.
+- `ROUTER_INTENTS` is live. `do_work` answers with a plain line on `router_refusal`; `fact` runs as a tool answer until
+  phase 1 adds the metrics.
+
+Phase 1, 6 November:
+
+- `localMatch` runs before the daily budget and the rate limit, not after them as the seam order says. Those two guard
+  model spending, and a number that spends nothing should still be there on the day the budget runs out.
+- A strict match means every word of the question is accounted for: a question word, a period, an alias, and at most one
+  status, law area or company. Any other leftover word ("why", "penalty") sends the question to the router.
+- "This year" means the financial year, and the answer always names the year it counted.
+- A client asking `companies.incorporated` gets their company's own date, whatever period was asked, because a count of
+  one company in a period reads as a wrong answer.
+- The catalog holds 28 metrics: the 25 named above, plus `steps.remaining`, `projects.by_status` and `people.team`,
+  which the phase task asked for by subject. `companies.in_progress` reads incorporated state, so a company with the
+  certificate step closed but no date set counts as incorporated, while the dated periods of `companies.incorporated`
+  need the date.
+- `filings.*` use the rows and `filingStatus` of the Filings page. That page shows one financial year at a time, while
+  `filings.overdue` counts every year, because a filing missed last year is still overdue. The sentence names how many
+  are from an earlier year, and the link opens the page on its full-year view, so 9 in chat next to 8 on the tile reads
+  as the same fact. `filings.due_soon` keeps items the page words as Waiting, which its Due soon filter leaves out.
+- `invoices.overdue` leaves out disputed invoices and says so in the sentence. `invoices.outstanding` does not.
+- `metrics/types.ts` changed from phase 0: `byMonth` became `bars`, which also takes groups, and filters gained
+  `fyStartYear` and `client`. A `bars` visual joined the fixed set for code only; it is on neither allowed-visual list, so
+  the model cannot emit it. A `list` destination joined the links, with a client subset.
+- `useStaffBasePath` sent a Project Lead's Ask links to `/app/manager`. Ask now uses `useAskLinkBase`, and `resolveHref`
+  takes the lead's and the client's base.
+
+Phase 2, 6 November:
+
+- Full text matches any word, not every word: `websearch_to_tsquery` ANDs them, so a paraphrase found nothing. Each search
+  runs on the words as asked and again on the words `query-expand.ts` adds, so a common added word ("due", "file") cannot
+  bury the source holding the rare word the person typed. A full-text hit under a quarter of the best score is dropped,
+  and vectors must sit within a cosine distance of 0.8. Both numbers are first estimates; Titan's distances have not been
+  seen yet, so look at 0.8 again when Bedrock is switched on.
+- The date check now accepts a date held by a document or record source, and `<source>` tags say which kind they are.
+  Without this, every answer from the statutory calendar would be rejected. A topic's date still does not count.
+- A source is out of the search when it has not begun, has ended or has been replaced. A replacement takes over only when
+  it turns ready and its start date arrives, so a failed upload cannot lose the old text. Archiving it restores the old one.
+- Record cards hold what people wrote, never a status or an owner, so only text changes refresh them. Staff-only is the
+  default: work tasks and notes are staff, requests are both, and a comment reaches a client only if it is not internal
+  and the client can see its task. The hooks sit in the repository writes people use. Rows from jobs and scripts
+  (`repeat.ts`, board meetings) are picked up by the nightly `ask-index-sweep`.
+- Cards join the sources only for a data question, and a card in the sources stops the answer being saved.
+- Regulatory update cards stay Watch's: `upsertChatCard` writes them, and a builder here would fight it over the hash.
+  `searchIndexItems` leaves out a card whose update a published one replaced.
+- Saved answers run after `localMatch` and before the budget, with the same reasoning as phase 1, and only on the first
+  message of a conversation. A client's key also holds the company's legal form and residency. A killed `saved_answer`
+  path answers in full rather than showing a stop line. Saving clears rows from older knowledge versions.
+- `isStandingQuestion` is a word list. It errs towards not saving: "we" and "our" block a saved answer on an otherwise
+  general question, which costs a model call and nothing else.
+- PDF: `inspectPages` from unpdf tells scans from text. A page under 40 characters with an image on it is a scan; a blank
+  page is ignored. Nothing installed can cut a page out of a PDF, so a partly scanned file goes to the model whole with the
+  scanned pages named, and input tokens are charged for all of it. Past the daily budget a scan fails with a clear reason
+  and a retry works later; a text PDF still indexes, without context prefixes. Ingestion spend is reported under a new
+  path, `ingest`. The contextualizer moved to Haiku 5.5 with thinking off, because 200 output tokens would otherwise go on
+  thinking. `unpdf` is in `serverExternalPackages`.
+- Embedding spend does not reach `ask_usage_daily`, which counts language-model tokens. Titan's cost is small and shows
+  on the AWS bill.
+- `npm run ask:knowledge:load` loads the playbook, obligation texts, statutory calendar, glossary, reviewed topics and the
+  two overview PDFs (staff only, read first: they name roles, not people). No topic is published yet, so none loaded. A
+  topic restricted by legal form or residency stays with the topic code, because a search source has no per-viewer check.
+  The dark copy of the map PDF is the same text and is left out.
+- `npm run eval:knowledge` is the database eval (40 cases against pgvector with a fake embedding provider), and
+  `npm run eval:knowledge:live` runs the paraphrase and Hinglish cases through the real pipeline.

@@ -9,6 +9,8 @@ type NextStepVisual = Extract<Visual, { type: 'nextStep' }>;
 type ProjectRowsVisual = Extract<Visual, { type: 'projectRows' }>;
 type MetricsVisual = Extract<Visual, { type: 'metrics' }>;
 
+type BarsVisual = Extract<Visual, { type: 'bars' }>;
+
 const STATE_TEXT = { done: 'done', here: 'you are here', next: 'next' } as const;
 const TONE_LABEL = { late: 'Late', waiting: 'Waiting', plain: '' } as const;
 
@@ -41,7 +43,11 @@ function nextStepText(v: NextStepVisual): string {
 
 function projectRowsText(v: ProjectRowsVisual): string {
   if (v.rows.length === 0) return 'No projects.';
-  return v.rows.map((r) => `${r.name}: ${r.step}. ${r.meta}.${TONE_LABEL[r.tone] ? ` ${TONE_LABEL[r.tone]}.` : ''}`).join(' ');
+  return v.rows.map((r) => `${r.name}: ${r.step}.${r.meta ? ` ${r.meta}.` : ''}${TONE_LABEL[r.tone] ? ` ${TONE_LABEL[r.tone]}.` : ''}`).join(' ');
+}
+
+function barsText(v: BarsVisual): string {
+  return v.items.map((b) => `${b.k}: ${b.v}.`).join(' ');
 }
 
 function metricsText(v: MetricsVisual): string {
@@ -67,5 +73,7 @@ export function visualText(visual: Visual): string {
       return projectRowsText(visual);
     case 'metrics':
       return metricsText(visual);
+    case 'bars':
+      return barsText(visual);
   }
 }

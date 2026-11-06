@@ -15,3 +15,9 @@ export interface EmbeddingProvider {
   /** One vector per text, in input order, each `EMBEDDING_DIMENSIONS` long and normalised. */
   embed(texts: readonly string[]): Promise<number[][]>;
 }
+
+/** A question's vector, with the model that made it: only vectors from one model can be compared. */
+export interface QueryVector {
+  values: number[];
+  model: string;
+}

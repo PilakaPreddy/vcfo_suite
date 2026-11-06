@@ -9,9 +9,9 @@ const lastFour = (value: string): string => {
 };
 
 const PATTERNS: readonly RegExp[] = [
-  /\b[A-Z]{5}\d{4}[A-Z]\b/g, // PAN
+  /\b[A-Z]{5}\d{4}[A-Z]\b/gi, // PAN
   /\b[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}\b/g, // Aadhaar
-  /\b[A-Z][1-9]\d{6}\b/g, // Passport
+  /\b[A-Z][1-9]\d{6}\b/gi, // Passport
 ];
 
 const DIN_IN_CONTEXT = /\b(DIN[\s:#-]*)(\d{8})\b/gi;

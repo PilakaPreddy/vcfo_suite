@@ -20,7 +20,7 @@ Playwright `e2e/ask-vcfo*.spec.ts` 19 tests.
 | §3.5 Suggestions per shell | Built | `src/data/ask/suggestions.ts`, `src/lib/ask/suggestions.ts` | |
 | §4.1–4.2 Conversations and messages tables | Built | `ask_conversations`, `ask_messages` (migrations 0021, 0022) | Created as `assist_*` under the working name, renamed in 0022 |
 | §4.3 Client library table | Built | `client_library_items`, `src/db/repositories/client-library.ts` | |
-| §4.4 Knowledge sources and chunks | Changed | `ask_documents`, `ask_chunks` | No `embedding` column: local Postgres has no pgvector and v1 retrieval is full-text only (OD2) |
+| §4.4 Knowledge sources and chunks | Changed | `ask_documents`, `ask_chunks` | Hybrid search with Titan V2 vectors at 512 dimensions; provider `none` runs on full text (`docs/specs/ask-vcfo/BUILD-PLAN.md`, phase 2) |
 | §4.5 "Ask my lead" reuses existing requests | Changed | `src/db/repositories/ask-handoff.ts` | Clients cannot create `document_requests`, and the client change request reopens a step. Owner chose a `tasks` row for the lead plus a notification |
 | §5 API routes | Built | `app/api/ask/*` | Also `status`, `nudge`, `brief`, `admin/gaps` for later features |
 | §6.1 Provider interface, Anthropic and Bedrock | Built | `src/lib/ask/provider/*` | |
@@ -48,9 +48,9 @@ Playwright `e2e/ask-vcfo*.spec.ts` 19 tests.
 | §9A C4 Monthly status brief | Built | `src/lib/ask/status-brief.ts`, `/api/ask/brief` | Flag C4, off |
 | §9A C5 What if I miss it | Built | `src/data/ask/topics/obligation-*.json` | Flag C5, off. Only published obligation topics are served; drafts carry no amounts |
 | §9A A1 Question gaps and visibility notice | Built | `/app/admin/ask-vcfo/gaps`, `src/db/repositories/ask-question-gaps.ts` | Flag A1, off. Notice wording is the owner's to confirm |
-| Phase 7 Knowledge ingestion | Changed | `src/lib/ask/ingest/*`, `src/jobs/ask-ingest.ts` | PDFs are transcribed by the contextualizer model (no PDF text extractor installed). Ingestion runs in-process when Inngest is unreachable |
+| Phase 7 Knowledge ingestion | Changed | `src/lib/ask/ingest/*`, `src/jobs/ask-ingest.ts` | PDF text is read locally with unpdf and only scanned pages go to a model. Ingestion runs in-process when Inngest is unreachable |
 | Phase 8 Evals | Built | `tests/ask/evals/*` | |
-| §13 Embeddings, reranker, thumbs, library sharing, retention job, learning path | Omitted | — | Listed by the spec as later backlog |
+| §13 Reranker, thumbs, library sharing, retention job, learning path | Omitted | — | Listed by the spec as later backlog |
 | GAP-1 Phase progress tool and where-now answer | Built | `src/lib/ask/phase-progress.ts` | |
 | GAP-1 §2.3 Step 3 of the e2e flow expects "Not yet reviewed" on the where-now answer | Changed | `e2e/ask-vcfo.spec.ts` | The where-now answer is `deterministic` per §2.3, so it carries the firm badge. "Not yet reviewed" is asserted on a topic answer instead |
 | GAP-1 §2.4 Free-text shortcut for "where are we?" | Omitted | — | `shortcut.ts` is the keyboard shortcut, not a pipeline shortcut; the model answers with `getPhaseProgress` as the spec allows |

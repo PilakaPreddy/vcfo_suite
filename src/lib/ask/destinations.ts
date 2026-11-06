@@ -2,6 +2,7 @@ import { getActiveCatalogItems } from '@/data/checklist';
 import {
   answerLinkSchema,
   CLIENT_DESTINATIONS,
+  CLIENT_METRIC_LISTS,
   MAX_ANSWER_LINKS,
   STAFF_DESTINATIONS,
   type AnswerLink,
@@ -51,6 +52,8 @@ export function checkDestination(dest: Destination, scope: DestinationScope): De
     case 'projectStep':
       if (!scope.engagementKeys?.has(dest.engagementId)) return null;
       return active.has(dest.stepId) ? dest : { to: 'project', engagementId: dest.engagementId };
+    case 'list':
+      return !client || CLIENT_METRIC_LISTS.includes(dest.list) ? dest : null;
     default:
       return dest;
   }

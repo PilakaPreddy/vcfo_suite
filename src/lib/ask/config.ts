@@ -15,6 +15,7 @@ export interface AskConfig {
   provider: AskProviderName;
   models: {
     guard: string;
+    /** Answers that read live data through tools. */
     answer: string;
     contextualizer: string;
     /** Document answers: Haiku first, and an env override to Sonnet where evals need it. */
@@ -56,17 +57,17 @@ export function askConfig(): AskConfig {
     enabled: process.env.ASK_VCFO_ENABLED === 'true',
     provider,
     models: {
-      guard: process.env.ASK_VCFO_MODEL_GUARD?.trim() || 'claude-haiku-4-5-20251001',
-      answer: process.env.ASK_VCFO_MODEL_ANSWER?.trim() || 'claude-sonnet-5-5',
-      contextualizer: process.env.ASK_VCFO_MODEL_CONTEXTUALIZER?.trim() || 'claude-haiku-4-5-20251001',
+      guard: process.env.ASK_VCFO_MODEL_GUARD?.trim() || 'claude-haiku-5-5',
+      answer: process.env.ASK_VCFO_MODEL_ANSWER?.trim() || 'claude-haiku-5-5',
+      contextualizer: process.env.ASK_VCFO_MODEL_CONTEXTUALIZER?.trim() || 'claude-haiku-5-5',
       document: process.env.ASK_VCFO_MODEL_DOCUMENT?.trim() || 'claude-haiku-5-5',
       extract: process.env.ASK_VCFO_MODEL_EXTRACT?.trim() || 'claude-haiku-5-5',
       watch: process.env.ASK_VCFO_MODEL_WATCH?.trim() || 'claude-haiku-5-5',
       agent: process.env.ASK_VCFO_MODEL_AGENT?.trim() || 'claude-sonnet-5-5',
     },
-    answerEffort: effort === 'low' || effort === 'high' ? effort : 'medium',
+    answerEffort: effort === 'medium' || effort === 'high' ? effort : 'low',
     rateLimit: { hour: intEnv('ASK_VCFO_RATE_LIMIT_HOUR', 30), day: intEnv('ASK_VCFO_RATE_LIMIT_DAY', 200) },
-    retrievalTopK: intEnv('ASK_VCFO_RETRIEVAL_TOP_K', 8),
+    retrievalTopK: intEnv('ASK_VCFO_RETRIEVAL_TOP_K', 4),
     bedrockRegion: process.env.ASK_VCFO_BEDROCK_REGION?.trim() || null,
     refusalFallback: process.env.ASK_VCFO_REFUSAL_FALLBACK !== 'false',
   };
@@ -112,6 +113,8 @@ export interface AskBudgets {
   runMaxTurns: number;
   /** Input plus output tokens for one Do run; cache reads do not count. */
   runMaxTokens: number;
+  /** Input plus output tokens for one chat answer across its tool rounds. */
+  answerMaxTokens: number;
   /** Across all paths, per day (IST); reaching it stops model calls until the next day. */
   dailyTokens: number;
 }
@@ -120,6 +123,7 @@ export function askBudgets(): AskBudgets {
   return {
     runMaxTurns: intEnv('ASK_RUN_MAX_TURNS', 12),
     runMaxTokens: intEnv('ASK_RUN_MAX_TOKENS', 200_000),
+    answerMaxTokens: intEnv('ASK_ANSWER_MAX_TOKENS', 40_000),
     dailyTokens: intEnv('ASK_DAILY_TOKEN_BUDGET', 2_000_000),
   };
 }

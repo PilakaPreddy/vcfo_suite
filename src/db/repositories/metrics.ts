@@ -199,6 +199,16 @@ function registrationCell(kind: string, status: string): RegistrationCell {
   return kind === 'waiting' ? 'waiting' : 'progress';
 }
 
+/** One cell per registration step of an engagement. */
+export function registrationCells(state: Parameters<typeof buildJourney>[0], key: string): Record<string, RegistrationCell> {
+  const cells: Record<string, RegistrationCell> = {};
+  for (const step of buildJourney(state, key)) {
+    if (step.phaseId !== REGISTRATION_PHASE_ID) continue;
+    cells[step.id] = registrationCell(step.kind, coerceStatusCode(state[step.id]?.status));
+  }
+  return cells;
+}
+
 interface Gathered {
   clients: MetricClient[];
   filings: MetricFiling[];
@@ -262,11 +272,7 @@ async function gather(ctx: AuthContext, now: Date): Promise<Gathered> {
       },
       now,
     );
-    const registrations: Record<string, RegistrationCell> = {};
-    for (const step of buildJourney(state, row.slug ?? appId)) {
-      if (step.phaseId !== REGISTRATION_PHASE_ID) continue;
-      registrations[step.id] = registrationCell(step.kind, coerceStatusCode(state[step.id]?.status));
-    }
+    const registrations = registrationCells(state, row.slug ?? appId);
     const schedule = normalizeEngagementSchedule(row.schedule);
     return {
       id: appId,

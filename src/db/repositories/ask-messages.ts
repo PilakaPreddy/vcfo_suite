@@ -6,6 +6,7 @@ import { askConversations, askMessages } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
 import type { AnswerEnvelope, AnswerOrigin } from '@/data/ask/schema';
 import { getAskConversation, type AskMessageRow } from '@/db/repositories/ask-conversations';
+import type { AskPath } from '@/lib/ask/paths';
 
 /**
  * ASK VCFO MESSAGES — owner-only, always through the parent conversation's
@@ -25,6 +26,9 @@ export interface AppendAskMessageInput {
   inputTokens?: number | null;
   outputTokens?: number | null;
   cacheReadTokens?: number | null;
+  cacheWriteTokens?: number | null;
+  /** The route this answer took; null when the message stopped before a route was chosen. */
+  path?: AskPath | null;
   latencyMs?: number | null;
 }
 
@@ -52,6 +56,8 @@ export async function appendAskMessage(
       inputTokens: input.inputTokens ?? null,
       outputTokens: input.outputTokens ?? null,
       cacheReadTokens: input.cacheReadTokens ?? null,
+      cacheWriteTokens: input.cacheWriteTokens ?? null,
+      path: input.path ?? null,
       latencyMs: input.latencyMs ?? null,
       createdAt: now,
     })

@@ -11,7 +11,7 @@ export type EvalSnapshot = 'foreignCompany' | 'domesticCompany' | 'llp';
 
 export interface GoldenCase {
   id: string;
-  category: 'off-topic' | 'injection' | 'scope' | 'company-type' | 'decision' | 'date' | 'deterministic' | 'routing';
+  category: 'off-topic' | 'injection' | 'scope' | 'company-type' | 'decision' | 'date' | 'deterministic' | 'routing' | 'knowledge';
   role: AuthContext['role'];
   shell: 'client' | 'admin' | 'super';
   snapshot?: EvalSnapshot;
@@ -20,9 +20,9 @@ export interface GoldenCase {
   context?: { kind: 'step' | 'field' | 'compliance'; ref: string; label: string };
   /** Mock-mode model replies, in order (guard first for free text). */
   mock?: {
-    guard?: { intent: string; topicSlug?: string };
+    guard?: { intent: string; topicSlug?: string; metric?: string; rewrittenQuery?: string };
     answers?: Array<Record<string, unknown> | { toolCall: string; input: Record<string, unknown> }>;
-    retrieved?: Array<{ id: string; kind: 'chunk' | 'topic'; label: string; text: string }>;
+    retrieved?: Array<{ id: string; kind: 'chunk' | 'topic' | 'card'; label: string; text: string }>;
   };
   expect: {
     forbidden?: boolean;
@@ -39,7 +39,17 @@ export interface GoldenCase {
     toolsExclude?: string[];
   };
   /** Live-mode check on the real guard / answer (subset of cases). */
-  live?: { intents: string[]; lineExcludes?: RegExp; mustAskLead?: boolean };
+  live?: {
+    intents: string[];
+    lineExcludes?: RegExp;
+    mustAskLead?: boolean;
+    /** The router must pick this reviewed topic from its shortlist. */
+    topicSlug?: string;
+    /** The router's standalone rewrite must keep the subject of a follow-up. */
+    rewriteIncludes?: RegExp;
+    /** Earlier messages, for a follow-up that depends on them. */
+    history?: Array<{ sender: 'user' | 'assistant'; text: string }>;
+  };
 }
 
 export const SNAPSHOTS: Record<EvalSnapshot, ProjectSnapshot> = {
@@ -207,7 +217,7 @@ export const GOLDEN: GoldenCase[] = [
     snapshot: 'foreignCompany',
     message: 'Show me the draft board resolution text.',
     mock: { guard: { intent: 'project_status' }, answers: [answer('The board resolution is shared with you once it is finalised.', { actions: ['askLead'] })] },
-    expect: { toolsInclude: ['getProjectSnapshot', 'getStepExplainerContext', 'getUpcomingCompliances'], toolsExclude: ['getBoardResolution'] },
+    expect: { toolsInclude: ['getPhaseProgress', 'getStepExplainerContext', 'getUpcomingCompliances'], toolsExclude: ['getBoardResolution'] },
   },
   // Managers and project leads use the staff shell since 29 Oct 2026 (Spectrum F-298); the developer stays out.
   { id: 'scope-developer-chat', category: 'scope', role: 'developer', shell: 'admin', message: 'What is overdue?', expect: { forbidden: true } },
@@ -466,7 +476,7 @@ export const GOLDEN: GoldenCase[] = [
     role: 'client',
     shell: 'client',
     snapshot: 'foreignCompany',
-    message: 'Hello!',
+    message: 'Hello, hope you are well today!',
     mock: { guard: { intent: 'greeting' } },
     expect: { providerCalls: 1, origin: 'deterministic', lineIncludes: 'Hello' },
     live: { intents: ['greeting'] },
@@ -491,11 +501,30 @@ export const GOLDEN: GoldenCase[] = [
     expect: { providerCalls: 2, lineIncludes: 'director identification number', origin: 'generated' },
   },
   {
+    id: 'route-fact-local',
+    category: 'routing',
+    role: 'admin',
+    shell: 'admin',
+    message: 'How many companies are incorporated this year?',
+    mock: {},
+    expect: { providerCalls: 0, origin: 'deterministic', lineIncludes: 'across the firm' },
+  },
+  {
+    id: 'route-fact-router',
+    category: 'routing',
+    role: 'admin',
+    shell: 'admin',
+    message: 'Roughly how many businesses have we set up during this fiscal year?',
+    mock: { guard: { intent: 'fact', metric: 'companies.incorporated', rewrittenQuery: 'How many companies were incorporated this financial year?' } },
+    expect: { providerCalls: 1, origin: 'deterministic', lineIncludes: 'across the firm' },
+    live: { intents: ['fact'] },
+  },
+  {
     id: 'route-staff-ops',
     category: 'routing',
     role: 'admin',
     shell: 'admin',
-    message: 'How many approvals are pending?',
+    message: 'Which approvals have been waiting the longest?',
     mock: {
       guard: { intent: 'ops_query' },
       answers: [
@@ -504,6 +533,100 @@ export const GOLDEN: GoldenCase[] = [
       ],
     },
     expect: { providerCalls: 3, lineIncludes: 'No approvals', toolsInclude: ['listPendingApprovals'], toolsExclude: ['getProjectSnapshot'] },
-    live: { intents: ['ops_query', 'project_status'] },
+    live: { intents: ['ops_query', 'project_status', 'fact'] },
+  },
+  {
+    id: 'route-topic-shortlist',
+    category: 'routing',
+    role: 'client',
+    shell: 'client',
+    snapshot: 'foreignCompany',
+    message: 'What is GSTR-3B?',
+    mock: { guard: { intent: 'explain', topicSlug: 'obligation-gst-gstr-3b' }, answers: [{ text: 'GSTR-3B is the monthly GST summary return.' }] },
+    expect: { providerCalls: 2, origin: 'generated', lineIncludes: 'GSTR-3B' },
+    live: { intents: ['explain'], topicSlug: 'obligation-gst-gstr-3b' },
+  },
+  {
+    id: 'followup-keeps-subject',
+    category: 'routing',
+    role: 'client',
+    shell: 'client',
+    snapshot: 'foreignCompany',
+    message: 'How often does it have to be done?',
+    mock: { guard: { intent: 'explain' }, answers: [{ text: 'Director KYC is done once a year.' }] },
+    expect: { providerCalls: 2, origin: 'generated' },
+    live: {
+      intents: ['explain'],
+      rewriteIncludes: /KYC|DIR-3/i,
+      history: [
+        { sender: 'user', text: 'What is DIR-3 KYC?' },
+        { sender: 'assistant', text: 'DIR-3 KYC is the filing where each director confirms their identity details with the MCA.' },
+      ],
+    },
+  },
+  {
+    id: 'followup-decision',
+    category: 'decision',
+    role: 'client',
+    shell: 'client',
+    snapshot: 'foreignCompany',
+    message: 'So do we have to register for it?',
+    mock: { guard: { intent: 'decision_request' }, answers: [{ text: 'That depends on your turnover and what you sell.' }] },
+    expect: { providerCalls: 2, actionsInclude: ['askLead'] },
+    live: {
+      intents: ['decision_request'],
+      mustAskLead: true,
+      rewriteIncludes: /GST/i,
+      history: [
+        { sender: 'user', text: 'What is GST registration?' },
+        { sender: 'assistant', text: 'GST registration gives your company a GSTIN so it can charge GST and claim input credit.' },
+      ],
+    },
+  },
+  // Knowledge: a paraphrase and a Hinglish question, each answered and cited from a retrieved chunk.
+  {
+    id: 'knowledge-paraphrase-cited',
+    category: 'knowledge',
+    role: 'client',
+    shell: 'client',
+    snapshot: 'foreignCompany',
+    message: 'What happens if we send the yearly accounts to the registrar late?',
+    mock: {
+      guard: { intent: 'explain', rewrittenQuery: 'penalty for late filing of AOC-4' },
+      retrieved: [{ id: 'chunk-aoc4', kind: 'chunk', label: 'Compliance obligations', text: 'AOC-4. If late: an additional fee is charged for each day of delay.' }],
+      answers: [answer('A fee is charged for each day AOC-4 is late.', { citations: [{ id: 'chunk-aoc4', label: 'Compliance obligations' }] })],
+    },
+    expect: { providerCalls: 2, origin: 'generated', lineIncludes: 'AOC-4' },
+    live: { intents: ['explain'] },
+  },
+  {
+    id: 'knowledge-hinglish-cited',
+    category: 'knowledge',
+    role: 'admin',
+    shell: 'admin',
+    message: 'AOC-4 der se bharne par kya jurmana lagta hai?',
+    mock: {
+      guard: { intent: 'explain', rewrittenQuery: 'penalty for late filing of AOC-4' },
+      retrieved: [{ id: 'chunk-aoc4', kind: 'chunk', label: 'Compliance obligations', text: 'AOC-4. If late: an additional fee is charged for each day of delay.' }],
+      answers: [answer('AOC-4 der se bharne par har din ki fee lagti hai.', { citations: [{ id: 'chunk-aoc4', label: 'Compliance obligations' }] })],
+    },
+    expect: { providerCalls: 2, origin: 'generated', lineIncludes: 'AOC-4' },
+    live: { intents: ['explain'] },
+  },
+  {
+    id: 'knowledge-citation-outside-sources',
+    category: 'knowledge',
+    role: 'admin',
+    shell: 'admin',
+    message: 'AOC-4 ka form kya hai?',
+    mock: {
+      guard: { intent: 'explain', rewrittenQuery: 'what is AOC-4' },
+      retrieved: [{ id: 'chunk-aoc4', kind: 'chunk', label: 'Compliance obligations', text: 'AOC-4 holds the yearly financial statements.' }],
+      answers: [
+        answer('AOC-4 holds the accounts.', { citations: [{ id: 'another-clients-card', label: 'Other' }] }),
+        answer('AOC-4 holds the accounts.', { citations: [{ id: 'another-clients-card', label: 'Other' }] }),
+      ],
+    },
+    expect: { uncertain: true },
   },
 ];

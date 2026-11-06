@@ -58,6 +58,8 @@ this table, so re-check the migration before trusting a row.
 | compliance_obligations | all | all | read | read | `20260708120000_compliance_calendar.sql` |
 | compliance_instances / _events / _triggers | all | via owned engagement | write via assigned engagement | read-only via own engagement | `20260708120000`, `20260805130000` |
 | audit_events | **read: all** | **read: owned/assigned engagements** | **own actor + assigned engagements** | own engagements | four-role + `20260529120000` + product |
+| ask_index_items | all | via owned engagement + firm-wide cards | via assigned engagement + firm-wide cards | own engagements, `client` / `both` cards only | `0047` (`ask-index.ts`) |
+| ask_saved_answers | staff rows | staff rows | staff rows | `client` rows only | `0047` (`ask-saved-answers.ts`) |
 | email_send_log | read | read | none | none | `20260806120000_email_send_log_seeds.sql` |
 | engagement_step_events | read: all | read: owned/assigned engagements | read: assigned engagements | **none** | product (G-13); written only inside `updateChecklistState`'s transaction |
 | metrics (practice, analytics, people; `metrics.ts`) | all; capacity write | own engagements; people: self + own leads | own engagements; people: none | **none** | product (G-13, G-14, G-27, G-29); reads only through the engagement scope |
