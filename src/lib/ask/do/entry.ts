@@ -10,7 +10,7 @@ import { checklistStateFromRow, getEngagementBySlug, getEngagementById, listEnga
 import { createNotificationsForUsers } from '@/db/repositories/notifications';
 import { appendAskRunStep, createAskRun, findWaitingAskRun, lockAskRun, updateAskRun } from '@/db/repositories/ask-runs';
 import { systemTodayTokenTotal } from '@/db/repositories/ask-usage';
-import { getItem } from '@/data/checklist';
+import { checklist } from '@/data/checklist';
 import { changesetHash } from '@/lib/ask/changeset/hash';
 import type { JsonValue } from '@/lib/ask/changeset/types';
 import { askBudgets, askConfig, askFlags } from '@/lib/ask/config';
@@ -108,7 +108,8 @@ export async function pageContextLine(ctx: AuthContext, page: DoWorkRequest['pag
   const key = decodeURIComponent(match[1]!);
   const row = (await getEngagementBySlug(ctx, key)) ?? (/^[0-9a-f-]{36}$/i.test(key) ? await getEngagementById(ctx, key) : null);
   if (!row) return null;
-  const step = match[2] ? getItem(decodeURIComponent(match[2])) : undefined;
+  const stepKey = match[2] ? decodeURIComponent(match[2]) : null;
+  const step = stepKey ? checklist.find((item) => item.slug === stepKey || item.id === stepKey) : undefined;
   return `The person is looking at ${row.companyName}${step ? `, step "${step.title}"` : ''}.`;
 }
 
