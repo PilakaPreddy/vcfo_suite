@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import {
   createAskDocument,
+  getAskDocument,
   listAskDocuments,
   setAskDocumentStorageKey,
   type AskDocumentAudience,
@@ -26,6 +27,8 @@ function view(row: Awaited<ReturnType<typeof listAskDocuments>>[number]) {
     status: row.status,
     error: row.error,
     effectiveFrom: row.effectiveFrom,
+    effectiveTo: row.effectiveTo,
+    supersededAt: row.supersededAt?.toISOString() ?? null,
     lastVerifiedAt: row.lastVerifiedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   };
@@ -46,8 +49,8 @@ export async function GET() {
 
 /**
  * POST /api/ask/admin/documents — multipart: title, sourceType, audience,
- * optional sourceUrl / effectiveFrom, and either `file` (PDF, DOCX, TXT, MD)
- * or `note` (firm note text). Stores the bytes in S3, then queues indexing.
+ * optional sourceUrl / effectiveFrom / effectiveTo / supersedesDocumentId, and
+ * either `file` (PDF, DOCX, TXT, MD) or `note` (firm note text). Stores the bytes in S3, then queues indexing.
  */
 export async function POST(request: Request) {
   const gate = await requireAsk();
@@ -65,6 +68,8 @@ export async function POST(request: Request) {
   const audience = String(form.get('audience') ?? '') as AskDocumentAudience;
   const sourceUrlRaw = String(form.get('sourceUrl') ?? '').trim();
   const effectiveFrom = String(form.get('effectiveFrom') ?? '').trim() || null;
+  const effectiveTo = String(form.get('effectiveTo') ?? '').trim() || null;
+  const supersedesDocumentId = String(form.get('supersedesDocumentId') ?? '').trim() || null;
   const note = String(form.get('note') ?? '').trim();
   const file = form.get('file');
 
@@ -73,6 +78,9 @@ export async function POST(request: Request) {
   if (!AUDIENCES.includes(audience)) return NextResponse.json({ error: 'Choose who may see answers from it' }, { status: 400 });
   if (effectiveFrom && !/^\d{4}-\d{2}-\d{2}$/.test(effectiveFrom)) {
     return NextResponse.json({ error: 'Effective date must be a date' }, { status: 400 });
+  }
+  if (effectiveTo && (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveTo) || (effectiveFrom && effectiveTo < effectiveFrom))) {
+    return NextResponse.json({ error: 'The end date must be a date after the start' }, { status: 400 });
   }
   let sourceUrl: string | null = null;
   if (sourceUrlRaw) {
@@ -105,7 +113,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const doc = await createAskDocument(gate.ctx, { title, sourceType, audience, sourceUrl, effectiveFrom });
+    if (supersedesDocumentId && !(await getAskDocument(gate.ctx, supersedesDocumentId))) {
+      return NextResponse.json({ error: 'The source it replaces was not found' }, { status: 400 });
+    }
+    const doc = await createAskDocument(gate.ctx, { title, sourceType, audience, sourceUrl, effectiveFrom, effectiveTo, supersedesDocumentId });
     const key = bucketKey('knowledge-bank', askSourceStoragePath(doc.id, fileName));
     await putObject(key, bytes, contentType);
     await setAskDocumentStorageKey(gate.ctx, doc.id, key);

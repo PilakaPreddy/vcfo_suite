@@ -13,6 +13,7 @@ import { isAdminOrManager } from '@/lib/auth';
 import { appEngagementId, engagementDbId } from '@/lib/projects/legacy-engagement-ids';
 import { isUuid } from '@/lib/slug';
 import { parseItemKey } from '@/lib/work/item-key';
+import { queueIndexRefresh } from '@/lib/ask/index-cards/queue';
 
 /**
  * WORK ASSIGNMENTS (G-12, G-18): a manager assigns a task to a lead, and an admin or manager
@@ -139,6 +140,7 @@ export async function assignLeadTask(
     })
     .returning();
   if (!row) throw new Error('Could not create the task');
+  queueIndexRefresh('task', row.id);
   return { task: toAppTask(row), lead, companyName: access.row.companyName, engagementDbId: access.dbId };
 }
 

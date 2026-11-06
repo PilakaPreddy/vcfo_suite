@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Destination } from '@/data/ask/schema';
 import { checkDestination, sanitizeLinks } from '@/lib/ask/destinations';
-import { resolveHref, stripAskParams } from '@/lib/ask/resolve-href';
+import { askProjectPath, LEAD_BASE, resolveHref, stripAskParams } from '@/lib/ask/resolve-href';
 import { nextStepAnswer, staffQueryAnswer } from '@/lib/ask/suggestions';
 import { SNAPSHOTS } from '../../../../tests/ask/evals/golden';
 
@@ -105,5 +105,58 @@ describe('deterministic answers carry links', () => {
     const data = { engagements: [], filings: [], now: new Date('2026-10-01') };
     expect(staffQueryAnswer('pendingApprovals', data).links?.[0]?.dest).toEqual({ to: 'approvals' });
     expect(staffQueryAnswer('overdueAndDueSoon', data).links?.[0]?.dest).toEqual({ to: 'compliance', filter: 'overdue' });
+  });
+});
+
+describe('links per shell', () => {
+  it('sends a Project Lead to the lead pages, never a manager page', () => {
+    expect(resolveHref({ to: 'project', engagementId: 'acme' }, LEAD_BASE)).toMatch(/^\/app\/intern\/engagements\/acme\?/);
+    expect(resolveHref({ to: 'projectStep', engagementId: 'acme', stepId: 'pre-2' }, LEAD_BASE)).toMatch(/^\/app\/intern\/engagements\/acme\//);
+    expect(resolveHref({ to: 'approvals' }, LEAD_BASE)).toMatch(/^\/app\/intern\/clients\?/);
+    expect(resolveHref({ to: 'compliance' }, LEAD_BASE)).toMatch(/^\/app\/intern\/compliances\/filings\?/);
+    expect(resolveHref({ to: 'composeReminder', engagementId: 'acme' }, LEAD_BASE)).toMatch(/^\/app\/intern\/mail\?/);
+    expect(askProjectPath('acme', LEAD_BASE)).toBe('/app/intern/engagements/acme');
+  });
+
+  it.each([
+    ['projects', '/app/admin', '/app/admin/projects'],
+    ['projects', '/app/manager', '/app/manager/projects'],
+    ['projects', '/app/super', '/app/admin/projects'],
+    ['projects', LEAD_BASE, '/app/intern/clients'],
+    ['approvals', '/app/manager', '/app/manager/approvals'],
+    ['approvals', LEAD_BASE, '/app/intern/clients'],
+    ['filings', '/app/admin', '/app/admin/compliances/filings'],
+    ['filings', LEAD_BASE, '/app/intern/compliances/filings'],
+    ['filings', '/app/client', '/app/client/compliances/filings'],
+    ['requests', LEAD_BASE, '/app/intern/requests'],
+    ['requests', '/app/client', '/app/client/documents'],
+    ['tasks', LEAD_BASE, '/app/intern/tasks'],
+    ['tasks', '/app/manager', '/app/manager/work'],
+    ['tasks', '/app/admin', '/app/admin/projects'],
+    ['documents', '/app/client', '/app/client/documents'],
+    ['documents', '/app/manager', '/app/manager/vault'],
+    ['registrations', '/app/client', '/app/client/registrations'],
+    ['labour', LEAD_BASE, '/app/intern/labour-registers'],
+    ['people', '/app/admin', '/app/admin/people'],
+    ['updates', '/app/client', '/app/client/announcements'],
+    ['receivables', '/app/manager', '/receivables/manager'],
+  ] as const)('%s from %s opens %s', (list, base, path) => {
+    expect(resolveHref({ to: 'list', list }, base).split('?')[0]).toBe(path);
+  });
+
+  it('carries the filter onto the list', () => {
+    const href = resolveHref({ to: 'list', list: 'filings', status: 'overdue', company: 'acme' }, '/app/admin');
+    const params = new URLSearchParams(href.split('?')[1]);
+    expect(params.get('status')).toBe('overdue');
+    expect(params.get('company')).toBe('acme');
+    expect(params.get('cadence')).toBe('annual');
+    expect(resolveHref({ to: 'list', list: 'projects', view: 'waiting' }, LEAD_BASE)).toContain('view=waiting');
+  });
+
+  it('keeps staff lists out of a client answer but leaves the client lists', () => {
+    expect(checkDestination({ to: 'list', list: 'filings' }, { shell: 'client' })).toEqual({ to: 'list', list: 'filings' });
+    expect(checkDestination({ to: 'list', list: 'approvals' }, { shell: 'client' })).toBeNull();
+    expect(checkDestination({ to: 'list', list: 'people' }, { shell: 'client' })).toBeNull();
+    expect(checkDestination({ to: 'list', list: 'people' }, { shell: 'admin' })).toEqual({ to: 'list', list: 'people' });
   });
 });

@@ -29,6 +29,7 @@ import {
   type PersonalTodoDto,
 } from '@/lib/intern/personal-todos';
 import { taskAssignmentPatch, taskCompletionPatch } from '@/lib/metrics/trend-stamps';
+import { queueIndexRefresh } from '@/lib/ask/index-cards/queue';
 
 /**
  * TASKS REPOSITORY — replaces vcfo.tasks localStorage.
@@ -197,6 +198,7 @@ export async function createTask(
       description: input.notes ?? null,
     })
     .returning();
+  queueIndexRefresh('task', row.id);
   return toAppTask(row);
 }
 
@@ -242,6 +244,7 @@ export async function updateTask(
     })
     .where(eq(tasks.id, id))
     .returning();
+  if (row && (patch.notes !== undefined || patch.engagementId !== undefined)) queueIndexRefresh('task', row.id);
   return row ? toAppTask(row) : null;
 }
 

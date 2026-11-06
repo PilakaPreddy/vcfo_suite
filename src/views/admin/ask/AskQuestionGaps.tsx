@@ -12,6 +12,7 @@ import { buttonVariants } from '@/components/ui/button-variants';
 import { EmptyState, SkeletonRows } from '@/components/ui/empty-state';
 import { CardHeadTile } from '@/components/common/CardHeadTile';
 import { draftTopicFor, type GapGroup } from '@/lib/ask/question-gaps';
+import { TokenUseLink } from './TokenUseLink';
 
 type GapsResponse = { days: number; total: number; groups: GapGroup[]; showsCompanies: boolean };
 
@@ -60,6 +61,7 @@ export default function AskQuestionGaps() {
           <Link href="/app/admin/ask-vcfo/sources" className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
             Sources
           </Link>
+          <TokenUseLink />
         </div>
 
         <section aria-labelledby="gaps-title" className="surface min-w-0 overflow-hidden">

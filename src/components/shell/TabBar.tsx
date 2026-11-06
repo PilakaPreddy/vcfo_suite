@@ -100,7 +100,8 @@ export function TabBar({ onMore, incorporated, role: roleProp }: { onMore?: () =
   if (tabs.length === 0) return null;
 
   const more = onMore ?? (portal ? () => portal.setDrawerOpen(true) : undefined);
-  const openAsk = ask?.enabled ? () => ask.setOpen(true) : portal ? () => portal.openChat() : undefined;
+  // The client portal shows its own chat window and has no Ask panel to open.
+  const openAsk = portal ? () => portal.openChat() : ask?.enabled ? () => ask.setOpen(true) : undefined;
   const activeHref = tabs
     .filter((t) => path === t.href || path.startsWith(`${t.href}/`))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;

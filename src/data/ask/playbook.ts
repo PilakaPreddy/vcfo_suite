@@ -1,14 +1,10 @@
 /**
  * Compact firm playbook placed in Ask VCFO's cached system prompt. A TS string
  * (not a .md read at runtime) so the standalone Docker build always ships it.
- * The firm reviews every change through a pull request.
+ * The firm reviews every change through a pull request. Keep it short and factual. Still to come
+ * from the firm: the typical turnaround it quotes, and how clients raise questions outside Ask VCFO.
  */
-export const ASK_PLAYBOOK = `# Firm playbook for Ask VCFO (skeleton)
-
-This text sits in the cached system prompt. Keep it short and factual; the firm
-reviews every change through a pull request.
-
-## How the firm runs an incorporation
+export const ASK_PLAYBOOK = `## How the firm runs an incorporation
 
 1. SPICe+ Part A — client details, parent board resolution (group companies),
    name application and approval.
@@ -26,9 +22,4 @@ reviews every change through a pull request.
 - The firm decides what applies to a company (for example, whether GST
   registration is needed). Ask VCFO explains; it never decides.
 - Due dates come only from the project's compliance calendar and checklist.
-
-## To be completed by the firm
-
-- Typical turnaround the firm quotes to clients.
-- How the firm prefers clients to raise questions outside Ask VCFO.
 `;

@@ -1,0 +1,560 @@
+<title>Ask VCFO Master Plan</title>
+<meta charset="utf-8">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column for prose, full-width sheets for tables, using VCFO Spectrum tokens. */
+:root {
+  --surface: #edf1f6; --raised: #ffffff; --sunken: #f1f4f8;
+  --line: #d3dae4; --line-strong: #b9c3d0;
+  --ink: #0a2540; --ink-2: #3c4f69; --muted: #5e6e85;
+  --brand-text: #4a3fe0; --brand-soft: #efeeff;
+  --positive: #0b7a43; --positive-soft: #dff5e7;
+  --warning: #9a4d00; --warning-soft: #fff0d9;
+  --danger: #c0182f; --danger-soft: #ffe6e9;
+  --info: #0a5fc2; --info-soft: #e8f1fd;
+  --sans: Roboto, "Segoe UI", system-ui, sans-serif;
+  --mono: "Roboto Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface: #0b0c10; --raised: #13151a; --sunken: #0f1115;
+    --line: #242830; --line-strong: #323742;
+    --ink: #f2f4f8; --ink-2: #b6beca; --muted: #8e97a5;
+    --brand-text: #aba6ff; --brand-soft: #23243f;
+    --positive: #5be08e; --positive-soft: #1a2d26;
+    --warning: #ffcb5c; --warning-soft: #2f291b;
+    --danger: #ff7f8e; --danger-soft: #342128;
+    --info: #7cb4f5; --info-soft: #172237;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --surface: #0b0c10; --raised: #13151a; --sunken: #0f1115;
+  --line: #242830; --line-strong: #323742;
+  --ink: #f2f4f8; --ink-2: #b6beca; --muted: #8e97a5;
+  --brand-text: #aba6ff; --brand-soft: #23243f;
+  --positive: #5be08e; --positive-soft: #1a2d26;
+  --warning: #ffcb5c; --warning-soft: #2f291b;
+  --danger: #ff7f8e; --danger-soft: #342128;
+  --info: #7cb4f5; --info-soft: #172237;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--surface); color: var(--ink);
+  font: 400 15px/1.55 var(--sans);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+.page { max-width: 1240px; margin: 0 auto; display: grid; gap: 40px; }
+.page > * { min-width: 0; }
+header { display: grid; gap: 8px; }
+.eyebrow { font: 500 12px/1.3 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 34px/1.15 var(--sans); margin: 0; text-wrap: balance; }
+h2 { font: 700 21px/1.25 var(--sans); margin: 0; text-wrap: balance; }
+h3 { font: 500 15px/1.3 var(--sans); margin: 0; }
+p { margin: 0; max-width: 72ch; color: var(--ink-2); }
+a { color: var(--brand-text); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--brand-text); outline-offset: 2px; border-radius: 3px; }
+code { font: 400 .88em/1.4 var(--mono); overflow-wrap: anywhere; }
+section { display: grid; gap: 14px; }
+section > * { min-width: 0; }
+.head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+.head > div { display: grid; gap: 4px; min-width: 0; flex: 1 1 320px; }
+
+.verdict { background: var(--raised); border: 2px solid var(--line); border-radius: 6px; padding: 22px; display: grid; gap: 16px; }
+.verdict .big { font: 700 22px/1.3 var(--sans); margin: 0; max-width: 60ch; text-wrap: balance; color: var(--ink); }
+.limits { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 28px; }
+.limits > div { display: grid; gap: 4px; align-content: start; }
+.limits p { font-size: 14px; }
+
+.sheet { background: var(--raised); border: 2px solid var(--line); border-radius: 6px; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; line-height: 1.45; }
+th { position: sticky; top: 0; background: var(--sunken); color: var(--muted); font-weight: 500; font-size: 12px; text-align: left; padding: 9px 12px; border-bottom: 2px solid var(--line); white-space: nowrap; }
+td { padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--ink-2); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { color: var(--ink); font-weight: 500; }
+.num { color: var(--muted); font: 400 12px/1.5 var(--mono); }
+.w-arch { min-width: 1120px; } .w-mid { min-width: 900px; } .w-small { min-width: 720px; }
+
+.chip { display: inline-block; padding: 1px 7px; border-radius: 4px; font: 500 11.5px/1.6 var(--sans); white-space: nowrap; }
+.c-exists { background: var(--positive-soft); color: var(--positive); }
+.c-extend { background: var(--info-soft); color: var(--info); }
+.c-new { background: var(--brand-soft); color: var(--brand-text); }
+.c-hold { background: var(--warning-soft); color: var(--warning); }
+.c-never { background: var(--danger-soft); color: var(--danger); }
+
+button.copy { font: 500 13px/1 var(--sans); padding: 8px 12px; border: 1px solid var(--line-strong); background: var(--raised); color: var(--ink); border-radius: 6px; cursor: pointer; white-space: nowrap; }
+button.copy:hover { background: var(--sunken); }
+
+.map { background: var(--raised); border: 2px solid var(--line); border-radius: 6px; padding: 18px; display: grid; gap: 6px; }
+.map .row { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.box { border: 1px solid var(--line-strong); border-radius: 6px; padding: 10px 12px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.box b { font-weight: 500; color: var(--ink); display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: center; }
+.box span.t { font-size: 13px; color: var(--muted); line-height: 1.4; }
+.down { text-align: center; color: var(--muted); font-size: 13px; line-height: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 13px; color: var(--muted); align-items: center; }
+.note { font-size: 13px; color: var(--muted); max-width: 90ch; }
+ol.sources { margin: 0; padding-left: 20px; font-size: 13.5px; display: grid; gap: 4px; color: var(--ink-2); }
+@media (max-width: 480px) { h1 { font-size: 27px; } .verdict { padding: 16px; } .map { padding: 12px; } }
+</style>
+
+<div class="page">
+<header>
+  <div class="eyebrow">VCFO Suite · Master plan · 6 November 2026</div>
+  <h1>Ask VCFO Master Plan</h1>
+  <p>One chat on top of three engines: Answer, Do and Watch. It joins today's Ask VCFO with the agent idea, adds a knowledge layer, cuts token use, and adds a portal watcher that feeds the chat and the notifications. This is a plan. Nothing has been built or changed. For the simple picture version, see the <a href="https://claude.ai/artifact/FeBZ9tr4AsH35Ch2zLxuib">diagrams, user flows and demo screens</a>.</p>
+</header>
+
+<section class="verdict" aria-label="Short answer">
+  <p class="big">Yes, all of this fits one product, and today's Ask VCFO stays as its base. Most questions will not call an AI model at all, because code can answer them exactly and for free.</p>
+  <div class="limits">
+    <div><h3>Counts come from live data, not RAG</h3><p>"How many companies are incorporated?" needs an exact count. RAG finds similar text, so it cannot count, and copied data goes stale and can leak across roles. Code counts live records, and RAG handles documents, notes and law.</p></div>
+    <div><h3>The cheapest token is no token</h3><p>Every step runs the cheapest option that can do the job: code, then a saved answer, then the small model, then the larger model. On my estimate, the same answers use about 87% fewer tokens.</p></div>
+    <div><h3>Some portals refuse automated reading</h3><p>MCA and Income Tax India returned "Access Denied" to a plain request, and RBI, SEBI and PIB offer working feeds. A blocked source gets a manual or email route. We do not disguise the crawler or solve CAPTCHAs.</p></div>
+  </div>
+</section>
+
+<section>
+  <div class="head"><div><h2>The three engines</h2><p>The person sees one chat and one notification area. Behind them, each engine has a different job and a different cost.</p></div></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Engine</th><th>Its job</th><th>Who starts it</th><th>What it costs in tokens</th><th>What protects it</th></tr></thead>
+    <tbody>
+      <tr><td>Answer</td><td>Explains, counts and finds things, in the same easy cards as today.</td><td>A person asks.</td><td>None for clicks, recognised questions and saved answers. Small for document answers.</td><td>Repository role checks, plus the answer validation you already have.</td></tr>
+      <tr><td>Do</td><td>Fills data into the right field and operates the app.</td><td>A person asks for work.</td><td>Small for fixed workflows. Large for the open agent loop, so that loop is capped and used rarely.</td><td>Review card, tier rules, same rule code as the screens.</td></tr>
+      <tr><td>Watch</td><td>Checks official portals, summarises what changed and publishes it.</td><td>A schedule, with no chat involved.</td><td>None when nothing changed. One small model call per genuinely new item.</td><td>Model has no tools, code checks its summary against the source, and a person reviews before clients see it.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head"><div><h2>How this joins what you already have</h2><p>The foundation is good, and more of this plan already exists than you may expect. The chat being read-only is the largest gap, and token use comes next.</p></div></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Part</th><th>Verdict</th><th>What the code shows</th><th>What it means for the plan</th></tr></thead>
+    <tbody>
+      <tr><td>Answer pipeline</td><td><span class="chip c-exists">Keep</span></td><td><code>pipeline.ts</code> already runs cheapest first: suggestion, what's-this, guard, reviewed topic, then search, tools and generation. Answer cards, validation, citations, depth, links and usage logging all work.</td><td>This remains the Answer engine. The new layers slot in before and after it, and the look of the answers does not change.</td></tr>
+      <tr><td>Free-text cost</td><td><span class="chip c-hold">Wasteful</span></td><td>Every typed message calls the guard, even "hello", and sends the list of topic questions. In the 30 September live eval, the average was 1,607 guard tokens plus, on the 16 answered cases, 10,965 answer tokens. The guard is on the older Haiku 4.5.</td><td>This is where the first savings come from. See the token plan.</td></tr>
+      <tr><td>Business counts</td><td><span class="chip c-never">Missing</span></td><td><code>getFirmPulse</code> counts active projects, waiting clients, approvals and overdue filings. No tool counts incorporated companies, although <code>engagements.incorporation_date</code> holds the date.</td><td>Your example question has no tool behind it today. A metric catalog fixes this kind of question as a group.</td></tr>
+      <tr><td>Who can ask</td><td><span class="chip c-hold">Limited</span></td><td><code>access.ts</code> allows client, admin and super admin. Managers and project leads get a 403, as the spec asked.</td><td>"Use the whole site from chat" requires opening it to those roles. This is your decision, listed below.</td></tr>
+      <tr><td>Announcements and bell</td><td><span class="chip c-exists">Keep</span></td><td>The board, megaphone, live popup, notification tab and <code>createNotificationsForUsers</code> all exist, and a new post reaches every signed-in role within seconds.</td><td>Watch publishes into these, keeping the existing popups and animations. No new notification system is needed.</td></tr>
+      <tr><td>Official feeds</td><td><span class="chip c-extend">Partly there</span></td><td><code>announcement-feeds.ts</code> reads RSS once at 06:00, from an allowlist of hosts. No circular URL in the portal catalog looks like a feed, so the catalog adds none, and it covers only what staff paste in. SEBI, NFRA and ICAI are not on the allowlist. Your notes say HTML pages are not scraped.</td><td>Watch grows this job. It also reverses that rule for public listing pages, so the note should change. Login pages stay out.</td></tr>
+      <tr><td>PDF reading</td><td><span class="chip c-hold">Wasteful</span></td><td><code>ingest/extract.ts</code> sends every PDF to a model to transcribe it, because no text extractor is installed.</td><td>Government circulars are mostly PDFs. A local extractor makes text PDFs free, and only scanned pages need a model.</td></tr>
+      <tr><td>Stored knowledge</td><td><span class="chip c-hold">Check</span></td><td>My local database has 0 rows in <code>ask_documents</code> and <code>ask_chunks</code>, and topics were still drafts at the last status update. I did not check production.</td><td>The search machinery exists but may have little to search. Loading content matters as much as adding vectors.</td></tr>
+      <tr><td>Data access</td><td><span class="chip c-exists">Strong</span></td><td>Only <code>src/db/repositories</code> touches the database, and each repository takes an <code>AuthContext</code> and scopes by role. There are 161 repository modules.</td><td>An agent acting as the signed-in person inherits correct permissions. Most products have to build this.</td></tr>
+      <tr><td>Field definitions</td><td><span class="chip c-exists">Strong</span></td><td><code>CLIENT_RESPONSE_FIELDS</code> holds 720 typed fields plus 64 repeat-entry fields, across 42 step definitions, with labels, sections, conditions and who fills each one.</td><td>This is the map that answers "where does this value belong?" It only needs synonyms and format rules added.</td></tr>
+      <tr><td>Rules and validators</td><td><span class="chip c-exists">Strong</span></td><td>Step gating, Part B, pre-9 and pre-10 validators, and <code>fieldsForOwnership</code> are plain tested functions.</td><td>Code can check the model's work before anyone sees it.</td></tr>
+      <tr><td>Knowledge search</td><td><span class="chip c-extend">Partly there</span></td><td>You do have RAG: <code>ask_documents</code>, <code>ask_chunks</code>, contextual prefixes and Postgres full-text search. There are no embeddings, so a paraphrased question can miss. Topics were still drafts at the last status update.</td><td>Add vector search and a reranker. This is a small job, and it should not come first.</td></tr>
+      <tr><td>Actions from chat</td><td><span class="chip c-never">Missing</span></td><td>There are 10 tools (6 staff, 4 client), and all of them only read. The app has 396 route files, and 259 of them can write.</td><td>This is the biggest gap. The chat can see the app but cannot operate it.</td></tr>
+      <tr><td>Data intake in chat</td><td><span class="chip c-never">Missing</span></td><td><code>chatRequestSchema</code> takes text up to 2,000 characters and no files.</td><td>You cannot yet give it a document or a pasted sheet to file.</td></tr>
+      <tr><td>Business rules in routes</td><td><span class="chip c-hold">Risk</span></td><td>The checklist route itself calls <code>leadWritablePatch</code>, <code>stripClientOnlyResponses</code> and the notification plan.</td><td>An agent calling repositories directly would skip those rules. They must move to functions that the routes and the agent share.</td></tr>
+      <tr><td>Long-running work</td><td><span class="chip c-extend">Partly there</span></td><td>A chat answer lives inside one web request. Inngest already runs background jobs.</td><td>Agent runs must survive a page close and wait for approval, so they belong in Inngest.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head"><div><h2>The recommended shape</h2><p>Questions keep the fast, cheap path you already have, with cheaper steps added in front of it. Work goes through a path that ends at a person's approval. Watch runs on its own schedule and meets the others at the knowledge layer and the notifications.</p></div></div>
+  <div class="map" role="img" aria-label="Layered architecture from the person, through the chat surface, free checks and router, to the Answer and Do engines, an approval gate and the existing repositories. The Watch engine runs separately from official portals into the knowledge layer and notifications. The MCA portal path is held separately.">
+    <div class="row"><div class="box"><b>The signed-in person</b><span class="t">Types, pastes a table or drops files, from any page</span></div></div>
+    <div class="down">↓</div>
+    <div class="row"><div class="box"><b>Chat surface <span class="chip c-extend">Extend</span></b><span class="t">Panel and full page, plus uploads, current page and record, and review cards</span></div></div>
+    <div class="down">↓</div>
+    <div class="row">
+      <div class="box"><b>Free checks <span class="chip c-extend">Extend</span></b><span class="t">Suggestion click, local match on metrics and reviewed topics, saved answer. No model.</span></div>
+      <div class="box"><b>Router <span class="chip c-extend">Extend</span></b><span class="t">Today's guard on Haiku 5.5. It sorts what the free checks could not.</span></div>
+    </div>
+    <div class="down">↓ question, or work to do</div>
+    <div class="row">
+      <div class="box"><b>Answer engine <span class="chip c-extend">Extend</span></b><span class="t">Metric catalog for exact facts, hybrid search for text, small model to write it up</span></div>
+      <div class="box"><b>Do: fixed workflows <span class="chip c-new">New</span></b><span class="t">Data router and common actions, in short model steps with code around them</span></div>
+      <div class="box"><b>Do: agent run <span class="chip c-new">New</span></b><span class="t">One capped model loop in an Inngest job, only for open-ended work. It can wait for an approval and then resume.</span></div>
+    </div>
+    <div class="down">↓ uses</div>
+    <div class="row">
+      <div class="box"><b>Knowledge layer <span class="chip c-extend">Extend</span></b><span class="t">Live facts, record cards, documents and regulatory updates, each with a date and a source</span></div>
+      <div class="box"><b>Field catalog <span class="chip c-new">New</span></b><span class="t">Every place a value can go, generated from your own field definitions</span></div>
+      <div class="box"><b>Action registry <span class="chip c-new">New</span></b><span class="t">One definition per action: input, risk tier, roles, preview, execute, undo</span></div>
+    </div>
+    <div class="down">↓ proposes, never writes</div>
+    <div class="row"><div class="box"><b>Changeset and approval gate <span class="chip c-new">New</span></b><span class="t">Old value, new value, source, check result. Code checks it again at the click, and the approval is tied to that exact content.</span></div></div>
+    <div class="down">↓ after approval</div>
+    <div class="row">
+      <div class="box"><b>Shared rule code, then repositories <span class="chip c-exists">Exists</span></b><span class="t">Same <code>AuthContext</code>, validators, notifications and audit events as the screens. Postgres and S3 stay as they are.</span></div>
+      <div class="box"><b>VCFO Assist, then MCA portal <span class="chip c-hold">On hold</span></b><span class="t">Needs written CS approval. The extension fills, and a person logs in, signs, pays and submits.</span></div>
+    </div>
+    <div class="down">Separately, on a schedule and with no chat involved</div>
+    <div class="row">
+      <div class="box"><b>Watch engine <span class="chip c-new">New</span></b><span class="t">Official portals, change check, noise filter, small model summary, code check of that summary, manager review</span></div>
+      <div class="box"><b>Announcements and bell <span class="chip c-exists">Exists</span></b><span class="t">App code posts to the board, popup and notification tab. The chat does not send these.</span></div>
+      <div class="box"><b>Knowledge layer <span class="chip c-extend">Extend</span></b><span class="t">The same update is indexed, so the chat can answer about it with its source</span></div>
+    </div>
+    <div class="down">Across all layers</div>
+    <div class="row"><div class="box"><b>Evals, traces, cost limits, kill switch <span class="chip c-extend">Extend</span></b><span class="t">Every run is recorded and can be replayed. Token use is reported per path. No new action ships without tests.</span></div></div>
+  </div>
+  <div class="legend"><span class="chip c-exists">Exists</span> keep as is <span class="chip c-extend">Extend</span> build on what you have <span class="chip c-new">New</span> build new <span class="chip c-hold">On hold</span> legal gate first</div>
+</section>
+
+<section>
+  <div class="head"><div><h2>The knowledge layer: your RAG, done properly</h2><p>You asked for a RAG that stores all the data and answers anything. The experience you describe is right, and it takes four stores behind one question box, because different questions need different methods. The person never has to choose.</p></div></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Store</th><th>Status</th><th>What it holds</th><th>Example question</th><th>How it answers</th><th>Tokens</th></tr></thead>
+    <tbody>
+      <tr><td>Live facts</td><td><span class="chip c-exists">Exists</span></td><td>Companies, steps, filings, tasks, invoices, people. They stay in their own tables and are never copied.</td><td>"How many companies are incorporated this year?"</td><td>A named metric calls a repository with the person's access, and a template writes the sentence.</td><td>None, or about 860 for the router</td></tr>
+      <tr><td>Record cards</td><td><span class="chip c-new">New</span></td><td>A short text card per record, built from notes, comments, requests and task titles. Identity numbers are left out.</td><td>"Which client had the landlord NOC problem?"</td><td>Hybrid search, limited first to records this person may see.</td><td>About 3,250 to write the answer, plus the router</td></tr>
+      <tr><td>Documents</td><td><span class="chip c-extend">Extend</span></td><td>Reviewed topics, firm playbook, obligation texts, statutory calendar, acts and rules, firm procedures.</td><td>"What is the penalty for a late AOC-4?"</td><td>A reviewed topic if one exists. Otherwise hybrid search with citations.</td><td>None for a recognised topic, otherwise about 3,250 plus the router</td></tr>
+      <tr><td>Regulatory updates</td><td><span class="chip c-new">New</span></td><td>Each update from Watch: act, area, effective date, summary, source quote, reviewer, and what it replaces.</td><td>"What changed in GST this week?"</td><td>Lists by date using code. Questions about meaning use search, and replaced rules are excluded.</td><td>None for lists, otherwise about 3,250 plus the router</td></tr>
+    </tbody>
+  </table></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Design choice</th><th>Recommendation</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Metric catalog</td><td>About 25 named metrics in <code>src/lib/ask/metrics/</code>. Each has aliases (including common Hinglish), allowed filters, a repository call, an answer template and a link to the filtered list.</td><td>Counts stay exact and role-correct: an admin sees the firm's number and a lead sees their own. The model only picks a name from a list, and it never writes SQL.</td></tr>
+      <tr><td>Vector store</td><td><code>pgvector</code> in the same Postgres, with a new <code>ask_index_items</code> table beside <code>ask_chunks</code>. The local Docker image changes to one that includes the extension.</td><td>No new service to run. AWS documents pgvector on RDS for PostgreSQL 16; check the exact version for your minor release.</td></tr>
+      <tr><td>Search index on a small database</td><td>Filter by access first, then compare vectors directly. Add an HNSW index only when rows pass roughly 50,000, and expect to size up from <code>db.t4g.micro</code> then.</td><td>The corpus is small, and a large index needs memory that a micro instance does not have. The threshold is my estimate, to be tested.</td></tr>
+      <tr><td>Embeddings</td><td>Amazon Titan Text Embeddings V2 through Bedrock, at 512 dimensions, then test Voyage if evals fall short.</td><td>Your AWS setup can already call it, with no new vendor. Third-party trackers list it at about $0.02 per million tokens and in Mumbai; confirm on the AWS pricing page.</td></tr>
+      <tr><td>Merging results</td><td>Full-text and vector results combined with rank fusion, and only 4 sources sent to the model. Add a reranker only if evals show a need.</td><td>Law questions use exact terms such as "AOC-4", where full-text search is strong. Paraphrases and Hinglish are where vectors help. Fewer sources means fewer tokens.</td></tr>
+      <tr><td>Keeping it fresh</td><td>Facts are read live. Record cards refresh from an Inngest event when a record changes. Every law source carries an effective date and what it replaces.</td><td>A confident answer from an old rule is the worst failure for a compliance product.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head"><div><h2>The token plan</h2><p>The ladder below decides how each message is handled, and it stops at the first step that can answer. Today's numbers come from your 30 September live eval, which used fixture data. All other figures are my estimates, and phase 0 replaces them with real production usage.</p></div></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Step</th><th>Status</th><th>What handles it</th><th>Tokens per message</th><th>Estimated cost</th><th>Estimated share of messages</th></tr></thead>
+    <tbody>
+      <tr><td>1. Suggestion click</td><td><span class="chip c-exists">Exists</span></td><td>Code, as today</td><td>0</td><td>$0</td><td>30%</td></tr>
+      <tr><td>2. Recognised question</td><td><span class="chip c-new">New</span></td><td>Code matches a metric or reviewed topic and skips the guard</td><td>0</td><td>$0</td><td rowspan="2">35% together</td></tr>
+      <tr><td>3. Saved answer</td><td><span class="chip c-new">New</span></td><td>Same wording, audience and knowledge version as an earlier document answer</td><td>0</td><td>$0</td></tr>
+      <tr><td>4. Router, then a fact</td><td><span class="chip c-extend">Extend</span></td><td>Haiku 5.5 picks a metric from a short list, and code does the rest</td><td>About 860</td><td>About $0.0001</td><td>10%</td></tr>
+      <tr><td>5. Document answer</td><td><span class="chip c-extend">Extend</span></td><td>Router, 4 sources, one short answer. Test Haiku 5.5 first and use Sonnet 5.5 if evals need it.</td><td>About 4,100</td><td>$0.0005 to $0.009</td><td>20%</td></tr>
+      <tr><td>6. Fixed workflow</td><td><span class="chip c-new">New</span></td><td>Short model steps with code around them, such as filing data into fields</td><td>About 6,900</td><td>$0.001 to $0.02</td><td>4%</td></tr>
+      <tr><td>7. Agent loop</td><td><span class="chip c-new">New</span></td><td>Sonnet 5.5 with a capped budget, only for open-ended work</td><td>About 126,000</td><td>About $0.13</td><td>1%</td></tr>
+    </tbody>
+  </table></div>
+  <div class="sheet"><table class="w-small">
+    <thead><tr><th>At 2,200 messages a month</th><th>Tokens a month</th><th>Cost a month</th><th>Can it do the work?</th></tr></thead>
+    <tbody>
+      <tr><td>Today's Ask VCFO</td><td>About 16 million</td><td>About $25</td><td>Answers only, and no firm counts</td></tr>
+      <tr><td>This plan, including Watch</td><td>About 6.4 million</td><td>About $3 to $9</td><td>Answers, counts, filing data, actions and portal updates</td></tr>
+      <tr><td>Sending all typed messages through an agent</td><td>About 194 million</td><td>About $200</td><td>The same, at many times the price</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">The volume of about 100 messages per working day is an assumption. The agent loop accounts for about 43% of the plan's tokens at only 1% of messages, so keeping it rare and capped matters more than any other setting. Answers alone fall from about 16 million tokens to about 2.1 million, which is the 87% reduction quoted above. Cache writes are not logged today, so the current figure is slightly low.</p>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Lever</th><th>Change</th><th>Why it saves</th><th>Risk to watch</th></tr></thead>
+    <tbody>
+      <tr><td>Move the guard to Haiku 5.5</td><td>One setting, plus disabling thinking for this call.</td><td>Listed at a tenth of the Haiku 4.5 price.</td><td>Rerun the 29 live eval cases first.</td></tr>
+      <tr><td>Local match first</td><td>Aliases for metrics, topics and greetings, checked in code before any call.</td><td>A recognised message costs nothing.</td><td>A wrong match gives a wrong answer, so match strictly and let the rest fall through.</td></tr>
+      <tr><td>Shortlist topics for the router</td><td>Send about 8 likely topics instead of all of them.</td><td>The guard averaged 1,479 input tokens, and this list is likely a large part of that. Measure it in phase 0.</td><td>The right topic must make the shortlist. Test this in evals.</td></tr>
+      <tr><td>Code draws the table</td><td>The model receives the count and top rows. The card shows the full list.</td><td>Staff tools can return up to 50 rows into the prompt today.</td><td>None, and the numbers become more reliable as well.</td></tr>
+      <tr><td>Smaller fixed prefix</td><td>Fetch playbook and topic summaries through search, not on every call.</td><td>They are sent with every generated answer.</td><td>Measure first, since this could lower recall.</td></tr>
+      <tr><td>Fewer sources and shorter history</td><td>Top 8 sources becomes 4. Last 6 turns becomes the rewritten question plus 2 turns.</td><td>These are the largest per-question inputs.</td><td>Follow-up questions may lose context. Test this in evals.</td></tr>
+      <tr><td>Short output</td><td>Lower the 4,096 output limit for questions, use lower effort, and use the depth setting you already have.</td><td>Output costs five times input.</td><td>Answers must not get cut off.</td></tr>
+      <tr><td>Promote repeated questions</td><td>Use your existing question-gaps report to turn frequent questions into reviewed topics or metrics.</td><td>The free share grows over time.</td><td>It needs someone to review the topics.</td></tr>
+      <tr><td>Local PDF text</td><td>Add a text extractor. Only scanned PDFs go to a model.</td><td>Most PDFs then cost nothing to read.</td><td>Old scans and Hindi gazettes will need the model.</td></tr>
+      <tr><td>Batches for backfills</td><td>Use Message Batches for bulk loading of acts and contextual prefixes.</td><td>50% off every token, on the direct API you use today. Bedrock does not offer it.</td><td>Results can take up to 24 hours, so this is not for live work.</td></tr>
+      <tr><td>Prompt caching, used where it pays</td><td>Keep it for agent loops, whose turns come quickly. Log cache writes, and judge the 5-minute cache on chat with real data.</td><td>Reads are far cheaper, but a sparse chat may often pay the write premium and never read.</td><td>The eval ran questions back to back, so its cache hits may flatter normal use.</td></tr>
+      <tr><td>Budgets and reports</td><td>Report tokens per path, set a per-run and per-day limit, and keep a kill switch per path.</td><td>You see leaks in days, and one runaway run cannot grow unnoticed.</td><td>Limits need a clear message to the person when reached.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head"><div><h2>The Watch engine: portal updates</h2><p>You called this an agent. I recommend building it as a fixed pipeline with one small model step, because a free-roaming agent reading hostile web pages would cost more and carry more risk for no better result.</p></div></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Step</th><th>What happens</th><th>Done by</th><th>Tokens</th><th>What stops a mistake</th></tr></thead>
+    <tbody>
+      <tr><td>1. Check</td><td>Feeds every 3 hours and pages twice a day. Uses conditional requests and a content hash, and stops here if nothing changed.</td><td>Code</td><td>0</td><td>Reuses your host allowlist and safe-URL checks. It only reads public pages and never logs in.</td></tr>
+      <tr><td>2. Find new items</td><td>A small adapter per source lists title, date and link. New ones are matched against what is stored.</td><td>Code</td><td>0</td><td>An adapter returning nothing raises an alert, in case the page layout changed.</td></tr>
+      <tr><td>3. Drop noise</td><td>Source rules remove tenders, jobs and routine auctions.</td><td>Code</td><td>0</td><td>Dropped items are kept in a log, so the rules can be audited.</td></tr>
+      <tr><td>4. Read</td><td>Download the PDF or page and extract the text.</td><td>Code</td><td>0 for text</td><td>A size limit applies. Scanned PDFs alone go to the model.</td></tr>
+      <tr><td>5. Understand</td><td>Returns area, act, change type, effective date, any new due date, who it affects, a plain summary and an exact quote.</td><td>Haiku 5.5</td><td>About 2,300</td><td>Strict schema and no tools at all, so a hostile page has nothing to trigger. Page text is treated as data.</td></tr>
+      <tr><td>6. Verify</td><td>Every date and number in the summary must appear in the source, and the quote must match exactly.</td><td>Code</td><td>0</td><td>A failed check marks the item for extra attention and does not send it out.</td></tr>
+      <tr><td>7. Merge</td><td>The same circular from two sources becomes one update, keeping both links.</td><td>Code</td><td>0</td><td>Unsure matches stay separate. A person can merge them later.</td></tr>
+      <tr><td>8. Review</td><td>Staff see it at once, marked "Not yet reviewed". A manager edits or publishes with one click.</td><td>Person</td><td>0</td><td>Nothing reaches clients unreviewed, because a wrong due date from the firm would cost trust.</td></tr>
+      <tr><td>9. Publish</td><td>Adds it to the board and popup, the notification tab and the chat knowledge together.</td><td>Code</td><td>0</td><td>Code picks recipients using fixed rules. Neither the chat nor the model chooses them.</td></tr>
+      <tr><td>10. Follow up (later)</td><td>A due-date change becomes a proposal to update the calendar, and leads see which of their clients are affected.</td><td>Code, person</td><td>0</td><td>The calendar is never changed automatically. A manager approves it.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="head"><div><h3>Who gets what</h3><p>These rules are a proposal you can change. They follow your request that everyone is notified, and they keep the bell from filling with routine items.</p></div></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Kind of update</th><th>Examples</th><th>Board and popup</th><th>Notification tab</th><th>Clients</th></tr></thead>
+    <tbody>
+      <tr><td>Important</td><td>Due date moved, new penalty, law in force, form changed</td><td>Immediately, for staff. Everyone after review.</td><td>Everyone, one row each, after review</td><td>Yes, after review</td></tr>
+      <tr><td>Normal</td><td>Circular, FAQ, clarification, consultation paper</td><td>Immediately, for staff. Everyone after review.</td><td>One daily summary row per person</td><td>Yes, after review</td></tr>
+      <tr><td>Staff only</td><td>Professional-body notices, internal process effect</td><td>Staff</td><td>In the daily summary row</td><td>No</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Email follows through your existing digests and stays additive. WhatsApp stays out at launch. Your notes currently treat the bell as work alerts and the board as news, so this plan changes that rule at your request. A system-level repository function, like <code>systemUpsertFeedAnnouncements</code>, would create the rows while keeping the data-access seam intact.</p>
+  <div class="head"><div><h3>What I found on the portals</h3><p>I requested each public page once on 6 November, from this laptop, using the app's real user agent. App Runner in Mumbai may see different results, so all of this needs retesting from AWS. A page that loads is not permission, so each site's terms need reading before it goes live. I only looked at robots.txt for some.</p></div><button class="copy" type="button" data-copy="sheet-sources">Copy for a spreadsheet</button></div>
+  <div class="sheet"><table class="w-mid" id="sheet-sources">
+    <thead><tr><th>Source</th><th>Covers</th><th>Result</th><th>What I saw</th><th>Route</th></tr></thead>
+    <tbody>
+      <tr><td>RBI notifications and press</td><td>FEMA, banking</td><td><span class="chip c-exists">Feed works</span></td><td>RSS with 10 items each, newest 5 November</td><td>Feed, first release</td></tr>
+      <tr><td>SEBI</td><td>Securities</td><td><span class="chip c-exists">Feed works</span></td><td>RSS with 30 items, newest 5 November. Host not on the allowlist yet.</td><td>Feed, first release</td></tr>
+      <tr><td>PIB</td><td>Ministry press releases</td><td><span class="chip c-exists">Feed works</span></td><td>RSS with 20 items. The URL redirected to different parameters, so the right language and ministry must be checked.</td><td>Feed, first release</td></tr>
+      <tr><td>CBIC GST central tax</td><td>GST notifications</td><td><span class="chip c-exists">Page works</span></td><td>Large plain page full of PDF links, on the URL your catalog already uses</td><td>Page adapter, first release</td></tr>
+      <tr><td>Income Tax e-filing news</td><td>Income tax</td><td><span class="chip c-exists">Page works</span></td><td>Plain page with PDF links</td><td>Page adapter, first release</td></tr>
+      <tr><td>ESIC circulars</td><td>ESI</td><td><span class="chip c-exists">Page works</span></td><td>Plain page with PDF links</td><td>Page adapter, first release</td></tr>
+      <tr><td>GST Council, NFRA, ICAI</td><td>GST policy, audit, accounting</td><td><span class="chip c-exists">Page works</span></td><td>Plain pages with PDF links. NFRA and ICAI are not on the allowlist yet.</td><td>Page adapter, first release</td></tr>
+      <tr><td>EPFO, IBBI</td><td>PF, insolvency</td><td><span class="chip c-extend">Find the URL</span></td><td>Home pages load, but the list URLs I tried gave 404. EPFO now redirects to <code>epfo.gov.in</code>.</td><td>Page adapter, once the list page is found</td></tr>
+      <tr><td>DGFT</td><td>Foreign trade</td><td><span class="chip c-hold">Check</span></td><td>The large page has PDF links and also mentions a CAPTCHA. If one guards the list, this moves to the manual route.</td><td>Second release</td></tr>
+      <tr><td>Telangana commercial taxes</td><td>Professional tax</td><td><span class="chip c-hold">Check</span></td><td>Page loads, with no PDF links in the plain response</td><td>Second release</td></tr>
+      <tr><td>GST portal news, ICSI, DPIIT, Labour ministry</td><td>GST, company secretaries, FDI, labour</td><td><span class="chip c-hold">Thin page</span></td><td>Very little content in the plain response, so the list probably loads through scripts. I did not confirm this.</td><td>Second release, with a scheduled browser task only if needed</td></tr>
+      <tr><td>India Code</td><td>Central acts</td><td><span class="chip c-hold">Check</span></td><td>The page title said "Site Migration"</td><td>Recheck later</td></tr>
+      <tr><td>MCA</td><td>Companies Act, LLP, forms</td><td><span class="chip c-never">Blocked</span></td><td>403 "Access Denied" on list pages and on robots.txt</td><td>Manual intake and official alert emails, then retest from AWS</td></tr>
+      <tr><td>Income Tax India</td><td>Notifications, circulars</td><td><span class="chip c-never">Blocked</span></td><td>403 "Access Denied" on the list page and on robots.txt</td><td>E-filing news covers part of it, plus manual intake</td></tr>
+      <tr><td>GST advisories</td><td>GST portal advisories</td><td><span class="chip c-never">Unavailable</span></td><td>503 on the page and on robots.txt</td><td>Retest, may be temporary</td></tr>
+      <tr><td>eGazette, CBIC tax information, Finance Ministry</td><td>Gazette, customs and tax, budgets</td><td><span class="chip c-never">No response</span></td><td>No response within the 20 to 25 second limit, twice for each</td><td>Retest from AWS Mumbai</td></tr>
+    </tbody>
+  </table></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Rule</th><th>What it means</th></tr></thead>
+    <tbody>
+      <tr><td>A blocked source stays blocked</td><td>The crawler uses its real name, respects robots rules and rate limits, and never solves a CAPTCHA, rotates identity or logs in. Getting around a block on a government site brings legal risk to a compliance firm.</td></tr>
+      <tr><td>Manual intake is first-class</td><td>Staff paste a link or upload a PDF, and it enters the same pipeline at step 4. MCA needs this from day one, because it is your most important source.</td></tr>
+      <tr><td>Official alert emails as a second route</td><td>Where a department offers an email alert, a firm mailbox can feed the pipeline. I have not confirmed which ones do.</td></tr>
+      <tr><td>Silence must not look like "no news"</td><td>Each source shows its last successful check, using your <code>service-checks</code> job. The chat says "no updates found from these sources as of this date", and it never says that the law has not changed.</td></tr>
+      <tr><td>Official sources only</td><td>Paid or commentary sites are not scraped. Their content has its own licence, and the firm should rely on the original notification.</td></tr>
+      <tr><td>Short summary and a link</td><td>The update keeps a short quote and a link to the original, and the original remains the authority.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head">
+    <div><h2>Architecture sheet</h2><p>Every layer, what exists today and the choice I recommend. Effort assumes one developer working with AI: S is under a week, M is 1 to 2 weeks, L is 3 weeks or more. These are estimates.</p></div>
+    <button class="copy" type="button" data-copy="sheet-arch">Copy for a spreadsheet</button>
+  </div>
+  <div class="sheet"><table class="w-arch" id="sheet-arch">
+    <thead><tr><th>#</th><th>Layer</th><th>Status</th><th>Its job</th><th>Today in VCFO</th><th>Recommended choice</th><th>Effort</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Chat surface</td><td><span class="chip c-extend">Extend</span></td><td>Take text, tables and files, and know what the person is looking at</td><td><code>AskPanel</code>, <code>AskFullPage</code>, an SSE event stream. No files; 2,000 characters.</td><td>Add uploads through the existing S3 flow, longer paste, current page and record as context, and new events for tool progress and approval. Reuse your event stream and do not add a chat framework.</td><td>S</td></tr>
+      <tr><td class="num">2</td><td>Router</td><td><span class="chip c-extend">Extend</span></td><td>Separate questions from work, cheaply</td><td><code>guard.ts</code> on Haiku 4.5, called on every typed message. It sorts intent and refuses off-topic messages.</td><td>Add a local match in front of it, so recognised messages skip the model. Add "fact" and "do work" intents and a shortlist of topics and metrics. Move to <code>claude-haiku-5-5</code>, which is listed at a tenth of the Haiku 4.5 price.</td><td>S</td></tr>
+      <tr><td class="num">3</td><td>Agent loop</td><td><span class="chip c-new">New</span></td><td>Plan, call tools, react to results</td><td><code>generate.ts</code>: read tools leading to one <code>render_answer</code>.</td><td>One orchestrator using the Anthropic SDK Tool Runner, whose per-turn hooks suit approval gates, used only for open-ended work. Start on <code>claude-sonnet-5-5</code>, which you already use, and move to <code>claude-opus-5-5</code> only if evals require it. Cap turns and tokens per run. Keep the provider switch. Do not build a swarm of agents.</td><td>M</td></tr>
+      <tr><td class="num">4</td><td>Durable runs</td><td><span class="chip c-new">New</span></td><td>Survive page closes and redeploys, and wait for people</td><td>Each answer lives in one request. Inngest is already in use.</td><td>Add <code>ask_runs</code> and <code>ask_run_steps</code> tables, with the loop in an Inngest function that sleeps until approval. The browser subscribes to progress and can reconnect.</td><td>M</td></tr>
+      <tr><td class="num">5</td><td>Action registry</td><td><span class="chip c-new">New</span></td><td>Be the one list of everything the app can do</td><td>Rules are spread across 259 write routes. Of all 396 route files, 202 already use zod.</td><td>Add <code>src/lib/actions/&lt;area&gt;/</code>. Each action has a name, description, zod input, risk tier, roles, <code>preview</code>, <code>execute</code> and optional <code>undo</code>. The route and the agent both call it. Move one route at a time, starting with the 25 most used.</td><td>L</td></tr>
+      <tr><td class="num">6</td><td>Tool selection</td><td><span class="chip c-new">New</span></td><td>Let the model find 1 of hundreds of actions</td><td>All tools are sent on every call, which is fine for 10.</td><td>First filter by role and shell in code, so the model never sees a forbidden action. Then use Anthropic tool search with <code>defer_loading</code>, keeping about 10 common tools loaded. Add <code>input_examples</code> for complex inputs and <code>strict: true</code> on every action.</td><td>S</td></tr>
+      <tr><td class="num">7</td><td>Field catalog</td><td><span class="chip c-extend">Extend</span></td><td>Know every place a value can go</td><td><code>CLIENT_RESPONSE_FIELDS</code>, <code>compliance-inputs</code>, <code>compliance-questionnaire</code>, <code>registration-rules</code>, and <code>fieldmaps/*.json</code> in VCFO Assist.</td><td>Generate one catalog from these at build time: canonical key (<code>director.pan</code>), synonyms, format rule, sensitivity, and all steps and portal fields that use it. Keep the current files as the source.</td><td>M</td></tr>
+      <tr><td class="num">8</td><td>Data router</td><td><span class="chip c-new">New</span></td><td>Turn loose data into field proposals</td><td>None. Ingestion only prepares documents for search.</td>A fixed workflow, not an agent loop, in this order: read the file with citations; apply exact format checks (PAN, DIN, CIN, GSTIN, IFSC, PIN); search the catalog for candidates; let the model choose only from those candidates; leave anything uncertain as a question. Test Haiku 5.5 for each model step before using a larger model.</td><td>L</td></tr>
+      <tr><td class="num">9</td><td>Changeset and approval</td><td><span class="chip c-new">New</span></td><td>Make every write reviewable and undoable</td><td>Audit events and step events exist. There is no proposal record.</td><td>Add an <code>ask_changesets</code> table: one row per field with old value, new value, source and checks. Approval is tied to a hash of the content, and code checks everything again at the click. The audit records the person, the run and "via Ask". The agent never approves its own work.</td><td>M</td></tr>
+      <tr><td class="num">10</td><td>Knowledge search</td><td><span class="chip c-extend">Extend</span></td><td>Answer law and process questions with sources</td><td>Full-text search, contextual prefixes, reviewed topics, <code>validate.ts</code> citation checks.</td>Add <code>pgvector</code> to the same Postgres and merge full-text and vector results with rank fusion. Send 4 sources, and add a reranker only if evals show a need. Add effective dates to law sources, because rules change. Use a graph only if evals prove this is not enough.</td><td>S</td></tr>
+      <tr><td class="num">11</td><td>Live data access</td><td><span class="chip c-extend">Extend</span></td><td>Answer "how many companies are incorporated?"</td><td>Read tools over scoped repositories. No incorporation count exists.</td><td>Add a metric catalog: about 25 named metrics with aliases, filters and templates, over repositories. Most need no model. Do not let the model write SQL, because that would bypass rule 1 and rule 2 in your <code>CLAUDE.md</code>. Consider programmatic tool calling later for large firm-wide reports; it is not available on Bedrock.</td><td>M</td></tr>
+      <tr><td class="num">12</td><td>Memory</td><td><span class="chip c-extend">Extend</span></td><td>Remember preferences and past corrections</td><td>Conversation history in <code>ask_messages</code>.</td><td>Use ordinary Postgres rows: user preferences, firm playbooks, and corrected mappings as new synonyms for review. Use server-side compaction for long chats. Never let a memory grant a permission.</td><td>S</td></tr>
+      <tr><td class="num">13</td><td>Safety</td><td><span class="chip c-extend">Extend</span></td><td>Stop mistakes, leaks and hostile documents</td><td>Guard, answer validation, link scope checks, rate limits, no identity numbers in tools.</td><td>Treat file text as data that can never authorise an action. Run tools as the person, using their <code>AuthContext</code>. Lock each run to one client. Mask identity numbers in chat, logs and prompts wherever the model does not need them. Add budgets per run and a kill switch per tier.</td><td>M</td></tr>
+      <tr><td class="num">14</td><td>Evals and traces</td><td><span class="chip c-extend">Extend</span></td><td>Prove it works, and keep proving it</td><td><code>tests/ask/evals</code>, with 29 of 29 passing on 30 September. Usage is saved per message.</td><td>Build a golden set from past real engagements with known correct fields. Measure wrong-field rate, wrong-client rate and how often people edit a proposal. Add prompt-injection and cross-tenant suites. Block a release when they fail.</td><td>M</td></tr>
+      <tr><td class="num">15</td><td>Portal hand-off</td><td><span class="chip c-hold">On hold</span></td><td>Bring prepared data to the MCA portal</td><td>VCFO Assist, <code>assist_runs</code> and the filing record, all uncommitted. Part B binds 610 of 1,110 fields. It has never run on the live portal.</td><td>The agent's only step is "prepare filing run". No MCA login, OTP, DSC PIN or token ever reaches the model. Waits for the CS opinion.</td><td>M</td></tr>
+      <tr><td class="num">16</td><td>Record cards</td><td><span class="chip c-new">New</span></td><td>Make notes and comments searchable</td><td>Free text sits in many tables, with no shared search.</td><td>An <code>ask_index_items</code> table holding card text, scope columns, a text index and a vector, refreshed by Inngest events. Identity numbers are never included. Search filters by access first.</td><td>M</td></tr>
+      <tr><td class="num">17</td><td>Saved answers</td><td><span class="chip c-new">New</span></td><td>Reuse an answer that is already correct</td><td>None.</td><td>Exact match on normalised wording, audience and knowledge version, for document answers only. Personal or live data is never cached. Do not match on similar meaning, because "GSTR-1 due date" and "GSTR-3B due date" look nearly identical to a vector.</td><td>S</td></tr>
+      <tr><td class="num">18</td><td>Cost controls</td><td><span class="chip c-extend">Extend</span></td><td>Show token use and stop leaks</td><td>Input, output and cache reads are saved per message. Cache writes are not.</td><td>Log cache writes and the path taken. Add a report per path, budgets per run and per day, and a kill switch per path.</td><td>S</td></tr>
+      <tr><td class="num">19</td><td>Watch sources</td><td><span class="chip c-extend">Extend</span></td><td>Know what to check, how often and whether it still works</td><td><code>announcement_sources</code>, the host allowlist and a once-daily RSS job.</td><td>Add source type, schedule, ETag, content hash and health columns. Add feed, page and manual intake adapters. Add SEBI, NFRA, ICAI and the others to the allowlist.</td><td>M</td></tr>
+      <tr><td class="num">20</td><td>Watch pipeline</td><td><span class="chip c-new">New</span></td><td>Turn a new document into a checked summary</td><td>None. Feed items are stored as they arrive.</td><td>Inngest steps for the pipeline above, a <code>reg_updates</code> table, a local PDF text extractor, Haiku 5.5 with strict output and no tools, and a code check of dates, numbers and the quote.</td><td>M</td></tr>
+      <tr><td class="num">21</td><td>Review and publish</td><td><span class="chip c-extend">Extend</span></td><td>Reach everyone through existing screens</td><td>Board, popup, bell and <code>createNotificationsForUsers</code>.</td><td>A review queue for managers, recipient rules in code, and one publish step that posts to the board and notification tab and indexes the update for chat. Keep the current popups and animations.</td><td>M</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">Running cost, as an estimate to replace with real numbers: an agent run of 6 model turns, 120,000 input tokens at 80% cache hits and 6,000 output tokens costs about $0.13 on Sonnet 5.5 or $0.24 on Opus 5.5, before cache-write charges. A fill-from-document fixed workflow should cost far less, at about $0.001 to $0.02, if small model steps prove accurate enough.</p>
+</section>
+
+<section>
+  <div class="head"><div><h2>Worked example: "How many companies are incorporated this year?"</h2><p>This one should cost nothing, and it still answers in the same easy card as today.</p></div></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Step</th><th>What happens</th><th>Done by</th><th>What stops a mistake</th></tr></thead>
+    <tbody>
+      <tr><td>1. Recognise</td><td>Code matches "how many", "companies" and "incorporated" to the metric <code>companies.incorporated</code>, with the period set to this financial year.</td><td>Code</td><td>Only a strict match skips the model. Anything less clear goes to the router, which may choose only from the metric list.</td></tr>
+      <tr><td>2. Count</td><td>A repository counts the engagements with an incorporation date in that period, using the person's <code>AuthContext</code>.</td><td>Code</td><td>An admin gets the firm's number, a lead gets their own, and a client gets only their own company.</td></tr>
+      <tr><td>3. Say it simply</td><td>A template fills in the existing answer card: "7 companies since 1 April", a small chart by month, and a link to the list.</td><td>Code</td><td>The number comes from the count, so a model cannot get it wrong.</td></tr>
+      <tr><td>4. Follow-up</td><td>"Why is Cedar still pending?" is a different kind of question, so it uses project tools and a short model answer.</td><td>Model</td><td>Your existing answer validation checks dates, steps and citations.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head"><div><h2>Worked example: a new GST notification</h2><p>The notification below is imaginary. It shows the steps and the people involved.</p></div></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Step</th><th>What happens</th><th>Done by</th><th>What the person sees</th></tr></thead>
+    <tbody>
+      <tr><td>1. Published</td><td>CBIC adds a notification moving a GSTR-1 due date, as a PDF.</td><td>Government</td><td>Nothing yet.</td></tr>
+      <tr><td>2. Found and read</td><td>The next page check finds a new link, downloads the PDF and extracts the text.</td><td>Code</td><td>Nothing yet.</td></tr>
+      <tr><td>3. Summarised</td><td>The small model returns the area, the old and new dates, who it affects, a plain summary and a quote. Code confirms that the dates and the quote are in the PDF.</td><td>Model, code</td><td>Staff see it on the board, marked "Not yet reviewed".</td></tr>
+      <tr><td>4. Reviewed</td><td>A manager reads the summary beside the source and clicks Publish.</td><td>Person</td><td>The manager sees a review queue item.</td></tr>
+      <tr><td>5. Sent to everyone</td><td>App code posts to the board and to each person's notification tab. The chat does not send it.</td><td>Code</td><td>Everyone sees the existing popup and a new bell row.</td></tr>
+      <tr><td>6. Chat knows it</td><td>The same update is indexed. "Does this affect Acme?" uses the update and Acme's own filing data.</td><td>Code, model</td><td>An answer with the source, the date and a link to the original.</td></tr>
+      <tr><td>7. Calendar proposal (later)</td><td>Code proposes the calendar change, and a manager approves it.</td><td>Person</td><td>A change card, and a list of affected clients for each lead.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head"><div><h2>Worked example: "Add this as director 2 for Acme"</h2><p>The person drops a PAN card and an Aadhaar card into the chat. Code does as much as possible, because code cannot invent a value.</p></div></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Step</th><th>What happens</th><th>Done by</th><th>What stops a mistake</th></tr></thead>
+    <tbody>
+      <tr><td>1. Take in</td><td>Files go to S3 through the normal upload path. The run is locked to the person and to Acme's engagement.</td><td>Code</td><td>A repository call confirms this person can reach Acme. If two companies match, the agent asks.</td></tr>
+      <tr><td>2. Read</td><td>The model identifies the document type and extracts name, PAN and date of birth, each with its page reference.</td><td>Model</td><td>A strict schema. Any instruction printed inside the document is treated as data.</td></tr>
+      <tr><td>3. Check format</td><td>The PAN pattern and the date are checked.</td><td>Code</td><td>A failed check goes to the person as a question, and no guess is made.</td></tr>
+      <tr><td>4. Find the place</td><td>The catalog returns candidates, such as <code>director.pan</code> in the <code>pre-15</code> entry. The model chooses from that list only.</td><td>Code, then model</td><td>The model cannot name a field that the catalog did not offer.</td></tr>
+      <tr><td>5. Check the rules</td><td>The existing checks run: step gate, who may fill the field, conditions, step validators.</td><td>Code</td><td>A locked step is held and labelled. A field this role cannot edit is routed to the right person.</td></tr>
+      <tr><td>6. Find conflicts</td><td>The value is compared with what is saved, and with other steps that hold the same fact.</td><td>Code</td><td>An existing value is never silently overwritten. The difference is shown.</td></tr>
+      <tr><td>7. Show the review</td><td>A card lists step, field, old value, new value, source page and check result, with Accept or Edit on every row.</td><td>Person</td><td>Nothing has been saved up to this point.</td></tr>
+      <tr><td>8. Save</td><td>On the click, code checks everything again and calls the same rule code as the screen. Audit and notifications run as usual.</td><td>Code</td><td>The approval only matches this exact content. The person can undo from the card.</td></tr>
+      <tr><td>9. File later</td><td>The filing data reaches VCFO Assist through <code>doc-pack</code>. A person logs in, signs, pays, submits and records the SRN.</td><td>Person</td><td>On hold until written CS approval.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head"><div><h2>What the agent may do on its own</h2><p>Every action carries one tier. Start strict, and only raise a tier when evals and real acceptance rates support it.</p></div></div>
+  <div class="sheet"><table class="w-small">
+    <thead><tr><th>Tier</th><th>Kind of action</th><th>Examples</th><th>Rule at launch</th></tr></thead>
+    <tbody>
+      <tr><td>T0 Read</td><td>Looks only</td><td>Status, lists, summaries, explain a step</td><td><span class="chip c-exists">Runs on its own</span></td></tr>
+      <tr><td>T1 Draft</td><td>Private and reversible</td><td>Personal to-do, draft email, draft values in the proposal</td><td><span class="chip c-exists">Runs on its own</span> with undo</td></tr>
+      <tr><td>T2 Record</td><td>Changes shared business data</td><td>Checklist values, tasks, filing dates, document links</td><td><span class="chip c-extend">Person approves</span> the changeset</td></tr>
+      <tr><td>T3 Outward</td><td>Others see it, or it is hard to undo</td><td>Email a client, approve a step, share a document, delete</td><td><span class="chip c-hold">Person confirms each one</span> with exact recipients. A step that needs a manager's approval still goes to the manager, even if the manager's own run prepared it, and the manager sees the same review card.</td></tr>
+      <tr><td>T4 Legal</td><td>Regulatory or financial effect</td><td>MCA submit, DSC signing, finalising resolutions, payments, changing roles</td><td><span class="chip c-never">Never by the agent</span> It may only prepare.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head">
+    <div><h2>Products to learn from</h2><p>Closest to your goal first. Vendors publish behaviour, and rarely their internal design, so the "copy" column is about patterns.</p></div>
+    <button class="copy" type="button" data-copy="sheet-products">Copy for a spreadsheet</button>
+  </div>
+  <div class="sheet"><table class="w-arch" id="sheet-products">
+    <thead><tr><th>Product</th><th>Where</th><th>What it does that is close to your idea</th><th>What to copy</th><th>Caution</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://openai.com/index/basis" target="_blank" rel="noopener">Basis</a></td><td>US accounting firms</td><td>Reads source documents, fills tax forms and keeps forms consistent with each other. Reported to have completed a full Form 1065.</td><td>A supervisor over focused sub-tasks, the right model per job, and showing data used, reasoning and confidence for each output.</td><td>A summary of its engineering talk points out that a return, unlike code, cannot simply be run to check it. You need your own validators.</td><td>Vendor case study, secondary summaries</td></tr>
+      <tr><td><a href="https://support.ramp.com/use-policy-agent-for-approvals" target="_blank" rel="noopener">Ramp Policy Agent</a></td><td>US spend management</td><td>Reviews expenses against written policy, approves clear cases and escalates the rest.</td><td>Autonomy earned in stages, people keeping final authority and able to override, and an admin-only test before wider rollout.</td><td>The 85% fewer reviews and 99% accuracy are vendor figures.</td><td>Vendor docs</td></tr>
+      <tr><td>Claude Code</td><td>Developer tool</td><td>Works across a large system through tools, with permission modes and diffs to review.</td><td>Plan, show the diff, approve, apply. Your changeset card is this pattern for business data.</td><td>Its users are developers. Your reviewers need plain labels.</td><td>First-hand</td></tr>
+      <tr><td><a href="https://www.intercom.com/help/en/articles/13459820-how-to-use-data-connectors-in-fin-procedures" target="_blank" rel="noopener">Intercom Fin</a></td><td>Customer support</td><td>Procedures guide multi-step work, and each connector is one specific API action.</td><td>One narrow definition per action, a health indicator per action, and "used by" tracking for safe edits.</td><td>Its own FAQ says connector failures are not handled automatically. Build the failure path yourself.</td><td>Vendor docs</td></tr>
+      <tr><td><a href="https://www.notion.com/help/custom-agents-sharing-and-permissions" target="_blank" rel="noopener">Notion Custom Agents</a></td><td>Workspace</td><td>Agents read and edit workspace content, with an audit log and admin off switches.</td><td>Full audit history and a stop switch.</td><td>Agents use their own access, so its help page warns they may expose data the user cannot see. Use the person's access instead.</td><td>Vendor docs</td></tr>
+      <tr><td><a href="https://thenextweb.com/news/salesforce-is-selling-the-ai-future-harder-than-it-is-delivering-it" target="_blank" rel="noopener">Salesforce Agentforce</a></td><td>CRM</td><td>Agents act inside records and trigger workflows.</td><td>Actions that live inside the record, using existing workflows.</td><td>One report counts 23,000 of 150,000 customers actively deploying it, and quality depends on data quality. Start narrow.</td><td>Press and analysts</td></tr>
+      <tr><td><a href="https://aiagentrank.io/compare/agentforce-vs-hubspot-breeze" target="_blank" rel="noopener">HubSpot Breeze</a></td><td>Mid-market CRM</td><td>Native agents, with no-code customisation reported.</td><td>Firm-defined playbooks on top of a fixed action list.</td><td>The sources I found disagree on basic details.</td><td>Weak, comparison pages</td></tr>
+      <tr><td><a href="https://gracker.ai/news/intuits-ai-innovations-driving-business-growth-and-expertise" target="_blank" rel="noopener">Intuit agents</a></td><td>Small business accounting</td><td>Reported to chase payments, send invoices and reconcile books inside QuickBooks.</td><td>Agents organised around one finished business outcome.</td><td>I found only secondary sources.</td><td>Weak, secondary</td></tr>
+      <tr><td><a href="https://www.accountingtoday.com/list/tech-news-canopy-adds-ai-tax-prep-features-via-integration-with-filed" target="_blank" rel="noopener">Filed</a> and <a href="https://neuronfeed.com/startups/accrual" target="_blank" rel="noopener">Accrual</a></td><td>US tax preparation</td><td>Filed is embedded inside Canopy. Accrual prepares and reviews returns using existing tax engines.</td><td>Keep your existing engines as the checker of record, as your validators already do.</td><td>US forms only.</td><td>Trade press, secondary</td></tr>
+      <tr><td><a href="https://theprint.in/ani-press-releases/indiafilings-launches-agentic-ai-platform-to-simplify-incorporation-and-tax-filing/2942813/" target="_blank" rel="noopener">IndiaFilings</a></td><td>India, incorporation and tax</td><td>Describes an agentic platform for MCA, GST and income tax work, with AI plus experts.</td><td>Your most direct comparison. Book a demo and test a real SPICe+ case.</td><td>Press release only. I could not test it.</td><td>Press release</td></tr>
+      <tr><td><a href="https://onfinanceainewsletter.beehiiv.com/p/onfinance-ai-launches-cs-legal-super-ai-agent-for-listed-indian-bfsi-titans-c855" target="_blank" rel="noopener">OnFinance AI</a></td><td>India, listed BFSI</td><td>An agent aimed at company secretaries, legal and board teams.</td><td>The CS-grade language and the review expected by this audience.</td><td>A different customer from yours, and vendor content only.</td><td>Vendor newsletter</td></tr>
+      <tr><td><a href="https://legalsuvidha.com/blog/how-legal-suvidha-uses-ai-to-scale-compliance-services" target="_blank" rel="noopener">Legal Suvidha</a></td><td>India, compliance services</td><td>AI drafts, an associate reviews, and a CA or CS signs off.</td><td>The same maker and checker chain as your lead and manager.</td><td>Its time-saving claims are not verified.</td><td>Vendor blog</td></tr>
+      <tr><td>Gen CompLaw, Leagully, ComplyRelax</td><td>India, MCA portal</td><td>Act on the MCA portal using logins the user provides. Only Gen CompLaw shows a SPICe+ path.</td><td>A person stays in the visible flow for OTP, signing and payment.</td><td>Your market report found no MCA approval for these tools. A product existing does not make its method lawful.</td><td>Your <code>MCA-Market-Report.pdf</code></td></tr>
+      <tr><td><a href="https://www.softwareadvice.co.uk/software/478617/Komrisk" target="_blank" rel="noopener">Komrisk</a></td><td>India, compliance</td><td>A large Indian compliance library, with alerts and escalations.</td><td>Alerts tied to the responsible person, as your per-lead follow-up does.</td><td>A reviewer calls mapping tedious. Yours can derive it from existing client data.</td><td>Review site</td></tr>
+      <tr><td><a href="https://complinity.com/?p=44900" target="_blank" rel="noopener">Complinity</a></td><td>India, compliance</td><td>Claims all-India coverage of notifications, circulars and amendments, with alerts filtered by act.</td><td>Filtering by act and law category, using your existing kinds.</td><td>Vendor claim. Coverage and speed are untested.</td><td>Vendor page</td></tr>
+      <tr><td><a href="https://lexisnexis.in/compliance" target="_blank" rel="noopener">LexisNexis India</a></td><td>India, compliance</td><td>A register of legal obligations, with sub-obligations assigned to owners, and alerts.</td><td>Link each update to the obligation it changes, and not only to a topic.</td><td>It is a paid editorial product, and a Watch summary will not match that editorial depth at launch.</td><td>Vendor page</td></tr>
+      <tr><td><a href="https://www.stack.grcreport.com/products/compliance-radar" target="_blank" rel="noopener">Compliance Radar</a></td><td>Compliance alerts</td><td>Profiles a business by type and location, then notifies when relevant rules change.</td><td>Use client profile data to work out who an update affects, in your later follow-up step.</td><td>A product listing only. I could not test it.</td><td>Listing page</td></tr>
+    </tbody>
+  </table></div>
+  <p class="note">I did not find a public product that takes free-form data and routes it across the SPICe+ fields inside a firm's own workflow. My searches were limited and many results were marketing pages, so treat that as a lead to check. If it holds, this is where you can stand out.</p>
+</section>
+
+<section>
+  <div class="head"><div><h2>What I would not build</h2><p>Each of these sounds advanced but would make this system worse at this stage.</p></div></div>
+  <div class="sheet"><table class="w-small">
+    <thead><tr><th>Idea</th><th>Why not</th><th>Use instead</th></tr></thead>
+    <tbody>
+      <tr><td>Model writes SQL against Postgres</td><td>It bypasses the seam and role scoping, which are your strongest protections.</td><td>Typed read tools over repositories</td></tr>
+      <tr><td>Agent clicks through your own website</td><td>Slow and fragile, and you own the code, so there is no reason to go through the screen.</td><td>Direct actions, and on-screen highlights only to show the result</td></tr>
+      <tr><td>One tool generated per API route</td><td>Routes were written for screens, so inputs are hard for a model to use and risk levels are unknown.</td><td>Hand-reviewed actions, added in priority order</td></tr>
+      <tr><td>Agent with its own powerful account</td><td>Anyone chatting could reach data beyond their role, as Notion's help page warns.</td><td>Every run uses the person's <code>AuthContext</code></td></tr>
+      <tr><td>A swarm of many agents</td><td>More cost and more places to fail. Mapping is mostly a fixed workflow.</td><td>One loop plus fixed workflows; a second-model check for high-risk items only</td></tr>
+      <tr><td>Knowledge graph or a separate vector database now</td><td>Your document volume is small. Sources I read say to prove plain retrieval is the bottleneck first, and report that pgvector scales into the millions.</td><td>pgvector in the same Postgres</td></tr>
+      <tr><td>Rewriting the app first</td><td>The foundation works, and your rules ask that ported domain code stays as it is.</td><td>Move routes to shared actions one at a time</td></tr>
+      <tr><td>Copying all data into RAG</td><td>A vector search cannot count, copies go stale, and a shared index can leak across clients.</td><td>Live facts through metrics, and an index only for free text</td></tr>
+      <tr><td>Matching saved answers by similar meaning</td><td>"GSTR-1 due date" and "GSTR-3B due date" look nearly the same to a vector, and returning the wrong one would be serious.</td><td>Exact match on normalised wording</td></tr>
+      <tr><td>The model reading every portal page</td><td>This burns tokens on pages that have not changed, and it exposes the model to hostile content for no gain.</td><td>Hash check and adapters in code, with the model only on new items</td></tr>
+      <tr><td>A free-roaming scraping agent</td><td>It costs more and is harder to test. A page could also instruct an agent that holds tools.</td><td>A fixed pipeline, where the model step has no tools</td></tr>
+      <tr><td>Disguising the crawler to get past blocks</td><td>It carries legal risk for a compliance firm, and it would break whenever the site tightens its rules.</td><td>Manual intake, official emails and the sources that allow reading</td></tr>
+      <tr><td>Letting the model choose who gets notified</td><td>A wrong guess means a person misses a deadline change.</td><td>Fixed recipient rules in code</td></tr>
+      <tr><td>Auto-editing the compliance calendar</td><td>One misread date would change deadlines for every client.</td><td>A proposal that a manager approves</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head"><div><h2>Build order</h2><p>This replaces my earlier order. Token fixes come first because they pay back immediately, and facts and Watch come early because they ship quickly and every role sees them. Each phase is useful alone. Weeks assume one developer working with AI, and they are estimates. Nothing starts until you say go.</p></div></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Phase</th><th>Weeks</th><th>Engine</th><th>What gets built</th><th>Done when</th></tr></thead>
+    <tbody>
+      <tr><td>0. Measure and cut</td><td>1</td><td>Answer</td><td>Read real usage from production <code>ask_messages</code>, log cache writes and path, move the guard to Haiku 5.5, trim history, sources and table rows, and add a token report.</td><td>The 29 live eval cases still pass, and tokens per answer are measurably lower.</td></tr>
+      <tr><td>1. Facts</td><td>2 to 3</td><td>Answer</td><td>Metric catalog of about 25 metrics, local match, answer templates, and access for managers and leads if you approve.</td><td>Your incorporation question gets an exact, role-correct answer with no model call.</td></tr>
+      <tr><td>2. Knowledge</td><td>4 to 5</td><td>Answer</td><td><code>pgvector</code>, embeddings, rank fusion, local PDF text, record cards, dated sources, saved answers, and loading the real documents.</td><td>Paraphrased and Hinglish questions pass the eval, with correct citations and no cross-client result.</td></tr>
+      <tr><td>3. Watch, first release</td><td>6 to 7</td><td>Watch</td><td>Source registry, health display, feeds and working pages, manual intake, summary and code check, manager review, publish to board, bell and chat.</td><td>A real week of updates is reviewed with no wrong date, and a broken source raises an alert.</td></tr>
+      <tr><td>4. Paste and file</td><td>8 to 10</td><td>Do</td><td>Field catalog, data router, changeset card and undo, for incorporation steps only.</td><td>A lead drops real documents and reviews correct proposals. Suggested target: 98% correct fields on proposed rows, and no wrong-client write.</td></tr>
+      <tr><td>5. Do things</td><td>11 to 13</td><td>Do</td><td>Action registry, tool search, tiers, durable runs, and the 25 most used actions (tasks, requests, reminders, documents, statuses).</td><td>Staff finish common daily work from chat, and every action has role tests.</td></tr>
+      <tr><td>6. Watch, second release</td><td>14 to 15</td><td>Watch</td><td>Affected-client lists, calendar change proposals, official alert mailbox, and remaining sources.</td><td>A due-date change produces a correct proposal and client list, approved by a manager.</td></tr>
+      <tr><td>7. Whole app</td><td>16 to 21</td><td>Do</td><td>Compliance, registrations, board meetings, receivables and labour registers, then client-portal actions limited to each client's own fields.</td><td>Each area meets the same test bar before release. Developer routes stay out.</td></tr>
+      <tr><td>8. Portal hand-off</td><td>After CS opinion</td><td>Do</td><td>"Prepare filing run" to VCFO Assist, with the remaining Part B field bindings.</td><td>One supervised real filing passes the acceptance list.</td></tr>
+      <tr><td>9. Proactive agent</td><td>Later</td><td>Do</td><td>Scheduled runs that prepare proposals overnight, and more autonomy where acceptance rates support it.</td><td>People accept nearly all proposals unedited for that action type.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head"><div><h2>Decisions that are yours</h2><p>These change the design, and my recommendation is given for each.</p></div></div>
+  <div class="sheet"><table class="w-mid">
+    <thead><tr><th>Decision</th><th>Why it matters</th><th>My recommendation</th></tr></thead>
+    <tbody>
+      <tr><td>Build order</td><td>I moved token fixes, facts and Watch ahead of filing SPICe+ from chat. If filing is your top priority, it can go straight after phase 0.</td><td>Keep the order above. Filing needs the most testing, and the earlier phases give value sooner.</td></tr>
+      <tr><td>Open chat to managers and leads?</td><td>The current spec blocks both roles, while "use the whole website" needs them.</td><td>Yes, in phase 1, starting with read-only questions.</td></tr>
+      <tr><td>Who reviews Watch updates?</td><td>Review is the safety gate, and a queue nobody owns will stall every update.</td><td>Name one manager and one backup. Set a same-day target for Important items.</td></tr>
+      <tr><td>Notify clients of every update?</td><td>You said everyone. Clients may get many items that do not apply to them, and may start to ignore them.</td><td>Follow your rule at launch, as in the table above. Once client matching exists, consider sending clients only what applies to them.</td></tr>
+      <tr><td>Allow scraping of public pages?</td><td>Your notes say HTML pages are not scraped, so this is a rule change. Government sites also have their own terms.</td><td>Allow public listing pages from official hosts, after reading each site's terms. Ask counsel for a short view, along with the CS opinion.</td></tr>
+      <tr><td>How to cover MCA?</td><td>It is your most important source, and it refused plain requests in my test.</td><td>Start with manual intake and official emails, retest from AWS Mumbai, and do not attempt to get around a block.</td></tr>
+      <tr><td>Who uses the Do engine first?</td><td>Clients and staff carry very different risk.</td><td>Project leads first, since they already review this data. Clients come after phase 5.</td></tr>
+      <tr><td>May the model read identity documents?</td><td>Today's rule is that Ask tools never see identity numbers, but filling from a PAN card needs this.</td><td>Allow it for extraction only, and mask those values in chat, logs and stored prompts. Get counsel's view on DPDP before using real client documents, and use test data until then.</td></tr>
+      <tr><td>Anthropic API or Amazon Bedrock?</td><td>This affects where client data is processed. The code already supports both, though features differ slightly.</td><td>Keep the current API for the test-data phase, and decide together with the question above before real data.</td></tr>
+      <tr><td>Stay on App Runner?</td><td>AWS closed App Runner to new customers in April 2026. Existing services continue, with no new features planned.</td><td>No move for this project. Agent runs in Inngest do not depend on long web requests, but test streaming limits early and plan a separate review of hosting.</td></tr>
+      <tr><td>The CS opinion</td><td>The portal hand-off cannot start without it, while phases 0 to 7 do not need it.</td><td>Keep it moving in parallel. Do not make the agent wait for it.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <div class="head"><div><h2>Sources and limits</h2><p>Code facts were read from this repository on 6 November 2026, including uncommitted files. Model prices come from the Claude API reference cached on 6 October 2026. Token baselines come from your 30 September eval, on fixture data and not production. Portal results come from one test on 6 November from this laptop, not from AWS. All targets, efforts, shares and costs are my estimates, and nothing has been prototyped.</p></div></div>
+  <ol class="sources">
+    <li><a href="https://docs.aws.amazon.com/AmazonRDS/latest/PostgreSQLReleaseNotes/postgresql-versions.html" target="_blank" rel="noopener">AWS: RDS for PostgreSQL versions and extensions</a> and <a href="https://aws.amazon.com/about-aws/whats-new/2024/05/amazon-rds-postgresql-pgvector-0-7-0/" target="_blank" rel="noopener">pgvector 0.7.0 on RDS</a>.</li>
+    <li><a href="https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-amazon-titan-text-embeddings-v2.html" target="_blank" rel="noopener">AWS: Titan Text Embeddings V2 model card</a>. The price quoted above comes from <a href="https://cloudprice.net/models/amazon.titan-embed-text-v2%3A0" target="_blank" rel="noopener">a third-party tracker</a>, so confirm it.</li>
+    <li><a href="https://docs.voyageai.com/docs/pricing" target="_blank" rel="noopener">Voyage AI: pricing</a>, for the alternative embedding and reranker models.</li>
+    <li><a href="https://www.sourceforge.net/software/regulatory-change-management/india" target="_blank" rel="noopener">Regulatory change management software in India</a> and <a href="https://www.mondaq.com/india/corporate-governance/1813550/what-is-compliance-management-softwarecomplete-guide-for-indian-businesses" target="_blank" rel="noopener">Mondaq: compliance software guide</a>. These are listings and vendor-linked articles, so treat their claims as self-reported.</li>
+    <li><a href="https://www.anthropic.com/engineering/advanced-tool-use" target="_blank" rel="noopener">Anthropic: advanced tool use</a>. Tool search, programmatic tool calling and tool use examples, with measured results.</li>
+    <li><a href="https://openai.com/index/basis" target="_blank" rel="noopener">OpenAI: Basis case study</a> and <a href="https://www.zenml.io/llmops-database/building-long-horizon-autonomous-agents-for-complex-accounting-work" target="_blank" rel="noopener">ZenML's summary of the Basis talk</a>.</li>
+    <li><a href="https://ramp.com/blog/ramp-agents-announcement" target="_blank" rel="noopener">Ramp: agents announcement</a> and <a href="https://support.ramp.com/use-policy-agent-for-approvals" target="_blank" rel="noopener">Policy Agent approvals</a>.</li>
+    <li><a href="https://copilotkit.ai/blog/the-state-of-agentic-ui-comparing-ag-ui-mcp-ui-and-a2ui-protocols" target="_blank" rel="noopener">CopilotKit: comparing agentic UI protocols</a>. I reviewed this and recommend keeping your own event stream for now.</li>
+    <li><a href="https://dev.to/gabrielanhaia/hybrid-search-is-the-phrase-youll-hear-at-every-rag-talk-in-2026-4dpd" target="_blank" rel="noopener">Hybrid search with Postgres</a>, <a href="https://semsudin.pages.dev/blog/enterprise-rag-patterns" target="_blank" rel="noopener">enterprise RAG field notes</a> and <a href="https://futureagi.com/blog/best-vector-databases-for-rag-2026/" target="_blank" rel="noopener">vector database comparison</a>. These are practitioner blogs, so treat their numbers as indicative.</li>
+    <li><a href="https://docs.aws.amazon.com/ja_jp/apprunner/latest/dg/apprunner-availability-change.html" target="_blank" rel="noopener">AWS: App Runner availability change</a>.</li>
+    <li><a href="https://www.icsi.edu/media/webmodules/CSJ/June2026/17.pdf" target="_blank" rel="noopener">ICSI journal, June 2026</a>, on AI and the Company Secretary.</li>
+    <li>In this repository: <code>docs/specs/mca-connect/PLAN.md</code>, <code>docs/specs/mca-connect/MCA-Market-Report.pdf</code>, <code>docs/context/notes/assist-filing.md</code>, <code>docs/specs/ask-vcfo/STATUS.md</code>, <code>docs/specs/ask-vcfo/EVAL-LIVE-2026-09-30.md</code>, <code>docs/context/notes/notifications.md</code>, <code>src/lib/ask/</code>, <code>src/jobs/announcement-feeds.ts</code>, <code>src/lib/notifications/</code>.</li>
+  </ol>
+</section>
+</div>
+
+<script>
+document.querySelectorAll('button.copy').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var table = document.getElementById(btn.getAttribute('data-copy'));
+    var tsv = Array.prototype.map.call(table.rows, function (row) {
+      return Array.prototype.map.call(row.cells, function (cell) {
+        return cell.innerText.replace(/\s+/g, ' ').trim();
+      }).join('\t');
+    }).join('\n');
+    var label = btn.textContent;
+    function done(text) { btn.textContent = text; setTimeout(function () { btn.textContent = label; }, 1800); }
+    function selectInstead() {
+      var range = document.createRange();
+      range.selectNodeContents(table);
+      var selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      done('Selected. Press copy.');
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tsv).then(function () { done('Copied'); }, selectInstead);
+    } else {
+      selectInstead();
+    }
+  });
+});
+</script>

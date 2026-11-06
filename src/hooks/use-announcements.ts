@@ -27,10 +27,11 @@ export function useAnnouncements(limit?: number) {
       const data = await readJson<{
         latestId: string | null;
         latestCreatedAt: string | null;
+        latestUpdatedAt: string | null;
         count: number;
       }>(await fetch('/api/announcements?head=1'));
       return {
-        fingerprint: fingerprintHead([data.latestId, data.latestCreatedAt, data.count]),
+        fingerprint: fingerprintHead([data.latestId, data.latestCreatedAt, data.latestUpdatedAt, data.count]),
       };
     },
     invalidateQueryKey: ['announcements'],

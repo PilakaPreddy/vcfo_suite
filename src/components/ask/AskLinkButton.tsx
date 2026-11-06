@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
 import type { AnswerLink } from '@/data/ask/schema';
-import { useStaffBasePath } from '@/hooks/use-staff-base-path';
+import { useAskLinkBase } from '@/components/ask/use-ask-link-base';
 import { resolveHref } from '@/lib/ask/resolve-href';
 import { buttonVariants } from '@/components/ui/button-variants';
 import { cn } from '@/lib/utils';
@@ -18,12 +18,12 @@ import { useAskLayoutMode } from './use-ask-layout';
  */
 export function AskLinkButton({ link }: { link: AnswerLink }) {
   const ask = useAskOptional();
-  const staffBase = useStaffBasePath();
+  const base = useAskLinkBase();
   const mode = useAskLayoutMode();
   if (!ask) return null;
   return (
     <Link
-      href={resolveHref(link.dest, staffBase)}
+      href={resolveHref(link.dest, base)}
       onClick={() => {
         if (mode === 'sheet') {
           ask.setOpen(false);

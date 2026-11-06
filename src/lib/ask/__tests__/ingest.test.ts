@@ -8,7 +8,21 @@ const replaceChunks = vi.fn();
 const setResult = vi.fn();
 const getObjectBuffer = vi.fn();
 const searchAskChunks = vi.fn();
+const recordUsage = vi.fn(async () => undefined);
+const todayTokens = vi.fn(async () => 0);
+const noRows = async () => [];
+vi.mock('@/db/repositories/ask-usage', () => ({
+  systemRecordAskUsage: (...a: unknown[]) => (recordUsage as (...x: unknown[]) => unknown)(...a),
+  systemTodayTokenTotal: () => todayTokens(),
+}));
+vi.mock('@/db/repositories/ask-index', () => ({
+  searchIndexItems: vi.fn(noRows),
+  systemListUnembeddedCards: vi.fn(noRows),
+  systemSetCardEmbeddings: vi.fn(noRows),
+}));
 vi.mock('@/db/repositories/ask-documents', () => ({
+  systemListUnembeddedChunks: vi.fn(noRows),
+  systemSetChunkEmbeddings: vi.fn(noRows),
   systemGetAskDocument: (...a: unknown[]) => getDoc(...a),
   systemReplaceAskChunks: (...a: unknown[]) => replaceChunks(...a),
   systemSetAskDocumentResult: (...a: unknown[]) => setResult(...a),
@@ -87,15 +101,46 @@ describe('ingestion job', () => {
     expect((replaceChunks.mock.calls[0]![1] as Array<{ contextPrefix: string | null }>)[0]!.contextPrefix).toBeNull();
   });
 
-  it('marks a PDF failed with a readable reason when no model is configured', async () => {
+  it('marks an unreadable PDF failed with a readable reason', async () => {
     getDoc.mockResolvedValue({ ...doc, s3Key: 'knowledge-bank/ask-sources/doc-1/rules.pdf' });
     getObjectBuffer.mockResolvedValue(Buffer.from('%PDF-1.4'));
     expect((await runAskIngestion('doc-1')).status).toBe('failed');
     expect(setResult).toHaveBeenLastCalledWith('doc-1', {
       status: 'failed',
-      error: expect.stringContaining('PDF sources need the Ask VCFO model'),
+      error: expect.stringContaining('not a readable PDF'),
     });
     expect(replaceChunks).not.toHaveBeenCalled();
+  });
+
+  it('settles a source with no file, loaded from this repository, instead of leaving it indexing', async () => {
+    getDoc.mockResolvedValue({ ...doc, s3Key: null });
+    expect((await runAskIngestion('doc-1')).status).toBe('skipped');
+    expect(setResult).toHaveBeenLastCalledWith('doc-1', { status: 'ready' });
+    expect(replaceChunks).not.toHaveBeenCalled();
+  });
+
+  it('meters indexing under its own path and skips the model past the daily budget', async () => {
+    const complete = vi.fn(async () => ({
+      model: 'claude-haiku-5-5',
+      stopReason: 'end_turn',
+      usage: { inputTokens: 5, outputTokens: 2, cacheReadTokens: 0, cacheWriteTokens: 0 },
+      content: [{ type: 'text', text: 'Context.' }],
+    }));
+    setAskProviderForTests({ name: 'mock', complete } as never);
+    getDoc.mockResolvedValue(doc);
+    getObjectBuffer.mockResolvedValue(Buffer.from(['# GST', para(1)].join('\n\n')));
+    expect((await runAskIngestion('doc-1')).status).toBe('ready');
+    expect(complete).toHaveBeenCalled();
+    const request = (complete.mock.calls[0] as unknown as [{ thinking?: string; effort?: string }])[0];
+    expect(request).toMatchObject({ thinking: 'off', effort: 'low' });
+    expect(recordUsage).toHaveBeenCalledWith('ingest', expect.arrayContaining([expect.objectContaining({ model: 'claude-haiku-5-5' })]));
+
+    complete.mockClear();
+    recordUsage.mockClear();
+    todayTokens.mockResolvedValueOnce(Number.MAX_SAFE_INTEGER);
+    expect((await runAskIngestion('doc-1')).status).toBe('ready');
+    expect(complete).not.toHaveBeenCalled();
+    expect(recordUsage).not.toHaveBeenCalled();
   });
 
   it('skips archived sources', async () => {
@@ -106,10 +151,33 @@ describe('ingestion job', () => {
 });
 
 describe('retrieval audience', () => {
+  const hit = (id: string, text: string) => ({ id, documentId: 'd', documentTitle: 'Guide', sourceType: 'govt', sourceUrl: null, text, contextPrefix: null, rank: 1 });
+  const staff = { userId: 's1', email: 's@x.test', name: 'S', role: 'manager' as const };
+
+  it('searches the asked words and the widened words, at most four sources, and masks identity numbers', async () => {
+    searchAskChunks.mockImplementation(async (_ctx: unknown, input: { query: string }) =>
+      input.query === 'jurmana kitna'
+        ? [hit('a', 'PAN ABCDE1234F on file')]
+        : [hit('a', 'PAN ABCDE1234F on file'), hit('b', 'two'), hit('c', 'three'), hit('d', 'four'), hit('e', 'five')],
+    );
+    const sources = await retrieveSources(staff, { query: 'jurmana kitna', persona: 'staff', topK: 4, applicability: null });
+    expect(searchAskChunks).toHaveBeenCalledTimes(2);
+    expect(searchAskChunks.mock.calls[1]![1].query).toContain('penalty');
+    expect(sources).toHaveLength(4);
+    expect(sources[0]).toMatchObject({ id: 'a', kind: 'chunk' });
+    expect(sources[0]!.text).not.toContain('ABCDE1234F');
+  });
+
+  it('a failed search leaves the rest of the answer standing', async () => {
+    searchAskChunks.mockRejectedValue(new Error('database down'));
+    await expect(retrieveSources(staff, { query: 'gst threshold', persona: 'staff', topK: 4, applicability: null })).resolves.toBeInstanceOf(Array);
+  });
+
+
   it('asks the repository for the client persona on a client question', async () => {
     searchAskChunks.mockResolvedValue([]);
     const ctx = { userId: 'c1', email: 'c@x.test', name: 'C', role: 'client' as const };
     await retrieveSources(ctx, { query: 'gst threshold', persona: 'client', topK: 5, applicability: null });
-    expect(searchAskChunks).toHaveBeenCalledWith(ctx, { query: 'gst threshold', persona: 'client', limit: 5 });
+    expect(searchAskChunks).toHaveBeenCalledWith(ctx, { query: 'gst threshold', persona: 'client', limit: 5, queryVector: null });
   });
 });

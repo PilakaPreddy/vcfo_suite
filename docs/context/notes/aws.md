@@ -99,3 +99,15 @@ single EUM transport (there is no `WHATSAPP_PROVIDER` any more).
 Until the number is registered and `EUM_PHONE_NUMBER_ID` is set, every send is
 recorded as `skipped/disabled` and no AWS call is made. Templates are `en`
 only (`WHATSAPP_TEMPLATE_LANG`).
+
+## pgvector on RDS (2026-11-06)
+
+- Migration `0047_ask_foundation` starts with `CREATE EXTENSION IF NOT EXISTS vector`. The migrating
+  user needs `rds_superuser` (the RDS master user has it) and the instance must offer the extension:
+  check `SELECT * FROM pg_available_extensions WHERE name = 'vector'` before the deploy. AWS documents
+  pgvector on RDS for PostgreSQL 16, but the exact version depends on the minor release.
+- There is no vector index yet. Search filters by access and compares directly; add HNSW only past
+  roughly 50,000 rows, and expect to size up from db.t4g.micro then.
+- Embeddings use Titan Text Embeddings V2 through Bedrock. Until `ASK_EMBEDDINGS_PROVIDER=bedrock`
+  and `ASK_EMBEDDINGS_REGION` are set, and the App Runner role may call `bedrock:InvokeModel` on it,
+  vectors stay empty and search runs on full-text alone.

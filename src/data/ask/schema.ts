@@ -18,7 +18,7 @@ const TOPIC_CATEGORIES = [
 ] as const;
 export const ASK_SHELLS = ['client', 'admin', 'super'] as const;
 export const ANSWER_DEPTHS = ['normal', 'simple', 'detail'] as const;
-const ANSWER_ORIGINS = ['reviewed', 'generated', 'deterministic', 'refusal'] as const;
+const ANSWER_ORIGINS = ['reviewed', 'generated', 'deterministic', 'refusal', 'work'] as const;
 export const ANSWER_ACTIONS = [
   'save',
   'simpler',
@@ -134,6 +134,15 @@ const metricsVisualSchema = z.object({
     .max(4),
 });
 
+/** Small counts by month or by group. Only metric answers draw it; the model is never offered it. */
+const barsVisualSchema = z.object({
+  type: z.literal('bars'),
+  items: z
+    .array(z.object({ k: z.string().trim().min(1).max(40), v: z.number().int().min(0) }))
+    .min(2)
+    .max(12),
+});
+
 export const visualSchema = z.discriminatedUnion('type', [
   flowVisualSchema,
   stepsVisualSchema,
@@ -143,6 +152,7 @@ export const visualSchema = z.discriminatedUnion('type', [
   nextStepVisualSchema,
   projectRowsVisualSchema,
   metricsVisualSchema,
+  barsVisualSchema,
 ]);
 
 export type Visual = z.infer<typeof visualSchema>;
@@ -226,6 +236,25 @@ export type Topic = z.infer<typeof topicSchema>;
 
 // ---------- Go-there links (§7.7) ----------
 
+/** The list pages a metric answer may open, resolved per role in `resolveHref`. */
+export const METRIC_LISTS = [
+  'projects',
+  'approvals',
+  'filings',
+  'obligations',
+  'requests',
+  'tasks',
+  'documents',
+  'registrations',
+  'labour',
+  'people',
+  'updates',
+  'receivables',
+] as const;
+export type MetricList = (typeof METRIC_LISTS)[number];
+/** The lists a client has a page for. */
+export const CLIENT_METRIC_LISTS: readonly MetricList[] = ['filings', 'obligations', 'requests', 'documents', 'registrations', 'labour', 'updates'];
+
 /** The only link shapes an answer may carry. Navigate / focus / prefill — never act. */
 const destinationSchema = z.discriminatedUnion('to', [
   // client
@@ -242,11 +271,19 @@ const destinationSchema = z.discriminatedUnion('to', [
   z.object({ to: z.literal('approvals') }),
   z.object({ to: z.literal('compliance'), filter: z.enum(['overdue', 'dueSoon']).optional() }),
   z.object({ to: z.literal('composeReminder'), engagementId: z.string().min(1) }),
+  // every shell, narrowed by `checkDestination`
+  z.object({
+    to: z.literal('list'),
+    list: z.enum(METRIC_LISTS),
+    status: z.enum(['overdue', 'due-soon', 'filed']).optional(),
+    view: z.enum(['overdue', 'waiting']).optional(),
+    company: z.string().min(1).optional(),
+  }),
 ]);
 export type Destination = z.infer<typeof destinationSchema>;
 
-export const CLIENT_DESTINATIONS = ['incorporation', 'step', 'inbox', 'compliances', 'documents', 'library', 'learn'] as const;
-export const STAFF_DESTINATIONS = ['project', 'projectStep', 'approvals', 'compliance', 'composeReminder'] as const;
+export const CLIENT_DESTINATIONS = ['incorporation', 'step', 'inbox', 'compliances', 'documents', 'library', 'learn', 'list'] as const;
+export const STAFF_DESTINATIONS = ['project', 'projectStep', 'approvals', 'compliance', 'composeReminder', 'list'] as const;
 
 export const answerLinkSchema = z.object({
   dest: destinationSchema,
@@ -290,6 +327,9 @@ export const answerEnvelopeSchema = z.object({
       engagementId: z.string().optional(),
     })
     .optional(),
+  /** The review card this answer carries, and the fixed workflow or agent run behind it. */
+  changesetId: z.string().uuid().optional(),
+  runId: z.string().uuid().optional(),
 });
 export type AnswerEnvelope = z.infer<typeof answerEnvelopeSchema>;
 

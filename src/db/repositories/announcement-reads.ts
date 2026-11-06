@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { isWatchStaff } from '@/lib/watch/recipients';
 import { and, count, eq, inArray, notExists, sql } from 'drizzle-orm';
 import { db } from '@/db/client';
 import { announcementReads, announcements } from '@/db/schema';
@@ -49,6 +50,7 @@ export async function countUnreadAnnouncements(ctx: AuthContext): Promise<number
     .where(
       and(
         sql`${announcements.publishedAt} > now() - interval '90 days'`,
+        isWatchStaff(ctx.role) ? undefined : eq(announcements.audience, 'everyone'),
         notExists(
           db
             .select({ one: sql`1` })

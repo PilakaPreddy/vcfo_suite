@@ -1,0 +1,296 @@
+Ask VCFO Master Plan
+  VCFO Suite · Master plan · 6 November 2026
+  Ask VCFO Master Plan
+  One chat on top of three engines: Answer, Do and Watch. It joins today's Ask VCFO with the agent idea, adds a knowledge layer, cuts token use, and adds a portal watcher that feeds the chat and the notifications. This is a plan. Nothing has been built or changed. For the simple picture version, see the diagrams, user flows and demo screens.
+  Yes, all of this fits one product, and today's Ask VCFO stays as its base. Most questions will not call an AI model at all, because code can answer them exactly and for free.
+    Counts come from live data, not RAG
+"How many companies are incorporated?" needs an exact count. RAG finds similar text, so it cannot count, and copied data goes stale and can leak across roles. Code counts live records, and RAG handles documents, notes and law.
+    The cheapest token is no token
+Every step runs the cheapest option that can do the job: code, then a saved answer, then the small model, then the larger model. On my estimate, the same answers use about 87% fewer tokens.
+    Some portals refuse automated reading
+MCA and Income Tax India returned "Access Denied" to a plain request, and RBI, SEBI and PIB offer working feeds. A blocked source gets a manual or email route. We do not disguise the crawler or solve CAPTCHAs.
+  The three engines
+The person sees one chat and one notification area. Behind them, each engine has a different job and a different cost.
+    Engine | Its job | Who starts it | What it costs in tokens | What protects it | 
+      Answer | Explains, counts and finds things, in the same easy cards as today. | A person asks. | None for clicks, recognised questions and saved answers. Small for document answers. | Repository role checks, plus the answer validation you already have. | 
+      Do | Fills data into the right field and operates the app. | A person asks for work. | Small for fixed workflows. Large for the open agent loop, so that loop is capped and used rarely. | Review card, tier rules, same rule code as the screens. | 
+      Watch | Checks official portals, summarises what changed and publishes it. | A schedule, with no chat involved. | None when nothing changed. One small model call per genuinely new item. | Model has no tools, code checks its summary against the source, and a person reviews before clients see it. | 
+  How this joins what you already have
+The foundation is good, and more of this plan already exists than you may expect. The chat being read-only is the largest gap, and token use comes next.
+    Part | Verdict | What the code shows | What it means for the plan | 
+      Answer pipeline | Keep | pipeline.ts already runs cheapest first: suggestion, what's-this, guard, reviewed topic, then search, tools and generation. Answer cards, validation, citations, depth, links and usage logging all work. | This remains the Answer engine. The new layers slot in before and after it, and the look of the answers does not change. | 
+      Free-text cost | Wasteful | Every typed message calls the guard, even "hello", and sends the list of topic questions. In the 30 September live eval, the average was 1,607 guard tokens plus, on the 16 answered cases, 10,965 answer tokens. The guard is on the older Haiku 4.5. | This is where the first savings come from. See the token plan. | 
+      Business counts | Missing | getFirmPulse counts active projects, waiting clients, approvals and overdue filings. No tool counts incorporated companies, although engagements.incorporation_date holds the date. | Your example question has no tool behind it today. A metric catalog fixes this kind of question as a group. | 
+      Who can ask | Limited | access.ts allows client, admin and super admin. Managers and project leads get a 403, as the spec asked. | "Use the whole site from chat" requires opening it to those roles. This is your decision, listed below. | 
+      Announcements and bell | Keep | The board, megaphone, live popup, notification tab and createNotificationsForUsers all exist, and a new post reaches every signed-in role within seconds. | Watch publishes into these, keeping the existing popups and animations. No new notification system is needed. | 
+      Official feeds | Partly there | announcement-feeds.ts reads RSS once at 06:00, from an allowlist of hosts. No circular URL in the portal catalog looks like a feed, so the catalog adds none, and it covers only what staff paste in. SEBI, NFRA and ICAI are not on the allowlist. Your notes say HTML pages are not scraped. | Watch grows this job. It also reverses that rule for public listing pages, so the note should change. Login pages stay out. | 
+      PDF reading | Wasteful | ingest/extract.ts sends every PDF to a model to transcribe it, because no text extractor is installed. | Government circulars are mostly PDFs. A local extractor makes text PDFs free, and only scanned pages need a model. | 
+      Stored knowledge | Check | My local database has 0 rows in ask_documents and ask_chunks, and topics were still drafts at the last status update. I did not check production. | The search machinery exists but may have little to search. Loading content matters as much as adding vectors. | 
+      Data access | Strong | Only src/db/repositories touches the database, and each repository takes an AuthContext and scopes by role. There are 161 repository modules. | An agent acting as the signed-in person inherits correct permissions. Most products have to build this. | 
+      Field definitions | Strong | CLIENT_RESPONSE_FIELDS holds 720 typed fields plus 64 repeat-entry fields, across 42 step definitions, with labels, sections, conditions and who fills each one. | This is the map that answers "where does this value belong?" It only needs synonyms and format rules added. | 
+      Rules and validators | Strong | Step gating, Part B, pre-9 and pre-10 validators, and fieldsForOwnership are plain tested functions. | Code can check the model's work before anyone sees it. | 
+      Knowledge search | Partly there | You do have RAG: ask_documents, ask_chunks, contextual prefixes and Postgres full-text search. There are no embeddings, so a paraphrased question can miss. Topics were still drafts at the last status update. | Add vector search and a reranker. This is a small job, and it should not come first. | 
+      Actions from chat | Missing | There are 10 tools (6 staff, 4 client), and all of them only read. The app has 396 route files, and 259 of them can write. | This is the biggest gap. The chat can see the app but cannot operate it. | 
+      Data intake in chat | Missing | chatRequestSchema takes text up to 2,000 characters and no files. | You cannot yet give it a document or a pasted sheet to file. | 
+      Business rules in routes | Risk | The checklist route itself calls leadWritablePatch, stripClientOnlyResponses and the notification plan. | An agent calling repositories directly would skip those rules. They must move to functions that the routes and the agent share. | 
+      Long-running work | Partly there | A chat answer lives inside one web request. Inngest already runs background jobs. | Agent runs must survive a page close and wait for approval, so they belong in Inngest. | 
+  The recommended shape
+Questions keep the fast, cheap path you already have, with cheaper steps added in front of it. Work goes through a path that ends at a person's approval. Watch runs on its own schedule and meets the others at the knowledge layer and the notifications.
+    The signed-in personTypes, pastes a table or drops files, from any page
+    ↓
+    Chat surface ExtendPanel and full page, plus uploads, current page and record, and review cards
+    ↓
+      Free checks ExtendSuggestion click, local match on metrics and reviewed topics, saved answer. No model.
+      Router ExtendToday's guard on Haiku 5.5. It sorts what the free checks could not.
+    ↓ question, or work to do
+      Answer engine ExtendMetric catalog for exact facts, hybrid search for text, small model to write it up
+      Do: fixed workflows NewData router and common actions, in short model steps with code around them
+      Do: agent run NewOne capped model loop in an Inngest job, only for open-ended work. It can wait for an approval and then resume.
+    ↓ uses
+      Knowledge layer ExtendLive facts, record cards, documents and regulatory updates, each with a date and a source
+      Field catalog NewEvery place a value can go, generated from your own field definitions
+      Action registry NewOne definition per action: input, risk tier, roles, preview, execute, undo
+    ↓ proposes, never writes
+    Changeset and approval gate NewOld value, new value, source, check result. Code checks it again at the click, and the approval is tied to that exact content.
+    ↓ after approval
+      Shared rule code, then repositories ExistsSame AuthContext, validators, notifications and audit events as the screens. Postgres and S3 stay as they are.
+      VCFO Assist, then MCA portal On holdNeeds written CS approval. The extension fills, and a person logs in, signs, pays and submits.
+    Separately, on a schedule and with no chat involved
+      Watch engine NewOfficial portals, change check, noise filter, small model summary, code check of that summary, manager review
+      Announcements and bell ExistsApp code posts to the board, popup and notification tab. The chat does not send these.
+      Knowledge layer ExtendThe same update is indexed, so the chat can answer about it with its source
+    Across all layers
+    Evals, traces, cost limits, kill switch ExtendEvery run is recorded and can be replayed. Token use is reported per path. No new action ships without tests.
+  Exists keep as is Extend build on what you have New build new On hold legal gate first
+  The knowledge layer: your RAG, done properly
+You asked for a RAG that stores all the data and answers anything. The experience you describe is right, and it takes four stores behind one question box, because different questions need different methods. The person never has to choose.
+    Store | Status | What it holds | Example question | How it answers | Tokens | 
+      Live facts | Exists | Companies, steps, filings, tasks, invoices, people. They stay in their own tables and are never copied. | "How many companies are incorporated this year?" | A named metric calls a repository with the person's access, and a template writes the sentence. | None, or about 860 for the router | 
+      Record cards | New | A short text card per record, built from notes, comments, requests and task titles. Identity numbers are left out. | "Which client had the landlord NOC problem?" | Hybrid search, limited first to records this person may see. | About 3,250 to write the answer, plus the router | 
+      Documents | Extend | Reviewed topics, firm playbook, obligation texts, statutory calendar, acts and rules, firm procedures. | "What is the penalty for a late AOC-4?" | A reviewed topic if one exists. Otherwise hybrid search with citations. | None for a recognised topic, otherwise about 3,250 plus the router | 
+      Regulatory updates | New | Each update from Watch: act, area, effective date, summary, source quote, reviewer, and what it replaces. | "What changed in GST this week?" | Lists by date using code. Questions about meaning use search, and replaced rules are excluded. | None for lists, otherwise about 3,250 plus the router | 
+    Design choice | Recommendation | Why | 
+      Metric catalog | About 25 named metrics in src/lib/ask/metrics/. Each has aliases (including common Hinglish), allowed filters, a repository call, an answer template and a link to the filtered list. | Counts stay exact and role-correct: an admin sees the firm's number and a lead sees their own. The model only picks a name from a list, and it never writes SQL. | 
+      Vector store | pgvector in the same Postgres, with a new ask_index_items table beside ask_chunks. The local Docker image changes to one that includes the extension. | No new service to run. AWS documents pgvector on RDS for PostgreSQL 16; check the exact version for your minor release. | 
+      Search index on a small database | Filter by access first, then compare vectors directly. Add an HNSW index only when rows pass roughly 50,000, and expect to size up from db.t4g.micro then. | The corpus is small, and a large index needs memory that a micro instance does not have. The threshold is my estimate, to be tested. | 
+      Embeddings | Amazon Titan Text Embeddings V2 through Bedrock, at 512 dimensions, then test Voyage if evals fall short. | Your AWS setup can already call it, with no new vendor. Third-party trackers list it at about $0.02 per million tokens and in Mumbai; confirm on the AWS pricing page. | 
+      Merging results | Full-text and vector results combined with rank fusion, and only 4 sources sent to the model. Add a reranker only if evals show a need. | Law questions use exact terms such as "AOC-4", where full-text search is strong. Paraphrases and Hinglish are where vectors help. Fewer sources means fewer tokens. | 
+      Keeping it fresh | Facts are read live. Record cards refresh from an Inngest event when a record changes. Every law source carries an effective date and what it replaces. | A confident answer from an old rule is the worst failure for a compliance product. | 
+  The token plan
+The ladder below decides how each message is handled, and it stops at the first step that can answer. Today's numbers come from your 30 September live eval, which used fixture data. All other figures are my estimates, and phase 0 replaces them with real production usage.
+    Step | Status | What handles it | Tokens per message | Estimated cost | Estimated share of messages | 
+      1. Suggestion click | Exists | Code, as today | 0 | $0 | 30% | 
+      2. Recognised question | New | Code matches a metric or reviewed topic and skips the guard | 0 | $0 | 35% together | 
+      3. Saved answer | New | Same wording, audience and knowledge version as an earlier document answer | 0 | $0 | 
+      4. Router, then a fact | Extend | Haiku 5.5 picks a metric from a short list, and code does the rest | About 860 | About $0.0001 | 10% | 
+      5. Document answer | Extend | Router, 4 sources, one short answer. Test Haiku 5.5 first and use Sonnet 5.5 if evals need it. | About 4,100 | $0.0005 to $0.009 | 20% | 
+      6. Fixed workflow | New | Short model steps with code around them, such as filing data into fields | About 6,900 | $0.001 to $0.02 | 4% | 
+      7. Agent loop | New | Sonnet 5.5 with a capped budget, only for open-ended work | About 126,000 | About $0.13 | 1% | 
+    At 2,200 messages a month | Tokens a month | Cost a month | Can it do the work? | 
+      Today's Ask VCFO | About 16 million | About $25 | Answers only, and no firm counts | 
+      This plan, including Watch | About 6.4 million | About $3 to $9 | Answers, counts, filing data, actions and portal updates | 
+      Sending all typed messages through an agent | About 194 million | About $200 | The same, at many times the price | 
+  The volume of about 100 messages per working day is an assumption. The agent loop accounts for about 43% of the plan's tokens at only 1% of messages, so keeping it rare and capped matters more than any other setting. Answers alone fall from about 16 million tokens to about 2.1 million, which is the 87% reduction quoted above. Cache writes are not logged today, so the current figure is slightly low.
+    Lever | Change | Why it saves | Risk to watch | 
+      Move the guard to Haiku 5.5 | One setting, plus disabling thinking for this call. | Listed at a tenth of the Haiku 4.5 price. | Rerun the 29 live eval cases first. | 
+      Local match first | Aliases for metrics, topics and greetings, checked in code before any call. | A recognised message costs nothing. | A wrong match gives a wrong answer, so match strictly and let the rest fall through. | 
+      Shortlist topics for the router | Send about 8 likely topics instead of all of them. | The guard averaged 1,479 input tokens, and this list is likely a large part of that. Measure it in phase 0. | The right topic must make the shortlist. Test this in evals. | 
+      Code draws the table | The model receives the count and top rows. The card shows the full list. | Staff tools can return up to 50 rows into the prompt today. | None, and the numbers become more reliable as well. | 
+      Smaller fixed prefix | Fetch playbook and topic summaries through search, not on every call. | They are sent with every generated answer. | Measure first, since this could lower recall. | 
+      Fewer sources and shorter history | Top 8 sources becomes 4. Last 6 turns becomes the rewritten question plus 2 turns. | These are the largest per-question inputs. | Follow-up questions may lose context. Test this in evals. | 
+      Short output | Lower the 4,096 output limit for questions, use lower effort, and use the depth setting you already have. | Output costs five times input. | Answers must not get cut off. | 
+      Promote repeated questions | Use your existing question-gaps report to turn frequent questions into reviewed topics or metrics. | The free share grows over time. | It needs someone to review the topics. | 
+      Local PDF text | Add a text extractor. Only scanned PDFs go to a model. | Most PDFs then cost nothing to read. | Old scans and Hindi gazettes will need the model. | 
+      Batches for backfills | Use Message Batches for bulk loading of acts and contextual prefixes. | 50% off every token, on the direct API you use today. Bedrock does not offer it. | Results can take up to 24 hours, so this is not for live work. | 
+      Prompt caching, used where it pays | Keep it for agent loops, whose turns come quickly. Log cache writes, and judge the 5-minute cache on chat with real data. | Reads are far cheaper, but a sparse chat may often pay the write premium and never read. | The eval ran questions back to back, so its cache hits may flatter normal use. | 
+      Budgets and reports | Report tokens per path, set a per-run and per-day limit, and keep a kill switch per path. | You see leaks in days, and one runaway run cannot grow unnoticed. | Limits need a clear message to the person when reached. | 
+  The Watch engine: portal updates
+You called this an agent. I recommend building it as a fixed pipeline with one small model step, because a free-roaming agent reading hostile web pages would cost more and carry more risk for no better result.
+    Step | What happens | Done by | Tokens | What stops a mistake | 
+      1. Check | Feeds every 3 hours and pages twice a day. Uses conditional requests and a content hash, and stops here if nothing changed. | Code | 0 | Reuses your host allowlist and safe-URL checks. It only reads public pages and never logs in. | 
+      2. Find new items | A small adapter per source lists title, date and link. New ones are matched against what is stored. | Code | 0 | An adapter returning nothing raises an alert, in case the page layout changed. | 
+      3. Drop noise | Source rules remove tenders, jobs and routine auctions. | Code | 0 | Dropped items are kept in a log, so the rules can be audited. | 
+      4. Read | Download the PDF or page and extract the text. | Code | 0 for text | A size limit applies. Scanned PDFs alone go to the model. | 
+      5. Understand | Returns area, act, change type, effective date, any new due date, who it affects, a plain summary and an exact quote. | Haiku 5.5 | About 2,300 | Strict schema and no tools at all, so a hostile page has nothing to trigger. Page text is treated as data. | 
+      6. Verify | Every date and number in the summary must appear in the source, and the quote must match exactly. | Code | 0 | A failed check marks the item for extra attention and does not send it out. | 
+      7. Merge | The same circular from two sources becomes one update, keeping both links. | Code | 0 | Unsure matches stay separate. A person can merge them later. | 
+      8. Review | Staff see it at once, marked "Not yet reviewed". A manager edits or publishes with one click. | Person | 0 | Nothing reaches clients unreviewed, because a wrong due date from the firm would cost trust. | 
+      9. Publish | Adds it to the board and popup, the notification tab and the chat knowledge together. | Code | 0 | Code picks recipients using fixed rules. Neither the chat nor the model chooses them. | 
+      10. Follow up (later) | A due-date change becomes a proposal to update the calendar, and leads see which of their clients are affected. | Code, person | 0 | The calendar is never changed automatically. A manager approves it. | 
+  Who gets what
+These rules are a proposal you can change. They follow your request that everyone is notified, and they keep the bell from filling with routine items.
+    Kind of update | Examples | Board and popup | Notification tab | Clients | 
+      Important | Due date moved, new penalty, law in force, form changed | Immediately, for staff. Everyone after review. | Everyone, one row each, after review | Yes, after review | 
+      Normal | Circular, FAQ, clarification, consultation paper | Immediately, for staff. Everyone after review. | One daily summary row per person | Yes, after review | 
+      Staff only | Professional-body notices, internal process effect | Staff | In the daily summary row | No | 
+  Email follows through your existing digests and stays additive. WhatsApp stays out at launch. Your notes currently treat the bell as work alerts and the board as news, so this plan changes that rule at your request. A system-level repository function, like systemUpsertFeedAnnouncements, would create the rows while keeping the data-access seam intact.
+  What I found on the portals
+I requested each public page once on 6 November, from this laptop, using the app's real user agent. App Runner in Mumbai may see different results, so all of this needs retesting from AWS. A page that loads is not permission, so each site's terms need reading before it goes live. I only looked at robots.txt for some.
+Copy for a spreadsheet
+    Source | Covers | Result | What I saw | Route | 
+      RBI notifications and press | FEMA, banking | Feed works | RSS with 10 items each, newest 5 November | Feed, first release | 
+      SEBI | Securities | Feed works | RSS with 30 items, newest 5 November. Host not on the allowlist yet. | Feed, first release | 
+      PIB | Ministry press releases | Feed works | RSS with 20 items. The URL redirected to different parameters, so the right language and ministry must be checked. | Feed, first release | 
+      CBIC GST central tax | GST notifications | Page works | Large plain page full of PDF links, on the URL your catalog already uses | Page adapter, first release | 
+      Income Tax e-filing news | Income tax | Page works | Plain page with PDF links | Page adapter, first release | 
+      ESIC circulars | ESI | Page works | Plain page with PDF links | Page adapter, first release | 
+      GST Council, NFRA, ICAI | GST policy, audit, accounting | Page works | Plain pages with PDF links. NFRA and ICAI are not on the allowlist yet. | Page adapter, first release | 
+      EPFO, IBBI | PF, insolvency | Find the URL | Home pages load, but the list URLs I tried gave 404. EPFO now redirects to epfo.gov.in. | Page adapter, once the list page is found | 
+      DGFT | Foreign trade | Check | The large page has PDF links and also mentions a CAPTCHA. If one guards the list, this moves to the manual route. | Second release | 
+      Telangana commercial taxes | Professional tax | Check | Page loads, with no PDF links in the plain response | Second release | 
+      GST portal news, ICSI, DPIIT, Labour ministry | GST, company secretaries, FDI, labour | Thin page | Very little content in the plain response, so the list probably loads through scripts. I did not confirm this. | Second release, with a scheduled browser task only if needed | 
+      India Code | Central acts | Check | The page title said "Site Migration" | Recheck later | 
+      MCA | Companies Act, LLP, forms | Blocked | 403 "Access Denied" on list pages and on robots.txt | Manual intake and official alert emails, then retest from AWS | 
+      Income Tax India | Notifications, circulars | Blocked | 403 "Access Denied" on the list page and on robots.txt | E-filing news covers part of it, plus manual intake | 
+      GST advisories | GST portal advisories | Unavailable | 503 on the page and on robots.txt | Retest, may be temporary | 
+      eGazette, CBIC tax information, Finance Ministry | Gazette, customs and tax, budgets | No response | No response within the 20 to 25 second limit, twice for each | Retest from AWS Mumbai | 
+    Rule | What it means | 
+      A blocked source stays blocked | The crawler uses its real name, respects robots rules and rate limits, and never solves a CAPTCHA, rotates identity or logs in. Getting around a block on a government site brings legal risk to a compliance firm. | 
+      Manual intake is first-class | Staff paste a link or upload a PDF, and it enters the same pipeline at step 4. MCA needs this from day one, because it is your most important source. | 
+      Official alert emails as a second route | Where a department offers an email alert, a firm mailbox can feed the pipeline. I have not confirmed which ones do. | 
+      Silence must not look like "no news" | Each source shows its last successful check, using your service-checks job. The chat says "no updates found from these sources as of this date", and it never says that the law has not changed. | 
+      Official sources only | Paid or commentary sites are not scraped. Their content has its own licence, and the firm should rely on the original notification. | 
+      Short summary and a link | The update keeps a short quote and a link to the original, and the original remains the authority. | 
+    Architecture sheet
+Every layer, what exists today and the choice I recommend. Effort assumes one developer working with AI: S is under a week, M is 1 to 2 weeks, L is 3 weeks or more. These are estimates.
+    Copy for a spreadsheet
+    # | Layer | Status | Its job | Today in VCFO | Recommended choice | Effort | 
+      1 | Chat surface | Extend | Take text, tables and files, and know what the person is looking at | AskPanel, AskFullPage, an SSE event stream. No files; 2,000 characters. | Add uploads through the existing S3 flow, longer paste, current page and record as context, and new events for tool progress and approval. Reuse your event stream and do not add a chat framework. | S | 
+      2 | Router | Extend | Separate questions from work, cheaply | guard.ts on Haiku 4.5, called on every typed message. It sorts intent and refuses off-topic messages. | Add a local match in front of it, so recognised messages skip the model. Add "fact" and "do work" intents and a shortlist of topics and metrics. Move to claude-haiku-5-5, which is listed at a tenth of the Haiku 4.5 price. | S | 
+      3 | Agent loop | New | Plan, call tools, react to results | generate.ts: read tools leading to one render_answer. | One orchestrator using the Anthropic SDK Tool Runner, whose per-turn hooks suit approval gates, used only for open-ended work. Start on claude-sonnet-5-5, which you already use, and move to claude-opus-5-5 only if evals require it. Cap turns and tokens per run. Keep the provider switch. Do not build a swarm of agents. | M | 
+      4 | Durable runs | New | Survive page closes and redeploys, and wait for people | Each answer lives in one request. Inngest is already in use. | Add ask_runs and ask_run_steps tables, with the loop in an Inngest function that sleeps until approval. The browser subscribes to progress and can reconnect. | M | 
+      5 | Action registry | New | Be the one list of everything the app can do | Rules are spread across 259 write routes. Of all 396 route files, 202 already use zod. | Add src/lib/actions/<area>/. Each action has a name, description, zod input, risk tier, roles, preview, execute and optional undo. The route and the agent both call it. Move one route at a time, starting with the 25 most used. | L | 
+      6 | Tool selection | New | Let the model find 1 of hundreds of actions | All tools are sent on every call, which is fine for 10. | First filter by role and shell in code, so the model never sees a forbidden action. Then use Anthropic tool search with defer_loading, keeping about 10 common tools loaded. Add input_examples for complex inputs and strict: true on every action. | S | 
+      7 | Field catalog | Extend | Know every place a value can go | CLIENT_RESPONSE_FIELDS, compliance-inputs, compliance-questionnaire, registration-rules, and fieldmaps/*.json in VCFO Assist. | Generate one catalog from these at build time: canonical key (director.pan), synonyms, format rule, sensitivity, and all steps and portal fields that use it. Keep the current files as the source. | M | 
+      8 | Data router | New | Turn loose data into field proposals | None. Ingestion only prepares documents for search. | A fixed workflow, not an agent loop, in this order: read the file with citations; apply exact format checks (PAN, DIN, CIN, GSTIN, IFSC, PIN); search the catalog for candidates; let the model choose only from those candidates; leave anything uncertain as a question. Test Haiku 5.5 for each model step before using a larger model. | L | 
+      9 | Changeset and approval | New | Make every write reviewable and undoable | Audit events and step events exist. There is no proposal record. | Add an ask_changesets table: one row per field with old value, new value, source and checks. Approval is tied to a hash of the content, and code checks everything again at the click. The audit records the person, the run and "via Ask". The agent never approves its own work. | M | 
+      10 | Knowledge search | Extend | Answer law and process questions with sources | Full-text search, contextual prefixes, reviewed topics, validate.ts citation checks. | Add pgvector to the same Postgres and merge full-text and vector results with rank fusion. Send 4 sources, and add a reranker only if evals show a need. Add effective dates to law sources, because rules change. Use a graph only if evals prove this is not enough. | S | 
+      11 | Live data access | Extend | Answer "how many companies are incorporated?" | Read tools over scoped repositories. No incorporation count exists. | Add a metric catalog: about 25 named metrics with aliases, filters and templates, over repositories. Most need no model. Do not let the model write SQL, because that would bypass rule 1 and rule 2 in your CLAUDE.md. Consider programmatic tool calling later for large firm-wide reports; it is not available on Bedrock. | M | 
+      12 | Memory | Extend | Remember preferences and past corrections | Conversation history in ask_messages. | Use ordinary Postgres rows: user preferences, firm playbooks, and corrected mappings as new synonyms for review. Use server-side compaction for long chats. Never let a memory grant a permission. | S | 
+      13 | Safety | Extend | Stop mistakes, leaks and hostile documents | Guard, answer validation, link scope checks, rate limits, no identity numbers in tools. | Treat file text as data that can never authorise an action. Run tools as the person, using their AuthContext. Lock each run to one client. Mask identity numbers in chat, logs and prompts wherever the model does not need them. Add budgets per run and a kill switch per tier. | M | 
+      14 | Evals and traces | Extend | Prove it works, and keep proving it | tests/ask/evals, with 29 of 29 passing on 30 September. Usage is saved per message. | Build a golden set from past real engagements with known correct fields. Measure wrong-field rate, wrong-client rate and how often people edit a proposal. Add prompt-injection and cross-tenant suites. Block a release when they fail. | M | 
+      15 | Portal hand-off | On hold | Bring prepared data to the MCA portal | VCFO Assist, assist_runs and the filing record, all uncommitted. Part B binds 610 of 1,110 fields. It has never run on the live portal. | The agent's only step is "prepare filing run". No MCA login, OTP, DSC PIN or token ever reaches the model. Waits for the CS opinion. | M | 
+      16 | Record cards | New | Make notes and comments searchable | Free text sits in many tables, with no shared search. | An ask_index_items table holding card text, scope columns, a text index and a vector, refreshed by Inngest events. Identity numbers are never included. Search filters by access first. | M | 
+      17 | Saved answers | New | Reuse an answer that is already correct | None. | Exact match on normalised wording, audience and knowledge version, for document answers only. Personal or live data is never cached. Do not match on similar meaning, because "GSTR-1 due date" and "GSTR-3B due date" look nearly identical to a vector. | S | 
+      18 | Cost controls | Extend | Show token use and stop leaks | Input, output and cache reads are saved per message. Cache writes are not. | Log cache writes and the path taken. Add a report per path, budgets per run and per day, and a kill switch per path. | S | 
+      19 | Watch sources | Extend | Know what to check, how often and whether it still works | announcement_sources, the host allowlist and a once-daily RSS job. | Add source type, schedule, ETag, content hash and health columns. Add feed, page and manual intake adapters. Add SEBI, NFRA, ICAI and the others to the allowlist. | M | 
+      20 | Watch pipeline | New | Turn a new document into a checked summary | None. Feed items are stored as they arrive. | Inngest steps for the pipeline above, a reg_updates table, a local PDF text extractor, Haiku 5.5 with strict output and no tools, and a code check of dates, numbers and the quote. | M | 
+      21 | Review and publish | Extend | Reach everyone through existing screens | Board, popup, bell and createNotificationsForUsers. | A review queue for managers, recipient rules in code, and one publish step that posts to the board and notification tab and indexes the update for chat. Keep the current popups and animations. | M | 
+  Running cost, as an estimate to replace with real numbers: an agent run of 6 model turns, 120,000 input tokens at 80% cache hits and 6,000 output tokens costs about $0.13 on Sonnet 5.5 or $0.24 on Opus 5.5, before cache-write charges. A fill-from-document fixed workflow should cost far less, at about $0.001 to $0.02, if small model steps prove accurate enough.
+  Worked example: "How many companies are incorporated this year?"
+This one should cost nothing, and it still answers in the same easy card as today.
+    Step | What happens | Done by | What stops a mistake | 
+      1. Recognise | Code matches "how many", "companies" and "incorporated" to the metric companies.incorporated, with the period set to this financial year. | Code | Only a strict match skips the model. Anything less clear goes to the router, which may choose only from the metric list. | 
+      2. Count | A repository counts the engagements with an incorporation date in that period, using the person's AuthContext. | Code | An admin gets the firm's number, a lead gets their own, and a client gets only their own company. | 
+      3. Say it simply | A template fills in the existing answer card: "7 companies since 1 April", a small chart by month, and a link to the list. | Code | The number comes from the count, so a model cannot get it wrong. | 
+      4. Follow-up | "Why is Cedar still pending?" is a different kind of question, so it uses project tools and a short model answer. | Model | Your existing answer validation checks dates, steps and citations. | 
+  Worked example: a new GST notification
+The notification below is imaginary. It shows the steps and the people involved.
+    Step | What happens | Done by | What the person sees | 
+      1. Published | CBIC adds a notification moving a GSTR-1 due date, as a PDF. | Government | Nothing yet. | 
+      2. Found and read | The next page check finds a new link, downloads the PDF and extracts the text. | Code | Nothing yet. | 
+      3. Summarised | The small model returns the area, the old and new dates, who it affects, a plain summary and a quote. Code confirms that the dates and the quote are in the PDF. | Model, code | Staff see it on the board, marked "Not yet reviewed". | 
+      4. Reviewed | A manager reads the summary beside the source and clicks Publish. | Person | The manager sees a review queue item. | 
+      5. Sent to everyone | App code posts to the board and to each person's notification tab. The chat does not send it. | Code | Everyone sees the existing popup and a new bell row. | 
+      6. Chat knows it | The same update is indexed. "Does this affect Acme?" uses the update and Acme's own filing data. | Code, model | An answer with the source, the date and a link to the original. | 
+      7. Calendar proposal (later) | Code proposes the calendar change, and a manager approves it. | Person | A change card, and a list of affected clients for each lead. | 
+  Worked example: "Add this as director 2 for Acme"
+The person drops a PAN card and an Aadhaar card into the chat. Code does as much as possible, because code cannot invent a value.
+    Step | What happens | Done by | What stops a mistake | 
+      1. Take in | Files go to S3 through the normal upload path. The run is locked to the person and to Acme's engagement. | Code | A repository call confirms this person can reach Acme. If two companies match, the agent asks. | 
+      2. Read | The model identifies the document type and extracts name, PAN and date of birth, each with its page reference. | Model | A strict schema. Any instruction printed inside the document is treated as data. | 
+      3. Check format | The PAN pattern and the date are checked. | Code | A failed check goes to the person as a question, and no guess is made. | 
+      4. Find the place | The catalog returns candidates, such as director.pan in the pre-15 entry. The model chooses from that list only. | Code, then model | The model cannot name a field that the catalog did not offer. | 
+      5. Check the rules | The existing checks run: step gate, who may fill the field, conditions, step validators. | Code | A locked step is held and labelled. A field this role cannot edit is routed to the right person. | 
+      6. Find conflicts | The value is compared with what is saved, and with other steps that hold the same fact. | Code | An existing value is never silently overwritten. The difference is shown. | 
+      7. Show the review | A card lists step, field, old value, new value, source page and check result, with Accept or Edit on every row. | Person | Nothing has been saved up to this point. | 
+      8. Save | On the click, code checks everything again and calls the same rule code as the screen. Audit and notifications run as usual. | Code | The approval only matches this exact content. The person can undo from the card. | 
+      9. File later | The filing data reaches VCFO Assist through doc-pack. A person logs in, signs, pays, submits and records the SRN. | Person | On hold until written CS approval. | 
+  What the agent may do on its own
+Every action carries one tier. Start strict, and only raise a tier when evals and real acceptance rates support it.
+    Tier | Kind of action | Examples | Rule at launch | 
+      T0 Read | Looks only | Status, lists, summaries, explain a step | Runs on its own | 
+      T1 Draft | Private and reversible | Personal to-do, draft email, draft values in the proposal | Runs on its own with undo | 
+      T2 Record | Changes shared business data | Checklist values, tasks, filing dates, document links | Person approves the changeset | 
+      T3 Outward | Others see it, or it is hard to undo | Email a client, approve a step, share a document, delete | Person confirms each one with exact recipients. A step that needs a manager's approval still goes to the manager, even if the manager's own run prepared it, and the manager sees the same review card. | 
+      T4 Legal | Regulatory or financial effect | MCA submit, DSC signing, finalising resolutions, payments, changing roles | Never by the agent It may only prepare. | 
+    Products to learn from
+Closest to your goal first. Vendors publish behaviour, and rarely their internal design, so the "copy" column is about patterns.
+    Copy for a spreadsheet
+    Product | Where | What it does that is close to your idea | What to copy | Caution | Evidence | 
+      Basis | US accounting firms | Reads source documents, fills tax forms and keeps forms consistent with each other. Reported to have completed a full Form 1065. | A supervisor over focused sub-tasks, the right model per job, and showing data used, reasoning and confidence for each output. | A summary of its engineering talk points out that a return, unlike code, cannot simply be run to check it. You need your own validators. | Vendor case study, secondary summaries | 
+      Ramp Policy Agent | US spend management | Reviews expenses against written policy, approves clear cases and escalates the rest. | Autonomy earned in stages, people keeping final authority and able to override, and an admin-only test before wider rollout. | The 85% fewer reviews and 99% accuracy are vendor figures. | Vendor docs | 
+      Claude Code | Developer tool | Works across a large system through tools, with permission modes and diffs to review. | Plan, show the diff, approve, apply. Your changeset card is this pattern for business data. | Its users are developers. Your reviewers need plain labels. | First-hand | 
+      Intercom Fin | Customer support | Procedures guide multi-step work, and each connector is one specific API action. | One narrow definition per action, a health indicator per action, and "used by" tracking for safe edits. | Its own FAQ says connector failures are not handled automatically. Build the failure path yourself. | Vendor docs | 
+      Notion Custom Agents | Workspace | Agents read and edit workspace content, with an audit log and admin off switches. | Full audit history and a stop switch. | Agents use their own access, so its help page warns they may expose data the user cannot see. Use the person's access instead. | Vendor docs | 
+      Salesforce Agentforce | CRM | Agents act inside records and trigger workflows. | Actions that live inside the record, using existing workflows. | One report counts 23,000 of 150,000 customers actively deploying it, and quality depends on data quality. Start narrow. | Press and analysts | 
+      HubSpot Breeze | Mid-market CRM | Native agents, with no-code customisation reported. | Firm-defined playbooks on top of a fixed action list. | The sources I found disagree on basic details. | Weak, comparison pages | 
+      Intuit agents | Small business accounting | Reported to chase payments, send invoices and reconcile books inside QuickBooks. | Agents organised around one finished business outcome. | I found only secondary sources. | Weak, secondary | 
+      Filed and Accrual | US tax preparation | Filed is embedded inside Canopy. Accrual prepares and reviews returns using existing tax engines. | Keep your existing engines as the checker of record, as your validators already do. | US forms only. | Trade press, secondary | 
+      IndiaFilings | India, incorporation and tax | Describes an agentic platform for MCA, GST and income tax work, with AI plus experts. | Your most direct comparison. Book a demo and test a real SPICe+ case. | Press release only. I could not test it. | Press release | 
+      OnFinance AI | India, listed BFSI | An agent aimed at company secretaries, legal and board teams. | The CS-grade language and the review expected by this audience. | A different customer from yours, and vendor content only. | Vendor newsletter | 
+      Legal Suvidha | India, compliance services | AI drafts, an associate reviews, and a CA or CS signs off. | The same maker and checker chain as your lead and manager. | Its time-saving claims are not verified. | Vendor blog | 
+      Gen CompLaw, Leagully, ComplyRelax | India, MCA portal | Act on the MCA portal using logins the user provides. Only Gen CompLaw shows a SPICe+ path. | A person stays in the visible flow for OTP, signing and payment. | Your market report found no MCA approval for these tools. A product existing does not make its method lawful. | Your MCA-Market-Report.pdf | 
+      Komrisk | India, compliance | A large Indian compliance library, with alerts and escalations. | Alerts tied to the responsible person, as your per-lead follow-up does. | A reviewer calls mapping tedious. Yours can derive it from existing client data. | Review site | 
+      Complinity | India, compliance | Claims all-India coverage of notifications, circulars and amendments, with alerts filtered by act. | Filtering by act and law category, using your existing kinds. | Vendor claim. Coverage and speed are untested. | Vendor page | 
+      LexisNexis India | India, compliance | A register of legal obligations, with sub-obligations assigned to owners, and alerts. | Link each update to the obligation it changes, and not only to a topic. | It is a paid editorial product, and a Watch summary will not match that editorial depth at launch. | Vendor page | 
+      Compliance Radar | Compliance alerts | Profiles a business by type and location, then notifies when relevant rules change. | Use client profile data to work out who an update affects, in your later follow-up step. | A product listing only. I could not test it. | Listing page | 
+  I did not find a public product that takes free-form data and routes it across the SPICe+ fields inside a firm's own workflow. My searches were limited and many results were marketing pages, so treat that as a lead to check. If it holds, this is where you can stand out.
+  What I would not build
+Each of these sounds advanced but would make this system worse at this stage.
+    Idea | Why not | Use instead | 
+      Model writes SQL against Postgres | It bypasses the seam and role scoping, which are your strongest protections. | Typed read tools over repositories | 
+      Agent clicks through your own website | Slow and fragile, and you own the code, so there is no reason to go through the screen. | Direct actions, and on-screen highlights only to show the result | 
+      One tool generated per API route | Routes were written for screens, so inputs are hard for a model to use and risk levels are unknown. | Hand-reviewed actions, added in priority order | 
+      Agent with its own powerful account | Anyone chatting could reach data beyond their role, as Notion's help page warns. | Every run uses the person's AuthContext | 
+      A swarm of many agents | More cost and more places to fail. Mapping is mostly a fixed workflow. | One loop plus fixed workflows; a second-model check for high-risk items only | 
+      Knowledge graph or a separate vector database now | Your document volume is small. Sources I read say to prove plain retrieval is the bottleneck first, and report that pgvector scales into the millions. | pgvector in the same Postgres | 
+      Rewriting the app first | The foundation works, and your rules ask that ported domain code stays as it is. | Move routes to shared actions one at a time | 
+      Copying all data into RAG | A vector search cannot count, copies go stale, and a shared index can leak across clients. | Live facts through metrics, and an index only for free text | 
+      Matching saved answers by similar meaning | "GSTR-1 due date" and "GSTR-3B due date" look nearly the same to a vector, and returning the wrong one would be serious. | Exact match on normalised wording | 
+      The model reading every portal page | This burns tokens on pages that have not changed, and it exposes the model to hostile content for no gain. | Hash check and adapters in code, with the model only on new items | 
+      A free-roaming scraping agent | It costs more and is harder to test. A page could also instruct an agent that holds tools. | A fixed pipeline, where the model step has no tools | 
+      Disguising the crawler to get past blocks | It carries legal risk for a compliance firm, and it would break whenever the site tightens its rules. | Manual intake, official emails and the sources that allow reading | 
+      Letting the model choose who gets notified | A wrong guess means a person misses a deadline change. | Fixed recipient rules in code | 
+      Auto-editing the compliance calendar | One misread date would change deadlines for every client. | A proposal that a manager approves | 
+  Build order
+This replaces my earlier order. Token fixes come first because they pay back immediately, and facts and Watch come early because they ship quickly and every role sees them. Each phase is useful alone. Weeks assume one developer working with AI, and they are estimates. Nothing starts until you say go.
+    Phase | Weeks | Engine | What gets built | Done when | 
+      0. Measure and cut | 1 | Answer | Read real usage from production ask_messages, log cache writes and path, move the guard to Haiku 5.5, trim history, sources and table rows, and add a token report. | The 29 live eval cases still pass, and tokens per answer are measurably lower. | 
+      1. Facts | 2 to 3 | Answer | Metric catalog of about 25 metrics, local match, answer templates, and access for managers and leads if you approve. | Your incorporation question gets an exact, role-correct answer with no model call. | 
+      2. Knowledge | 4 to 5 | Answer | pgvector, embeddings, rank fusion, local PDF text, record cards, dated sources, saved answers, and loading the real documents. | Paraphrased and Hinglish questions pass the eval, with correct citations and no cross-client result. | 
+      3. Watch, first release | 6 to 7 | Watch | Source registry, health display, feeds and working pages, manual intake, summary and code check, manager review, publish to board, bell and chat. | A real week of updates is reviewed with no wrong date, and a broken source raises an alert. | 
+      4. Paste and file | 8 to 10 | Do | Field catalog, data router, changeset card and undo, for incorporation steps only. | A lead drops real documents and reviews correct proposals. Suggested target: 98% correct fields on proposed rows, and no wrong-client write. | 
+      5. Do things | 11 to 13 | Do | Action registry, tool search, tiers, durable runs, and the 25 most used actions (tasks, requests, reminders, documents, statuses). | Staff finish common daily work from chat, and every action has role tests. | 
+      6. Watch, second release | 14 to 15 | Watch | Affected-client lists, calendar change proposals, official alert mailbox, and remaining sources. | A due-date change produces a correct proposal and client list, approved by a manager. | 
+      7. Whole app | 16 to 21 | Do | Compliance, registrations, board meetings, receivables and labour registers, then client-portal actions limited to each client's own fields. | Each area meets the same test bar before release. Developer routes stay out. | 
+      8. Portal hand-off | After CS opinion | Do | "Prepare filing run" to VCFO Assist, with the remaining Part B field bindings. | One supervised real filing passes the acceptance list. | 
+      9. Proactive agent | Later | Do | Scheduled runs that prepare proposals overnight, and more autonomy where acceptance rates support it. | People accept nearly all proposals unedited for that action type. | 
+  Decisions that are yours
+These change the design, and my recommendation is given for each.
+    Decision | Why it matters | My recommendation | 
+      Build order | I moved token fixes, facts and Watch ahead of filing SPICe+ from chat. If filing is your top priority, it can go straight after phase 0. | Keep the order above. Filing needs the most testing, and the earlier phases give value sooner. | 
+      Open chat to managers and leads? | The current spec blocks both roles, while "use the whole website" needs them. | Yes, in phase 1, starting with read-only questions. | 
+      Who reviews Watch updates? | Review is the safety gate, and a queue nobody owns will stall every update. | Name one manager and one backup. Set a same-day target for Important items. | 
+      Notify clients of every update? | You said everyone. Clients may get many items that do not apply to them, and may start to ignore them. | Follow your rule at launch, as in the table above. Once client matching exists, consider sending clients only what applies to them. | 
+      Allow scraping of public pages? | Your notes say HTML pages are not scraped, so this is a rule change. Government sites also have their own terms. | Allow public listing pages from official hosts, after reading each site's terms. Ask counsel for a short view, along with the CS opinion. | 
+      How to cover MCA? | It is your most important source, and it refused plain requests in my test. | Start with manual intake and official emails, retest from AWS Mumbai, and do not attempt to get around a block. | 
+      Who uses the Do engine first? | Clients and staff carry very different risk. | Project leads first, since they already review this data. Clients come after phase 5. | 
+      May the model read identity documents? | Today's rule is that Ask tools never see identity numbers, but filling from a PAN card needs this. | Allow it for extraction only, and mask those values in chat, logs and stored prompts. Get counsel's view on DPDP before using real client documents, and use test data until then. | 
+      Anthropic API or Amazon Bedrock? | This affects where client data is processed. The code already supports both, though features differ slightly. | Keep the current API for the test-data phase, and decide together with the question above before real data. | 
+      Stay on App Runner? | AWS closed App Runner to new customers in April 2026. Existing services continue, with no new features planned. | No move for this project. Agent runs in Inngest do not depend on long web requests, but test streaming limits early and plan a separate review of hosting. | 
+      The CS opinion | The portal hand-off cannot start without it, while phases 0 to 7 do not need it. | Keep it moving in parallel. Do not make the agent wait for it. | 
+  Sources and limits
+Code facts were read from this repository on 6 November 2026, including uncommitted files. Model prices come from the Claude API reference cached on 6 October 2026. Token baselines come from your 30 September eval, on fixture data and not production. Portal results come from one test on 6 November from this laptop, not from AWS. All targets, efforts, shares and costs are my estimates, and nothing has been prototyped.
+    AWS: RDS for PostgreSQL versions and extensions and pgvector 0.7.0 on RDS.
+    AWS: Titan Text Embeddings V2 model card. The price quoted above comes from a third-party tracker, so confirm it.
+    Voyage AI: pricing, for the alternative embedding and reranker models.
+    Regulatory change management software in India and Mondaq: compliance software guide. These are listings and vendor-linked articles, so treat their claims as self-reported.
+    Anthropic: advanced tool use. Tool search, programmatic tool calling and tool use examples, with measured results.
+    OpenAI: Basis case study and ZenML's summary of the Basis talk.
+    Ramp: agents announcement and Policy Agent approvals.
+    CopilotKit: comparing agentic UI protocols. I reviewed this and recommend keeping your own event stream for now.
+    Hybrid search with Postgres, enterprise RAG field notes and vector database comparison. These are practitioner blogs, so treat their numbers as indicative.
+    AWS: App Runner availability change.
+    ICSI journal, June 2026, on AI and the Company Secretary.
+    In this repository: docs/specs/mca-connect/PLAN.md, docs/specs/mca-connect/MCA-Market-Report.pdf, docs/context/notes/assist-filing.md, docs/specs/ask-vcfo/STATUS.md, docs/specs/ask-vcfo/EVAL-LIVE-2026-09-30.md, docs/context/notes/notifications.md, src/lib/ask/, src/jobs/announcement-feeds.ts, src/lib/notifications/.

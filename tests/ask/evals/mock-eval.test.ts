@@ -20,6 +20,11 @@ vi.mock('@/db/repositories/ask-messages', () => ({
   appendAskMessage: vi.fn(async () => ({ id: 'msg-eval' })),
   countModelAnswersSince: vi.fn(async () => 0),
 }));
+vi.mock('@/db/repositories/ask-runs', () => ({ findWaitingAskRun: vi.fn(async () => null) }));
+vi.mock('@/db/repositories/ask-usage', () => ({
+  systemRecordAskUsage: vi.fn(async () => undefined),
+  systemTodayTokenTotal: vi.fn(async () => 0),
+}));
 vi.mock('@/lib/ask/snapshot', () => ({
   loadProjectSnapshot: vi.fn(async () => ({
     snapshot: SNAPSHOTS[current.snapshot ?? 'foreignCompany'],
@@ -29,9 +34,16 @@ vi.mock('@/lib/ask/snapshot', () => ({
     filings: [{ particular: 'GSTR-3B', dueDate: '2026-10-20', filedOn: null }],
   })),
 }));
+vi.mock('@/db/repositories/ask-saved-answers', () => ({ findSavedAnswer: vi.fn(async () => null), saveAnswer: vi.fn(async () => undefined) }));
+vi.mock('@/lib/ask/knowledge-version', () => ({ currentKnowledgeVersion: vi.fn(async () => 'kv') }));
 vi.mock('@/lib/ask/retrieve', () => ({ retrieveSources: (...a: unknown[]) => retrieveSources(...a) }));
 vi.mock('@/lib/ask/tools/staff-data', () => ({
   loadStaffData: vi.fn(async () => ({ engagements: [], filings: [], now: new Date() })),
+  loadStaffEngagements: vi.fn(async () => []),
+}));
+vi.mock('@/db/repositories/engagements', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/db/repositories/engagements')>()),
+  listEngagements: vi.fn(async () => []),
 }));
 
 const { runAskChat } = await import('@/lib/ask/pipeline');
@@ -40,7 +52,7 @@ const { AskForbiddenError } = await import('@/lib/ask/access');
 const { REFUSAL_COPY } = await import('@/lib/ask/refusals');
 
 function content(reply: Record<string, unknown>, i: number): LlmResult {
-  const usage = { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0 };
+  const usage = { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 };
   if ('toolCall' in reply) {
     return {
       model: 'mock',
@@ -65,14 +77,12 @@ function providerFor(c: GoldenCase): LlmProvider & { calls: LlmRequest[] } {
   if (c.mock?.guard) {
     replies.push({
       model: 'mock-guard',
-      stopReason: 'tool_use',
-      usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0 },
+      stopReason: 'end_turn',
+      usage: { inputTokens: 1, outputTokens: 1, cacheReadTokens: 0, cacheWriteTokens: 0 },
       content: [
         {
-          type: 'tool_use',
-          id: 'tu-guard',
-          name: 'classify',
-          input: { intent: c.mock.guard.intent, rewrittenQuery: c.message ?? 'q', topicSlug: c.mock.guard.topicSlug ?? '', language: 'en' },
+          type: 'text',
+          text: JSON.stringify({ rewrittenQuery: c.message ?? 'q', topicSlug: '', language: 'en', ...c.mock.guard }),
         } as never,
       ],
     });

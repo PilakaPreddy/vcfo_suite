@@ -5,6 +5,7 @@ import { complianceTaskChecklistItems, complianceTaskComments, complianceTaskEve
 import type { AuthContext } from '@/auth/guards';
 import { assertEngagementAccess } from '@/db/repositories/engagements';
 import { getActivityRow, systemEnsureActivitiesSeeded } from '@/db/repositories/compliance-activities';
+import { queueIndexRefresh } from '@/lib/ask/index-cards/queue';
 import { queueTaskCompleted } from '@/lib/compliance-tasks/events';
 import {
   STAGE_LABEL,
@@ -103,6 +104,7 @@ export async function createTask(ctx: AuthContext, input: CreateTaskInput): Prom
     })
     .returning();
   if (!task) throw new ComplianceTaskError(400, 'create_failed');
+  queueIndexRefresh('compliance_task', task.id);
   // A repeating task starts its own series, so the next occurrences can find it.
   let row: TaskRow = task;
   if (repeats !== 'one-time') {
@@ -235,6 +237,7 @@ export async function editTask(ctx: AuthContext, taskId: string, input: EditTask
   }
   const [updated] = await db.update(complianceTasks).set(set).where(eq(complianceTasks.id, task.id)).returning();
   const row = updated ?? task;
+  queueIndexRefresh('compliance_task', task.id);
   if (changes.length) await recordEvent(ctx, task.id, `Changed ${changes.join(', ')}`, input.ownerId !== undefined || input.reviewerId !== undefined);
   if (input.ownerId && input.ownerId !== task.ownerId) {
     await notifyTask(ctx, { task: row, companyName: engagement.companyName, title: `Assigned to you: ${row.name}`, body: `Due ${row.dueDate}`, recipientIds: [input.ownerId] });
@@ -348,6 +351,7 @@ export async function addTaskComment(ctx: AuthContext, taskId: string, input: { 
   if (!body) throw new ComplianceTaskError(400, 'body_required');
   const internal = ctx.role === 'client' ? false : Boolean(input.internal);
   const [row] = await db.insert(complianceTaskComments).values({ taskId: task.id, authorId: ctx.userId, body, internal }).returning();
+  if (row) queueIndexRefresh('comment', row.id);
   const recipients =
     ctx.role === 'client'
       ? [task.ownerId]

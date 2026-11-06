@@ -42,6 +42,7 @@ const conversations = await import('@/db/repositories/ask-conversations');
 const messages = await import('@/db/repositories/ask-messages');
 const library = await import('@/db/repositories/client-library');
 const documents = await import('@/db/repositories/ask-documents');
+const usage = await import('@/db/repositories/ask-usage');
 const { AskForbiddenError } = await import('@/lib/ask/access');
 
 const dialect = new PgDialect();
@@ -350,5 +351,12 @@ describe('knowledge sources', () => {
   it('staff retrieval includes staff sources', async () => {
     await documents.searchAskChunks(admin, { query: 'gst threshold', persona: 'staff', limit: 5 });
     expect(whereParams()).toContain('staff');
+  });
+});
+
+describe('token report', () => {
+  it.each([admin, manager, lead, clientA, developer])('refuses $role before any query runs', async (who) => {
+    await expect(usage.askUsageReport(who, { days: 30 })).rejects.toBeInstanceOf(AskForbiddenError);
+    expect(dbSelect).not.toHaveBeenCalled();
   });
 });

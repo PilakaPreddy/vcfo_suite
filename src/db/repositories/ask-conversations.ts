@@ -127,8 +127,10 @@ export async function listOwnAskConversations(
 ): Promise<{ conversations: AskConversationSummary[]; hasMore: boolean }> {
   assertAskRole(ctx);
   const page = Math.max(0, Math.floor(input.page ?? 0));
-  const firstQuestion = sql<string | null>`(select ${askMessages.text} from ${askMessages} where ${askMessages.conversationId} = ${askConversations.id} and ${askMessages.sender} = 'user' order by ${askMessages.createdAt} asc limit 1)`;
-  const messageCount = sql<number>`(select count(*)::int from ${askMessages} where ${askMessages.conversationId} = ${askConversations.id})`;
+  // Plain table names: Drizzle prints a column in a one-table select with no table name, so the inner
+  // query would compare its own columns and every title would come back empty.
+  const firstQuestion = sql<string | null>`(select m.text from ask_messages m where m.conversation_id = ask_conversations.id and m.sender = 'user' order by m.created_at asc limit 1)`;
+  const messageCount = sql<number>`(select count(*)::int from ask_messages m where m.conversation_id = ask_conversations.id)`;
 
   const filters = [eq(askConversations.profileId, ctx.userId), sql`${messageCount} > 0`];
   if (input.shell) filters.push(eq(askConversations.shell, input.shell));

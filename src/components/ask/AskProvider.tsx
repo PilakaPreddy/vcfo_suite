@@ -13,6 +13,7 @@ import type { AnswerDepth, AskShell } from '@/data/ask/schema';
 import { useApp } from '@/context/AppContext';
 import { findEngagementForClientUser } from '@/lib/checklist/checklist-state-key';
 import { canUseAsk, defaultShellForRole } from '@/lib/ask/access';
+import { maskIdentityNumbers } from '@/lib/ask/mask';
 import { fetchConversation, fetchConversationList, recordTopicAnswer, streamChat } from '@/hooks/ask/ask-api';
 import { useAskStatus } from '@/hooks/ask/use-ask-status';
 import {
@@ -59,6 +60,7 @@ function writeSession(key: string, value: string | null) {
 }
 
 const HISTORY_MAX = 40;
+const ECHO_MAX = 1_000;
 
 function historyKey(userId: string | null | undefined) {
   return `vcfo.ask.history.${userId ?? 'anon'}`;
@@ -207,6 +209,15 @@ export function AskProvider({ children }: { children: ReactNode }) {
       });
   }, [open, pageOpen, enabled, conversationId, thread.length, key, hKey]);
 
+  // A link such as a manager's notification opens one review card in the chat.
+  useEffect(() => {
+    if (!enabled) return;
+    const changesetId = new URLSearchParams(window.location.search).get('changeset');
+    if (!changesetId) return;
+    setThread((t) => (t.some((item) => item.kind === 'changeset' && item.changesetId === changesetId) ? t : [...t, { id: nextId(), kind: 'changeset', changesetId }]));
+    setOpenState(true);
+  }, [enabled]);
+
   const setOpen = useCallback((next: boolean) => {
     setOpenState(next);
     if (next) setBackPill(false);
@@ -230,7 +241,8 @@ export function AskProvider({ children }: { children: ReactNode }) {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
-      setThread((t) => [...t, { id: nextId(), kind: 'user', text }]);
+      // A long paste shows as a short, masked line; the card below it holds what matters.
+      setThread((t) => [...t, { id: nextId(), kind: 'user', text: maskIdentityNumbers(text).slice(0, ECHO_MAX) }]);
       setBusy(true);
       setStatus(null);
       try {
@@ -243,9 +255,12 @@ export function AskProvider({ children }: { children: ReactNode }) {
             suggestionId: input.suggestionId,
             context: input.context,
             depth: input.depth,
+            attachmentIds: input.attachmentIds,
+            page: shell === 'client' ? undefined : { path: window.location.pathname },
           },
           (event) => {
-            if (event.type === 'status') setStatus(event.label);
+            if (event.type === 'status' || event.type === 'progress') setStatus(event.label);
+            else if (event.type === 'run') return;
             else if (event.type === 'answer') {
               setConversationId(event.conversationId);
               writeSession(key, event.conversationId);
