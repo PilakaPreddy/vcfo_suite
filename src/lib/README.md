@@ -10,6 +10,7 @@ Domain logic and helpers. Nothing here imports `db`; data access goes through
 - `ask/` — Ask VCFO: retrieval, prompts, guards, PDF briefs and the tool calls it can make.
 - `assist-profile/` — builds the company profile that the vcfo_assist browser extension fills into MCA portals.
 - `audit/` — audit-log display formatting and the role rules for who sees which audit events.
+- `budget/` — annual cost budgets: the one calculation (`engine.ts`), Excel and PDF, the owner's workbook import, and messages.
 - `board-resolution/` — board resolution data model, docx generation, preview and storage keys.
 - `board-meetings/` — board meetings after incorporation: dates (T-10, T-7, T+30, 120-day gap), meeting numbers, quorum, agenda rules, the notice text and Word file, `.ics` invites and signed director links.
 - `checklist/` — the 34-step SPICe+ checklist: per-step validation, gating, review, locks, responses and Part A sections.

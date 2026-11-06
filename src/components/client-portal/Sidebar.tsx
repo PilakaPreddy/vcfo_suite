@@ -176,6 +176,7 @@ export function portalNav({
          existed since the feature was built; it had no way in from here, so a client could
          reach it only by typing the URL. */
       { k: 'labour-registers', t: 'Labour registers' },
+      { k: 'budgets', t: 'Budgets' },
     ],
   };
   const registrations: NavItem = { k: 'registrations', t: 'Registrations', i: 'badge-check' };

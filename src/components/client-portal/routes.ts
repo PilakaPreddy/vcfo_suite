@@ -13,6 +13,7 @@ export type PortalRouteKey =
   | 'filings'
   | 'obligations'
   | 'labour-registers'
+  | 'budgets'
   | 'registrations'
   | 'documents'
   | 'knowledge-bank'
@@ -34,6 +35,7 @@ export const PORTAL_PATHS: Record<PortalRouteKey, string> = {
   filings: `${CP_BASE}/compliances/filings`,
   obligations: `${CP_BASE}/compliances/obligations`,
   'labour-registers': `${CP_BASE}/labour-registers`,
+  budgets: `${CP_BASE}/budgets`,
   registrations: `${CP_BASE}/registrations`,
   documents: `${CP_BASE}/documents`,
   'knowledge-bank': `${CP_BASE}/library`,
@@ -55,6 +57,7 @@ export const PORTAL_TITLES: Record<PortalRouteKey, string> = {
   filings: 'Filings',
   obligations: 'Obligations',
   'labour-registers': 'Labour registers',
+  budgets: 'Budgets',
   registrations: 'Registrations',
   documents: 'Documents',
   'knowledge-bank': 'Library',

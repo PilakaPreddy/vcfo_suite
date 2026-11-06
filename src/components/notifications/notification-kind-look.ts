@@ -38,6 +38,7 @@ export const NOTIFICATION_KIND_LOOK: Record<
   'compliance.reminder': { Icon: CalendarClock, tone: 'warn', group: 'Steps' },
   'compliance.task': { Icon: CircleCheck, tone: 'prog', group: 'Steps' },
   'board.meeting': { Icon: Users, tone: 'prog', group: 'Steps' },
+  'budget.update': { Icon: CircleCheck, tone: 'prog', group: 'Steps' },
   'team.assigned': { Icon: Users, tone: 'prog', group: 'Team' },
   'team.removed': { Icon: Users, tone: 'idle', group: 'Team' },
   'email.sent': { Icon: Mail, tone: 'ok', group: 'Email' },

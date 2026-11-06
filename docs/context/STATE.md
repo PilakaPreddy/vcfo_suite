@@ -129,3 +129,10 @@ Demo logins:
 - `manager@vcfo.local` / `manager123` (Project Manager)
 - `intern@vcfo.local` / `intern123` (Project Lead)
 - `client@vcfo.local` / `client123` (Client)
+
+## Budget module (branch `feat/budget`, 6 Nov 2026, not merged or deployed)
+
+Built on the owner's instruction with no tests run and none written; the owner tests it personally.
+`tsc --noEmit` passes. Needs migration `0047_budgets`, which clashes in number with the unmerged
+chatbot branches. Spec and decisions: `docs/specs/budget/PLAN.md`. Gotchas: `docs/context/notes/budget.md`.
+

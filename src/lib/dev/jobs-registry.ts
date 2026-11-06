@@ -18,6 +18,7 @@ import { receivablesBankFeed } from '@/jobs/receivables-bank-feed';
 import { receivablesFxRates } from '@/jobs/receivables-fx-rates';
 import { receivablesDigest } from '@/jobs/receivables-digest';
 import { devCleanup } from '@/jobs/dev-cleanup';
+import { budgetAlerts } from '@/jobs/budget-alerts';
 import { describeFunctions } from './parse';
 import type { JobFunction } from './types';
 
@@ -47,5 +48,6 @@ export function registeredJobs(): JobFunction[] {
     receivablesBankFeed,
     receivablesFxRates,
     receivablesDigest,
+    budgetAlerts,
   ]);
 }
