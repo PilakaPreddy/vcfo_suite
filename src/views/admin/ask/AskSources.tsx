@@ -26,6 +26,8 @@ type SourceRow = {
   status: 'processing' | 'ready' | 'failed' | 'archived';
   error: string | null;
   effectiveFrom: string | null;
+  effectiveTo: string | null;
+  supersededAt: string | null;
   lastVerifiedAt: string | null;
   createdAt: string;
 };
@@ -169,6 +171,27 @@ export default function AskSources() {
               </label>
               <Input id="src-date" name="effectiveFrom" type="date" />
             </div>
+            <div>
+              <label htmlFor="src-date-to" className={label}>
+                Effective to (optional)
+              </label>
+              <Input id="src-date-to" name="effectiveTo" type="date" />
+            </div>
+            <div>
+              <label htmlFor="src-replaces" className={label}>
+                Replaces (optional)
+              </label>
+              <select id="src-replaces" name="supersedesDocumentId" className={select} defaultValue="">
+                <option value="">Nothing</option>
+                {docs
+                  .filter((d) => d.status === 'ready' && !d.supersededAt)
+                  .map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.title}
+                    </option>
+                  ))}
+              </select>
+            </div>
             <fieldset className="md:col-span-2">
               <legend className={label}>Content</legend>
               <SpectrumTabs
@@ -221,13 +244,13 @@ export default function AskSources() {
           )}
           {list.data && docs.length === 0 && <EmptyState title="No sources yet" className="m-4" />}
           {docs.length > 0 && (
-            <div className="overflow-x-auto">
+            <div className="relative overflow-x-auto">
               <table className="w-full min-w-[640px] border-collapse text-[14px]">
                 <thead>
                   <tr>
                     <th scope="col" className={T1_HEAD}>Source</th>
                     <th scope="col" className={T1_HEAD}>Status</th>
-                    <th scope="col" className={T1_HEAD}>Effective from</th>
+                    <th scope="col" className={T1_HEAD}>In force</th>
                     <th scope="col" className={T1_HEAD}>
                       <span className="sr-only">Actions</span>
                     </th>
@@ -249,6 +272,7 @@ export default function AskSources() {
                         </p>
                         <p className="text-[12.5px] text-ink-muted">
                           {TYPE_LABEL[doc.sourceType] ?? doc.sourceType} · {AUDIENCE_LABEL[doc.audience] ?? doc.audience}
+                          {doc.supersededAt ? ` · Replaced from ${plainDate(doc.supersededAt)}` : ''}
                         </p>
                         {doc.error && <p className="text-[12.5px] text-danger">{doc.error}</p>}
                       </td>
@@ -256,7 +280,11 @@ export default function AskSources() {
                         <Chip tone={STATUS_TONE[doc.status]}>{STATUS_LABEL[doc.status]}</Chip>
                       </td>
                       <td className="whitespace-nowrap px-4 py-2.5 tabular-nums text-ink-2">
-                        {doc.effectiveFrom ? plainDate(doc.effectiveFrom) : <span className="text-ink-faint">—</span>}
+                        {doc.effectiveFrom || doc.effectiveTo ? (
+                          [doc.effectiveFrom && plainDate(doc.effectiveFrom), doc.effectiveTo && `to ${plainDate(doc.effectiveTo)}`].filter(Boolean).join(' ')
+                        ) : (
+                          <span className="text-ink-faint">—</span>
+                        )}
                       </td>
                       <td className="px-4 py-2.5">
                         {doc.status !== 'archived' && (
