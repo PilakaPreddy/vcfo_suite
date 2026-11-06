@@ -13,6 +13,7 @@ import { serviceChecks } from '@/jobs/service-checks';
 import { complianceTaskReminders } from '@/jobs/compliance-task-reminders';
 import { complianceTaskRepeatOnComplete, complianceTaskRepeatSweep } from '@/jobs/compliance-task-repeat';
 import { boardMeetingReminders } from '@/jobs/board-meeting-reminders';
+import { askIndexRefresh, askIndexSweep } from '@/jobs/ask-index-refresh';
 import { receivablesReminders } from '@/jobs/receivables-reminders';
 import { receivablesBankFeed } from '@/jobs/receivables-bank-feed';
 import { receivablesFxRates } from '@/jobs/receivables-fx-rates';
@@ -31,6 +32,8 @@ export function registeredJobs(): JobFunction[] {
     announcementFeeds,
     whatsappSend,
     askIngest,
+    askIndexRefresh,
+    askIndexSweep,
     complianceReminders,
     savedReportsSend,
     weeklyDigest,

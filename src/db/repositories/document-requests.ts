@@ -12,6 +12,7 @@ import {
 } from '@/db/repositories/engagements';
 import { LEGACY_ENGAGEMENT_IDS } from '@/lib/projects/legacy-engagement-ids';
 import { requestClosedPatch } from '@/lib/metrics/trend-stamps';
+import { queueIndexRefresh } from '@/lib/ask/index-cards/queue';
 
 /**
  * DOCUMENT REQUESTS REPOSITORY — replaces vcfo.requests localStorage.
@@ -132,6 +133,7 @@ export async function createDocumentRequest(
       .onConflictDoNothing();
   }
 
+  queueIndexRefresh('request', row.id);
   const mapped = toAppDocRequest(row);
   return { ...mapped, taskId: input.taskId ?? '', dueAt: input.dueAt };
 }
@@ -170,6 +172,7 @@ export async function updateDocumentRequest(
     .returning();
 
   if (!row) return null;
+  queueIndexRefresh('request', row.id);
   const mapped = toAppDocRequest(row);
   return {
     ...mapped,
