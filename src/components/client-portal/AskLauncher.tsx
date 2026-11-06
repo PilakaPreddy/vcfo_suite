@@ -23,6 +23,7 @@ import type { Destination } from '@/data/ask/schema';
 import { ASK_PANEL_SIZES, useAskPanelSize, type AskPanelSize } from '@/components/ask/use-ask-layout';
 import { useApp } from '@/context/AppContext';
 import { CLIENT_BASE, resolveHref } from '@/lib/ask/resolve-href';
+import { visualText } from '@/lib/ask/visual-text';
 import { AFTER_QUESTIONS, BEFORE_QUESTIONS } from '@/lib/client-portal/answers';
 import { usePortal, type WhatsThisAnswer } from './PortalProvider';
 import { VisorCharacter, VisorHead } from '@/components/ask/Visor';
@@ -223,7 +224,8 @@ export function AskLauncher() {
       const refusal = last.answer.origin === 'refusal';
       const item: LogItem = {
         r: 'a',
-        t: last.answer.line + (last.answer.why ? `\n${last.answer.why}` : ''),
+        // This window shows plain text, so a list or chart comes through as its text form.
+        t: [last.answer.line, last.answer.visual && visualText(last.answer.visual), last.answer.why].filter(Boolean).join('\n'),
         k: refusal ? 'nan' : 'ok',
         h: refusal,
         links: (last.answer.links ?? []).map((l) => ({ label: l.label, href: destHref(l.dest) })),

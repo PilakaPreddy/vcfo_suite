@@ -44,7 +44,6 @@ test.describe.serial('official updates', () => {
     expect(asLead.status()).toBe(403);
 
     const titles = unreviewed.map((row) => row.title);
-    await page.context().clearCookies();
     await login(page, 'client');
     const seen = (await boardTitles(page)).map((row) => row.title);
     expect(seen.filter((seenTitle) => titles.includes(seenTitle))).toEqual([]);
@@ -68,7 +67,6 @@ test.describe.serial('official updates', () => {
     await expect(page.getByText('Published').first()).toBeVisible();
 
     for (const role of ROLES) {
-      await page.context().clearCookies();
       await login(page, role);
       expect(await bellTitles(page), `bell row for ${role}`).toContain(title.slice(0, 160));
       const board = await boardTitles(page);
@@ -90,8 +88,6 @@ test.describe.serial('official updates', () => {
     await chat.getByRole('textbox', { name: 'Type a question' }).fill('What changed this week?');
     await chat.getByRole('textbox', { name: 'Type a question' }).press('Enter');
     await expect(chat.getByText(title.slice(0, 40)).first()).toBeVisible({ timeout: 60_000 });
-
-    await page.context().clearCookies();
     await login(page, 'lead');
     const panel = await openAsk(page);
     await panel.locator('#ask-composer').fill('What changed in GST this week?');
@@ -117,7 +113,6 @@ test.describe.serial('official updates', () => {
     await page.getByLabel('Why it is rejected').fill('A duplicate of another update.');
     await page.getByRole('dialog').getByRole('button', { name: 'Reject' }).click();
     await expect(page.getByText('Rejected').first()).toBeVisible();
-    await page.context().clearCookies();
     await login(page, 'client');
     expect((await boardTitles(page)).map((item) => item.title)).not.toContain(rejected);
   });

@@ -54,7 +54,7 @@ async function forgetSignInCounts(): Promise<void> {
 }
 
 /**
- * Sign in through the login page. The page renders the form twice (one copy
+ * Sign in through the login page, ending any earlier session. The page renders the form twice (one copy
  * hidden) and hydration can clear an early fill, so fill the visible inputs
  * and re-fill until the values stick.
  */
@@ -62,6 +62,9 @@ export async function login(page: Page, role: DemoRole): Promise<void> {
   const { email, password } = USERS[role];
   await forgetSignInCounts();
   await closeLivePopups(page);
+  // Leave the page first: a request still running there could set the old session cookie again.
+  await page.goto('about:blank');
+  await page.context().clearCookies();
   await page.goto('/login');
   await page.waitForLoadState('networkidle');
   const emailInput = page.locator('#email:visible');
