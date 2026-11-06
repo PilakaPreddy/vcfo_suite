@@ -26,6 +26,7 @@ docs/mca-recordings/
 
 # Source workbooks with client PII (PAN, Aadhaar, DIN) — never commit
 *.xlsx
+!tests/ask/evals/fill/fixtures/*.xlsx
 
 # Generated knowledge graph from the graphify skill (42MB); rebuild with /graphify
 graphify-out/
