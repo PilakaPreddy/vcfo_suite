@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { Client } from 'pg';
 
 /**
@@ -40,18 +40,21 @@ export async function closeLivePopups(page: Page): Promise<void> {
   }
 }
 
-/**
- * The sign-in limit counts every attempt, ten per address in fifteen minutes, and a test run signs
- * in far more often than that. So a test forgets the counts first, on a local database only: no
- * connection is made for any other host.
- */
-async function forgetSignInCounts(): Promise<void> {
+/** Runs against the test database only when it is on this machine: no connection is made for any other host. */
+export async function onLocalDb(run: (db: Client) => Promise<unknown>): Promise<void> {
   const url = process.env.DATABASE_URL;
   if (!url || !['localhost', '127.0.0.1'].includes(new URL(url).hostname)) return;
-  const client = new Client({ connectionString: url });
-  await client.connect();
-  await client.query(`delete from rate_limits where key like 'sign-in:%' or key like 'two-step:%'`).finally(() => client.end());
+  const db = new Client({ connectionString: url });
+  await db.connect();
+  await run(db).finally(() => db.end());
 }
+
+/**
+ * The sign-in limit counts every attempt, ten per address in fifteen minutes, and a test run signs
+ * in far more often than that. So a test forgets the counts first, on a local database only.
+ */
+const forgetSignInCounts = (): Promise<void> =>
+  onLocalDb((db) => db.query(`delete from rate_limits where key like 'sign-in:%' or key like 'two-step:%'`));
 
 /**
  * Sign in through the login page, ending any earlier session. The page renders the form twice (one copy
@@ -79,7 +82,7 @@ export async function login(page: Page, role: DemoRole): Promise<void> {
   await page.waitForURL(/\/app\//, { timeout: 30_000 });
 }
 
-/** The top-bar Ask VCFO launcher. */
+/** The staff Ask VCFO launcher. */
 export function askLauncher(page: Page) {
   return page.locator('button[aria-controls="ask-panel"]');
 }
@@ -91,4 +94,21 @@ export async function openAsk(page: Page) {
   const panel = page.locator('#ask-panel');
   await expect(panel).toBeVisible();
   return panel;
+}
+
+/** The client portal's own chat window: the pill above a phone's width, and the Ask tab on a phone. */
+export async function openClientChat(page: Page) {
+  const pill = page.getByRole('button', { name: 'Open Ask VCFO chat' });
+  const tab = page.getByRole('navigation', { name: 'Main, phone' }).getByRole('button', { name: 'Ask' });
+  await pill.or(tab).first().click({ timeout: 30_000 });
+  const chat = page.locator('#vp-chat');
+  await expect(chat).toBeVisible();
+  return chat;
+}
+
+/** Types a question into the open client chat window and sends it. */
+export async function askClientChat(chat: Locator, question: string) {
+  const input = chat.getByRole('textbox', { name: 'Type a question' });
+  await input.fill(question);
+  await input.press('Enter');
 }

@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { login, openAsk, type DemoRole } from './helpers/login';
+import { askClientChat, login, openAsk, openClientChat, type DemoRole } from './helpers/login';
 
 /**
  * Exact counts with no model. Run this against a server started with no model key: a question that
@@ -27,10 +27,8 @@ async function ask(root: Locator, question: string) {
 
 /** The client portal has its own chat window, with its own launcher. */
 async function askInClientChat(page: Page, question: string) {
-  await page.getByRole('button', { name: 'Open Ask VCFO chat' }).click({ timeout: 30_000 });
-  const chat = page.locator('#vp-chat');
-  await chat.getByRole('textbox', { name: 'Type a question' }).fill(question);
-  await chat.getByRole('textbox', { name: 'Type a question' }).press('Enter');
+  const chat = await openClientChat(page);
+  await askClientChat(chat, question);
   return chat;
 }
 

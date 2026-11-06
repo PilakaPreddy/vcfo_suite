@@ -1,12 +1,34 @@
 import { expect, test, type Page } from '@playwright/test';
-import { login, openAsk, type DemoRole } from './helpers/login';
+import { askClientChat, login, onLocalDb, openAsk, openClientChat, type DemoRole } from './helpers/login';
 
 /**
  * Official updates, end to end: a reviewer publishes an important update from the queue and every
- * role gets a bell row for it. The queue is filled by the Watch pipeline, so the test needs at least
- * one update waiting (`Not yet reviewed`) and skips when there is none.
+ * role gets a bell row for it. A run uses up two waiting updates, so on a local database it tops the
+ * queue up here, with no model. On any other database the tests skip when nothing is waiting.
  */
 const ROLES: DemoRole[] = ['super', 'admin', 'manager', 'lead', 'client'];
+
+const QUOTE = 'The due date for filing the return is extended to 31 March 2027.';
+
+async function topUpQueue(): Promise<void> {
+  await onLocalDb(async (db) => {
+    const { rows } = await db.query(`select count(*)::int as waiting from reg_updates where status = 'unreviewed'`);
+    for (let n = rows[0].waiting; n < 2; n += 1) {
+      const title = `Test update ${Date.now()}-${n}: return due date extended`;
+      const { rows: [update] } = await db.query(
+        `insert into reg_updates (title, intake, status, area, change_type, importance, summary, quote, source_text, published_on)
+         values ($1, 'manual', 'unreviewed', 'gst', 'circular', 'normal', $2, $2, $2, current_date) returning id`,
+        [title, QUOTE],
+      );
+      const { rows: [board] } = await db.query(
+        `insert into announcements (title, body, kind, origin, external_id, audience, unreviewed, author_name)
+         values ($1, $2, 'gst', 'feed', $3, 'staff', true, 'Official update') returning id`,
+        [title, QUOTE, `reg:${update.id}`],
+      );
+      await db.query(`update reg_updates set announcement_id = $1 where id = $2`, [board.id, update.id]);
+    }
+  });
+}
 
 const boardTitles = (page: Page): Promise<Array<{ title: string; unreviewed?: boolean }>> =>
   page.request.get('/api/announcements').then(async (res) => (await res.json()).announcements);
@@ -19,6 +41,8 @@ const ANY_ID = '00000000-0000-0000-0000-000000000001';
 
 test.describe.serial('official updates', () => {
   let title = '';
+
+  test.beforeAll(topUpQueue);
 
   test('a reviewer sees the queue and the health of every source', async ({ page }) => {
     await login(page, 'admin');
@@ -83,10 +107,8 @@ test.describe.serial('official updates', () => {
   test('the chat lists the published update with no model call', async ({ page }) => {
     test.skip(!title, 'No update was published.');
     await login(page, 'client');
-    await page.getByRole('button', { name: 'Open Ask VCFO chat' }).click({ timeout: 30_000 });
-    const chat = page.locator('#vp-chat');
-    await chat.getByRole('textbox', { name: 'Type a question' }).fill('What changed this week?');
-    await chat.getByRole('textbox', { name: 'Type a question' }).press('Enter');
+    const chat = await openClientChat(page);
+    await askClientChat(chat, 'What changed this week?');
     await expect(chat.getByText(title.slice(0, 40)).first()).toBeVisible({ timeout: 60_000 });
     await login(page, 'lead');
     const panel = await openAsk(page);
