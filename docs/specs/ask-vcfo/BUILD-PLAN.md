@@ -174,6 +174,10 @@ any path adds to `ask_usage_daily` through `systemRecordAskUsage`, and calls are
 - Watch records its token use through `reg-updates.ts` (`systemRecordWatchUsage`, `systemTodayTokens`), because `ask-usage.ts` is on the answer track. The final merge can move them.
 - The chat seam is a short block in `pipeline.ts` before free text. `updatesThisWeekMetric` is ready for the answer track's catalog, which can replace that block.
 - `listRegUpdates` and the review routes keep to `app/api/watch/*`; the page is also at `app/app/intern/watch/`, read-only, since project leads may add an update.
+- Publish and reject commit in one transaction with their board row and chat card, so a failure leaves an update waiting and never half published. A rejected update gives up its content hash, so a later copy of the same document is read and not swallowed by that row.
+- A scan waits, and does not fail, when the day's budget is spent or no model is configured. A draft the model summarised as made goes to `needs_attention`, because code can correct its label but not its wording. A date on a draft is the comment deadline, so it never shows as a new due date.
+- `feed` rows still read "From VCFOSuite" on the board and popup. That is the existing, tested rule, and each row carries its source link and quote.
+- Merge notes for the final track: (1) the answer track's `updates.this_week` in `metrics/catalog/work.ts` counts everything on the board and runs before this track's block in `pipeline.ts`, so replace it with `updatesThisWeekMetric`, which has the honest coverage line. (2) `outputSchema`, `outputConfigFor` and the Haiku exclusion in `provider/anthropic.ts` are the same lines the answer track wrote; keep one copy. (3) Move `systemRecordWatchUsage` and `systemTodayTokens` to `ask-usage.ts`.
 
 ## Phase 4: paste and file (do)
 
