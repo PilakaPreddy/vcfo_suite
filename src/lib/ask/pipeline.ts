@@ -58,6 +58,7 @@ import {
   topicToAnswer,
 } from '@/lib/ask/topics';
 import { validateAnswer, withoutVisual } from '@/lib/ask/validate';
+import { handleDoWork, isDataMessage, pageContextLine, pendingDoRun, STORED_USER_TEXT_MAX, type DoEvent } from '@/lib/ask/do/entry';
 
 /**
  * Ask VCFO request pipeline (§2, §6). Cheapest path first:
@@ -68,11 +69,18 @@ import { validateAnswer, withoutVisual } from '@/lib/ask/validate';
  *   through scoped repositories.
  */
 
+/** Long pastes are for the data router, which clients do not have yet. */
+const CLIENT_MESSAGE_MAX = 2000;
+
 export const chatRequestSchema = z.object({
   conversationId: z.string().uuid().optional(),
   shell: z.enum(ASK_SHELLS),
   engagementId: z.string().trim().min(1).optional(),
-  message: z.string().trim().min(1).max(2000).optional(),
+  message: z.string().trim().min(1).max(20_000).optional(),
+  /** Files already uploaded to `/api/ask/attachments`. */
+  attachmentIds: z.array(z.string().uuid()).max(5).optional(),
+  /** Where the person is, for "this client". The page's own engagement is still checked by scope. */
+  page: z.object({ path: z.string().max(300), engagementId: z.string().max(80).optional() }).optional(),
   suggestionId: z.string().trim().min(1).max(80).optional(),
   context: z
     .object({
@@ -83,7 +91,7 @@ export const chatRequestSchema = z.object({
     .optional(),
   depth: z.enum(ANSWER_DEPTHS).optional(),
   language: z.string().trim().min(2).max(35).optional(),
-});
+}).refine((body) => body.shell !== 'client' || (body.message?.length ?? 0) <= CLIENT_MESSAGE_MAX, { path: ['message'] });
 export type ChatRequest = z.infer<typeof chatRequestSchema>;
 
 const STATUS_LABELS = {
@@ -94,6 +102,7 @@ const STATUS_LABELS = {
 
 export type AskEvent =
   | { type: 'status'; label: (typeof STATUS_LABELS)[keyof typeof STATUS_LABELS] }
+  | DoEvent
   | { type: 'answer'; conversationId: string; messageId: string; answer: AnswerEnvelope }
   | { type: 'error'; code: 'rate_limited' | 'unavailable' | 'forbidden'; message: string };
 
@@ -174,7 +183,12 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
 
   const suggestion = request.suggestionId ? getSuggestion(request.suggestionId) : null;
   const typed = request.message ? maskIdentityNumbers(request.message) : undefined;
-  const userText = typed ?? suggestion?.label ?? (request.context ? `What's this: ${request.context.label}?` : null);
+  const attachmentIds = request.attachmentIds ?? [];
+  const userText =
+    typed?.slice(0, STORED_USER_TEXT_MAX) ??
+    suggestion?.label ??
+    (attachmentIds.length > 0 ? `Attached ${attachmentIds.length} file${attachmentIds.length === 1 ? '' : 's'}` : null) ??
+    (request.context ? `What's this: ${request.context.label}?` : null);
   if (!userText) {
     emit({ type: 'error', code: 'unavailable', message: 'Ask a question or pick a suggestion.' });
     return;
@@ -245,6 +259,20 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
   };
 
   const flags = askFlags();
+  // The data router's own way in: a file, a labelled paste, or the answer to its last question.
+  // The raw message goes there because code needs the values; it is stored only in masked form.
+  const pending = shell === 'client' ? null : await pendingDoRun(ctx, conversationId, request.message, now);
+  const doWork = async (extra: { guard?: GuardResult; startedAt?: number } = {}) => {
+    const result = await handleDoWork(ctx, request, request.message ?? '', emit, { conversationId, now, pending });
+    if (!result) return false;
+    metered = result.metered ?? metered;
+    await finish(result.answer, { path: 'fixed_workflow', ...extra });
+    return true;
+  };
+  if (shell !== 'client' && (attachmentIds.length > 0 || pending || (request.message && isDataMessage(request.message)))) {
+    if (await doWork()) return;
+  }
+
   const stopIfKilled = async (path: AskPath, extra: { guard?: GuardResult; startedAt?: number } = {}): Promise<boolean> => {
     if (!flags.killedPaths.has(path)) return false;
     await finish(limitAnswer(shell, 'pathStopped'), { path, ...extra });
@@ -346,7 +374,9 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
     const lastAsked = history.findLast((m) => m.sender === 'user')?.text ?? '';
     const topics = shortlistTopics(`${message} ${lastAsked}`, audience).map((t) => ({ slug: t.slug, question: t.question }));
     const metrics = metricsForRole(metricRole).map((m) => m.name);
-    guard = (await runGuard(provider, { model: config.models.guard, shell, message, history, topics, metrics })).result;
+    const onScreen = shell === 'client' ? null : await pageContextLine(ctx, request.page);
+    const routed = onScreen ? `${message}\n\n(${onScreen})` : message;
+    guard = (await runGuard(provider, { model: config.models.guard, shell, message: routed, history, topics, metrics })).result;
   } catch (error) {
     console.error('[ask-vcfo] guard failed', error);
     await finish(unavailableAnswer(shell), { path: null });
@@ -362,6 +392,7 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
     return;
   }
   if (guard.intent === 'do_work') {
+    if (shell !== 'client' && (await doWork({ guard, startedAt }))) return;
     await finish(limitAnswer(shell, 'doWork'), { path: 'router_refusal', guard, startedAt });
     return;
   }

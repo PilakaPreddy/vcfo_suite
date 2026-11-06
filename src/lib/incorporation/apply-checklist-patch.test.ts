@@ -17,7 +17,7 @@ describe('checklistPatchForRole', () => {
 
   it('keeps a lead from stamping a review on a direct-flow step or the manager step', () => {
     for (const step of ['pre-15', 'pre-2']) {
-      const patch = checklistPatchForRole(lead, step, { reviewStatus: 'pending', locked: true, responses: { x: '1' } }, undefined, NOW);
+      const patch = checklistPatchForRole(lead, step, { reviewStatus: 'reviewing', locked: true, responses: { x: '1' } }, undefined, NOW);
       expect(patch.reviewStatus).toBeUndefined();
       expect(patch.locked).toBeUndefined();
     }

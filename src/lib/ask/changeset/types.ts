@@ -41,6 +41,7 @@ export interface RowCheck {
 export interface RowSource {
   kind: 'attachment' | 'paste' | 'message' | 'record';
   attachmentId?: string;
+  fileName?: string;
   page?: number;
   quote?: string;
 }

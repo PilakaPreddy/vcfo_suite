@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { PREVIEW_CLIENT_LINE } from '@/lib/ask/preview';
 import { AskAnswerCard } from './AskAnswerCard';
+import { AskChangesetCard } from './AskChangesetCard';
 import { AskPreviewPicker } from './AskPreviewPicker';
 import { AskHandoffForm } from './AskHandoffForm';
 import { useApp } from '@/context/AppContext';
@@ -45,6 +46,13 @@ export function AskThread() {
             </p>
           );
         }
+        if (item.kind === 'changeset') {
+          return (
+            <AnswerRow key={item.id}>
+              <AskChangesetCard changesetId={item.changesetId} />
+            </AnswerRow>
+          );
+        }
         if (item.answer.line === PREVIEW_CLIENT_LINE && ask.shell === 'super') {
           return (
             <AnswerRow key={item.id}>
@@ -58,6 +66,11 @@ export function AskThread() {
         return (
           <AnswerRow key={item.id}>
             <AskAnswerCard answer={item.answer} messageId={item.messageId} lastQuestion={lastQuestion} />
+            {item.answer.changesetId ? (
+              <div className="mt-2">
+                <AskChangesetCard changesetId={item.answer.changesetId} />
+              </div>
+            ) : null}
           </AnswerRow>
         );
       })}

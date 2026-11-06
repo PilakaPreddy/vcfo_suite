@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import type { AppRole, AuthContext } from '@/auth/guards';
-import type { ChangesetDraft, JsonValue } from '@/lib/ask/changeset/types';
+import type { ChangesetDraft, JsonValue, RowCheck } from '@/lib/ask/changeset/types';
 
 /**
  * One definition per action, used by the chat and, as routes move over, by the route too.
@@ -30,6 +30,18 @@ export type ActionResult =
   | { ok: true; summary: string; href?: string; undo?: JsonValue }
   | { ok: false; error: string };
 
+export interface ActionRecheck {
+  checks: RowCheck[];
+  heldReason: string | null;
+  canApply: boolean;
+  /** The current saved value and how the new one is stored and shown, for the card. */
+  oldValue: string;
+  value: string;
+  displayOld: string;
+  displayNew: string;
+  sensitive: boolean;
+}
+
 export interface Action<Input = unknown> {
   /** `<area>.<verb>`; the prefix must match the area folder that exports it. */
   name: string;
@@ -45,6 +57,11 @@ export interface Action<Input = unknown> {
   examples?: readonly Input[];
   /** Null for T0 and T1, which have nothing to review. Reads only; it never writes. */
   preview(actx: ActionContext, input: Input): Promise<ChangesetDraft | null>;
+  /**
+   * Checks one proposed row against the saved record as it stands now: when it is edited and again
+   * at the click. Actions with nothing beyond input parsing to recheck leave it out.
+   */
+  recheck?(actx: ActionContext, input: Input, pending: Readonly<Record<string, string>>): Promise<ActionRecheck>;
   /** Runs the same rule code as the screen, then writes through repositories. */
   execute(actx: ActionContext, input: Input): Promise<ActionResult>;
   undo?(actx: ActionContext, undo: JsonValue): Promise<ActionResult>;

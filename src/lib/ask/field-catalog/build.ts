@@ -4,20 +4,13 @@ import { QUESTIONNAIRE_SECTIONS } from '@/data/compliance-questionnaire';
 import { registrationRule, RULED_REGISTRATIONS } from '@/data/registration-rules';
 import { COMPLIANCE_OBLIGATIONS } from '@/lib/compliance/obligations-seed';
 import { CLIENT_RESPONSE_FIELDS } from '@/lib/checklist/checklist-responses';
-import { CANONICAL_RULES, FORMAT_BY_FIELD_ID, type CanonicalRule } from './rules';
+import { CANONICAL_RULES, normalizeLabel, FORMAT_BY_FIELD_ID, type CanonicalRule } from './rules';
 import type { CatalogEntry, FieldFormat, FieldUse } from './types';
 
 /**
  * Builds the catalog from the source files. Retired steps (`pre-6`, `pre-8`, `reg-2`) keep their stored
  * answers but take no new ones, so they are left out; `npm run ask:catalog` writes the result.
  */
-
-export const normalizeLabel = (text: string): string =>
-  text
-    .toLowerCase()
-    .replace(/\([^)]*\)/g, ' ')
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
 
 function formatOf(field: ChecklistField): FieldFormat {
   const byId = FORMAT_BY_FIELD_ID.find(([pattern]) => pattern.test(field.id));

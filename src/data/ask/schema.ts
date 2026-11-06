@@ -327,6 +327,9 @@ export const answerEnvelopeSchema = z.object({
       engagementId: z.string().optional(),
     })
     .optional(),
+  /** The review card this answer carries, and the fixed workflow or agent run behind it. */
+  changesetId: z.string().uuid().optional(),
+  runId: z.string().uuid().optional(),
 });
 export type AnswerEnvelope = z.infer<typeof answerEnvelopeSchema>;
 

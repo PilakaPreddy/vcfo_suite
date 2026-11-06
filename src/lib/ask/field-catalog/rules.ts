@@ -1,5 +1,13 @@
 import type { FieldFormat, FieldSensitivity, FieldSubject } from './types';
 
+/** Labels compare in lower case, without punctuation or anything in brackets. */
+export const normalizeLabel = (text: string): string =>
+  text
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
 /**
  * What the source files do not say: which fields hold the same fact, what people call it and what
  * shape it has. `fields` names `<step>/<field>`, with `#` for a slot number and `group.field` for a
