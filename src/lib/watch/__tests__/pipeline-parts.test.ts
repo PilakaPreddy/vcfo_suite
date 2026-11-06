@@ -141,6 +141,8 @@ describe('the chat list answer', () => {
     expect(matchUpdatesQuestion('latest updates')).toEqual({ area: undefined, days: 7, label: 'in the last 7 days' });
     expect(matchUpdatesQuestion('what does section 139 say about changes')).toBeNull();
     expect(matchUpdatesQuestion('which client changed its address')).toBeNull();
+    expect(matchUpdatesQuestion('any changes to my task this week')).toBeNull();
+    expect(matchUpdatesQuestion('latest updates on our project')).toBeNull();
   });
 
   const question = { area: 'gst' as const, days: 7, label: 'in the last 7 days' };

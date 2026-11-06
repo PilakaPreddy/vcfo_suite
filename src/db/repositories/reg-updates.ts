@@ -28,7 +28,7 @@ import type {
   RegVerifyProblem,
 } from '@/lib/watch/types';
 import { noiseLogFields } from '@/lib/watch/noise';
-import { deleteWatchBoardRow, systemPublishWatchBoardRow, systemPostWatchBoardRow } from './announcements';
+import { systemDeleteWatchBoardRow, systemPublishWatchBoardRow, systemPostWatchBoardRow, type BoardWriter } from './announcements';
 
 /**
  * Regulatory updates: Watch's records from discovery to a reviewer's decision.
@@ -137,20 +137,19 @@ export async function systemQueueRegUpdates(
 }
 
 /** Updates a lost event or a spent budget left behind; the hourly check sends them through again. */
-export async function systemStuckRegUpdateIds(before: Date): Promise<string[]> {
-  const rows = await db
-    .select({ id: regUpdates.id })
+export async function systemStuckRegUpdates(before: Date): Promise<Array<{ id: string; sourceUrl: string | null }>> {
+  return db
+    .select({ id: regUpdates.id, sourceUrl: regUpdates.sourceUrl })
     .from(regUpdates)
     .where(and(inArray(regUpdates.status, ['queued', 'read']), lt(regUpdates.updatedAt, before)))
     .limit(50);
-  return rows.map((row) => row.id);
 }
 
 /** A link that stayed unreachable this long needs a person, so it stops going round and says why. */
 export async function systemGiveUpOnUnreadUpdates(createdBefore: Date): Promise<void> {
   await db
     .update(regUpdates)
-    .set({ status: 'failed', error: 'The document could not be reached for three days. Upload the PDF instead.' })
+    .set({ status: 'failed', error: 'This could not be read for three days. Upload the PDF, or read it by hand.' })
     .where(and(eq(regUpdates.status, 'queued'), lt(regUpdates.createdAt, createdBefore)));
 }
 
@@ -363,24 +362,27 @@ export async function saveRegUpdateEdit(
 
 /**
  * Publish moves one row exactly once: only an `unreviewed` update qualifies, so two reviewers
- * clicking together publish it once. It opens the board row to its audience and adds the chat card.
+ * clicking together publish it once. It opens the board row to its audience and adds the chat card,
+ * all in one transaction, so a failure leaves the update waiting and never half published.
  */
 export async function publishRegUpdate(ctx: AuthContext, id: string, sourceName: string | null): Promise<RegUpdateRow | null> {
   assertReviewer(ctx);
   const now = new Date();
-  const [row] = await db
-    .update(regUpdates)
-    .set({ status: 'published', publishedAt: now, reviewedById: ctx.userId, reviewedAt: now })
-    .where(and(eq(regUpdates.id, id), eq(regUpdates.status, 'unreviewed')))
-    .returning();
-  if (!row) return null;
-  await systemPublishWatchBoardRow(row, sourceName);
-  await upsertChatCard(row);
-  return row;
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(regUpdates)
+      .set({ status: 'published', publishedAt: now, reviewedById: ctx.userId, reviewedAt: now })
+      .where(and(eq(regUpdates.id, id), eq(regUpdates.status, 'unreviewed')))
+      .returning();
+    if (!row) return null;
+    await systemPublishWatchBoardRow(row, sourceName, tx);
+    await upsertChatCard(row, tx);
+    return row;
+  });
 }
 
 /** The chat's knowledge: one masked card per published update, searched like any other card. */
-async function upsertChatCard(row: RegUpdateRow): Promise<void> {
+async function upsertChatCard(row: RegUpdateRow, tx: BoardWriter): Promise<void> {
   const importance = (row.importance ?? 'normal') as RegImportance;
   const cardText = maskIdentityNumbers(
     [row.summary, row.affects && `Affects: ${row.affects}`, row.act && `Act: ${row.act}`, row.newDueDate && `New due date: ${row.newDueDate}`, row.sourceUrl && `Source: ${row.sourceUrl}`]
@@ -395,22 +397,25 @@ async function upsertChatCard(row: RegUpdateRow): Promise<void> {
     contentHash: sha256(cardText),
     effectiveFrom: row.effectiveDate,
   };
-  await db
+  await tx
     .insert(askIndexItems)
     .values({ sourceKind: 'reg_update', sourceId: row.id, ...fields })
     .onConflictDoUpdate({ target: [askIndexItems.sourceKind, askIndexItems.sourceId], set: fields });
 }
 
+/** The hash goes with the decision, so a later copy of a rejected document is read and not swallowed by this row. */
 export async function rejectRegUpdate(ctx: AuthContext, id: string, reason: string): Promise<boolean> {
   assertReviewer(ctx);
-  const [row] = await db
-    .update(regUpdates)
-    .set({ status: 'rejected', rejectReason: reason, reviewedById: ctx.userId, reviewedAt: new Date(), announcementId: null })
-    .where(and(eq(regUpdates.id, id), notInArray(regUpdates.status, ['published', 'rejected'])))
-    .returning({ id: regUpdates.id });
-  if (!row) return false;
-  await deleteWatchBoardRow(id);
-  return true;
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(regUpdates)
+      .set({ status: 'rejected', rejectReason: reason, reviewedById: ctx.userId, reviewedAt: new Date(), announcementId: null, contentHash: null })
+      .where(and(eq(regUpdates.id, id), notInArray(regUpdates.status, ['published', 'rejected'])))
+      .returning({ id: regUpdates.id });
+    if (!row) return false;
+    await systemDeleteWatchBoardRow(id, tx);
+    return true;
+  });
 }
 
 /** A failed read or summary goes round again, once a person asks. */

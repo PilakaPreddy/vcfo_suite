@@ -310,9 +310,12 @@ export async function systemUpsertFeedAnnouncements(
 
 type BoardUpdate = typeof regUpdates.$inferSelect;
 
+/** `db` or a transaction, so Watch's publish and reject commit with the update's own status. */
+export type BoardWriter = Pick<typeof db, 'insert' | 'update' | 'delete'>;
+
 /** Watch's staff-only row, marked "Not yet reviewed", which raises the same live popup as any post. */
-export async function systemPostWatchBoardRow(update: BoardUpdate, sourceName: string | null): Promise<string> {
-  const [row] = await db
+export async function systemPostWatchBoardRow(update: BoardUpdate, sourceName: string | null, writer: BoardWriter = db): Promise<string> {
+  const [row] = await writer
     .insert(announcements)
     .values({
       title: update.title.slice(0, 200),
@@ -335,10 +338,10 @@ export async function systemPostWatchBoardRow(update: BoardUpdate, sourceName: s
 }
 
 /** After review the same row opens to its audience, so staff do not get a second popup. */
-export async function systemPublishWatchBoardRow(update: BoardUpdate, sourceName: string | null): Promise<void> {
-  const announcementId = update.announcementId ?? (await systemPostWatchBoardRow(update, sourceName));
+export async function systemPublishWatchBoardRow(update: BoardUpdate, sourceName: string | null, writer: BoardWriter = db): Promise<void> {
+  const announcementId = update.announcementId ?? (await systemPostWatchBoardRow(update, sourceName, writer));
   const now = new Date();
-  await db
+  await writer
     .update(announcements)
     .set({
       title: update.title.slice(0, 200),
@@ -350,10 +353,10 @@ export async function systemPublishWatchBoardRow(update: BoardUpdate, sourceName
       updatedAt: now,
     })
     .where(eq(announcements.id, announcementId));
-  if (!update.announcementId) await db.update(regUpdates).set({ announcementId }).where(eq(regUpdates.id, update.id));
+  if (!update.announcementId) await writer.update(regUpdates).set({ announcementId }).where(eq(regUpdates.id, update.id));
 }
 
 /** A rejected update comes off the staff board. */
-export async function deleteWatchBoardRow(updateId: string): Promise<void> {
-  await db.delete(announcements).where(eq(announcements.externalId, `reg:${updateId}`));
+export async function systemDeleteWatchBoardRow(updateId: string, writer: BoardWriter = db): Promise<void> {
+  await writer.delete(announcements).where(eq(announcements.externalId, `reg:${updateId}`));
 }

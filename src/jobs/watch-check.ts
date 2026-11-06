@@ -1,7 +1,7 @@
 import { inngest } from '@/jobs/client';
 import { skipWhenPaused, PAUSED, withRunNow } from '@/jobs/dev-controls';
 import { systemDueWatchSources, systemEnsureWatchSources, systemGetWatchSource } from '@/db/repositories/reg-sources';
-import { systemGiveUpOnUnreadUpdates, systemStuckRegUpdateIds } from '@/db/repositories/reg-updates';
+import { systemGiveUpOnUnreadUpdates, systemStuckRegUpdates } from '@/db/repositories/reg-updates';
 import { askFlags } from '@/lib/ask/config';
 import { checkWatchSource } from '@/lib/watch/check';
 import { hostOf, queueWatchProcess } from '@/lib/watch/process';
@@ -39,9 +39,9 @@ export const watchCheck = inngest.createFunction(
     }
     const stuck = await step.run('stuck-updates', async () => {
       await systemGiveUpOnUnreadUpdates(new Date(Date.now() - GIVE_UP_AFTER_MS));
-      const ids = await systemStuckRegUpdateIds(new Date(Date.now() - STUCK_AFTER_MS));
-      await queueWatchProcess(ids.map((updateId) => ({ id: updateId, host: 'retry' })));
-      return ids.length;
+      const rows = await systemStuckRegUpdates(new Date(Date.now() - STUCK_AFTER_MS));
+      await queueWatchProcess(rows.map((row) => ({ id: row.id, host: hostOf(row.sourceUrl) })));
+      return rows.length;
     });
     return { sources: due.length, queued, stuck };
   },

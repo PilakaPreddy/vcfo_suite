@@ -97,7 +97,7 @@ export async function listWatchSources(ctx: AuthContext): Promise<WatchSourceSta
 }
 
 /** Names and last checks a client may see: never the staff-only sources. */
-export async function listPublicSourceStatus(): Promise<WatchSourceStatus[]> {
+export async function listPublicSourceStatus(_ctx: AuthContext): Promise<WatchSourceStatus[]> {
   const rows = await db
     .select()
     .from(announcementSources)

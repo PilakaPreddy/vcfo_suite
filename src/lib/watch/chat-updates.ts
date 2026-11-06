@@ -26,6 +26,8 @@ const AREA_WORDS: ReadonlyArray<readonly [RegArea, RegExp]> = [
 ];
 
 const ASKS_FOR_CHANGES = /\b(what('?s| has| have)? (changed|new)|what changed|any (new|latest|recent)|(latest|recent|new) (\w+ )?(updates?|changes?|circulars?|notifications?)|updates?|changes?|kya (badla|naya))\b/i;
+/** "Any changes to my task this week" is about the firm's own work, not the law. */
+const ABOUT_OWN_WORK = /\b(my|our|mera|hamara|task|tasks|project|projects|request|requests)\b/i;
 const NAMES_A_PERIOD = /\b(this week|today|this month|last week|past week|recent(ly)?|latest|is hafte)\b/i;
 
 export interface UpdatesQuestion {
@@ -35,7 +37,7 @@ export interface UpdatesQuestion {
 }
 
 export function matchUpdatesQuestion(message: string): UpdatesQuestion | null {
-  if (!ASKS_FOR_CHANGES.test(message) || !NAMES_A_PERIOD.test(message)) return null;
+  if (!ASKS_FOR_CHANGES.test(message) || !NAMES_A_PERIOD.test(message) || ABOUT_OWN_WORK.test(message)) return null;
   const area = AREA_WORDS.find(([, words]) => words.test(message))?.[0];
   if (/\btoday\b/i.test(message)) return { area, days: 1, label: 'today' };
   if (/\b(this|last|past) month\b/i.test(message)) return { area, days: 30, label: 'in the last 30 days' };
@@ -92,7 +94,7 @@ export function buildUpdatesAnswer(input: {
 }
 
 async function coverageFor(ctx: AuthContext, clientView: boolean, now: Date): Promise<SourceCoverage> {
-  return sourceCoverage(clientView ? await listPublicSourceStatus() : await listWatchSources(ctx), now);
+  return sourceCoverage(clientView ? await listPublicSourceStatus(ctx) : await listWatchSources(ctx), now);
 }
 
 export async function answerUpdatesQuestion(
