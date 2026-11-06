@@ -59,7 +59,7 @@ export function askConfig(): AskConfig {
     models: {
       guard: process.env.ASK_VCFO_MODEL_GUARD?.trim() || 'claude-haiku-5-5',
       answer: process.env.ASK_VCFO_MODEL_ANSWER?.trim() || 'claude-haiku-5-5',
-      contextualizer: process.env.ASK_VCFO_MODEL_CONTEXTUALIZER?.trim() || 'claude-haiku-4-5-20251001',
+      contextualizer: process.env.ASK_VCFO_MODEL_CONTEXTUALIZER?.trim() || 'claude-haiku-5-5',
       document: process.env.ASK_VCFO_MODEL_DOCUMENT?.trim() || 'claude-haiku-5-5',
       extract: process.env.ASK_VCFO_MODEL_EXTRACT?.trim() || 'claude-haiku-5-5',
       watch: process.env.ASK_VCFO_MODEL_WATCH?.trim() || 'claude-haiku-5-5',

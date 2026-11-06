@@ -5,6 +5,7 @@
  * suggestion, context, metric_local, topic_local, greeting_local and saved_answer call no model.
  * router_* answers spent only the router call. document_answer and tool_answer spent the router
  * and one answer call. fixed_workflow and agent_run belong to the Do engine, watch to Watch.
+ * ingest is no chat message: it is what indexing a source spends, reported beside the rest.
  */
 export const ASK_PATHS = [
   'suggestion',
@@ -21,6 +22,7 @@ export const ASK_PATHS = [
   'fixed_workflow',
   'agent_run',
   'watch',
+  'ingest',
 ] as const;
 export type AskPath = (typeof ASK_PATHS)[number];
 
