@@ -141,7 +141,7 @@ any path adds to `ask_usage_daily` through `systemRecordAskUsage`, and calls are
   fixtures come from a saved copy only; tests never touch the network. Empty list raises health `empty`.
 - Pipeline in Inngest: `watch-check.ts` (hourly, picks due sources, returns at once when `askFlags().watch` is
   off) emits `watch/update.process`; `watch-process.ts` steps are read (unpdf, then the model only for scans),
-  summarise (`summarise.ts`, `askConfig().models.watch`, one strict tool, no other tools, page text wrapped as
+  summarise (`summarise.ts`, `askConfig().models.watch`, strict output schema, no tools, page text wrapped as
   data), verify (`verify.ts`: every date and number in the summary is in `source_text`, the quote matches
   exactly after whitespace folding), merge (same `content_hash` adds a `reg_update_links` row; unsure stays
   separate).
@@ -160,6 +160,24 @@ any path adds to `ask_usage_daily` through `systemRecordAskUsage`, and calls are
 - Health: staff-visible last success per source; `service-checks`-style alert after 3 failures.
 - Update `docs/context/notes/notifications.md`, which says pages are not scraped and the bell is work alerts only.
 - Done: all pipeline steps tested on fixtures. Live portal checks only if run, and reported as such.
+
+### What Phase 3 built differently, and why
+
+- Adapters sit in one file, `src/lib/watch/adapters/index.ts`, because most share a table shape.
+- Importance comes from code (`importanceFor`), not the model, so a hostile page cannot pick recipients.
+- A `stale` health was added, because a list that answers with years-old rows otherwise reads as healthy.
+- CBIC's `cbic-gst.gov.in` list stopped in December 2022, so the GST lists read are the GST Council's three CGST pages. They lag too (newest rows January to June 2025) and show `Out of date`, so current GST papers need manual intake. `taxinformation.cbic.gov.in` is a manual source: it is script-loaded and its server omits the intermediate TLS certificate, so Node cannot verify it. Whether to read its JSON list is an owner decision.
+- `summarise.ts` uses a strict output schema with no tools, as the master plan says, not the single strict tool first written here. On the same 20 live documents output fell from 746 to 329 tokens per document. It added `outputSchema` to the provider exactly as the answer track did, so the merge keeps one copy.
+- RBI's PDF host (`rbidocs.rbi.org.in`) answers the reader with a bot check. The notification's own text is read from its page where it has one; a PDF-only paper, such as a Master Direction, fails with the message to upload it.
+- A listed title with "draft" or "proposed" is a consultation whatever the model says (`changeTypeFor`), so a proposal never rings every bell.
+- The merge runs straight after the read, before the model, because that is the cheapest place for it.
+- Watch records its token use through `reg-updates.ts` (`systemRecordWatchUsage`, `systemTodayTokens`), because `ask-usage.ts` is on the answer track. The final merge can move them.
+- The chat seam is a short block in `pipeline.ts` before free text. `updatesThisWeekMetric` is ready for the answer track's catalog, which can replace that block.
+- `listRegUpdates` and the review routes keep to `app/api/watch/*`; the page is also at `app/app/intern/watch/`, read-only, since project leads may add an update.
+- Publish and reject commit in one transaction with their board row and chat card, so a failure leaves an update waiting and never half published. A rejected update gives up its content hash, so a later copy of the same document is read and not swallowed by that row.
+- A scan waits, and does not fail, when the day's budget is spent or no model is configured. A draft the model summarised as made goes to `needs_attention`, because code can correct its label but not its wording. A date on a draft is the comment deadline, so it never shows as a new due date.
+- `feed` rows still read "From VCFOSuite" on the board and popup. That is the existing, tested rule, and each row carries its source link and quote.
+- Merge notes for the final track: (1) the answer track's `updates.this_week` in `metrics/catalog/work.ts` counts everything on the board and runs before this track's block in `pipeline.ts`, so replace it with `updatesThisWeekMetric`, which has the honest coverage line. (2) `outputSchema`, `outputConfigFor` and the Haiku exclusion in `provider/anthropic.ts` are the same lines the answer track wrote; keep one copy. (3) Move `systemRecordWatchUsage` and `systemTodayTokens` to `ask-usage.ts`.
 
 ## Phase 4: paste and file (do)
 
@@ -228,6 +246,16 @@ gains `{ type: 'progress'; runId; label }` and `{ type: 'run'; runId; status }`.
 - Leads see their affected clients on the update. `mail-intake.ts` with `watch-mailbox.ts` feeds alert emails into the read
   step, off while `WATCH_ALERT_MAILBOX` is empty. Sender allowlist; mail text is data.
 - Adds second-release sources. Nothing that needs a CAPTCHA or a login.
+
+### What Phase 6 built differently, and why
+
+- `watch-mailbox.ts` was not built. Reading a mailbox needs an IMAP or Graph dependency and AWS wiring that are not allowed tonight, so the mailbox relay posts each raw message to `app/api/watch/mail` instead. Staff also have a paste box. The wiring steps are in `docs/context/notes/notifications.md`.
+- Proposals are written at publish, not at the read, so a person has checked the dates first. The review dialog shows a preview from the saved fields. The firm's filing periods decide the rows, and each proposal is for one filing and one period.
+- Filings stay where they are in the compliance repository: `moveFilingPeriod` and `systemApprovedCalendarChanges` live in `compliance.ts`, and the generator there reads them. That is an addition to the generator's caller, not a change to `src/lib/compliance/`, whose rules still hold when no date has moved. The move also shifts unsent reminders by the same number of days and writes a line in the filing's history.
+- Filing windows and overrides are left alone. An approved move changes the instance due date only.
+- An update is matched to rows in order: the old date it gives, then a period the text names, then the nearest earlier date. A year named with no row on the calendar means no proposal.
+- Source results on 6 November 2026, from a laptop with the real user agent, one request each: DGFT answered with a plain table of 232 rows, newest 30 October 2026, so it has an adapter. Its CAPTCHA sits only on the separate IEC and MEIS widgets. The PDFs are on `content.dgft.gov.in`, whose `robots.txt` answers 403, so the reader treats each as blocked and it fails with the upload message.
+- The rest are manual, with the reason on the health screen: Telangana commercial taxes (`tgct.gov.in`, a post-back list, newest 2021), GST news and GST advisories (script-loaded), ICSI (a thin script shell), DPIIT, Labour and India Code (403 to the reader), eGazette and CBIC tax information (the server omits its TLS intermediate), Finance Ministry (`finmin.gov.in` timed out, and `doe.gov.in` reset its `robots.txt` request).
 
 ## Phase 7: whole app (packs)
 

@@ -7,11 +7,11 @@ import {
   type OpenRequestRow,
   type OpenTaskRow,
 } from '@/db/repositories/ask-metrics';
-import { listAnnouncements } from '@/db/repositories/announcements';
 import { listMeetings } from '@/db/repositories/board-meetings/meetings';
 import { listBatches } from '@/db/repositories/labour-registers';
 import { getPeopleMetrics } from '@/db/repositories/metrics';
 import { formatFilingDate, todayIST } from '@/lib/compliance/filings';
+import { updatesThisWeekMetric } from '@/lib/watch/chat-updates';
 import { ADMIN_AND_MANAGERS, counted, defineMetric, EVERYONE, isAre, openList, STAFF, tally } from '../define';
 import type { MetricDefinition, MetricRow } from '../types';
 import { oneEngagement } from './shared';
@@ -196,19 +196,5 @@ export const WORK_METRICS: MetricDefinition[] = [
     say: (n, { where }) => `There ${isAre(n)} ${tally(n, 'person', 'people').toLowerCase()} on the team ${where}.`,
     link: () => openList('Open people', 'people'),
   }),
-  defineMetric({
-    name: 'updates.this_week',
-    label: 'Updates this week',
-    aliases: ['updates this week', 'this week updates', 'updates', 'new updates', 'latest updates', 'law updates this week', 'announcements this week', 'is hafte ke updates', 'is hafte updates', 'updates is hafte'],
-    roles: EVERYONE,
-    async run(env, _filters) {
-      const since = env.now.getTime() - WEEK_DAYS * DAY_MS;
-      const rows = (await listAnnouncements(env.ctx, 120)).filter((a) => Date.parse(a.publishedAt) >= since);
-      return counted(rows.map((a) => ({ label: a.title.slice(0, 60), value: formatFilingDate(a.publishedAt.slice(0, 10)) })));
-    },
-    say: (n, _words, _value, _filters, env) =>
-      // Only what has been posted here; never a claim that the law itself did not change.
-      `${tally(n, 'update was', 'updates were')} posted here in the last ${WEEK_DAYS} days, as of ${formatFilingDate(todayIST(env.now))}.`,
-    link: () => openList('Open updates', 'updates'),
-  }),
+  updatesThisWeekMetric,
 ];

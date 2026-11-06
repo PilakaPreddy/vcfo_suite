@@ -10,10 +10,12 @@ import { applicabilityFromSnapshot, isReviewed, resolveTopicForViewer, topicToAn
 import { getMetric } from '@/lib/ask/metrics/catalog';
 import { contentWords, matchCompany, matchMetric, routerMetricFilters } from '@/lib/ask/metrics/match';
 import type { MetricDefinition, MetricEnv, MetricFilters } from '@/lib/ask/metrics/types';
+import { answerUpdatesQuestion, matchUpdatesQuestion } from '@/lib/watch/chat-updates';
 
 /**
- * What code can answer alone, cheapest first: a greeting, a strict metric match, a reviewed topic
- * asked word for word. Only a strict match skips the model; anything else falls through to the router.
+ * What code can answer alone, cheapest first: a greeting, a strict metric match, a list of official
+ * updates, a reviewed topic asked word for word. Only a strict match skips the model; anything else
+ * falls through to the router.
  */
 
 const GREETINGS = new Set(
@@ -74,6 +76,18 @@ export async function metricByName(
   return client ? runMetric(metric, { ...filters, client }, env) : null;
 }
 
+/** "What changed in GST this week?" is a list, so it needs no model. A failed read takes the normal route. */
+async function localUpdates(message: string, env: MetricEnv): Promise<AnswerEnvelope | null> {
+  const question = matchUpdatesQuestion(message);
+  if (!question) return null;
+  try {
+    return await answerUpdatesQuestion(env.ctx, env.shell, question, env.now);
+  } catch (error) {
+    console.error('[ask-vcfo] official updates failed', error);
+    return null;
+  }
+}
+
 function localTopic(message: string, shell: AskShell, input: LocalInput): AnswerEnvelope | null {
   const key = plain(message);
   if (DECISION_START.test(key)) return null;
@@ -98,6 +112,8 @@ export async function localMatch(
   if (GREETINGS.has(plain(message))) return { path: 'greeting_local', answer: greetingAnswer(env.shell) };
   const metric = await localMetric(message, input.role, env);
   if (metric) return { path: 'metric_local', answer: metric };
+  const updates = await localUpdates(message, env);
+  if (updates) return { path: 'metric_local', answer: updates };
   const topic = localTopic(message, env.shell, input);
   return topic ? { path: 'topic_local', answer: topic } : null;
 }

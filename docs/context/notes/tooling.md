@@ -51,3 +51,9 @@ Gotchas already paid for once. Append when something costs more than a minute to
 - Auth guards: import from `@/auth/guards` directly (`requireAnyRole('admin', 'manager')`, `requireRole('client')`). The `@/lib/api/require-role` / `require-manager` shims were deleted.
 - Email: import `sendEmail` / `SendEmailResult` from `@/lib/email/send-email`. `sendResendEmail`, `SendResendResult`, `resolveResendDevRedirect` no longer exist.
 - Upload limit constant is `MAX_UPLOAD_BYTES` (`@/lib/upload-limits`).
+
+## Dev servers in a git worktree
+
+`npm run dev` runs `docker compose up` first, which fails in a worktree, because the container names belong to the
+main checkout's project. It also leaves an empty network and volumes named after the worktree folder. Run
+`npm run css:portal && npx next dev -p <port>` instead, against the worktree's own `DATABASE_URL`.

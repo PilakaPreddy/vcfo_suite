@@ -12,10 +12,12 @@ import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-ke
 import { extractTriggersFromChecklist } from '@/lib/compliance/extract-triggers';
 import { generateComplianceInstances } from '@/lib/compliance/generate-instances';
 import type { EntityLegalForm } from '@/lib/compliance/types';
+import { withCalendarChanges, type CalendarChange } from '@/lib/watch/calendar-proposal';
 
 export function computeAllFilings(
   engagements: Engagement[],
   checklistStates: Record<string, Record<string, ChecklistItemStateSlice>>,
+  calendarChanges: readonly CalendarChange[] = [],
 ): ComplianceFiling[] {
   const out: ComplianceFiling[] = [];
 
@@ -25,12 +27,15 @@ export function computeAllFilings(
       incorporationDate: engagement.incorporationDate ?? null,
     });
 
-    const instances = generateComplianceInstances({
-      engagementId: engagement.id,
-      entityLegalForm: (engagement.entityLegalForm ?? 'company') as EntityLegalForm,
-      triggers,
-      ownerId: engagement.internId,
-    });
+    const instances = withCalendarChanges(
+      generateComplianceInstances({
+        engagementId: engagement.id,
+        entityLegalForm: (engagement.entityLegalForm ?? 'company') as EntityLegalForm,
+        triggers,
+        ownerId: engagement.internId,
+      }),
+      calendarChanges,
+    );
 
     for (const instance of instances) {
       out.push({

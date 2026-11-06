@@ -19,7 +19,7 @@ const listOpenRequestsForMetrics = vi.fn();
 const listOpenTasksForMetrics = vi.fn();
 const listDocumentsPendingReview = vi.fn();
 const listOpenInvoicesForMetrics = vi.fn();
-const listAnnouncements = vi.fn();
+const listUpdatesForChat = vi.fn();
 const listMeetings = vi.fn();
 const listBatches = vi.fn();
 const getPeopleMetrics = vi.fn();
@@ -32,7 +32,8 @@ vi.mock('@/db/repositories/ask-metrics', () => ({
   listDocumentsPendingReview: (...a: unknown[]) => listDocumentsPendingReview(...a),
   listOpenInvoicesForMetrics: (...a: unknown[]) => listOpenInvoicesForMetrics(...a),
 }));
-vi.mock('@/db/repositories/announcements', () => ({ listAnnouncements: (...a: unknown[]) => listAnnouncements(...a) }));
+vi.mock('@/db/repositories/reg-updates', () => ({ listUpdatesForChat: (...a: unknown[]) => listUpdatesForChat(...a) }));
+vi.mock('@/db/repositories/reg-sources', () => ({ listPublicSourceStatus: async () => [], listWatchSources: async () => [] }));
 vi.mock('@/db/repositories/board-meetings/meetings', () => ({ listMeetings: (...a: unknown[]) => listMeetings(...a) }));
 vi.mock('@/db/repositories/labour-registers', () => ({ listBatches: (...a: unknown[]) => listBatches(...a) }));
 vi.mock('@/db/repositories/metrics', () => ({
@@ -102,10 +103,10 @@ beforeEach(() => {
     { clientName: 'Bravo', invoiceNo: null, dueDate: '2026-10-02', amountInr: '50000.00', disputed: true },
     { clientName: 'Cedar', invoiceNo: 'C-1', dueDate: '2026-12-01', amountInr: '25000.50', disputed: false },
   ]);
-  listAnnouncements.mockResolvedValue([
-    { title: 'New GST circular', publishedAt: '2026-11-04T00:00:00.000Z' },
-    { title: 'Old circular', publishedAt: '2026-09-01T00:00:00.000Z' },
-  ]);
+  listUpdatesForChat.mockResolvedValue({
+    total: 1,
+    rows: [{ id: 'u', title: 'New GST circular', day: '2026-11-04', reviewed: true, sourceUrl: 'https://cbic.gov.in/a' }],
+  });
   listMeetings.mockResolvedValue([
     { engagementId: 'own', companyName: 'own Pvt Ltd', meetingNo: 'BM 3', meetingDate: '2026-11-20', word: 'In progress' },
     { engagementId: 'own', companyName: 'own Pvt Ltd', meetingNo: 'BM 2', meetingDate: '2026-08-20', word: 'Done' },
@@ -242,7 +243,9 @@ describe('the numbers', () => {
     expect(await line('labour_registers.pending')).toBe('1 labour register batch is still pending across the firm.');
     expect(await line('leads.workload')).toBe('2 project leads across the firm, busiest first.');
     expect(await line('people.team')).toBe('There are 3 people on the team across the firm.');
-    expect(await line('updates.this_week')).toBe('1 update was posted here in the last 7 days, as of 06 Nov 2026.');
+    expect(await line('updates.this_week')).toBe('1 update in the last 7 days, as of 6 Nov 2026. New GST circular');
+    await line('updates.this_week', { area: 'GST' });
+    expect(listUpdatesForChat).toHaveBeenLastCalledWith(firm.ctx, { clientView: false, area: 'gst', since: '2026-10-31' });
   });
 
   it('invoices count in rupees and leave out disputes when overdue', async () => {
