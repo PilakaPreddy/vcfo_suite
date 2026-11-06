@@ -94,6 +94,10 @@ Gotchas already paid for once. Append when something costs more than a minute to
 - Source health: `watch.alert` bell rows go to super admin, admin and manager once, when a source's
   health changes to empty, stale, failing (3 in a row) or blocked. A blocked source is never retried
   until a person presses Check again, and it goes to manual intake.
+- GST: `cbic-gst.gov.in` stopped in 2022 and the GST Council's CGST lists lag by over a year, so all of
+  them show `Out of date`. Current GST notifications come through manual intake until CBIC has a plain list.
+- RBI: `rbidocs.rbi.org.in` answers with a bot check, so a PDF-only paper fails with the upload message.
+  Papers with text on their `NotificationUser.aspx` page are read from there.
 
 ## Pre-incorporation direct flow events (2026-10-13)
 

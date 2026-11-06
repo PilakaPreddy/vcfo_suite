@@ -165,7 +165,11 @@ any path adds to `ask_usage_daily` through `systemRecordAskUsage`, and calls are
 
 - Adapters sit in one file, `src/lib/watch/adapters/index.ts`, because most share a table shape.
 - Importance comes from code (`importanceFor`), not the model, so a hostile page cannot pick recipients.
-- A `stale` health was added: CBIC's page answers but its newest row is from 2022, which reads as healthy otherwise.
+- A `stale` health was added, because a list that answers with years-old rows otherwise reads as healthy.
+- CBIC's `cbic-gst.gov.in` list stopped in December 2022, so the GST lists read are the GST Council's three CGST pages. They lag too (newest rows January to June 2025) and show `Out of date`, so current GST papers need manual intake. `taxinformation.cbic.gov.in` is a manual source: it is script-loaded and its server omits the intermediate TLS certificate, so Node cannot verify it. Whether to read its JSON list is an owner decision.
+- `summarise.ts` uses a strict output schema with no tools, as the master plan says, not the single strict tool first written here. On the same 20 live documents output fell from 746 to 329 tokens per document. It added `outputSchema` to the provider exactly as the answer track did, so the merge keeps one copy.
+- RBI's PDF host (`rbidocs.rbi.org.in`) answers the reader with a bot check. The notification's own text is read from its page where it has one; a PDF-only paper, such as a Master Direction, fails with the message to upload it.
+- A listed title with "draft" or "proposed" is a consultation whatever the model says (`changeTypeFor`), so a proposal never rings every bell.
 - The merge runs straight after the read, before the model, because that is the cheapest place for it.
 - Watch records its token use through `reg-updates.ts` (`systemRecordWatchUsage`, `systemTodayTokens`), because `ask-usage.ts` is on the answer track. The final merge can move them.
 - The chat seam is a short block in `pipeline.ts` before free text. `updatesThisWeekMetric` is ready for the answer track's catalog, which can replace that block.

@@ -24,6 +24,9 @@ const VIEW_OPTIONS = [
   { value: 'all', label: 'All' },
 ];
 
+/** A source someone must act on comes first, so a problem never sits below fifteen working rows. */
+const needsEye = (source: WatchSourceStatus): boolean => source.type !== 'manual' && source.type !== 'email' && source.health !== 'ok' && source.health !== 'unknown';
+
 const dated = (iso: string | null): string | null => (iso ? formatSourceDate(new Date(iso)) : null);
 
 function UpdateRow({ update, onOpen }: { update: RegUpdateListItem; onOpen: () => void }) {
@@ -60,7 +63,7 @@ function SourceRow({ source, canRetest }: { source: WatchSourceStatus; canRetest
           {manual ? 'Added by hand' : HEALTH_LABEL[source.health]}
         </Chip>
       </span>
-      <a href={source.url} target="_blank" rel="noreferrer" className="min-w-0 flex-1 truncate text-[14px] text-ink hover:underline">
+      <a href={source.url} target="_blank" rel="noreferrer" className="order-first min-w-0 basis-full truncate text-[14px] text-ink hover:underline sm:order-none sm:flex-1 sm:basis-0">
         {source.name}
       </a>
       <span className="text-[12.5px] tabular-nums text-ink-muted">{manual ? 'Not read automatically' : lastGood ? `Last good check ${lastGood}` : 'No good check yet'}</span>
@@ -97,7 +100,7 @@ export default function WatchPage() {
   const updates = useWatchUpdates(view);
   const sources = useWatchSources();
   const list = updates.data?.updates ?? [];
-  const sourceList = sources.data?.sources ?? [];
+  const sourceList = [...(sources.data?.sources ?? [])].sort((a, b) => Number(needsEye(b)) - Number(needsEye(a)));
 
   return (
     <div className="grid min-w-0 gap-4">
