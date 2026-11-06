@@ -28,6 +28,8 @@ vi.mock('@/db/repositories/ask-usage', () => ({
   systemTodayTokenTotal: (...a: unknown[]) => systemTodayTokenTotal(...a),
 }));
 vi.mock('@/lib/ask/snapshot', () => ({ loadProjectSnapshot: (...a: unknown[]) => loadProjectSnapshot(...a) }));
+vi.mock('@/db/repositories/ask-saved-answers', () => ({ findSavedAnswer: vi.fn(async () => null), saveAnswer: vi.fn(async () => undefined) }));
+vi.mock('@/lib/ask/knowledge-version', () => ({ currentKnowledgeVersion: vi.fn(async () => 'kv') }));
 vi.mock('@/lib/ask/retrieve', () => ({ retrieveSources: vi.fn(async () => []) }));
 vi.mock('@/lib/ask/tools/staff-data', () => ({
   loadStaffData: vi.fn(async () => ({ engagements: [], filings: [], now: new Date() })),

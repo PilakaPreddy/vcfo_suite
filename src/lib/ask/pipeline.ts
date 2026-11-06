@@ -16,6 +16,7 @@ import {
   getAskConversationWithMessages,
 } from '@/db/repositories/ask-conversations';
 import { appendAskMessage } from '@/db/repositories/ask-messages';
+import { findSavedAnswer, saveAnswer, type SavedAnswerKey } from '@/db/repositories/ask-saved-answers';
 import { systemRecordAskUsage, systemTodayTokenTotal } from '@/db/repositories/ask-usage';
 import { firmDisplayName } from '@/lib/shell/brand';
 import { assertAskRole, AskForbiddenError, shellAllowedForRole } from '@/lib/ask/access';
@@ -24,6 +25,7 @@ import { contextAnswer } from '@/lib/ask/context-answer';
 import { sanitizeLinks, type DestinationScope } from '@/lib/ask/destinations';
 import { gateActiveCatalog } from '@/lib/checklist/checklist-step-gate';
 import { generateAnswer, SNAPSHOT_SOURCE_ID } from '@/lib/ask/generate';
+import { currentKnowledgeVersion } from '@/lib/ask/knowledge-version';
 import { expectsData, runGuard, type GuardResult } from '@/lib/ask/guard';
 import { localMatch, metricByName } from '@/lib/ask/local-match';
 import { metricsForRole } from '@/lib/ask/metrics/match';
@@ -31,6 +33,7 @@ import { maskIdentityNumbers } from '@/lib/ask/mask';
 import type { AskPath } from '@/lib/ask/paths';
 import { addLlmUsage, getAskProvider, NO_LLM_USAGE } from '@/lib/ask/provider';
 import { meterProvider, type MeteredProvider } from '@/lib/ask/provider/meter';
+import { isStandingQuestion, questionKey } from '@/lib/ask/question-key';
 import { checkAskRateLimit } from '@/lib/ask/rate-limit';
 import {
   greetingAnswer,
@@ -41,6 +44,7 @@ import {
   unavailableAnswer,
 } from '@/lib/ask/refusals';
 import { retrieveSources } from '@/lib/ask/retrieve';
+import { maySaveAnswer } from '@/lib/ask/saved-answer';
 import { loadProjectSnapshot } from '@/lib/ask/snapshot';
 import { getSuggestion, resolveSuggestion, staffToolCard } from '@/lib/ask/suggestions';
 import { shortlistTopics } from '@/lib/ask/topic-match';
@@ -58,7 +62,7 @@ import { validateAnswer, withoutVisual } from '@/lib/ask/validate';
 /**
  * Ask VCFO request pipeline (§2, §6). Cheapest path first:
  *   suggestion → deterministic · context → reviewed content · free text →
- *   kill switch and budget → router → (refusal | reviewed topic | retrieval +
+ *   saved answer → kill switch and budget → router → (refusal | reviewed topic | retrieval +
  *   tools + generation). Every answer is persisted with its path and usage; the
  *   model never sees data outside the caller's scope because every tool reads
  *   through scoped repositories.
@@ -237,6 +241,7 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
       await systemRecordAskUsage(extra.path, spend, now).catch((error) => console.error('[ask-vcfo] usage not recorded', error));
     }
     emit({ type: 'answer', conversationId: conversationId!, messageId: row?.id ?? '', answer: final });
+    return { messageId: row?.id ?? null, answer: final };
   };
 
   const flags = askFlags();
@@ -287,7 +292,33 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
     }
   }
 
-  // ---- 4. Free text: budget → router → metric, topic or generation ----
+  const applicability = applicabilityFromSnapshot(snapshot);
+  const audience = personaFor(shell);
+
+  // ---- 4. A standing question asked before, in the same words, on the same knowledge ----
+  let savedKey: SavedAnswerKey | null = null;
+  if (typed && !request.context && history.length === 0 && isStandingQuestion(typed) && !flags.killedPaths.has('saved_answer')) {
+    try {
+      // A client's answer can depend on the company's form, so each kind of company has its own.
+      const kind = applicability ? `${applicability.legalForm}:${applicability.residency}|` : '';
+      savedKey = {
+        questionKey: `${kind}${questionKey(typed)}`,
+        audience,
+        language: request.language ?? 'en',
+        depth: request.depth ?? 'normal',
+        knowledgeVersion: await currentKnowledgeVersion(now),
+      };
+      const saved = await findSavedAnswer(ctx, savedKey);
+      if (saved) {
+        await finish(saved, { path: 'saved_answer' });
+        return;
+      }
+    } catch (error) {
+      console.warn('[ask-vcfo] saved answer lookup failed; answering in full', error);
+    }
+  }
+
+  // ---- 5. Free text: budget → router → metric, topic or generation ----
   const budgets = askBudgets();
   if ((await systemTodayTokenTotal(now)) >= budgets.dailyTokens) {
     await finish(limitAnswer(shell, 'budgetReached'), { path: null });
@@ -309,8 +340,6 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
   metered = provider;
 
   const startedAt = Date.now();
-  const audience = personaFor(shell);
-  const applicability = applicabilityFromSnapshot(snapshot);
   let guard: GuardResult;
   try {
     // A follow-up rarely names its subject, so the previous question helps to pick the topics.
@@ -371,7 +400,11 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
     persona: audience,
     topK: config.retrievalTopK,
     applicability,
+    includeCards: wantsData,
+    engagementId,
   });
+  // Dates in a document or a record are checked against that source. A topic's rule is a duration.
+  const datedSources = sources.filter((s) => s.kind !== 'topic').map((s) => s.text);
 
   let toolCard: Visual | undefined;
   const allTools =
@@ -424,7 +457,7 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
       decision,
       tools,
       validate: (raw, toolResultTexts) => {
-        const vctx = { shell, allowedCitationIds, toolResultTexts };
+        const vctx = { shell, allowedCitationIds, toolResultTexts: [...toolResultTexts, ...datedSources] };
         const full = validateAnswer(enrich(raw), vctx);
         if (full.ok === true) return full;
         // An invalid visual alone renders as text only (§3.3), without a retry.
@@ -448,7 +481,7 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
     // T3: no render_answer call — the text becomes a plain answer, still checked.
     const fallback = validateAnswer(
       { line: result.textOnly.slice(0, 1200), citations: [], actions: [], origin: 'generated', depth },
-      { shell, allowedCitationIds, toolResultTexts: output.toolResultTexts },
+      { shell, allowedCitationIds, toolResultTexts: [...output.toolResultTexts, ...datedSources] },
     );
     answer = fallback.ok === true ? { ...fallback.answer, ...(toolCard ? { visual: toolCard } : {}) } : uncertainAnswer();
   } else {
@@ -463,11 +496,22 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
       shell,
     );
   }
-  await finish(answer, {
-    path: output.toolCalls.length > 0 ? 'tool_answer' : 'document_answer',
+  const path: AskPath = output.toolCalls.length > 0 ? 'tool_answer' : 'document_answer';
+  const done = await finish(answer, {
+    path,
     guard,
     startedAt,
     retrievedChunkIds: sources.filter((s) => s.kind === 'chunk').map((s) => s.id),
     toolCalls: output.toolCalls,
   });
+  if (
+    savedKey &&
+    result.ok === true &&
+    !wantsData &&
+    !decision &&
+    !preview &&
+    maySaveAnswer({ answer: done.answer, path, sources, namedCompany: Boolean(guard.company), companyName: snapshot?.companyName ?? null })
+  ) {
+    await saveAnswer(ctx, savedKey, done.answer, done.messageId).catch((error) => console.warn('[ask-vcfo] answer not saved', error));
+  }
 }

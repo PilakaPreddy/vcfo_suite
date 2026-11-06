@@ -40,6 +40,8 @@ const defaultSnapshotLoad = () => ({
     state: {},
     filings: [],
 });
+vi.mock('@/db/repositories/ask-saved-answers', () => ({ findSavedAnswer: vi.fn(async () => null), saveAnswer: vi.fn(async () => undefined) }));
+vi.mock('@/lib/ask/knowledge-version', () => ({ currentKnowledgeVersion: vi.fn(async () => 'kv') }));
 vi.mock('@/lib/ask/retrieve', () => ({ retrieveSources: vi.fn(async () => []) }));
 vi.mock('@/lib/ask/tools/staff-data', () => ({
   loadStaffData: (...a: unknown[]) => loadStaffData(...a),
