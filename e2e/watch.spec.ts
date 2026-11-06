@@ -85,6 +85,7 @@ test.describe.serial('official updates', () => {
       await page.keyboard.press('Escape');
       await page.locator(role === 'client' ? 'button[aria-label^="Notifications"]' : '[data-notifications-bell]').first().click();
       await expect(page.getByText(title.slice(0, 40)).first()).toBeVisible();
+      if (role === 'client') await expect(page.locator('.nkind', { hasText: 'Announcement' }).first()).toBeVisible();
       await page.screenshot({ path: test.info().outputPath(`bell-${role}.png`) });
     }
   });
@@ -114,5 +115,11 @@ test.describe.serial('official updates', () => {
     await expect(page.getByText('Review queue')).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(0);
+    // A source's name keeps its own line, so it is never squeezed down to a letter or two.
+    const source = page.getByRole('link', { name: 'CGST notifications' });
+    await source.scrollIntoViewIfNeeded();
+    expect((await source.boundingBox())!.height).toBeLessThan(40);
+    expect((await source.evaluate((link) => link.scrollWidth <= link.clientWidth))).toBe(true);
+    await page.screenshot({ path: test.info().outputPath('watch-phone.png'), fullPage: true });
   });
 });

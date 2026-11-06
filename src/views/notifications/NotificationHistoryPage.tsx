@@ -81,6 +81,7 @@ const BAR_TONE: Record<NotificationGroup, string> = {
   Steps: 'bg-brand',
   Documents: 'bg-warning-mid',
   Requests: 'bg-waiting-mid',
+  Updates: 'bg-info-mid',
   Team: 'bg-upcoming-mid',
   Email: 'bg-positive-mid',
 };
@@ -91,6 +92,7 @@ const TAB_LABEL: Record<NotificationTab, string> = {
   Steps: 'Steps',
   Documents: 'Documents',
   Requests: 'Requests',
+  Updates: 'Updates',
   Team: 'Team',
   Email: 'Email',
 };
