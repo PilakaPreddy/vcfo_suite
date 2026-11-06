@@ -13,13 +13,12 @@ test.describe.configure({ timeout: 180_000 });
 const QUESTION = 'How many companies are incorporated this year?';
 
 async function ask(root: Locator, question: string) {
-  // Hydration can clear an early fill, so fill until the send button wakes up.
+  // Hydration can clear an early fill, so fill and send until the send button takes the click.
   const send = root.getByRole('button', { name: 'Send' });
   await expect(async () => {
     await root.locator('#ask-composer').fill(question);
-    await expect(send).toBeEnabled({ timeout: 1_000 });
+    await send.click({ timeout: 1_000 });
   }).toPass({ timeout: 30_000 });
-  await send.click();
   // The newest answer is the one this question produced.
   const answer = root.locator('article').last();
   await expect(answer).toBeVisible({ timeout: 60_000 });

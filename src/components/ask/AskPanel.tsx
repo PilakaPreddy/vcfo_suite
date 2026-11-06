@@ -141,7 +141,7 @@ export function AskPanel() {
   useEffect(() => {
     if (!open || mode === 'sheet') return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') ask?.setOpen(false);
+      if (e.key === 'Escape' && !e.defaultPrevented) ask?.setOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

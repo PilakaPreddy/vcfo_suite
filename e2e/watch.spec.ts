@@ -20,14 +20,6 @@ const ANY_ID = '00000000-0000-0000-0000-000000000001';
 test.describe.serial('official updates', () => {
   let title = '';
 
-  // New items pop up for staff; a person closes those cards, so the test does too.
-  test.beforeEach(async ({ page }) => {
-    for (const kind of ['announcement', 'notification']) {
-      // The next card in the queue can follow at once, so the handler does not wait for this one to go.
-      await page.addLocatorHandler(page.locator(`#${kind}-live-title`), () => page.keyboard.press('Escape'), { noWaitAfter: true });
-    }
-  });
-
   test('a reviewer sees the queue and the health of every source', async ({ page }) => {
     await login(page, 'admin');
     await page.goto('/app/admin/watch');

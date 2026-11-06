@@ -1,5 +1,5 @@
 import { expect, test as base, type Cookie, type Page } from '@playwright/test';
-import { login, type DemoRole } from './helpers/login';
+import { closeLivePopups, login, type DemoRole } from './helpers/login';
 
 /**
  * Smoke suite: every main page renders for every role.
@@ -84,10 +84,7 @@ const test = base.extend<
 
 /** Visit a page and run the generic render checks. */
 async function visit(page: Page, problems: string[], path: string) {
-  // New items pop up over the page; a person closes those cards, so the test does too.
-  for (const kind of ['announcement', 'notification']) {
-    await page.addLocatorHandler(page.locator(`#${kind}-live-title`), () => page.keyboard.press('Escape'), { noWaitAfter: true });
-  }
+  await closeLivePopups(page);
   const response = await page.goto(path, { waitUntil: 'domcontentloaded' });
   expect(response, `no response for ${path}`).not.toBeNull();
   expect(response!.status(), `HTTP status for ${path}`).toBeLessThan(400);

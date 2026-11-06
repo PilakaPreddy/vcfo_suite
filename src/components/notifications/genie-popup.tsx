@@ -189,8 +189,9 @@ export function GenieCard({
       if (event.shiftKey && remaining > 0) skipAll();
       else park();
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    // Capture first: the card on top takes Escape, and what lies under it sees the key was used.
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [park, remaining, skipAll]);
 
   return (

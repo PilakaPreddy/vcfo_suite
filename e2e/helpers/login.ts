@@ -31,6 +31,14 @@ const USERS = {
 
 export type DemoRole = keyof typeof USERS;
 
+/** New items pop up over the page; a person closes those cards, so a test does too. */
+export async function closeLivePopups(page: Page): Promise<void> {
+  for (const kind of ['announcement', 'notification']) {
+    // The next card in the queue can follow at once, so the handler does not wait for this one to go.
+    await page.addLocatorHandler(page.locator(`#${kind}-live-title`), () => page.keyboard.press('Escape'), { noWaitAfter: true });
+  }
+}
+
 /**
  * Sign in through the login page. The page renders the form twice (one copy
  * hidden) and hydration can clear an early fill, so fill the visible inputs
@@ -38,6 +46,7 @@ export type DemoRole = keyof typeof USERS;
  */
 export async function login(page: Page, role: DemoRole): Promise<void> {
   const { email, password } = USERS[role];
+  await closeLivePopups(page);
   await page.goto('/login');
   await page.waitForLoadState('networkidle');
   const emailInput = page.locator('#email:visible');
