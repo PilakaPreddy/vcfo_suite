@@ -44,6 +44,7 @@ const PAGE_LABEL: Record<string, string> = {
   vault: 'Vault',
   'knowledge-bank': 'Knowledge bank',
   announcements: 'Announcements',
+  watch: 'Official updates',
   notifications: 'Notifications',
   mail: 'Email',
   compliances: 'Compliances',
@@ -85,6 +86,7 @@ const PAGE_ICON: Record<string, ShellCrumbIcon> = {
   documents: 'folder',
   'knowledge-bank': 'book',
   announcements: 'megaphone',
+  watch: 'megaphone',
   notifications: 'bell',
   mail: 'mail',
   inbox: 'inbox',
@@ -133,7 +135,7 @@ function roleBase(parts: string[]): string {
 /** Parent group for Docs / Updates / Compliances sidebar disclosures. */
 export function shellCrumbParent(segment: string | undefined): string | null {
   if (segment === 'vault' || segment === 'knowledge-bank') return 'Docs';
-  if (segment === 'announcements' || segment === 'notifications') return 'Updates';
+  if (segment === 'announcements' || segment === 'notifications' || segment === 'watch') return 'Updates';
   if (segment === 'compliances') return 'Compliances';
   if (segment === 'engagements') return 'Clients';
   return null;

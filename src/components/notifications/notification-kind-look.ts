@@ -6,7 +6,9 @@ import {
   Inbox,
   LockOpen,
   Mail,
+  Megaphone,
   Send,
+  TriangleAlert,
   Upload,
   Users,
   type LucideIcon,
@@ -18,9 +20,9 @@ import type { NotificationKind } from '@/lib/checklist/checklist-notifications';
    `TYPE_ICON`): the type tile's icon, the status tone of its chip, and the tab group it sits in.
    The words on the chip stay `NOTIFICATION_KIND_LABEL`. */
 
-export type NotificationGroup = 'Steps' | 'Documents' | 'Requests' | 'Team' | 'Email';
+export type NotificationGroup = 'Steps' | 'Documents' | 'Requests' | 'Updates' | 'Team' | 'Email';
 
-export const NOTIFICATION_GROUPS: NotificationGroup[] = ['Steps', 'Documents', 'Requests', 'Team', 'Email'];
+export const NOTIFICATION_GROUPS: NotificationGroup[] = ['Steps', 'Documents', 'Requests', 'Updates', 'Team', 'Email'];
 
 export const NOTIFICATION_KIND_LOOK: Record<
   NotificationKind,
@@ -39,6 +41,8 @@ export const NOTIFICATION_KIND_LOOK: Record<
   'compliance.task': { Icon: CircleCheck, tone: 'prog', group: 'Steps' },
   'board.meeting': { Icon: Users, tone: 'prog', group: 'Steps' },
   'budget.update': { Icon: CircleCheck, tone: 'prog', group: 'Steps' },
+  'watch.update': { Icon: Megaphone, tone: 'prog', group: 'Updates' },
+  'watch.alert': { Icon: TriangleAlert, tone: 'warn', group: 'Updates' },
   'team.assigned': { Icon: Users, tone: 'prog', group: 'Team' },
   'team.removed': { Icon: Users, tone: 'idle', group: 'Team' },
   'email.sent': { Icon: Mail, tone: 'ok', group: 'Email' },

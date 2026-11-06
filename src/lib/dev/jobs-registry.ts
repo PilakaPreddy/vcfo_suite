@@ -1,6 +1,9 @@
 import 'server-only';
 import { complianceGenerate } from '@/jobs/compliance-generate';
 import { announcementFeeds } from '@/jobs/announcement-feeds';
+import { watchCheck } from '@/jobs/watch-check';
+import { watchProcess } from '@/jobs/watch-process';
+import { watchDailySummary } from '@/jobs/watch-daily-summary';
 import { whatsappSend } from '@/jobs/whatsapp-send';
 import { askIngest } from '@/jobs/ask-ingest';
 import { complianceReminders } from '@/jobs/compliance-reminders';
@@ -13,6 +16,7 @@ import { serviceChecks } from '@/jobs/service-checks';
 import { complianceTaskReminders } from '@/jobs/compliance-task-reminders';
 import { complianceTaskRepeatOnComplete, complianceTaskRepeatSweep } from '@/jobs/compliance-task-repeat';
 import { boardMeetingReminders } from '@/jobs/board-meeting-reminders';
+import { askIndexRefresh, askIndexSweep } from '@/jobs/ask-index-refresh';
 import { receivablesReminders } from '@/jobs/receivables-reminders';
 import { receivablesBankFeed } from '@/jobs/receivables-bank-feed';
 import { receivablesFxRates } from '@/jobs/receivables-fx-rates';
@@ -32,6 +36,8 @@ export function registeredJobs(): JobFunction[] {
     announcementFeeds,
     whatsappSend,
     askIngest,
+    askIndexRefresh,
+    askIndexSweep,
     complianceReminders,
     savedReportsSend,
     weeklyDigest,
@@ -49,5 +55,8 @@ export function registeredJobs(): JobFunction[] {
     receivablesFxRates,
     receivablesDigest,
     budgetAlerts,
+    watchCheck,
+    watchProcess,
+    watchDailySummary,
   ]);
 }

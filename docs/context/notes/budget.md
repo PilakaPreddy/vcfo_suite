@@ -11,5 +11,6 @@
 - Bell rows and emails link to `/budgets/[id]`, which redirects by role, because a message does not
   know its reader's shell.
 - The owner's workbook holds a real client's figures. Keep it out of the repo.
-- Migration `0047_budgets` has the same number as `0047_ask_foundation` on the unmerged chatbot
-  branches. Whichever merges second must renumber.
+- The budget migration is `0048_budgets`. It was first written as `0047_budgets` and renumbered
+  when `main` took `0047_ask_foundation`. A local database that already applied the old name
+  must drop the budget tables, or be rebuilt, before it migrates again.

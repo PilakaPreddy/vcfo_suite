@@ -7,6 +7,7 @@ import {
   isNavGroup,
   isNavSectionBreak,
   sidebarItemsFor,
+  withOfficialUpdates,
   type NavEntry,
 } from './sidebar-items';
 
@@ -108,5 +109,14 @@ describe('practice block (R-51)', () => {
 
   it('super admin inside the developer console sees the console items', () => {
     expect(sidebarItemsFor('super_admin', '/app/super', true)).toBe(developerItems);
+  });
+});
+
+describe('withOfficialUpdates', () => {
+  it('adds the leaf to the Updates group only, on the role base', () => {
+    const items = withOfficialUpdates(sidebarItemsFor('intern', '/app/intern'));
+    const updates = items.find((entry) => isNavGroup(entry) && entry.label === 'Updates');
+    expect(isNavGroup(updates!) && updates.items.map((leaf) => leaf.to)).toContain('/app/intern/watch');
+    expect(sidebarItemsFor('intern', '/app/intern').flatMap((entry) => (isNavGroup(entry) ? entry.items : [])).some((leaf) => leaf.to.endsWith('/watch'))).toBe(false);
   });
 });

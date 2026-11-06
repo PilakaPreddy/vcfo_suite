@@ -8,6 +8,7 @@ import type { AuthContext } from '@/auth/guards';
 import { assertEngagementAccess } from '@/db/repositories/engagements';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { createNotificationsForUsers } from '@/db/repositories/notifications';
+import { queueIndexRefresh } from '@/lib/ask/index-cards/queue';
 
 /**
  * "ASK MY LEAD" (T5) — a client's question Ask VCFO could not settle becomes a
@@ -71,6 +72,7 @@ export async function createAskHandoff(
     .values({ engagementId: access.dbId, assignedTo, assignedBy: staffAssignedBy(ctx.role, ctx.userId, assignedTo), title, description, stepId: null, status: 'open' })
     .returning();
   if (!row) throw new Error('Could not send the question');
+  queueIndexRefresh('task', row.id);
 
   if (assignedTo) {
     try {

@@ -1,7 +1,7 @@
 import 'server-only';
 
 import Anthropic from '@anthropic-ai/sdk';
-import type { LlmProvider, LlmRequest, LlmResult } from './index';
+import { outputConfigFor, toLlmResult, type LlmProvider, type LlmRequest, type LlmResult } from './index';
 import { anthropicApiKey } from '@/lib/secrets/app-secrets';
 import { withSecretRetry, type RuntimeSecret } from '@/lib/secrets/runtime-secret';
 
@@ -14,7 +14,8 @@ function isUnauthorized(err: unknown): boolean {
  * Anthropic API adapter. System blocks carry their own `cache_control`
  * (set by generate.ts on the stable prefix). The server-side refusal
  * fallback is on by default so a classifier false positive is rescued by
- * another model inside the same call rather than failing the answer.
+ * another model inside the same call rather than failing the answer. Haiku
+ * has no such fallback, so a call to it never sends the parameter.
  *
  * KEY (M7): the API key comes from `anthropicApiKey` (Secrets Manager when
  * ANTHROPIC_API_KEY_SECRET_ID is set, else ANTHROPIC_API_KEY). A 401 drops the cached key
@@ -47,8 +48,9 @@ async function send(client: Anthropic, req: LlmRequest, refusalFallback: boolean
       system: req.system,
       messages: req.messages,
       ...(req.tools && req.tools.length > 0 ? { tools: req.tools, tool_choice: { type: 'auto' } } : {}),
-      ...(req.effort ? { output_config: { effort: req.effort } } : {}),
-      ...(refusalFallback
+      ...outputConfigFor(req),
+      ...(req.thinking === 'off' ? { thinking: { type: 'disabled' as const } } : {}),
+      ...(refusalFallback && !req.model.includes('haiku')
         ? {
             betas: ['server-side-fallback-2026-07-01'],
             fallbacks: 'default' as const,
@@ -57,14 +59,5 @@ async function send(client: Anthropic, req: LlmRequest, refusalFallback: boolean
     },
     req.timeoutMs ? { timeout: req.timeoutMs } : undefined,
   );
-  return {
-    model: response.model,
-    content: response.content,
-    stopReason: response.stop_reason,
-    usage: {
-      inputTokens: response.usage.input_tokens,
-      outputTokens: response.usage.output_tokens,
-      cacheReadTokens: response.usage.cache_read_input_tokens ?? 0,
-    },
-  };
+  return toLlmResult(response);
 }

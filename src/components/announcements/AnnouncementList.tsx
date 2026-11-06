@@ -168,7 +168,7 @@ export function AnnouncementRow({
         <p className={cn('line-clamp-2 text-[13px] leading-snug', unread ? 'font-medium text-ink' : 'text-ink-2')}>
           {message}
         </p>
-        <p className="mt-0.5 truncate text-[12px] leading-snug text-ink-muted">{sentBy}</p>
+        <p className="mt-0.5 truncate text-[12px] leading-snug text-ink-muted">{item.unreviewed ? `Not yet reviewed · ${sentBy}` : sentBy}</p>
       </div>
       <time dateTime={item.publishedAt} className="shrink-0 self-center text-[12px] tabular-nums text-ink-muted">
         {formatAnnouncementWhen(item.publishedAt)}
@@ -182,6 +182,7 @@ export function AnnouncementRow({
       <div className="min-w-0 flex-1">
         <p className="flex flex-wrap items-center gap-2">
           <AnnouncementKindChip kind={item.kind} />
+          {item.unreviewed ? <Tag tone="warn">Not yet reviewed</Tag> : null}
           <span className="text-[12.5px] text-ink-muted">
             {item.origin === 'feed' ? 'Official feed' : `From ${sentBy}`}
             {/* A phone has no room for the host tag, so the host joins the by-line. */}

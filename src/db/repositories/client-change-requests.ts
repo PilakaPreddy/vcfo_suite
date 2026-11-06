@@ -10,6 +10,7 @@ import { isAdminOrManager } from '@/lib/auth';
 import { assertEngagementAccess } from '@/db/repositories/engagements';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { getActiveCatalogItems } from '@/data/checklist';
+import { queueIndexRefresh } from '@/lib/ask/index-cards/queue';
 
 /**
  * CLIENT CHANGE REQUESTS.
@@ -95,6 +96,7 @@ export async function createClientChangeRequest(
     .returning();
 
   if (!row) throw new Error('Could not record the request');
+  queueIndexRefresh('task', row.id);
 
   await recordAuditEvent(ctx, {
     engagementId: access.dbId,
@@ -168,6 +170,7 @@ export async function createClientTimelineRequest(
       status: 'open',
     })
     .returning();
+  if (task) queueIndexRefresh('task', task.id);
 
   // A newer request replaces an older pending one.
   await db

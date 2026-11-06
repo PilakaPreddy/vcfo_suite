@@ -1,4 +1,5 @@
 import type { AnswerDepth, AnswerEnvelope, AskShell, ProjectSnapshot } from '@/data/ask/schema';
+import type { ChangesetView } from '@/lib/ask/changeset/view-types';
 
 /** Browser client for /api/ask/*. Every call surfaces a friendly error message. */
 
@@ -67,10 +68,14 @@ export type ChatBody = {
   suggestionId?: string;
   context?: { kind: 'step' | 'field' | 'compliance' | 'document'; ref: string; label: string };
   depth?: AnswerDepth;
+  attachmentIds?: string[];
+  page?: { path: string };
 };
 
 export type ChatEvent =
   | { type: 'status'; label: string }
+  | { type: 'progress'; runId: string; label: string }
+  | { type: 'run'; runId: string; status: string }
   | { type: 'answer'; conversationId: string; messageId: string; answer: AnswerEnvelope }
   | { type: 'error'; code: string; message: string };
 
@@ -205,4 +210,33 @@ export async function sendHandoff(body: {
     body: JSON.stringify(body),
   });
   await json(res, 'Could not send your question. Please try again.');
+}
+
+/** POST /api/ask/attachments: stores one file for the next chat message. */
+export async function uploadAskAttachment(file: File): Promise<{ id: string; fileName: string }> {
+  const form = new FormData();
+  form.set('file', file);
+  return json(await fetch('/api/ask/attachments', { method: 'POST', body: form }), 'Could not attach this file.');
+}
+
+const changesetUrl = (id: string) => `/api/ask/changesets/${encodeURIComponent(id)}`;
+
+export async function fetchChangeset(id: string): Promise<ChangesetView> {
+  return json(await fetch(changesetUrl(id), { cache: 'no-store' }), 'Could not load this card.');
+}
+
+function sendChangeset(url: string, method: 'POST' | 'PATCH', body: unknown): Promise<Response> {
+  return fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+}
+
+export async function editChangesetRow(id: string, rowId: string, value: string): Promise<ChangesetView> {
+  return json(await sendChangeset(changesetUrl(id), 'PATCH', { rowId, value }), 'Could not change this value.');
+}
+
+export async function decideChangeset(id: string, body: { contentHash: string; accept: string[] } | { reject: true }): Promise<ChangesetView> {
+  return json(await sendChangeset(`${changesetUrl(id)}/decide`, 'POST', body), 'Could not save these values.');
+}
+
+export async function undoChangeset(id: string): Promise<ChangesetView> {
+  return json(await sendChangeset(`${changesetUrl(id)}/undo`, 'POST', {}), 'Could not undo this.');
 }

@@ -51,3 +51,15 @@ Gotchas already paid for once. Append when something costs more than a minute to
 - Auth guards: import from `@/auth/guards` directly (`requireAnyRole('admin', 'manager')`, `requireRole('client')`). The `@/lib/api/require-role` / `require-manager` shims were deleted.
 - Email: import `sendEmail` / `SendEmailResult` from `@/lib/email/send-email`. `sendResendEmail`, `SendResendResult`, `resolveResendDevRedirect` no longer exist.
 - Upload limit constant is `MAX_UPLOAD_BYTES` (`@/lib/upload-limits`).
+
+## Dev servers in a git worktree
+
+`npm run dev` runs `docker compose up` first, which fails in a worktree, because the container names belong to the
+main checkout's project. It also leaves an empty network and volumes named after the worktree folder. Run
+`npm run css:portal && npx next dev -p <port>` instead, against the worktree's own `DATABASE_URL`.
+
+## Browser tests on a worktree
+
+- Set `PLAYWRIGHT_BASE_URL` to the worktree's port. The login helper clears the sign-in counts first when `DATABASE_URL` points at localhost, because the limit counts every attempt and a second run in fifteen minutes would otherwise be locked out.
+- Vault and Documents ask for real files, so a page fails with a 500 when MinIO is down and a 404 when the bucket has no demo placeholders. `npm run db:seed-demo` writes the placeholders only if storage is reachable at that moment.
+- The receivables spec needs `npm run receivables:seed-demo` on the same database.

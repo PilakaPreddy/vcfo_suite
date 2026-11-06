@@ -140,3 +140,7 @@ Gotchas already paid for once. Append when something costs more than a minute to
   `refetchInterval` on the fat list. Live popups stay on 4s `?head=1`.
 - Command palette mounts the cmdk result list only while open. Compose-email host is
   dynamically imported from providers.
+
+## Subqueries in a one-table select
+
+Drizzle prints a column inside a `sql` field with no table name when the select reads one table. So `${inner.parentId} = ${outer.id}` becomes `parent_id = id`, the subquery compares its own columns, and it returns nothing with no error. A mocked repository test cannot see this. Write such a subquery with plain table names and an alias, as `listOwnAskConversations` does.

@@ -32,6 +32,10 @@ const NOTIFICATION_KINDS = [
   'board.meeting',
   /** A budget tab, publish, approval or overspend needs someone (budgets). */
   'budget.update',
+  /** A reviewed official update, or the day's summary of them (Watch). */
+  'watch.update',
+  /** An official source stopped working, for the reviewers (Watch). */
+  'watch.alert',
   'team.assigned',
   'team.removed',
   'email.sent',

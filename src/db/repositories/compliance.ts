@@ -1,17 +1,32 @@
 import 'server-only';
 
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { db } from '@/db/client';
 import {
+  complianceInstanceWorkflow,
   complianceInstances,
   complianceObligations,
+  complianceReminders,
   engagementComplianceTriggers,
   engagements,
+  filingEvents,
   profiles,
+  regCalendarProposals,
 } from '@/db/schema';
+import type { AuthContext } from '@/auth/guards';
+import { isAdminOrManager } from '@/lib/auth';
 import { generateComplianceInstances } from '@/lib/compliance/generate-instances';
 import { COMPLIANCE_OBLIGATIONS } from '@/lib/compliance/obligations-seed';
 import { OBLIGATION_ACTIVITY } from '@/data/compliance-activities';
+import {
+  periodKey,
+  periodRowsToMove,
+  withCalendarChanges,
+  type CalendarChange,
+  type PeriodRow,
+} from '@/lib/watch/calendar-proposal';
+import { todayIST } from '@/lib/compliance/filings';
+import { formatSourceDate } from '@/lib/watch/source-status';
 import type {
   ComplianceInstance,
   EngagementComplianceTriggers,
@@ -34,6 +49,9 @@ import type {
  * `systemGenerateComplianceInstances` is the Inngest
  * cron entry point. It is intentionally unscoped (no AuthContext) and is the
  * ONLY system-job writer for this table — document any new callers as system jobs.
+ *
+ * `moveFilingPeriod` is the one way a due date changes: admin, super admin or manager, and only
+ * for a calendar proposal they approved. It writes across the firm, as a statutory date does.
  */
 
 type EngagementComplianceTriggersRow =
@@ -229,6 +247,8 @@ export async function systemGenerateComplianceInstances(
     });
   }
 
+  const changes = await systemApprovedCalendarChanges();
+  const existing = await existingPeriodKeys(changes);
   const digest: SystemGenerateResult['digest'] = [];
   const toUpsert: UpsertComplianceInstanceInput[] = [];
 
@@ -242,13 +262,18 @@ export async function systemGenerateComplianceInstances(
       triggers.incorporationDate = engagement.incorporationDate;
     }
 
-    const instances = generateComplianceInstances({
-      engagementId: engagement.id,
-      entityLegalForm: (engagement.entityLegalForm ?? 'company') as EntityLegalForm,
-      triggers,
-      ownerId: ownerUuid ?? engagement.internId,
-      asOfDate,
-    });
+    const instances = withCalendarChanges(
+      generateComplianceInstances({
+        engagementId: engagement.id,
+        entityLegalForm: (engagement.entityLegalForm ?? 'company') as EntityLegalForm,
+        triggers,
+        ownerId: ownerUuid ?? engagement.internId,
+        asOfDate,
+      }),
+      changes,
+      existing,
+      todayIST(asOfDate),
+    );
 
     let upcoming = 0;
     let overdue = 0;
@@ -274,6 +299,106 @@ export async function systemGenerateComplianceInstances(
     upserted,
     digest,
   };
+}
+
+// ---------- Approved due-date changes ----------
+
+type InstanceReader = Pick<typeof db, 'select'>;
+
+/** A filed row stays where it is, and so does one a person marked not applicable. */
+const closedRow = sql<boolean>`${complianceInstances.filedOn} is not null or ${complianceInstances.status} = 'filed' or coalesce(${complianceInstanceWorkflow.stage}, '') = 'not-applicable'`;
+
+function periodRows(reader: InstanceReader, where: SQL | undefined) {
+  return reader
+    .select({
+      id: complianceInstances.id,
+      engagementId: complianceInstances.engagementId,
+      obligationId: complianceInstances.obligationId,
+      periodLabel: sql<string>`coalesce(${complianceInstances.periodLabel}, '')`,
+      dueDate: complianceInstances.dueDate,
+      ownerId: complianceInstances.ownerId,
+      filed: closedRow,
+    })
+    .from(complianceInstances)
+    .innerJoin(engagements, and(eq(engagements.id, complianceInstances.engagementId), isNull(engagements.deletedAt)))
+    .leftJoin(complianceInstanceWorkflow, eq(complianceInstanceWorkflow.instanceId, complianceInstances.id))
+    .where(where);
+}
+
+/** SYSTEM (no AuthContext): every period of these filings, so a proposal is worked out across the firm. */
+export async function systemFilingPeriodRows(obligationIds: readonly string[]): Promise<PeriodRow[]> {
+  if (obligationIds.length === 0) return [];
+  return periodRows(db, inArray(complianceInstances.obligationId, [...obligationIds]));
+}
+
+/** SYSTEM (no AuthContext): approved moves, oldest first. A rejected proposal never appears here. */
+export async function systemApprovedCalendarChanges(): Promise<CalendarChange[]> {
+  return db
+    .select({
+      obligationId: regCalendarProposals.obligationId,
+      period: regCalendarProposals.period,
+      oldDueDate: regCalendarProposals.oldDueDate,
+      newDueDate: regCalendarProposals.newDueDate,
+    })
+    .from(regCalendarProposals)
+    .where(eq(regCalendarProposals.status, 'approved'))
+    .orderBy(asc(regCalendarProposals.decidedAt));
+}
+
+async function existingPeriodKeys(changes: readonly CalendarChange[]): Promise<Set<string>> {
+  if (changes.length === 0) return new Set();
+  const rows = await db
+    .select({ engagementId: complianceInstances.engagementId, obligationId: complianceInstances.obligationId, periodLabel: complianceInstances.periodLabel })
+    .from(complianceInstances)
+    .where(inArray(complianceInstances.obligationId, [...new Set(changes.map((change) => change.obligationId))]));
+  return new Set(rows.map((row) => periodKey(row.engagementId, row.obligationId, row.periodLabel ?? '')));
+}
+
+export interface MovedFiling {
+  id: string;
+  engagementId: string;
+  ownerId: string | null;
+}
+
+/**
+ * Moves one filing period to its new date, inside the caller's transaction, for the proposal it just
+ * approved. Rows keep their ids, so proofs, workflow and history stay attached. A filing not yet
+ * reminded of keeps the same lead time, and one no longer late stops reading as overdue.
+ */
+export async function moveFilingPeriod(
+  ctx: AuthContext,
+  change: { obligationId: string; period: string; oldDueDate: string | null; newDueDate: string },
+  tx: Pick<typeof db, 'select' | 'insert' | 'update'>,
+): Promise<MovedFiling[]> {
+  if (!isAdminOrManager(ctx.role)) throw new Error('not permitted');
+  const { newDueDate } = change;
+  const rows = await periodRows(tx, and(eq(complianceInstances.obligationId, change.obligationId), eq(complianceInstances.periodLabel, change.period)));
+  const alreadyThere = new Set(rows.filter((row) => row.dueDate === newDueDate).map((row) => row.engagementId));
+  const moving = periodRowsToMove(rows, change.oldDueDate, newDueDate).filter((row) => !alreadyThere.has(row.engagementId));
+  if (moving.length === 0) return [];
+  const ids = moving.map((row) => row.id);
+  await tx
+    .update(complianceReminders)
+    .set({ remindOn: sql`${complianceReminders.remindOn} + (${newDueDate}::date - ${complianceInstances.dueDate})` })
+    .from(complianceInstances)
+    .where(and(eq(complianceReminders.instanceId, complianceInstances.id), inArray(complianceInstances.id, ids), isNull(complianceReminders.sentAt)));
+  await tx
+    .update(complianceInstances)
+    .set({
+      dueDate: newDueDate,
+      status: sql`case when ${complianceInstances.status} = 'overdue' and ${newDueDate}::date >= ${todayIST(new Date())}::date then 'upcoming' else ${complianceInstances.status} end`,
+    })
+    .where(inArray(complianceInstances.id, ids));
+  const newDay = formatSourceDate(new Date(`${newDueDate}T12:00:00+05:30`));
+  await tx.insert(filingEvents).values(
+    moving.map((row) => ({
+      instanceId: row.id,
+      side: 'sbc',
+      label: `Due date moved from ${formatSourceDate(new Date(`${row.dueDate}T12:00:00+05:30`))} to ${newDay}, from an official update`,
+      actorId: ctx.userId,
+    })),
+  );
+  return moving.map((row) => ({ id: row.id, engagementId: row.engagementId, ownerId: row.ownerId }));
 }
 
 /**

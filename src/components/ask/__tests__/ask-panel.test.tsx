@@ -104,6 +104,10 @@ describe('keyboard', () => {
     expect(launcher).toHaveAttribute('aria-expanded', 'true');
     expect(await screen.findByRole('complementary', { name: 'Ask VCFO' })).toBeInTheDocument();
     expect(screen.getByText('What is GST, and do we need it?')).toBeInTheDocument();
+    // A popup over the panel takes Escape first, so the same key press leaves the panel open.
+    window.addEventListener('keydown', (e) => e.preventDefault(), { capture: true, once: true });
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(launcher).toHaveAttribute('aria-expanded', 'true');
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(launcher).toHaveAttribute('aria-expanded', 'false');
   });

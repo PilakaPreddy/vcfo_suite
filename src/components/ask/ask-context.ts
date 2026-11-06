@@ -7,7 +7,9 @@ import type { ChatBody } from '@/hooks/ask/ask-api';
 export type ThreadItem =
   | { id: string; kind: 'user'; text: string }
   | { id: string; kind: 'assistant'; messageId: string | null; answer: AnswerEnvelope }
-  | { id: string; kind: 'error'; text: string };
+  | { id: string; kind: 'error'; text: string }
+  /** A review card opened from a link, such as a manager's notification. */
+  | { id: string; kind: 'changeset'; changesetId: string };
 
 export type AskPreview = { engagementId: string; companyName: string };
 
@@ -33,6 +35,7 @@ export type AskInput = {
   label?: string;
   context?: ChatBody['context'];
   depth?: AnswerDepth;
+  attachmentIds?: string[];
 };
 
 export interface AskContextValue {

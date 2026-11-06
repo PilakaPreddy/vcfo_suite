@@ -60,7 +60,7 @@ export function Modal({
           )}
           {...(description ? {} : { 'aria-describedby': undefined })}
         >
-          <header className="relative flex min-h-head items-start gap-3 border-b border-line-soft px-4 py-3 md:px-5">
+          <header className="relative flex min-h-head shrink-0 items-start gap-3 border-b border-line-soft px-4 py-3 md:px-5">
             <div className="min-w-0 flex-1">
               {eyebrow ? <div className="truncate text-[12.5px] text-ink-muted">{eyebrow}</div> : null}
               <D.Title className="text-[15px] font-medium leading-snug">{title}</D.Title>

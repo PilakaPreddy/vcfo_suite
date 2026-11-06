@@ -4,7 +4,7 @@ import type { LlmProvider } from '@/lib/ask/provider';
 import type { SourceChunk } from './chunk';
 
 /**
- * Contextual retrieval prefix (Haiku, 50–100 tokens): one or two sentences
+ * Contextual retrieval prefix (Haiku 5.5, 50–100 tokens): one or two sentences
  * situating a chunk in its document, indexed alongside it. The document is
  * placed in a cached system block so every chunk after the first reads it
  * from cache. A failed chunk keeps a null prefix and is still indexed.
@@ -28,6 +28,9 @@ export async function contextualizeChunks(input: {
       const result = await provider.complete({
         model: input.model,
         maxTokens: 200,
+        // Thinking counts toward max_tokens, and two sentences of context need none.
+        effort: 'low',
+        thinking: 'off',
         system: [
           {
             type: 'text',

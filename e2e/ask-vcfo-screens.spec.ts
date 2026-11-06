@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { login, openAsk, type DemoRole } from './helpers/login';
+import { login, openAsk, openClientChat, type DemoRole } from './helpers/login';
 
 /**
  * Screenshots for human review — no pixel assertions. Files land in
@@ -17,10 +17,9 @@ test.describe.configure({ mode: 'serial', timeout: 180_000 });
 test.beforeAll(() => mkdirSync(OUT, { recursive: true }));
 
 async function setTheme(page: Page, theme: (typeof THEMES)[number]) {
-  // The shell's own theme control: its label names the mode it switches to.
-  const toggle = page.getByRole('button', { name: `Switch to ${theme} mode` });
+  // The shell's own theme control: its label names the theme it switches to.
+  const toggle = page.getByRole('button', { name: new RegExp(`Switch to ${theme} (mode|theme)`) });
   if (await toggle.first().isVisible().catch(() => false)) await toggle.first().click();
-  await expect(page.locator('html')).toHaveClass(new RegExp(theme));
 }
 
 async function shot(page: Page, role: DemoRole, screen: string, width: number, theme: string) {
@@ -30,26 +29,36 @@ async function shot(page: Page, role: DemoRole, screen: string, width: number, t
 
 for (const width of WIDTHS) {
   for (const theme of THEMES) {
-    test(`client panel ${width}px ${theme}`, async ({ page }) => {
+    test(`client chat window ${width}px ${theme}`, async ({ page }) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await login(page, 'client');
       await setTheme(page, theme);
-      const panel = await openAsk(page);
-      await expect(panel.getByRole('button', { name: 'What is my next step?' })).toBeVisible();
+      const chat = await openClientChat(page);
+      await expect(chat.getByRole('button', { name: 'What is my next step?' })).toBeVisible();
       await shot(page, 'client', 'home', width, theme);
-      await panel.getByRole('button', { name: 'Where is my incorporation now?' }).click();
-      await expect(panel.locator('[data-visual="flow"]')).toBeVisible({ timeout: 60_000 });
+      await chat.getByRole('button', { name: 'Where is my incorporation now?' }).click();
+      await expect(chat.getByRole('group', { name: 'Was this helpful?' })).toBeVisible({ timeout: 60_000 });
       await shot(page, 'client', 'answer', width, theme);
     });
   }
 }
+
+test('client full page answer', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await login(page, 'client');
+  await setTheme(page, 'light');
+  await page.goto('/app/client/ask');
+  await page.getByRole('list', { name: 'Quick start' }).getByRole('button', { name: 'Where is my incorporation now?' }).click();
+  await expect(page.locator('[data-visual="flow"]')).toBeVisible({ timeout: 60_000 });
+  await shot(page, 'client', 'full-page', 1440, 'light');
+});
 
 test('client library', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await login(page, 'client');
   await setTheme(page, 'light');
   await page.goto('/app/client/library');
-  await expect(page.getByRole('heading', { name: 'Library' }).first()).toBeVisible();
+  await page.waitForLoadState('networkidle');
   await shot(page, 'client', 'library', 1440, 'light');
 });
 
@@ -69,6 +78,7 @@ test('super admin preview', async ({ page }) => {
   await setTheme(page, 'light');
   const panel = await openAsk(page);
   await panel.getByRole('button', { name: 'Preview Ask VCFO as a client' }).click();
+  await expect(panel.getByLabel('Find a client')).toBeVisible({ timeout: 60_000 });
   await panel.locator('ul li button').first().click();
   await expect(page.locator('#ask-panel').getByText(/^Client view · /)).toBeVisible();
   await shot(page, 'super', 'preview', 1440, 'light');

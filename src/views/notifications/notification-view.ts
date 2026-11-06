@@ -6,9 +6,9 @@ import type { AppNotification } from '@/lib/checklist/checklist-notifications';
 /* Pure helpers for the Notifications page (prototype NotificationsScreen): the tab filter, the
    counts on each tab, the "This month" card and the link to the person's notification settings. */
 
-/** The page's groups, as the prototype names them. A Chatbot group waits for chatbot notifications to exist. */
-export type NotificationGroup = 'Documents' | 'Steps' | 'Deadlines' | 'Messages';
-export const NOTIFICATION_GROUPS: NotificationGroup[] = ['Documents', 'Steps', 'Deadlines', 'Messages'];
+/** The prototype's groups plus Updates for official updates from Watch. A Chatbot group waits for chatbot notifications to exist. */
+export type NotificationGroup = 'Documents' | 'Steps' | 'Deadlines' | 'Messages' | 'Updates';
+export const NOTIFICATION_GROUPS: NotificationGroup[] = ['Documents', 'Steps', 'Deadlines', 'Messages', 'Updates'];
 
 /** "all", "unread" or one type group. */
 export type NotificationTab = 'all' | 'unread' | NotificationGroup;
@@ -18,6 +18,7 @@ export function groupOf(item: Pick<AppNotification, 'kind'>): NotificationGroup 
   if (k === 'docs.share' || k.startsWith('request.')) return 'Documents';
   if (k === 'schedule.window' || k.startsWith('compliance.') || k === 'board.meeting') return 'Deadlines';
   if (k === 'message.received' || k.startsWith('email.') || k.startsWith('team.')) return 'Messages';
+  if (k.startsWith('watch.')) return 'Updates';
   return 'Steps';
 }
 
@@ -31,6 +32,8 @@ export function chipWordOf(item: Pick<AppNotification, 'kind'>): string {
   if (k === 'message.received') return 'Message';
   if (k.startsWith('email.')) return 'Email';
   if (k.startsWith('team.')) return 'Team';
+  if (k === 'watch.update') return 'Update';
+  if (k === 'watch.alert') return 'Source';
   return 'Step';
 }
 

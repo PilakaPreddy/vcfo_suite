@@ -60,6 +60,7 @@ const BAR_TONE: Record<NotificationGroup, string> = {
   Steps: 'bg-brand',
   Deadlines: 'bg-danger-mid',
   Messages: 'bg-waiting-mid',
+  Updates: 'bg-info-mid',
 };
 
 const TAB_LABEL: Record<NotificationTab, string> = {
@@ -69,6 +70,7 @@ const TAB_LABEL: Record<NotificationTab, string> = {
   Steps: 'Steps',
   Deadlines: 'Deadlines',
   Messages: 'Messages',
+  Updates: 'Updates',
 };
 
 const TABS: NotificationTab[] = ['all', 'unread', ...NOTIFICATION_GROUPS];

@@ -82,6 +82,7 @@ export function AnnouncementDetailDialog({
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <AnnouncementKindChip kind={item.kind} />
                 {announcementIsImportant(item.kind) && parseAnnouncementKind(item.kind) !== 'deadline' ? <Tag tone="bad">Important</Tag> : null}
+                {item.unreviewed ? <Tag tone="warn">Not yet reviewed</Tag> : null}
                 <time dateTime={item.publishedAt} className="text-[12.5px] tabular-nums text-ink-muted">
                   {whenLine(item.publishedAt)}
                 </time>

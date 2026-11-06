@@ -90,6 +90,8 @@ const BAR: Record<Grp, string> = {
 function typeOf(n: AppNotification): Ty {
   const k = String(n.kind);
   const t = `${n.title} ${n.body}`.toLowerCase();
+  // An official update can mention a due date or a schedule, which says nothing about the client's own work.
+  if (k === 'watch.update') return 'ann';
   if (k.startsWith('email.')) return 'mail';
   if (k.startsWith('team.')) return 'team';
   if (k === 'request.created' || k === 'docs.share') return 'doc';

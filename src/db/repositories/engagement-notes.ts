@@ -8,6 +8,7 @@ import { assertEngagementAccess } from '@/db/repositories/engagements';
 import { isFirmWideAdmin } from '@/lib/auth';
 import { appEngagementId } from '@/lib/projects/legacy-engagement-ids';
 import type { EngagementNote } from '@/lib/notes/types';
+import { queueIndexRefresh } from '@/lib/ask/index-cards/queue';
 
 export type { EngagementNote };
 
@@ -114,6 +115,7 @@ export async function createEngagementNote(
     .insert(engagementNotes)
     .values({ engagementId: dbId, authorId: ctx.userId, body, pinned: Boolean(input.pinned) })
     .returning();
+  queueIndexRefresh('note', row!.id);
   void recordAuditEvent(ctx, {
     engagementId: dbId,
     action: 'notes.created',
@@ -157,6 +159,7 @@ export async function updateEngagementNote(
     .set(set)
     .where(and(eq(engagementNotes.id, cur.id), eq(engagementNotes.engagementId, dbId)));
   const edited = set.body !== undefined && set.body !== cur.body;
+  if (edited) queueIndexRefresh('note', cur.id);
   const pinChanged = set.pinned !== undefined && set.pinned !== cur.pinned;
   if (edited || pinChanged) {
     void recordAuditEvent(ctx, {
@@ -178,6 +181,7 @@ export async function deleteEngagementNote(ctx: AuthContext, engagementId: strin
     .update(engagementNotes)
     .set({ deletedAt: new Date() })
     .where(and(eq(engagementNotes.id, cur.id), eq(engagementNotes.engagementId, dbId)));
+  queueIndexRefresh('note', cur.id);
   void recordAuditEvent(ctx, {
     engagementId: dbId,
     action: 'notes.deleted',
