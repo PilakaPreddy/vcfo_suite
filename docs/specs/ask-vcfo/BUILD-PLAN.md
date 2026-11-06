@@ -247,6 +247,16 @@ gains `{ type: 'progress'; runId; label }` and `{ type: 'run'; runId; status }`.
   step, off while `WATCH_ALERT_MAILBOX` is empty. Sender allowlist; mail text is data.
 - Adds second-release sources. Nothing that needs a CAPTCHA or a login.
 
+### What Phase 6 built differently, and why
+
+- `watch-mailbox.ts` was not built. Reading a mailbox needs an IMAP or Graph dependency and AWS wiring that are not allowed tonight, so the mailbox relay posts each raw message to `app/api/watch/mail` instead. Staff also have a paste box. The wiring steps are in `docs/context/notes/notifications.md`.
+- Proposals are written at publish, not at the read, so a person has checked the dates first. The review dialog shows a preview from the saved fields. The firm's filing periods decide the rows, and each proposal is for one filing and one period.
+- Filings stay where they are in the compliance repository: `moveFilingPeriod` and `systemApprovedCalendarChanges` live in `compliance.ts`, and the generator there reads them. That is an addition to the generator's caller, not a change to `src/lib/compliance/`, whose rules still hold when no date has moved. The move also shifts unsent reminders by the same number of days and writes a line in the filing's history.
+- Filing windows and overrides are left alone. An approved move changes the instance due date only.
+- An update is matched to rows in order: the old date it gives, then a period the text names, then the nearest earlier date. A year named with no row on the calendar means no proposal.
+- Source results on 6 November 2026, from a laptop with the real user agent, one request each: DGFT answered with a plain table of 232 rows, newest 30 October 2026, so it has an adapter. Its CAPTCHA sits only on the separate IEC and MEIS widgets. The PDFs are on `content.dgft.gov.in`, whose `robots.txt` answers 403, so the reader treats each as blocked and it fails with the upload message.
+- The rest are manual, with the reason on the health screen: Telangana commercial taxes (`tgct.gov.in`, a post-back list, newest 2021), GST news and GST advisories (script-loaded), ICSI (a thin script shell), DPIIT, Labour and India Code (403 to the reader), eGazette and CBIC tax information (the server omits its TLS intermediate), Finance Ministry (`finmin.gov.in` timed out, and `doe.gov.in` reset its `robots.txt` request).
+
 ## Phase 7: whole app (packs)
 
 Three sub-tracks, one folder each, same test bar as phase 5: `compliance` and `registrations`; `board-meetings`, `receivables`

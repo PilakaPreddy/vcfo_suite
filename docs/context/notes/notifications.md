@@ -98,6 +98,35 @@ Gotchas already paid for once. Append when something costs more than a minute to
   them show `Out of date`. Current GST notifications come through manual intake until CBIC has a plain list.
 - RBI: `rbidocs.rbi.org.in` answers with a bot check, so a PDF-only paper fails with the upload message.
   Papers with text on their `NotificationUser.aspx` page are read from there.
+- Due-date changes: publishing writes `reg_calendar_proposals` in its own transaction, and only a reviewer's
+  approval moves rows (`moveFilingPeriod`). The due date is part of the instance's unique key, so a moved row
+  would come back beside itself on the next generation. `systemGenerateComplianceInstances` runs approved
+  changes through `withCalendarChanges` for that reason, and filed rows stay on their date. The browser-computed
+  filings and the statutory calendar read the same changes (`/api/watch/proposals?applied=1`). An update naming
+  no filing proposes nothing: the review dialog says so, and the reviewer names the form and period in the summary.
+- Affected clients come from `affected.ts`: a named filing means clients with it open, else the area and
+  registrations. A person sees names only in their scope, with the firm-wide count beside them.
+
+### Wiring the official alert mailbox
+
+Nothing is wired yet and no AWS change has been made. `POST /api/watch/mail` answers 404 until `WATCH_ENABLED`,
+`WATCH_ALERT_MAILBOX` and `WATCH_ALERT_TOKEN` are all set. The relay needs a place that keeps the raw message:
+
+1. Point the portals' alert subscriptions at one firm mailbox, and put its address in `WATCH_ALERT_MAILBOX`.
+2. SES inbound is the plain route: a receipt rule stores the raw message in S3, and a small function posts those
+   bytes to the endpoint. A Microsoft 365 shared mailbox also works if the relay fetches the MIME content, as
+   its normal mail body drops the headers.
+3. Post the raw RFC 5322 text, at most 2 MB, with `Authorization: Bearer <WATCH_ALERT_TOKEN>`. Keep header order,
+   as the top `Authentication-Results` line must be the one your own receiving server wrote. Send one real alert
+   and one forged From line through before relying on it, because this check has only run against local requests.
+4. Answers: 201 queued, 200 with `duplicate`, 422 refused. A refusal is logged in `reg_noise_log` as
+   `sender_not_allowed`, `not_authenticated` or `no_text`, and retrying it does not help. To add a sender domain,
+   edit `OFFICIAL_MAIL_DOMAINS` in `src/lib/watch/mail-parse.ts`.
+
+A mail with text of 500 characters or more, or with no link, is read as it stands. A shorter one with an official
+link reads the link, so a portal that refuses the reader fails with the message to upload the PDF. Staff can
+paste a mail in Add update. A paste keeps the sender allowlist but not the server check, as headers rarely survive
+a copy, and a person is vouching for it.
 
 ## Pre-incorporation direct flow events (2026-10-13)
 
