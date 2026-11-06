@@ -18,6 +18,7 @@ vi.mock('@/db/repositories/ask-messages', () => ({
   appendAskMessage: (...a: unknown[]) => appendAskMessage(...a),
   countModelAnswersSince: vi.fn(async () => 0),
 }));
+vi.mock('@/db/repositories/ask-runs', () => ({ findWaitingAskRun: vi.fn(async () => null) }));
 vi.mock('@/db/repositories/ask-usage', () => ({
   systemRecordAskUsage: vi.fn(async () => undefined),
   systemTodayTokenTotal: vi.fn(async () => 0),

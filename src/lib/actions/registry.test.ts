@@ -28,7 +28,8 @@ describe('action registry', () => {
   it('loads every area file and finds nothing that was not registered', async () => {
     expect(await getAction('no.such')).toBeNull();
     expect(Array.isArray(await actionsForRole('admin'))).toBe(true);
-  });
+    // Every area file is imported here for the first time, which is slow in a loaded test run.
+  }, 30_000);
 });
 
 describe('tier rules', () => {

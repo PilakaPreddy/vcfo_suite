@@ -24,6 +24,7 @@ vi.mock('@/db/repositories/ask-messages', () => ({
 const getAskConversationWithMessages = vi.fn();
 const systemRecordAskUsage = vi.fn();
 const systemTodayTokenTotal = vi.fn();
+vi.mock('@/db/repositories/ask-runs', () => ({ findWaitingAskRun: vi.fn(async () => null) }));
 vi.mock('@/db/repositories/ask-usage', () => ({
   systemRecordAskUsage: (...a: unknown[]) => systemRecordAskUsage(...a),
   systemTodayTokenTotal: (...a: unknown[]) => systemTodayTokenTotal(...a),

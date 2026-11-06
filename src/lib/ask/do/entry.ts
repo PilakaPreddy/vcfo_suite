@@ -67,7 +67,7 @@ const line = (text: string, extra: Partial<AnswerEnvelope> = {}): AnswerEnvelope
   line: text.slice(0, 1200),
   citations: [],
   actions: [],
-  origin: 'deterministic',
+  origin: 'work',
   depth: 'normal',
   ...extra,
 });

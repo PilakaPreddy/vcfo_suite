@@ -18,7 +18,7 @@ const TOPIC_CATEGORIES = [
 ] as const;
 export const ASK_SHELLS = ['client', 'admin', 'super'] as const;
 export const ANSWER_DEPTHS = ['normal', 'simple', 'detail'] as const;
-const ANSWER_ORIGINS = ['reviewed', 'generated', 'deterministic', 'refusal'] as const;
+const ANSWER_ORIGINS = ['reviewed', 'generated', 'deterministic', 'refusal', 'work'] as const;
 export const ANSWER_ACTIONS = [
   'save',
   'simpler',

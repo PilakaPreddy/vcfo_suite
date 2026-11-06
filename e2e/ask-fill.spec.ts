@@ -69,6 +69,7 @@ test('a dropped document becomes a card, saves on accept and comes back off on u
   const card = panel.locator('section[aria-label^="Details for"]');
   await expect(card).toBeVisible({ timeout: 90_000 });
   await expect(panel.getByText(/Nothing is saved until you accept/)).toBeVisible();
+  await expect(panel).not.toContainText('Reviewed by');
   const rows = card.getByTestId('changeset-row');
   await expect(rows.first()).toBeVisible();
 

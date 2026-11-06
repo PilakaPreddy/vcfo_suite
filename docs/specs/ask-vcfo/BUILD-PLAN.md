@@ -378,3 +378,25 @@ Phase 2, 6 November:
   The dark copy of the map PDF is the same text and is left out.
 - `npm run eval:knowledge` is the database eval (40 cases against pgvector with a fake embedding provider), and
   `npm run eval:knowledge:live` runs the paraphrase and Hinglish cases through the real pipeline.
+
+## Where the do track left this plan
+
+Phase 4, 6 November:
+
+- The field catalog is written by `npm run ask:catalog` into a checked-in `catalog.generated.json`, and a test fails when
+  it is stale. The plan said module load. A generated file costs nothing at start-up and shows every change in review.
+  `src/lib/assist-profile/` is not a source yet, because phase 4 covers incorporation steps only.
+- `AskRunProgress` and a runs route were not built. `progress` events reuse the chat's existing status line, and `run`
+  events are sent and ignored until phase 5 has a run worth showing. Changeset `messageId` stays empty, because the card
+  is found through its conversation.
+- `AnswerEnvelope.origin` gains `work`. A line about work in progress has no content to vouch for, and "Reviewed by SBC"
+  over values read from an unchecked document would be false. `TrustBadge` shows nothing for it.
+- `message` is 20,000 for staff and stays 2,000 for a client, through a refine on the schema. The stored copy of a long
+  paste is capped at 1,000 characters and masked. A paste goes to S3 only when the run has to wait for a reply.
+- A locked step holds its row, which is stricter than the lead's screen, as the worked example asks. A finished or
+  waiting step holds too. An equal saved value drops the row rather than showing a change that is not one.
+- Rows run as the person who clicks, so a manager's approval is audited as the manager. A manager or firm admin can open
+  a card only when it holds a row for them; other cards answer "not available" even on their own engagement.
+- A manager accepting a real approval step is covered by unit tests with `needsManager` rows. The browser test only
+  opens such a card from its link.
+
