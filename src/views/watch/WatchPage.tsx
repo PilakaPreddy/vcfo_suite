@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/button';
 import { EmptyState, SkeletonRows } from '@/components/ui/empty-state';
 import { FilterSelect } from '@/components/ui/native-select';
 import { Chip, Tag } from '@/components/ui/spectrum-chip';
+import { WatchCalendarCard } from '@/components/watch/WatchCalendarCard';
 import { WatchIntakeDialog } from '@/components/watch/WatchIntakeDialog';
 import { WatchReviewDialog } from '@/components/watch/WatchReviewDialog';
 import { HEALTH_TONE, STATUS_LOOK } from '@/components/watch/watch-labels';
-import { useWatchRetest, useWatchSources, useWatchUpdates } from '@/hooks/use-watch';
+import { useCalendarProposals, useWatchRetest, useWatchSources, useWatchUpdates } from '@/hooks/use-watch';
 import { isAdminOrManager } from '@/lib/auth';
 import { toastError, toastSuccess } from '@/lib/toast-errors';
 import { formatSourceDate, HEALTH_LABEL } from '@/lib/watch/source-status';
@@ -96,8 +97,9 @@ function SourceRow({ source, canRetest }: { source: WatchSourceStatus; canRetest
 }
 
 /**
- * Official updates for staff: the review queue beside the health of every source, so a quiet source
- * never reads as a quiet law. Project leads read and may add an update; reviewers do the rest.
+ * Official updates for staff: due-date changes to decide, the review queue, and the health of every
+ * source, so a quiet source never reads as a quiet law. Project leads read and may add an update;
+ * reviewers do the rest.
  */
 export default function WatchPage() {
   const { user } = useApp();
@@ -107,11 +109,24 @@ export default function WatchPage() {
   const [adding, setAdding] = useState(false);
   const updates = useWatchUpdates(view);
   const sources = useWatchSources();
+  const proposals = useCalendarProposals().data?.proposals ?? [];
   const list = updates.data?.updates ?? [];
   const sourceList = [...(sources.data?.sources ?? [])].sort((a, b) => Number(needsEye(b)) - Number(needsEye(a)));
 
   return (
     <div className="grid min-w-0 gap-4">
+      {proposals.length > 0 ? (
+        <DashSection title="Calendar changes" meta={proposals.filter((proposal) => proposal.status === 'proposed').length} flush>
+          <ul>
+            {proposals.map((proposal) => (
+              <li key={proposal.id} className="border-t border-line-soft first:border-t-0">
+                <WatchCalendarCard proposal={proposal} canDecide={canReview} />
+              </li>
+            ))}
+          </ul>
+        </DashSection>
+      ) : null}
+
       <DashSection
         title="Review queue"
         meta={updates.isLoading ? undefined : list.length}

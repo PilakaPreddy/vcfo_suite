@@ -14,6 +14,7 @@ import { useWatchActions, useWatchUpdate } from '@/hooks/use-watch';
 import { toastError, toastSuccess } from '@/lib/toast-errors';
 import { REG_AREAS, REG_CHANGE_TYPES, REG_IMPORTANCE, type RegReviewEdit, type RegUpdateDetail } from '@/lib/watch/types';
 import { AREA_LABEL, IMPORTANCE_LABEL, STATUS_LOOK } from './watch-labels';
+import { WatchImpactPanel } from './WatchImpact';
 
 const humanise = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1).replace(/_/g, ' ');
 const optionsOf = (values: readonly string[]) => values.map((value) => ({ value, label: humanise(value) }));
@@ -198,6 +199,7 @@ export function WatchReviewDialog({ id, canReview, onClose }: { id: string | nul
                 </div>
               </fieldset>
             ) : null}
+            {hasSummary ? <WatchImpactPanel update={update} canDecide={canReview} /> : null}
             {rejecting ? (
               <Field label="Why it is rejected" id="watch-reason">
                 <Input id="watch-reason" maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />

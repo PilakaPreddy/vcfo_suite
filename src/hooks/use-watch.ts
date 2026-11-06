@@ -1,7 +1,8 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { RegReviewEdit, RegUpdateDetail, RegUpdateListItem, RegVerifyProblem, WatchSourceStatus } from '@/lib/watch/types';
+import type { CalendarChange } from '@/lib/watch/calendar-proposal';
+import type { CalendarProposalView, RegReviewEdit, RegUpdateDetail, RegUpdateListItem, RegVerifyProblem, WatchSourceStatus } from '@/lib/watch/types';
 
 async function readJson<T>(res: Response): Promise<T> {
   const data = (await res.json().catch(() => ({}))) as T & { error?: string };
@@ -52,7 +53,7 @@ export function useWatchSources() {
 function useWatchRefresh() {
   const client = useQueryClient();
   return () =>
-    Promise.all(['watch-updates', 'watch-update', 'watch-sources', 'announcements'].map((key) => client.invalidateQueries({ queryKey: [key] })));
+    Promise.all(['watch-updates', 'watch-update', 'watch-sources', 'watch-proposals', 'watch-calendar-changes', 'announcements'].map((key) => client.invalidateQueries({ queryKey: [key] })));
 }
 
 export function useWatchActions(id: string | null) {
@@ -83,4 +84,34 @@ export function useWatchIntake() {
     mutationFn: async (form: FormData) => readJson<{ id: string }>(await fetch('/api/watch/intake', { method: 'POST', body: form })),
     onSuccess: refresh,
   });
+}
+
+export function useCalendarProposals() {
+  return useQuery({
+    queryKey: ['watch-proposals'],
+    queryFn: async () => readJson<{ proposals: CalendarProposalView[] }>(await fetch('/api/watch/proposals')),
+  });
+}
+
+export function useCalendarDecision() {
+  const refresh = useWatchRefresh();
+  return useMutation({
+    mutationFn: ({ id, decision }: { id: string; decision: 'approved' | 'rejected' }) => send<{ moved: number }>(`/api/watch/proposals/${id}`, 'POST', { decision }),
+    onSuccess: refresh,
+  });
+}
+
+const NO_CHANGES: CalendarChange[] = [];
+
+/** Approved moves, for screens that work dates out from the rules in the browser. Staff screens only. */
+export function useCalendarChanges(): CalendarChange[] {
+  const enabled = useWatchEnabled(true);
+  const query = useQuery({
+    queryKey: ['watch-calendar-changes'],
+    enabled,
+    staleTime: 300_000,
+    retry: false,
+    queryFn: async () => readJson<{ changes: CalendarChange[] }>(await fetch('/api/watch/proposals?applied=1')),
+  });
+  return query.data?.changes ?? NO_CHANGES;
 }

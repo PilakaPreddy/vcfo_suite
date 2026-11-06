@@ -26,7 +26,9 @@ import {
   PreIncorporationPortfolioNote,
   type PreIncorporationScope,
 } from '@/components/compliances/PreIncorporationNotice';
+import { useCalendarChanges } from '@/hooks/use-watch';
 import { isIncorporated } from '@/lib/compliance/incorporation-state';
+import { withMovedDeadlines } from '@/lib/watch/calendar-proposal';
 import { PageBackCluster } from '@/components/shell/PageBackButton';
 import {
   buildStatutoryMonthGrid,
@@ -355,9 +357,11 @@ export function StatutoryCalendar({
     company && !isIncorporated(company, getStateForEngagement(company)),
   );
 
+  const calendarChanges = useCalendarChanges();
+
   /** Company + scope, but before category mutes — legend counts must not vanish. */
   const scoped = useMemo(() => {
-    return STATUTORY_DEADLINES.filter((d) => {
+    return withMovedDeadlines(STATUTORY_DEADLINES, calendarChanges).filter((d) => {
       if (company && !deadlineAppliesTo(d, company)) return false;
       if (!firmWide && !company && !engagements.some((e) => deadlineAppliesTo(d, e))) {
         return false;
@@ -365,7 +369,7 @@ export function StatutoryCalendar({
       if (scope === 'overdue' && statutoryStatus(d.date, todayIso) !== 'overdue') return false;
       return true;
     });
-  }, [company, scope, todayIso, firmWide, engagements]);
+  }, [company, scope, todayIso, firmWide, engagements, calendarChanges]);
 
   const visible = useMemo(() => scoped.filter((d) => !mutedActs.has(d.act)), [scoped, mutedActs]);
 
