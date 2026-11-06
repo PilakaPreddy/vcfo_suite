@@ -51,7 +51,7 @@ export const CANONICAL_RULES: readonly CanonicalRule[] = [
   person('qualification', 'Director qualification', ['qualification', 'highest qualification', 'education', 'highest educational qualification'], ['highestEducationalQualification'], { format: 'choice' }),
   person('occupation', 'Director occupation', ['occupation', 'occupation type', 'profession'], ['occupationType'], { format: 'choice' }),
   person('mobile', 'Director mobile number', ['mobile', 'mobile number', 'mobile no', 'phone', 'phone number', 'contact number'], ['mobileNumber'], { format: 'mobile', inputs: ['mobile'] }),
-  person('email', 'Director personal e-mail', ['email', 'e mail', 'email id', 'personal email', 'personal e mail'], ['personalMailId'], { format: 'email', inputs: ['email'] }),
+  person('email', 'Director personal e-mail', ['email', 'e mail', 'email id', 'email address', 'e mail address', 'personal email', 'personal e mail'], ['personalMailId'], { format: 'email', inputs: ['email'] }),
   person('email_official', 'Director official e-mail', ['official email', 'official e mail', 'work email'], ['officialMailId'], { format: 'email' }),
   person('aadhaar', 'Director Aadhaar number', ['aadhaar', 'aadhar', 'aadhaar number', 'aadhaar no', 'uid', 'uidai number'], ['aadhaarNumber'], { format: 'aadhaar', sensitivity: 'identity' }),
   person('pan', 'Director PAN', ['pan', 'pan number', 'pan no', 'permanent account number', 'income tax pan'], ['panNumber'], { format: 'pan', sensitivity: 'identity' }),
@@ -66,7 +66,8 @@ export const CANONICAL_RULES: readonly CanonicalRule[] = [
   person('driving_licence_copy', 'Copy of driving licence', [], ['drivingLicenceCopyUrl'], { format: 'file' }),
   person('utility_bill_copy', 'Copy of utility bill', [], ['utilityBillCopyUrl'], { format: 'file' }),
 
-  { key: 'company.name', label: 'Company name', subject: 'company', synonyms: ['company name', 'name of the company', 'incorporated company name', 'approved company name', 'approved name'], fields: ['pre-12/incorporatedCompanyName', 'pre-5/approvedCompanyName'] },
+  { key: 'company.name', label: 'Company name', subject: 'company', synonyms: ['company name', 'name of the company', 'incorporated company name'], fields: ['pre-12/incorporatedCompanyName'] },
+  { key: 'company.approved_name', label: 'Approved company name', subject: 'company', synonyms: ['approved company name', 'approved name'], fields: ['pre-5/approvedCompanyName'] },
   { key: 'company.cin', label: 'Company CIN', format: 'cin', subject: 'company', synonyms: ['cin', 'corporate identification number', 'corporate identity number', 'company cin'], fields: ['pre-12/cin'], inputs: ['cin'] },
   { key: 'company.pan', label: 'Company PAN', format: 'pan', sensitivity: 'identity', subject: 'company', synonyms: ['company pan', 'pan of the company', 'permanent account number', 'pan'], fields: ['pre-12/pan'], inputs: ['pan'] },
   { key: 'company.tan', label: 'Company TAN', format: 'tan', subject: 'company', synonyms: ['tan', 'tan number', 'tax deduction account number', 'tax deduction and collection account number'], fields: ['pre-12/tan'], inputs: ['tan'] },

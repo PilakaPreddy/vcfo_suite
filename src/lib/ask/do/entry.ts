@@ -14,10 +14,10 @@ import { getItem } from '@/data/checklist';
 import { changesetHash } from '@/lib/ask/changeset/hash';
 import type { JsonValue } from '@/lib/ask/changeset/types';
 import { askBudgets, askConfig, askFlags } from '@/lib/ask/config';
-import { candidatesFor, catalogSynonyms } from '@/lib/ask/data-router/candidates';
-import { chooseFields, type ChoiceInput } from '@/lib/ask/data-router/choose';
+import { catalogSynonyms } from '@/lib/ask/data-router/candidates';
 import { companiesNamed, documentMatches, lockEngagement } from '@/lib/ask/data-router/lock';
-import { planRows, type AttachedFile, type PlacedValue } from '@/lib/ask/data-router/plan';
+import { placeValues, type SourceRead } from '@/lib/ask/data-router/place';
+import { planRows } from '@/lib/ask/data-router/plan';
 import { instructionOf, looksLikeData, readFile, readPaste, ReadRefused } from '@/lib/ask/data-router/read';
 import type { ReadResult } from '@/lib/ask/data-router/types';
 import { normalizeLabel } from '@/lib/ask/field-catalog/rules';
@@ -59,7 +59,6 @@ interface PendingState {
   mismatch: { engagementId: string; company: string } | null;
 }
 
-const MIN_CONFIDENCE = 0.6;
 const CARD_DAYS = 7;
 const MIN_SYNONYM_LENGTH = 4;
 export const STORED_USER_TEXT_MAX = 1_000;
@@ -208,7 +207,7 @@ export async function handleDoWork(
   const rows: AskAttachmentRow[] = await getOwnAskAttachments(ctx, sourceIds);
   if (sourceIds.length > 0 && rows.length !== sourceIds.length) return finish(line('One of those files is not available. Please attach it again.'), 'failed');
   progress(rows.length > 0 || paste ? 'Reading…' : 'Checking…');
-  const reads: Array<{ result: ReadResult; attachment: AskAttachmentRow | null }> = [];
+  const reads: SourceRead[] = [];
   const refusals: string[] = [];
   const readOne = async (attachment: AskAttachmentRow | null, read: () => Promise<ReadResult>) => {
     try {
@@ -268,46 +267,11 @@ export async function handleDoWork(
 
   // Find the place for each value: code first, then one small-model call for the rest.
   progress('Finding the right fields…');
-  const subjectHint = /subscriber|shareholder/i.test(instruction) ? 'subscriber' : /director|promoter/i.test(instruction) ? 'director' : null;
-  const asked = /\b(?:director|subscriber|shareholder|promoter)\s*(?:no\.?\s*)?\d+\b/i.exec(instruction)?.[0] ?? subjectHint;
-  const questions: string[] = [...new Set(refusals)];
-  const placed: PlacedValue[] = [];
-  const toChoose: Array<ChoiceInput & { source: PlacedValue['source'] }> = [];
-  for (const { result, attachment } of reads) {
-    const source: PlacedValue['source'] = attachment && attachment.kind === 'file' ? { kind: 'attachment', attachmentId: attachment.id, fileName: attachment.fileName } : { kind: 'paste' };
-    for (const raw of result.values) {
-      const value = { ...raw, person: raw.person ?? asked };
-      const here = { ...source, ...(value.page ? { page: value.page } : {}) };
-      if (value.confidence < MIN_CONFIDENCE) {
-        questions.push(`I could not read "${value.label}" clearly. Please type it in.`);
-        continue;
-      }
-      const subject = /subscriber|shareholder/i.test(value.person ?? '') ? 'subscriber' : /director|promoter/i.test(value.person ?? '') ? 'director' : subjectHint;
-      const { exact, candidates } = candidatesFor(value, subject);
-      if (exact) placed.push({ value, entry: exact, source: here });
-      else if (candidates.length > 0) toChoose.push({ value, candidates, source: here });
-      else if (result.usedModel || normalizeLabel(value.label).split(' ').length < 6) questions.push(`I do not know where "${value.label}" goes, so I left it out.`);
-    }
-  }
-  if (toChoose.length > 0) {
-    try {
-      const chosen = await chooseFields(await provider(), config.models.extract, toChoose);
-      toChoose.forEach((item, index) => {
-        const entry = chosen.get(index);
-        if (entry) placed.push({ value: item.value, entry, source: item.source });
-        else questions.push(`I do not know where "${item.value.label}" goes, so I left it out.`);
-      });
-      await appendAskRunStep(ctx, runId, { kind: 'model', name: 'choose', output: { asked: toChoose.length, chosen: chosen.size } });
-    } catch (error) {
-      if (!(error instanceof ReadRefused)) console.error('[ask-vcfo] field choice failed', error);
-      questions.push(`I could not place ${toChoose.length} value${toChoose.length === 1 ? '' : 's'}: ${toChoose.map((t) => t.value.label).slice(0, 5).join(', ')}.`);
-    }
-  }
+  const { placed, questions: placeQuestions, files, chooseCalls } = await placeValues(reads, { instruction, provider, model: config.models.extract });
+  if (chooseCalls > 0) await appendAskRunStep(ctx, runId, { kind: 'model', name: 'choose', output: { asked: chooseCalls, chosen: placed.length } });
+  const questions = [...new Set(refusals), ...placeQuestions];
 
   progress('Checking the rules…');
-  const files: AttachedFile[] = reads.flatMap(({ result, attachment }) =>
-    attachment && attachment.kind === 'file' ? [{ attachmentId: attachment.id, fileName: attachment.fileName, docType: result.docType, person: result.values.find((v) => v.person)?.person ?? asked }] : [],
-  );
   const plan = planRows({ role: ctx.role, engagementId: row.id, companyName: row.companyName, engagement: row, state, placed, files, instruction });
   questions.push(...plan.questions);
   const askMore = questions.length > 0 ? ` ${[...new Set(questions)].slice(0, 5).join(' ')}` : '';

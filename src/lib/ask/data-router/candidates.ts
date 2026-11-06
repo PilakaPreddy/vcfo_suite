@@ -20,6 +20,8 @@ export function catalogSynonyms(): ReadonlySet<string> {
 
 const PERSON_SUBJECTS: ReadonlySet<string> = new Set(['director', 'subscriber']);
 const MAX_CANDIDATES = 6;
+/** One shared word in three is the least that can mean the same fact; "type of registration" and "business type" do not. */
+const MIN_OVERLAP = 1 / 3;
 
 const tokensOf = (text: string) => new Set(normalizeLabel(text).split(' ').filter(Boolean));
 
@@ -54,7 +56,7 @@ export function candidatesFor(value: ReadValue, subject: 'director' | 'subscribe
   const scored = pool
     .filter((entry) => entry.format !== 'longtext' && !/notes?$/i.test(entry.key))
     .map((entry) => ({ entry, score: Math.max(...entry.synonyms.map((s) => overlap(tokens, tokensOf(s)))) }))
-    .filter((s) => s.score > 0)
+    .filter((s) => s.score >= MIN_OVERLAP)
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_CANDIDATES)
     .map((s) => s.entry);

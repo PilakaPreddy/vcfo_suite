@@ -59,15 +59,14 @@ export async function chooseFields(provider: LlmProvider, model: string, inputs:
       },
     },
   });
-  let picks: z.infer<typeof choiceOutput>['picks'] = [];
   try {
-    picks = choiceOutput.parse(JSON.parse(reply.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join(''))).picks;
+    const { picks } = choiceOutput.parse(JSON.parse(reply.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('')));
+    for (const { index, key } of picks) {
+      const entry = inputs[index]?.candidates.find((c) => c.key === key);
+      if (entry) chosen.set(index, entry);
+    }
   } catch {
-    return chosen;
-  }
-  for (const { index, key } of picks) {
-    const entry = inputs[index]?.candidates.find((c) => c.key === key);
-    if (entry) chosen.set(index, entry);
+    // A reply outside the schema places nothing, so every value becomes a question.
   }
   return chosen;
 }

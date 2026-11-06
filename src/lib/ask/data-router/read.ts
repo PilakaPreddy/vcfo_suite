@@ -120,7 +120,9 @@ function parseTable(lines: string[], page: number | null): ReadValue[] | null {
   if (lines.length < 2) return null;
   const separator = lines[0]!.includes('\t') ? '\t' : ',';
   const header = splitRow(lines[0]!, separator);
-  if (header.length < 2 || header.some((cell) => !cell || cell.length > 60)) return null;
+  if (header.length < 2 || header.some((cell) => !cell || cell.length > 60 || /\d/.test(cell))) return null;
+  // Two columns are usually label and value; they are a table only under a known column name.
+  if (header.length === 2 && !catalogSynonyms().has(normal(header[1]!))) return null;
   const rows = lines.slice(1).map((line) => splitRow(line, separator));
   if (rows.some((row) => row.length !== header.length)) return null;
   const nameColumn = header.findIndex((cell) => NAME_LABEL.test(normal(cell)));
@@ -282,7 +284,7 @@ async function pdfPages(data: Buffer): Promise<string[] | null> {
 
 async function sheetPages(data: Buffer): Promise<string[]> {
   const ExcelJS = await import('exceljs');
-  const book = new ExcelJS.Workbook();
+  const book = new (ExcelJS.default?.Workbook ?? ExcelJS.Workbook)();
   await book.xlsx.load(data as unknown as ArrayBuffer);
   return book.worksheets.map((sheet) => {
     const rows: string[] = [];
