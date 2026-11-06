@@ -35,6 +35,9 @@ const db = {
 
 vi.mock('@/db/client', () => ({ db }));
 
+let scoped: string[] = [];
+vi.mock('./engagements', async (original) => ({ ...(await original<typeof import('./engagements')>()), listScopedEngagementIds: async () => scoped }));
+
 const { decideCalendarProposal, getUpdateImpact, listCalendarChanges, listCalendarProposals, writeCalendarProposals } = await import('./reg-proposals');
 const { addPastedAlertMail, systemQueueAlertMail } = await import('./reg-updates');
 const { moveFilingPeriod } = await import('./compliance');
@@ -58,6 +61,7 @@ beforeEach(() => {
   writes.length = 0;
   selects = [];
   claimed = [];
+  scoped = [];
 });
 
 describe('deciding a calendar change', () => {
@@ -134,6 +138,52 @@ describe('alert mail intake', () => {
     await addPastedAlertMail(as('intern'), 'source', MAIL);
     expect(writes[0]!.data).toMatchObject({ intakeById: 'manager-1' });
     await expect(addPastedAlertMail(as('client'), 'source', MAIL)).rejects.toThrow('not permitted');
+  });
+});
+
+describe('who sees which client', () => {
+  const NAMES = [
+    { id: 'mine', name: 'Mine Ltd' },
+    { id: 'other', name: 'Other Ltd' },
+  ];
+  const listed = (id: string, affectedEngagementIds: string[]) => ({ proposal: { ...PROPOSAL, id, status: 'proposed', affectedEngagementIds }, title: `Update ${id}` });
+
+  it('a lead sees only cards touching their own clients, naming only those beside the firm-wide count', async () => {
+    scoped = ['mine'];
+    selects = [[listed('p1', ['mine', 'other']), listed('p2', ['other'])], NAMES];
+    const views = await listCalendarProposals(as('intern'));
+    expect(views.map((view) => view.id)).toEqual(['p1']);
+    expect(views[0]).toMatchObject({ total: 2, clients: [{ companyName: 'Mine Ltd' }] });
+  });
+
+  it('a manager sees every card to decide it, and still names only their own clients', async () => {
+    scoped = ['mine'];
+    selects = [[listed('p1', ['mine', 'other']), listed('p2', ['other'])], NAMES];
+    const views = await listCalendarProposals(as('manager'));
+    expect(views.map((view) => view.clients.map((client) => client.companyName))).toEqual([['Mine Ltd'], []]);
+    expect(views.map((view) => view.total)).toEqual([2, 1]);
+  });
+
+  it('an admin names every client', async () => {
+    selects = [[listed('p1', ['mine', 'other'])], NAMES];
+    const [view] = await listCalendarProposals(as('admin'));
+    expect(view!.clients.map((client) => client.companyName)).toEqual(['Mine Ltd', 'Other Ltd']);
+  });
+
+  it('the list on an update names only a lead\'s own clients, with the reason and the firm-wide count', async () => {
+    scoped = ['mine'];
+    const client = (engagementId: string, companyName: string) => ({ engagementId, companyName, legalForm: 'company', questionnaire: null, trigger: null });
+    selects = [
+      [client('mine', 'Mine Ltd'), client('other', 'Other Ltd')],
+      [
+        { engagementId: 'mine', obligationId: 'mca-mgt-7' },
+        { engagementId: 'other', obligationId: 'mca-mgt-7' },
+      ],
+      [{ ...PROPOSAL, status: 'proposed', affectedEngagementIds: ['mine', 'other'] }],
+    ];
+    const impact = await getUpdateImpact(as('intern'), { id: 'u1', status: 'published', title: 'Form MGT-7 time extended', area: 'mca', act: null, changeType: 'due_date', summary: null, affects: null, quote: null, oldDueDate: '2026-11-29', newDueDate: '2026-12-31' });
+    expect(impact).toMatchObject({ basis: 'filing', total: 2, clients: [{ companyName: 'Mine Ltd', reason: 'Form MGT-7 open' }] });
+    expect(impact.proposals[0]).toMatchObject({ total: 2, clients: [{ companyName: 'Mine Ltd' }] });
   });
 });
 
