@@ -6,7 +6,7 @@ import type { LlmProvider } from '@/lib/ask/provider';
 import { stripHtml } from '@/lib/notifications/announcements';
 import { getObjectBuffer } from '@/storage/s3';
 import { officialUrl } from './adapters/html';
-import { MAX_PDF_BYTES, watchFetch } from './fetch';
+import { MAX_PDF_BYTES, WatchBlockedError, watchFetch, type WatchFetch } from './fetch';
 
 /**
  * Step 4 of the pipeline: from a link or a file to plain text. Listing text that is already long
@@ -61,14 +61,33 @@ async function readPdf(bytes: Buffer, provider: LlmProvider | null, model: strin
 
 export type ScanUsage = { model: string; inputTokens: number; outputTokens: number; cacheReadTokens: number };
 
-/** SEBI and others wrap the document in a viewer page; the PDF is the document. */
+/** SEBI wraps the document in a viewer page and RBI heads its page with a link to it; the PDF is the document. */
 export function embeddedPdf(html: string, baseUrl: string): string | null {
-  const match = /<(?:iframe|embed|object)\b[^>]*(?:src|data)\s*=\s*["']([^"']+)["']/i.exec(html);
+  const match =
+    /<a\b[^>]*\bid\s*=\s*["']APDF_[^>]*\bhref\s*=\s*["']([^"']+)["']/i.exec(html) ??
+    /<(?:iframe|embed|object)\b[^>]*(?:src|data)\s*=\s*["']([^"']+)["']/i.exec(html);
   const target = match?.[1];
   if (!target) return null;
   const inner = /[?&]file=([^&]+)/.exec(target)?.[1];
   const candidate = inner ? decodeURIComponent(inner) : target;
   return /\.pdf(\?|#|$)/i.test(candidate) ? officialUrl(candidate, baseUrl) : null;
+}
+
+/**
+ * An RBI notification's own text sits in one table cell, between the site's menus and its archive
+ * list. Empty means the paper is only a PDF. The balance count survives tables inside the text.
+ */
+export function rbiBody(html: string): string | null {
+  const start = /class="tablecontent2"[^>]*>/i.exec(html);
+  if (!start) return null;
+  const rest = html.slice(start.index + start[0].length);
+  let depth = 0;
+  for (const tag of rest.matchAll(/<(\/?)table\b/gi)) {
+    if (!tag[1]) depth += 1;
+    else if (depth === 0) return stripHtml(rest.slice(0, tag.index));
+    else depth -= 1;
+  }
+  return null;
 }
 
 /** The main text of a page: menus and footers cost tokens and are never the document. */
@@ -83,6 +102,16 @@ function finish(text: string): string {
   if (out.length < 40) throw new WatchReadError('The document had no readable text.');
   return out;
 }
+
+type FetchedDocument = Extract<WatchFetch, { status: 'ok' }>;
+
+async function fetchDocument(url: string): Promise<FetchedDocument> {
+  const fetched = await watchFetch(url, { maxBytes: MAX_PDF_BYTES });
+  if (fetched.status === 'not_modified') throw new WatchReadError('The server sent no document.');
+  return fetched;
+}
+
+const isPdf = (fetched: FetchedDocument): boolean => fetched.contentType.includes('pdf') || fetched.body.subarray(0, 5).toString('latin1') === '%PDF-';
 
 export async function readUpdateText(
   input: { url: string | null; s3Key: string | null; listingText: string | null },
@@ -101,18 +130,19 @@ export async function readUpdateText(
   if (listingIsWhole || (listing && input.url?.includes('#'))) return { text: finish(listing) };
   if (!input.url) throw new WatchReadError('This update has no link or file.');
 
-  const fetched = await watchFetch(input.url, { maxBytes: MAX_PDF_BYTES });
-  if (fetched.status === 'not_modified') throw new WatchReadError('The server sent no document.');
-  const isPdf = fetched.contentType.includes('pdf') || fetched.body.subarray(0, 5).toString('latin1') === '%PDF-';
-  if (isPdf) {
+  const fetched = await fetchDocument(input.url);
+  if (isPdf(fetched)) {
     const read = await readPdf(fetched.body, provider, model);
     return { text: finish(read.text), usage: read.usage };
   }
   const html = fetched.body.toString('utf8');
+  const inline = rbiBody(html);
+  if (inline) return { text: finish(inline) };
   const embedded = embeddedPdf(html, fetched.finalUrl);
   if (embedded) {
-    const pdf = await watchFetch(embedded, { maxBytes: MAX_PDF_BYTES });
-    if (pdf.status === 'not_modified') throw new WatchReadError('The server sent no document.');
+    const pdf = await fetchDocument(embedded);
+    // A web page in place of a PDF is the host's bot check, which the reader never tries to pass.
+    if (!isPdf(pdf)) throw new WatchBlockedError('bot_check');
     const read = await readPdf(pdf.body, provider, model);
     return { text: finish(read.text), usage: read.usage };
   }
