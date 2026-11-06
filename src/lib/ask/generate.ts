@@ -26,7 +26,7 @@ const SHARED_VISUALS = [
   '{"type":"flow","stages":[{"label","sub?","state":"done|here|next"}]} (2-5 stages)',
   '{"type":"steps","items":[{"label","form?"}]} (2-8)',
   '{"type":"compare","left":{"title","points":[]},"right":{"title","points":[]}} (<=5 points each)',
-  '{"type":"timeline","events":[{"label","when","source":"calendar|rule"}]} (2-6; calendar dates only from tool results)',
+  '{"type":"timeline","events":[{"label","when","source":"calendar|rule"}]} (2-6; calendar dates only from tool results or document and record sources)',
   '{"type":"keyFacts","facts":[{"k","v"}]} (2-6)',
 ];
 const CLIENT_VISUAL = '{"type":"nextStep","stepId","title","dueLabel?","items":[]}';
@@ -92,7 +92,7 @@ const RULES_BLOCK = [
   'Rules:',
   '- Answer only Indian company setup and compliance questions and questions about the user\'s own project. Anything else: say briefly it is outside what you cover.',
   '- Use only the sources, topics and tool results provided in this conversation. If they do not cover the question, say you are not certain and add the askLead action (client).',
-  '- Never state a calendar date unless it appears in a tool result from this turn. Describe rules as durations ("within 30 days of …").',
+  '- Never state a calendar date unless it appears in a tool result from this turn or in a source of kind document or record. Otherwise describe rules as durations ("within 30 days of …").',
   '- Only refer to checklist steps by the titles and ids that tools return.',
   '- Never state a penalty, late fee or interest amount or rate unless it appears in a source given to you. Say your project lead can confirm the consequence.',
   '- Cite every source or tool you relied on in citations, by its id.',
@@ -129,6 +129,8 @@ export interface GenerateOutput {
   usage: LlmUsage;
 }
 
+const SOURCE_KIND: Record<RetrievedSource['kind'], string> = { chunk: 'document', topic: 'topic', card: 'record' };
+
 function escapeSource(text: string): string {
   return text.replace(/<\/?source[^>]*>/gi, '');
 }
@@ -144,7 +146,7 @@ function buildSystem(input: Pick<GenerateInput, 'shell' | 'firmName' | 'snapshot
     input.snapshot ? `Project snapshot (the user's own project, id ${SNAPSHOT_SOURCE_ID}):\n${JSON.stringify(input.snapshot)}` : '',
     input.sources.length > 0
       ? `Sources:\n${input.sources
-          .map((s) => `<source id="${s.id}" label="${s.label.replace(/"/g, "'")}">\n${escapeSource(s.text)}\n</source>`)
+          .map((s) => `<source id="${s.id}" kind="${SOURCE_KIND[s.kind]}" label="${s.label.replace(/"/g, "'")}">\n${escapeSource(s.text)}\n</source>`)
           .join('\n')}`
       : 'Sources: none retrieved for this question.',
     `Depth: ${input.depth === 'simple' ? 'as simple as possible, one or two sentences' : input.depth === 'detail' ? 'more detail, up to six sentences' : 'normal'}.`,
