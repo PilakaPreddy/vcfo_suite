@@ -100,6 +100,13 @@ describe('the printed statutory calendar', () => {
     expect(withMovedDeadlines([shared], [change]).map((row) => row.date)).toEqual(['2026-11-29', '2026-12-31']);
   });
 
+  it('follows a second move of the same filing', () => {
+    const second = { ...change, oldDueDate: '2026-12-31', newDueDate: '2027-01-15' };
+    const [moved] = withMovedDeadlines([line], [change, second]);
+    expect(moved!.date).toBe('2027-01-15');
+    expect(moved!.title).toContain('31 Dec 2026');
+  });
+
   it('changes nothing when no date moved', () => {
     expect(withMovedDeadlines([line], [])).toEqual([line]);
     expect(withMovedDeadlines([{ ...line, date: '2026-10-29' }], [change])[0]!.date).toBe('2026-10-29');

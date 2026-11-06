@@ -49,7 +49,7 @@ export function WatchCalendarCard({ proposal, canDecide }: { proposal: CalendarP
           </Chip>
         </span>
         <span className="min-w-0 flex-1 basis-48 text-[14px] text-ink">
-          {proposal.obligationName}, {proposal.period}
+          {proposal.period.startsWith(proposal.obligationName) ? proposal.period : `${proposal.obligationName}, ${proposal.period}`}
         </span>
         {canDecide && proposal.status === 'proposed' ? (
           <span className="flex flex-none items-center gap-2">
@@ -63,7 +63,7 @@ export function WatchCalendarCard({ proposal, canDecide }: { proposal: CalendarP
         ) : null}
       </div>
       <p className="text-[13px] tabular-nums text-ink-2">
-        Due {day(proposal.oldDueDate)} to {day(proposal.newDueDate)}. {moveLine(proposal)}.
+        Due date from {day(proposal.oldDueDate)} to {day(proposal.newDueDate)}. {moveLine(proposal)}.
       </p>
       <p className="line-clamp-2 text-[12.5px] text-ink-muted">{proposal.updateTitle}</p>
       {proposal.clients.length > 0 ? (

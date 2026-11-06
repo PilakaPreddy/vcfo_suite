@@ -116,21 +116,22 @@ export function withCalendarChanges<T extends { engagementId: string; obligation
 }
 
 /**
- * The printed statutory calendar shows an approved move as a line on the new date, naming the old one.
- * A line that lists other filings too stays where it is, because those did not move.
+ * The printed statutory calendar shows an approved move as a line on the new date, naming the old one,
+ * with later moves applied in turn. A line that lists other filings too stays, as those did not move.
  */
 export function withMovedDeadlines<T extends { id: string; date: string; title: string }>(deadlines: readonly T[], changes: readonly CalendarChange[]): T[] {
-  if (changes.length === 0) return [...deadlines];
-  return deadlines.flatMap<T>((deadline) => {
-    const named = obligationsNamedIn(deadline.title);
-    const moved = changes.filter((change) => change.oldDueDate === deadline.date && named.includes(change.obligationId));
-    if (moved.length === 0) return [deadline];
-    const lines = moved.map((change) => ({
-      ...deadline,
-      id: `${deadline.id}-moved-${change.obligationId}`,
-      date: change.newDueDate,
-      title: `${obligationName(change.obligationId)}: moved from ${formatSourceDate(new Date(`${deadline.date}T12:00:00+05:30`))}`,
-    }));
-    return /[;,&]/.test(deadline.title) ? [deadline, ...lines] : lines;
-  });
+  return changes.reduce<T[]>(
+    (lines, change) =>
+      lines.flatMap<T>((line) => {
+        if (change.oldDueDate !== line.date || !obligationsNamedIn(line.title).includes(change.obligationId)) return [line];
+        const moved = {
+          ...line,
+          id: `${line.id}-moved-${change.obligationId}`,
+          date: change.newDueDate,
+          title: `${obligationName(change.obligationId)}: moved from ${formatSourceDate(new Date(`${line.date}T12:00:00+05:30`))}`,
+        };
+        return /[;,&]/.test(line.title) ? [line, moved] : [moved];
+      }),
+    [...deadlines],
+  );
 }

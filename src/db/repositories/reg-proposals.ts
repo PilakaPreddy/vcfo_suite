@@ -148,7 +148,7 @@ export async function getUpdateImpact(
   };
 }
 
-/** Open proposals and those decided lately. A lead sees only the ones touching their own clients. */
+/** Open proposals first, then those decided lately. A lead sees only the ones touching their own clients. */
 export async function listCalendarProposals(ctx: AuthContext): Promise<CalendarProposalView[]> {
   if (!isWatchStaff(ctx.role)) throw new Error('not permitted');
   const rows = await db
@@ -156,7 +156,7 @@ export async function listCalendarProposals(ctx: AuthContext): Promise<CalendarP
     .from(regCalendarProposals)
     .innerJoin(regUpdates, eq(regUpdates.id, regCalendarProposals.updateId))
     .where(or(eq(regCalendarProposals.status, 'proposed'), gte(regCalendarProposals.decidedAt, new Date(Date.now() - RECENT_DECISIONS_MS))))
-    .orderBy(desc(regCalendarProposals.createdAt))
+    .orderBy(desc(sql`${regCalendarProposals.status} = 'proposed'`), desc(regCalendarProposals.createdAt))
     .limit(50);
   const [names, inScope] = await Promise.all([namesOf(rows.flatMap((row) => row.proposal.affectedEngagementIds)), scopeOf(ctx)]);
   const views = rows.map((row) => toView(row.proposal, { id: row.proposal.updateId, title: row.title }, names, inScope));
