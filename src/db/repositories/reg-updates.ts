@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { and, count, desc, eq, gte, inArray, isNull, lt, ne, notInArray, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, isNull, lt, ne, notInArray, or, sql, sum } from 'drizzle-orm';
 import { db } from '@/db/client';
 import {
   announcementSources,
@@ -27,7 +27,9 @@ import type {
   RegUpdateStatus,
   RegVerifyProblem,
 } from '@/lib/watch/types';
+import type { AlertMail } from '@/lib/watch/mail-parse';
 import { noiseLogFields } from '@/lib/watch/noise';
+import { writeCalendarProposals } from './reg-proposals';
 import { systemDeleteWatchBoardRow, systemPublishWatchBoardRow, systemPostWatchBoardRow, type BoardWriter } from './announcements';
 
 /**
@@ -299,7 +301,7 @@ export async function listRegUpdates(
   return rows.map((row) => toListItem(row.update, row.sourceName));
 }
 
-export async function getRegUpdate(ctx: AuthContext, id: string): Promise<(RegUpdateDetail & { s3Key: string | null }) | null> {
+export async function getRegUpdate(ctx: AuthContext, id: string): Promise<(Omit<RegUpdateDetail, 'impact'> & { s3Key: string | null }) | null> {
   assertStaff(ctx);
   const [row] = await db
     .select({ update: regUpdates, sourceName: announcementSources.name })
@@ -362,8 +364,9 @@ export async function saveRegUpdateEdit(
 
 /**
  * Publish moves one row exactly once: only an `unreviewed` update qualifies, so two reviewers
- * clicking together publish it once. It opens the board row to its audience and adds the chat card,
- * all in one transaction, so a failure leaves the update waiting and never half published.
+ * clicking together publish it once. It opens the board row to its audience, adds the chat card and
+ * records any calendar change for a manager to approve, all in one transaction, so a failure leaves
+ * the update waiting and never half published.
  */
 export async function publishRegUpdate(ctx: AuthContext, id: string, sourceName: string | null): Promise<RegUpdateRow | null> {
   assertReviewer(ctx);
@@ -377,6 +380,7 @@ export async function publishRegUpdate(ctx: AuthContext, id: string, sourceName:
     if (!row) return null;
     await systemPublishWatchBoardRow(row, sourceName, tx);
     await upsertChatCard(row, tx);
+    await writeCalendarProposals(row, tx);
     return row;
   });
 }
@@ -448,6 +452,40 @@ export async function createManualRegUpdate(
       .onConflictDoNothing();
     return row!.id;
   });
+}
+
+const MAX_MAIL_TEXT = 50_000;
+
+/**
+ * One alert mail, once: a repeat of the message or of a link already known adds no update and returns
+ * null. A mail with no link has no `sourceUrl`, and its text is the document.
+ */
+async function queueAlertMail(sourceId: string, mail: AlertMail, intakeById: string | null): Promise<string | null> {
+  const title = maskIdentityNumbers(mail.subject).slice(0, 300);
+  const url = mail.link ?? `mail:${mail.messageId}`;
+  const known = or(eq(regUpdateLinks.url, url), and(eq(regUpdateLinks.sourceId, sourceId), eq(regUpdateLinks.externalKey, mail.messageId)));
+  const [same] = await db.select({ updateId: regUpdateLinks.updateId }).from(regUpdateLinks).where(known).limit(1);
+  return db.transaction(async (tx) => {
+    let id = same?.updateId;
+    const created = !id;
+    if (!id) {
+      const [row] = await tx
+        .insert(regUpdates)
+        .values({ title, sourceUrl: mail.link, sourceId, intake: 'email', intakeById, sourceText: maskIdentityNumbers(mail.body).slice(0, MAX_MAIL_TEXT), publishedOn: mail.sentOn })
+        .returning({ id: regUpdates.id });
+      id = row!.id;
+    }
+    await tx.insert(regUpdateLinks).values({ updateId: id, sourceId, externalKey: mail.messageId, url, title }).onConflictDoNothing();
+    return created ? id : null;
+  });
+}
+
+/** SYSTEM (no session): the mailbox endpoint, after its token and sender checks. */
+export const systemQueueAlertMail = (sourceId: string, mail: AlertMail): Promise<string | null> => queueAlertMail(sourceId, mail, null);
+
+export async function addPastedAlertMail(ctx: AuthContext, sourceId: string, mail: AlertMail): Promise<string | null> {
+  assertStaff(ctx);
+  return queueAlertMail(sourceId, mail, ctx.userId);
 }
 
 // ---------- Recipients and the daily summary (jobs) ----------

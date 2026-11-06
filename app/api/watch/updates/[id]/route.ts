@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
+import { getUpdateImpact } from '@/db/repositories/reg-proposals';
 import { getRegUpdate, rejectRegUpdate, retryRegUpdate } from '@/db/repositories/reg-updates';
 import { publicErrorMessage } from '@/lib/api-error';
 import { parseJsonBody } from '@/lib/api/parse-body';
@@ -22,7 +23,7 @@ const actionSchema = z.discriminatedUnion('action', [
 const notFound = () => NextResponse.json({ error: 'not_found' }, { status: 404 });
 const uuid = z.string().uuid();
 
-/** GET: the update beside its source, with a short-lived link to an uploaded file. */
+/** GET: the update beside its source, with who it touches and a short-lived link to an uploaded file. */
 export async function GET(_request: Request, { params }: Params) {
   const guard = await watchStaff();
   if (guard.ok === false) return guard.response;
@@ -32,7 +33,8 @@ export async function GET(_request: Request, { params }: Params) {
     const found = await getRegUpdate(guard.ctx, id);
     if (!found) return notFound();
     const { s3Key, ...update } = found;
-    return NextResponse.json({ update: { ...update, fileUrl: s3Key ? await signedDownloadUrl(s3Key) : null } });
+    const [fileUrl, impact] = await Promise.all([s3Key ? signedDownloadUrl(s3Key) : null, getUpdateImpact(guard.ctx, update)]);
+    return NextResponse.json({ update: { ...update, fileUrl, impact } });
   } catch (err) {
     return NextResponse.json({ error: publicErrorMessage(err, 'read_failed') }, { status: 500 });
   }

@@ -146,6 +146,39 @@ export interface RegUpdateListItem {
   createdAt: string;
 }
 
+/** One client on an update or a change card, as far as the viewer may see it. */
+export interface WatchClientRef {
+  /** The app's engagement id, which also picks the client's identity colour. */
+  engagementId: string;
+  companyName: string;
+  reason?: string;
+}
+
+/**
+ * A due-date change on a card. `preview` is what publishing would propose, before anything is stored.
+ * `clients` holds the viewer's own clients; `total` counts every client it touches across the firm.
+ */
+export interface CalendarProposalView {
+  id: string | null;
+  updateId: string;
+  updateTitle: string;
+  obligationName: string;
+  period: string;
+  oldDueDate: string | null;
+  newDueDate: string;
+  status: RegProposalStatus | 'preview';
+  total: number;
+  clients: WatchClientRef[];
+}
+
+/** Who an update touches. `none` means client data cannot say, which is not the same as nobody. */
+export interface WatchImpact {
+  basis: 'filing' | 'area' | 'none';
+  total: number;
+  clients: WatchClientRef[];
+  proposals: CalendarProposalView[];
+}
+
 export interface RegUpdateDetail extends RegUpdateListItem {
   act: string | null;
   oldDueDate: string | null;
@@ -156,6 +189,7 @@ export interface RegUpdateDetail extends RegUpdateListItem {
   links: Array<{ url: string; title: string; sourceName: string | null }>;
   rejectReason: string | null;
   fileUrl: string | null;
+  impact: WatchImpact;
 }
 
 /** What a reviewer may change. Dates are `YYYY-MM-DD` or null. */

@@ -71,6 +71,11 @@ export async function systemGetWatchSource(id: string): Promise<WatchSourceRow |
   return row ?? null;
 }
 
+export async function systemWatchSourceByUrl(url: string): Promise<WatchSourceRow | null> {
+  const [row] = await db.select().from(announcementSources).where(eq(announcementSources.feedUrl, url)).limit(1);
+  return row ?? null;
+}
+
 export async function systemSaveSourceCheck(
   id: string,
   patch: Partial<

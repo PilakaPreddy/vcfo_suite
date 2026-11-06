@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Modal } from '@/components/ui/modal';
 import { FilterSelect } from '@/components/ui/native-select';
+import { Textarea } from '@/components/ui/textarea';
 import { useWatchIntake } from '@/hooks/use-watch';
 import { toastError, toastSuccess } from '@/lib/toast-errors';
 import type { WatchSourceStatus } from '@/lib/watch/types';
 
-/** Paste a link or upload a PDF. MCA and Income Tax India notices arrive this way. */
+/** Paste a link or an official email, or upload a PDF. MCA and Income Tax India notices arrive this way. */
 export function WatchIntakeDialog({
   open,
   onOpenChange,
@@ -25,12 +26,14 @@ export function WatchIntakeDialog({
   const [title, setTitle] = useState('');
   const [sourceId, setSourceId] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [email, setEmail] = useState('');
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const form = new FormData();
     if (file) form.set('file', file);
-    else form.set('url', url);
+    else if (url.trim()) form.set('url', url);
+    else form.set('email', email);
     if (title.trim()) form.set('title', title);
     if (sourceId) form.set('sourceId', sourceId);
     intake.mutate(form, {
@@ -40,6 +43,7 @@ export function WatchIntakeDialog({
         setTitle('');
         setSourceId('');
         setFile(null);
+        setEmail('');
         onOpenChange(false);
       },
       onError: (err) => toastError('Could not add it', err.message),
@@ -52,7 +56,7 @@ export function WatchIntakeDialog({
       onOpenChange={onOpenChange}
       title="Add an update"
       footer={
-        <Button type="submit" form="watch-intake" disabled={intake.isPending || (!file && !url.trim())}>
+        <Button type="submit" form="watch-intake" disabled={intake.isPending || (!file && !url.trim() && !email.trim())}>
           {intake.isPending ? 'Adding' : 'Add update'}
         </Button>
       }
@@ -71,6 +75,10 @@ export function WatchIntakeDialog({
             className="text-[13px] text-ink-2 file:mr-2.5 file:h-control-sm file:rounded-md file:border-1.5 file:border-line-strong file:bg-surface-raised file:px-2.5 file:text-[13px] file:font-medium file:text-ink"
             onChange={(event) => setFile(event.target.files?.[0] ?? null)}
           />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="watch-email">Or paste an official email, with its From and Subject lines</Label>
+          <Textarea id="watch-email" rows={4} maxLength={200_000} value={email} disabled={file != null || url.trim() !== ''} onChange={(event) => setEmail(event.target.value)} />
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="watch-source">Source</Label>

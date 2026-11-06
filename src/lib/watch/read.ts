@@ -135,8 +135,8 @@ export async function readUpdateText(
     return { text: finish(read.text), usage: read.usage };
   }
   const listingIsWhole = listing.length >= ENOUGH_LISTING_TEXT && listing.length < LISTING_TEXT_CAP;
-  // A link with a fragment points at the listing itself, so its text is the whole document.
-  if (listingIsWhole || (listing && input.url?.includes('#'))) return { text: finish(listing) };
+  // A link with a fragment points at the listing itself, and a mail with no link is its own document.
+  if (listingIsWhole || (listing && (!input.url || input.url.includes('#')))) return { text: finish(listing) };
   if (!input.url) throw new WatchReadError('This update has no link or file.');
 
   const fetched = await fetchDocument(input.url);
