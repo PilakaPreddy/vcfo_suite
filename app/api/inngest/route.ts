@@ -23,8 +23,9 @@ import { devCleanup } from '@/jobs/dev-cleanup';
 import { watchCheck } from '@/jobs/watch-check';
 import { watchProcess } from '@/jobs/watch-process';
 import { watchDailySummary } from '@/jobs/watch-daily-summary';
+import { assistFilingDeadlines } from '@/jobs/assist-filing-deadlines';
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [complianceGenerate, announcementFeeds, whatsappSend, askIngest, askIndexRefresh, askIndexSweep, complianceReminders, savedReportsSend, weeklyDigest, kpiSnapshots, staffAlerts, dailyDigest, serviceChecks, devCleanup, complianceTaskReminders, complianceTaskRepeatOnComplete, complianceTaskRepeatSweep, boardMeetingReminders, receivablesReminders, receivablesBankFeed, receivablesFxRates, receivablesDigest, watchCheck, watchProcess, watchDailySummary],
+  functions: [complianceGenerate, announcementFeeds, whatsappSend, askIngest, askIndexRefresh, askIndexSweep, complianceReminders, savedReportsSend, weeklyDigest, kpiSnapshots, staffAlerts, dailyDigest, serviceChecks, devCleanup, complianceTaskReminders, complianceTaskRepeatOnComplete, complianceTaskRepeatSweep, boardMeetingReminders, receivablesReminders, receivablesBankFeed, receivablesFxRates, receivablesDigest, watchCheck, watchProcess, watchDailySummary, assistFilingDeadlines],
 });

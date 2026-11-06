@@ -22,6 +22,7 @@ import { receivablesBankFeed } from '@/jobs/receivables-bank-feed';
 import { receivablesFxRates } from '@/jobs/receivables-fx-rates';
 import { receivablesDigest } from '@/jobs/receivables-digest';
 import { devCleanup } from '@/jobs/dev-cleanup';
+import { assistFilingDeadlines } from '@/jobs/assist-filing-deadlines';
 import { describeFunctions } from './parse';
 import type { JobFunction } from './types';
 
@@ -56,5 +57,6 @@ export function registeredJobs(): JobFunction[] {
     watchCheck,
     watchProcess,
     watchDailySummary,
+    assistFilingDeadlines,
   ]);
 }

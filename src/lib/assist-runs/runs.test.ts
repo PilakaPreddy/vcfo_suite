@@ -28,7 +28,7 @@ describe('VCFO Assist runs', () => {
 
   it('words the state, and says when it is not set up', () => {
     expect(assistWord(null)).toEqual({ label: 'Not started', tone: 'idle' });
-    expect(assistWord(run({ state: 'done' })).label).toBe('Filed by Assist');
+    expect(assistWord(run({ state: 'done' })).label).toBe('Reference recorded');
     expect(assistWord(run(), false).label).toBe('Not set up');
   });
 

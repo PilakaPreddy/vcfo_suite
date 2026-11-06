@@ -25,6 +25,7 @@ Domain logic and helpers. Nothing here imports `db`; data access goes through
 - `intern/` — the project lead's (intern role) dashboard, work queue, managers and personal todos.
 - `knowledge-bank/` — knowledge bank folders, search and storage keys.
 - `labour-registers/` — statutory labour registers: the form catalogue for a state and period, column and value matching against a client's payroll sheet, the per-day attendance block, content-addressed caching of generated documents, and the section 14 overtime scoping. Gotchas: `docs/context/notes/labour-registers.md`.
+- `mca-filing/` — the SPICe+ filing record: PDF signature reader, PDF text compare, filing states and clocks, attachment files. Never drives the MCA portal and never signs.
 - `noc/` — the parent company NOC (Pre-2 board resolution) templates and variants.
 - `notifications/` — in-app bell, announcements, popup cadence and the dock animation.
 - `notes/` — the wire type of a staff note on a client record (G-19).

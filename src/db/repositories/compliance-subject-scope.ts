@@ -28,6 +28,8 @@ const ROLES = new Set(['super_admin', 'admin', 'manager', 'intern', 'client']);
 const STAFF = new Set(['super_admin', 'admin', 'manager', 'intern']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const REG = /^reg-\d{1,3}$/;
+/** The two SPICe+ forms the VCFO Assist extension runs; each is a registration subject of its own. */
+const SPICE_RUN_KEYS: ReadonlySet<string> = new Set(['spice-part-a', 'spice-part-b']);
 
 export function isStaff(ctx: AuthContext): boolean {
   return STAFF.has(ctx.role);
@@ -53,7 +55,7 @@ export async function scopeEngagement(
 
 /** True when the key names a subject of this engagement (a filing of it, or a registration step). */
 export async function subjectInEngagement(dbId: string, kind: SubjectKind, key: string): Promise<boolean> {
-  if (kind === 'registration') return REG.test(key);
+  if (kind === 'registration') return REG.test(key) || SPICE_RUN_KEYS.has(key);
   if (!UUID.test(key)) return false;
   const [row] = await db
     .select({ id: complianceInstances.id })
