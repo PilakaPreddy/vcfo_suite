@@ -48,7 +48,7 @@ async function send(client: Anthropic, req: LlmRequest, refusalFallback: boolean
       messages: req.messages,
       ...(req.tools && req.tools.length > 0 ? { tools: req.tools, tool_choice: { type: 'auto' } } : {}),
       ...outputConfigFor(req),
-      ...(refusalFallback
+      ...(refusalFallback && !req.model.includes('haiku')
         ? {
             betas: ['server-side-fallback-2026-07-01'],
             fallbacks: 'default' as const,
