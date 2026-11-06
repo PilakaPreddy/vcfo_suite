@@ -11,7 +11,7 @@ export type EvalSnapshot = 'foreignCompany' | 'domesticCompany' | 'llp';
 
 export interface GoldenCase {
   id: string;
-  category: 'off-topic' | 'injection' | 'scope' | 'company-type' | 'decision' | 'date' | 'deterministic' | 'routing';
+  category: 'off-topic' | 'injection' | 'scope' | 'company-type' | 'decision' | 'date' | 'deterministic' | 'routing' | 'knowledge';
   role: AuthContext['role'];
   shell: 'client' | 'admin' | 'super';
   snapshot?: EvalSnapshot;
@@ -22,7 +22,7 @@ export interface GoldenCase {
   mock?: {
     guard?: { intent: string; topicSlug?: string; metric?: string; rewrittenQuery?: string };
     answers?: Array<Record<string, unknown> | { toolCall: string; input: Record<string, unknown> }>;
-    retrieved?: Array<{ id: string; kind: 'chunk' | 'topic'; label: string; text: string }>;
+    retrieved?: Array<{ id: string; kind: 'chunk' | 'topic' | 'card'; label: string; text: string }>;
   };
   expect: {
     forbidden?: boolean;
@@ -582,5 +582,51 @@ export const GOLDEN: GoldenCase[] = [
         { sender: 'assistant', text: 'GST registration gives your company a GSTIN so it can charge GST and claim input credit.' },
       ],
     },
+  },
+  // Knowledge: a paraphrase and a Hinglish question, each answered and cited from a retrieved chunk.
+  {
+    id: 'knowledge-paraphrase-cited',
+    category: 'knowledge',
+    role: 'client',
+    shell: 'client',
+    snapshot: 'foreignCompany',
+    message: 'What happens if we send the yearly accounts to the registrar late?',
+    mock: {
+      guard: { intent: 'explain', rewrittenQuery: 'penalty for late filing of AOC-4' },
+      retrieved: [{ id: 'chunk-aoc4', kind: 'chunk', label: 'Compliance obligations', text: 'AOC-4. If late: an additional fee is charged for each day of delay.' }],
+      answers: [answer('A fee is charged for each day AOC-4 is late.', { citations: [{ id: 'chunk-aoc4', label: 'Compliance obligations' }] })],
+    },
+    expect: { providerCalls: 2, origin: 'generated', lineIncludes: 'AOC-4' },
+    live: { intents: ['explain'] },
+  },
+  {
+    id: 'knowledge-hinglish-cited',
+    category: 'knowledge',
+    role: 'admin',
+    shell: 'admin',
+    message: 'AOC-4 der se bharne par kya jurmana lagta hai?',
+    mock: {
+      guard: { intent: 'explain', rewrittenQuery: 'penalty for late filing of AOC-4' },
+      retrieved: [{ id: 'chunk-aoc4', kind: 'chunk', label: 'Compliance obligations', text: 'AOC-4. If late: an additional fee is charged for each day of delay.' }],
+      answers: [answer('AOC-4 der se bharne par har din ki fee lagti hai.', { citations: [{ id: 'chunk-aoc4', label: 'Compliance obligations' }] })],
+    },
+    expect: { providerCalls: 2, origin: 'generated', lineIncludes: 'AOC-4' },
+    live: { intents: ['explain'] },
+  },
+  {
+    id: 'knowledge-citation-outside-sources',
+    category: 'knowledge',
+    role: 'admin',
+    shell: 'admin',
+    message: 'AOC-4 ka form kya hai?',
+    mock: {
+      guard: { intent: 'explain', rewrittenQuery: 'what is AOC-4' },
+      retrieved: [{ id: 'chunk-aoc4', kind: 'chunk', label: 'Compliance obligations', text: 'AOC-4 holds the yearly financial statements.' }],
+      answers: [
+        answer('AOC-4 holds the accounts.', { citations: [{ id: 'another-clients-card', label: 'Other' }] }),
+        answer('AOC-4 holds the accounts.', { citations: [{ id: 'another-clients-card', label: 'Other' }] }),
+      ],
+    },
+    expect: { uncertain: true },
   },
 ];

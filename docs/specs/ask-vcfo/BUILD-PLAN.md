@@ -313,3 +313,41 @@ Phase 1, 6 November:
   the model cannot emit it. A `list` destination joined the links, with a client subset.
 - `useStaffBasePath` sent a Project Lead's Ask links to `/app/manager`. Ask now uses `useAskLinkBase`, and `resolveHref`
   takes the lead's and the client's base.
+
+Phase 2, 6 November:
+
+- Full text matches any word, not every word: `websearch_to_tsquery` ANDs them, so a paraphrase found nothing. Each search
+  runs on the words as asked and again on the words `query-expand.ts` adds, so a common added word ("due", "file") cannot
+  bury the source holding the rare word the person typed. A full-text hit under a quarter of the best score is dropped,
+  and vectors must sit within a cosine distance of 0.8. Both numbers are first estimates; Titan's distances have not been
+  seen yet, so look at 0.8 again when Bedrock is switched on.
+- The date check now accepts a date held by a document or record source, and `<source>` tags say which kind they are.
+  Without this, every answer from the statutory calendar would be rejected. A topic's date still does not count.
+- A source is out of the search when it has not begun, has ended or has been replaced. A replacement takes over only when
+  it turns ready and its start date arrives, so a failed upload cannot lose the old text. Archiving it restores the old one.
+- Record cards hold what people wrote, never a status or an owner, so only text changes refresh them. Staff-only is the
+  default: work tasks and notes are staff, requests are both, and a comment reaches a client only if it is not internal
+  and the client can see its task. The hooks sit in the repository writes people use. Rows from jobs and scripts
+  (`repeat.ts`, board meetings) are picked up by the nightly `ask-index-sweep`.
+- Cards join the sources only for a data question, and a card in the sources stops the answer being saved.
+- Regulatory update cards stay Watch's: `upsertChatCard` writes them, and a builder here would fight it over the hash.
+  `searchIndexItems` leaves out a card whose update a published one replaced.
+- Saved answers run after `localMatch` and before the budget, with the same reasoning as phase 1, and only on the first
+  message of a conversation. A client's key also holds the company's legal form and residency. A killed `saved_answer`
+  path answers in full rather than showing a stop line. Saving clears rows from older knowledge versions.
+- `isStandingQuestion` is a word list. It errs towards not saving: "we" and "our" block a saved answer on an otherwise
+  general question, which costs a model call and nothing else.
+- PDF: `inspectPages` from unpdf tells scans from text. A page under 40 characters with an image on it is a scan; a blank
+  page is ignored. Nothing installed can cut a page out of a PDF, so a partly scanned file goes to the model whole with the
+  scanned pages named, and input tokens are charged for all of it. Past the daily budget a scan fails with a clear reason
+  and a retry works later; a text PDF still indexes, without context prefixes. Ingestion spend is reported under a new
+  path, `ingest`. The contextualizer moved to Haiku 5.5 with thinking off, because 200 output tokens would otherwise go on
+  thinking. `unpdf` is in `serverExternalPackages`.
+- Embedding spend does not reach `ask_usage_daily`, which counts language-model tokens. Titan's cost is small and shows
+  on the AWS bill.
+- `npm run ask:knowledge:load` loads the playbook, obligation texts, statutory calendar, glossary, reviewed topics and the
+  two overview PDFs (staff only, read first: they name roles, not people). No topic is published yet, so none loaded. A
+  topic restricted by legal form or residency stays with the topic code, because a search source has no per-viewer check.
+  The dark copy of the map PDF is the same text and is left out.
+- `npm run eval:knowledge` is the database eval (40 cases against pgvector with a fake embedding provider), and
+  `npm run eval:knowledge:live` runs the paraphrase and Hinglish cases through the real pipeline.

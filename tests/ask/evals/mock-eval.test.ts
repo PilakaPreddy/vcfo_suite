@@ -33,6 +33,8 @@ vi.mock('@/lib/ask/snapshot', () => ({
     filings: [{ particular: 'GSTR-3B', dueDate: '2026-10-20', filedOn: null }],
   })),
 }));
+vi.mock('@/db/repositories/ask-saved-answers', () => ({ findSavedAnswer: vi.fn(async () => null), saveAnswer: vi.fn(async () => undefined) }));
+vi.mock('@/lib/ask/knowledge-version', () => ({ currentKnowledgeVersion: vi.fn(async () => 'kv') }));
 vi.mock('@/lib/ask/retrieve', () => ({ retrieveSources: (...a: unknown[]) => retrieveSources(...a) }));
 vi.mock('@/lib/ask/tools/staff-data', () => ({
   loadStaffData: vi.fn(async () => ({ engagements: [], filings: [], now: new Date() })),
