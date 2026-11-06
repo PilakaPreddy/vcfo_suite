@@ -48,7 +48,7 @@ test('client full page answer', async ({ page }) => {
   await login(page, 'client');
   await setTheme(page, 'light');
   await page.goto('/app/client/ask');
-  await page.getByRole('button', { name: 'Where is my incorporation now?' }).click();
+  await page.getByRole('list', { name: 'Quick start' }).getByRole('button', { name: 'Where is my incorporation now?' }).click();
   await expect(page.locator('[data-visual="flow"]')).toBeVisible({ timeout: 60_000 });
   await shot(page, 'client', 'full-page', 1440, 'light');
 });
@@ -78,6 +78,7 @@ test('super admin preview', async ({ page }) => {
   await setTheme(page, 'light');
   const panel = await openAsk(page);
   await panel.getByRole('button', { name: 'Preview Ask VCFO as a client' }).click();
+  await expect(panel.getByLabel('Find a client')).toBeVisible({ timeout: 60_000 });
   await panel.locator('ul li button').first().click();
   await expect(page.locator('#ask-panel').getByText(/^Client view · /)).toBeVisible();
   await shot(page, 'super', 'preview', 1440, 'light');

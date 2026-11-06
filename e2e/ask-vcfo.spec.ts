@@ -64,7 +64,7 @@ test.describe('client full page', () => {
 
   test('where-now answer and its go-there link', async ({ page }) => {
     const main = page.locator('main');
-    await main.getByRole('button', { name: WHERE_NOW }).click(ANSWER);
+    await main.getByRole('list', { name: 'Quick start' }).getByRole('button', { name: WHERE_NOW }).click(ANSWER);
     await expect(main.locator('[data-visual="flow"]')).toBeVisible(ANSWER);
     // Built from the project's own gate, so it carries the firm badge; topic answers carry
     // "Not yet reviewed" while topics are drafts (next test).
@@ -79,7 +79,7 @@ test.describe('client full page', () => {
 
   test('topic answer saves to the library', async ({ page }) => {
     const main = page.locator('main');
-    await main.getByRole('button', { name: 'What is GST, and do we need it?' }).click(ANSWER);
+    await main.getByRole('list', { name: 'Quick start' }).getByRole('button', { name: 'What is GST, and do we need it?' }).click(ANSWER);
     await expect(main.getByText('Not yet reviewed')).toBeVisible(ANSWER);
     await main.getByRole('button', { name: 'Save to library' }).click();
     await expect(main.getByText('Saved to library')).toBeVisible();
