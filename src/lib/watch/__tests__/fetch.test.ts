@@ -94,6 +94,12 @@ describe('watchFetch', () => {
     await expect(settled(watchFetch('https://esic.gov.in/a'))).rejects.toThrow('robots_http_503');
   });
 
+  it('takes a rate limit on the robots file as a failure, never as permission', async () => {
+    mockFetch(() => new Response('', { status: 429 }));
+    await expect(settled(watchFetch('https://esic.gov.in/a'))).rejects.toThrow('robots_http_429');
+    expect(calls).toHaveLength(1);
+  });
+
   it('reads a robots redirect to the home page as no robots file', async () => {
     mockFetch((url) =>
       url.endsWith('/robots.txt') ? new Response(null, { status: 302, headers: { location: 'http://www.incometax.gov.in/iec/foportal' } }) : new Response('ok'),

@@ -29,6 +29,14 @@ export class WatchReadError extends Error {
   }
 }
 
+/** A scan needs the model and none is available now, so it waits for the next check and does not fail. */
+export class WatchScanWaitsError extends Error {
+  constructor() {
+    super('scan_waits_for_model');
+    this.name = 'WatchScanWaitsError';
+  }
+}
+
 async function readPdf(bytes: Buffer, provider: LlmProvider | null, model: string): Promise<{ text: string; usage?: ScanUsage }> {
   let extracted: { text: string; pages: number };
   try {
@@ -37,8 +45,8 @@ async function readPdf(bytes: Buffer, provider: LlmProvider | null, model: strin
     throw new WatchReadError('This PDF could not be read.');
   }
   if (extracted.text.replace(/\s/g, '').length >= extracted.pages * SCAN_CHARS_PER_PAGE) return { text: extracted.text };
-  if (!provider) throw new WatchReadError('This PDF is a scan, and no model is configured to read it.');
-  if (extracted.pages > MAX_SCAN_PAGES) throw new WatchReadError(`This scan has ${extracted.pages} pages, over the limit of ${MAX_SCAN_PAGES}. Paste the text by hand.`);
+  if (extracted.pages > MAX_SCAN_PAGES) throw new WatchReadError(`This scan has ${extracted.pages} pages, over the limit of ${MAX_SCAN_PAGES}, so a person must read it.`);
+  if (!provider) throw new WatchScanWaitsError();
   const result = await provider.complete({
     model,
     maxTokens: 8000,
@@ -55,6 +63,7 @@ async function readPdf(bytes: Buffer, provider: LlmProvider | null, model: strin
     ],
   });
   if (result.stopReason === 'refusal') throw new WatchReadError('The model declined to read this scan.');
+  if (result.stopReason === 'max_tokens') throw new WatchReadError('This scan is too long to transcribe whole, so a person must read it.');
   const text = result.content.flatMap((block) => (block.type === 'text' ? [block.text] : [])).join('\n');
   return { text: `${SCAN_LABEL}\n\n${text}`, usage: { model: result.model, ...result.usage } };
 }

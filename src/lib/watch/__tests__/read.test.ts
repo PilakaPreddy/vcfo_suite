@@ -8,7 +8,7 @@ vi.mock('../fetch', () => ({ MAX_PDF_BYTES: 1000, WatchBlockedError: class exten
 vi.mock('@/lib/ask/ingest/pdf-text', () => ({ pdfText: (bytes: unknown) => pdfMock(bytes) }));
 vi.mock('@/storage/s3', () => ({ getObjectBuffer: async () => Buffer.from('%PDF-file') }));
 
-const { embeddedPdf, readUpdateText, SCAN_LABEL, WatchReadError } = await import('../read');
+const { embeddedPdf, readUpdateText, SCAN_LABEL, WatchReadError, WatchScanWaitsError } = await import('../read');
 
 const LONG = 'Notification text that is long enough to read. '.repeat(20);
 const scanModel = (text: string, stopReason = 'end_turn') =>
@@ -71,11 +71,12 @@ describe('readUpdateText', () => {
     expect(usage).toMatchObject({ inputTokens: 5, outputTokens: 6 });
   });
 
-  it('refuses a long scan, a declined scan and a scan with no model', async () => {
+  it('refuses a long scan and a declined scan, and a scan with no model waits', async () => {
     pdfMock.mockResolvedValue({ text: '', pages: 11 });
     await expect(readUpdateText({ url: null, s3Key: 'k', listingText: null }, scanModel(LONG), 'm')).rejects.toThrow('over the limit');
     pdfMock.mockResolvedValue({ text: '', pages: 1 });
     await expect(readUpdateText({ url: null, s3Key: 'k', listingText: null }, scanModel('', 'refusal'), 'm')).rejects.toThrow('declined');
-    await expect(readUpdateText({ url: null, s3Key: 'k', listingText: null }, null, 'm')).rejects.toBeInstanceOf(WatchReadError);
+    await expect(readUpdateText({ url: null, s3Key: 'k', listingText: null }, scanModel('part of it', 'max_tokens'), 'm')).rejects.toBeInstanceOf(WatchReadError);
+    await expect(readUpdateText({ url: null, s3Key: 'k', listingText: null }, null, 'm')).rejects.toBeInstanceOf(WatchScanWaitsError);
   });
 });

@@ -114,7 +114,8 @@ async function robotsFor(url: URL): Promise<RobotsRules> {
       }
       if (res.ok) return parseRobots((await readCapped(res, 512 * 1024)).toString('utf8'));
       if (res.status === 401 || res.status === 403) return DENY_ALL;
-      if (res.status >= 400 && res.status < 500) return ALLOW_ALL;
+      // A 429 asks us to slow down, which is not "no robots file", so this check fails and runs later.
+      if (res.status >= 400 && res.status < 500 && res.status !== 429) return ALLOW_ALL;
       throw new Error(`robots_http_${res.status}`);
     }
     throw new Error('robots_too_many_redirects');

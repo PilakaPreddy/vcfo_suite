@@ -101,7 +101,7 @@ export const regSummarySchema = z.object({
 });
 export type RegSummary = z.infer<typeof regSummarySchema>;
 
-/** A problem the code check found: a date, number or quote that is not in the source. */
+/** A problem the code check found: a date, number or quote not in the source, or a draft summarised as made. */
 export interface RegVerifyProblem {
   field: string;
   value: string;

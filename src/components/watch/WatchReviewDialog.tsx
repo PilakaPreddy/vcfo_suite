@@ -73,7 +73,7 @@ export function WatchReviewDialog({ id, canReview, onClose }: { id: string | nul
     edit.mutate(
       { ...draft, act: draft.act?.trim() || null, effectiveDate: draft.effectiveDate || null, oldDueDate: draft.oldDueDate || null, newDueDate: draft.newDueDate || null },
       {
-        onSuccess: ({ problems }) => (problems.length > 0 && !draft.acceptProblems ? toastError('Saved, with flags', 'The check still finds something not in the source.') : toastSuccess('Saved')),
+        onSuccess: ({ problems }) => (problems.length > 0 && !draft.acceptProblems ? toastError('Saved, with flags', 'The check still flags something against the source.') : toastSuccess('Saved')),
         onError: failed('Could not save'),
       },
     );
@@ -140,11 +140,11 @@ export function WatchReviewDialog({ id, canReview, onClose }: { id: string | nul
             {update.rejectReason ? <p className="text-[13px] text-ink-2">Rejected: {update.rejectReason}</p> : null}
             {update.verifyProblems.length > 0 ? (
               <div className="rounded-md bg-warning-soft px-3 py-2 text-[13px] text-ink">
-                <p className="font-medium">The check found these are not in the source</p>
+                <p className="font-medium">The check flagged these against the source</p>
                 <ul className="mt-1 grid gap-0.5">
                   {update.verifyProblems.map((problem) => (
                     <li key={`${problem.field}:${problem.value}`}>
-                      {humanise(problem.field)}: {problem.value}
+                      {humanise(problem.field)}: {problem.value}. {problem.message}
                     </li>
                   ))}
                 </ul>
