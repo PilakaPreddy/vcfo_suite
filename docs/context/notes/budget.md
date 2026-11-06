@@ -14,3 +14,4 @@
 - The budget migration is `0048_budgets`. It was first written as `0047_budgets` and renumbered
   when `main` took `0047_ask_foundation`. A local database that already applied the old name
   must drop the budget tables, or be rebuilt, before it migrates again.
+- The client portal reverts Tailwind's reset outside a `.cp-tw` island, so a budget page under `app/app/client` must sit inside one or its layout collapses.
