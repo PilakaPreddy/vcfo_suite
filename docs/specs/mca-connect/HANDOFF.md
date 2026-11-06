@@ -43,9 +43,11 @@ Route R1: a Chrome extension (`vcfo_assist`) fills forms inside the person's own
 
 **api-anything (github.com/goodnight000/api-anything) was examined and rejected.** It replays private site requests, which rule 3 prohibits. Its docs say it does not solve captchas, its last-resort browser tier is reads only, and its writes are tested only against a local fixture. Its issues #108 to #112 report plaintext cookie storage and reading the everyday browser's cookies, so do not install it on a machine with MCA or client sessions. Only its docs and issues were read. It was not run.
 
-## What is built (all uncommitted)
+## What is built (committed on branches, not pushed)
 
-**`/home/farhath/Documents/vcfo_assist`**, branch `main`, version 0.2.0:
+Update of 6 November: the owner said the extension was not up to the mark, so it was redesigned (`ASSIST-ARCHITECTURE.html`) and steps P1 to P3 were built with no portal access. The extension is now on branch `feat/assist-v2`, version 0.3.0, and its current description is `vcfo_assist/docs/ARCHITECTURE.md`. The Suite work is on branch `feat/mca-filing`. Neither branch is pushed, merged or deployed. `vcfo_assist` is a public GitHub repository, so check what a push would publish before pushing it.
+
+**`/home/farhath/Documents/vcfo_assist`**, as built on 5 November (version 0.2.0):
 
 - Part B is enabled, and a saved CS approval reference is required before a run starts.
 - Form-change check (`src/engine/drift.js`, `ops/driftCheck.js`, `schemas-full/*.known.json`).
@@ -54,9 +56,9 @@ Route R1: a Chrome extension (`vcfo_assist`) fills forms inside the person's own
 - Credential guard fix: `otp(?!anel)`. The old pattern matched `rootPanel` and would have refused every field on the live form.
 - Recipes regenerated (v3). Recipes contain no submit, sign or pay step, and a test enforces this.
 
-**`/home/farhath/Documents/vcfo-suite`**, branch `main` at `c7ae16b6`:
+**`/home/farhath/Documents/vcfo-suite`**, branch `feat/mca-filing`, worktree `.claude/worktrees/mca-filing`:
 
-- `src/lib/mca-filing/`, `src/db/repositories/assist-filings.ts`, `assist-attachments.ts`, routes under `app/api/assist/engagements/[id]/` (`attachments/`, `filing/`), `src/components/incorporation/McaFilingCard.tsx`, `src/hooks/use-mca-filing.ts`, `src/jobs/assist-filing-deadlines.ts`, migration `0041_assist_filings`.
+- `src/lib/mca-filing/`, `src/db/repositories/assist-filings.ts`, `assist-attachments.ts`, routes under `app/api/assist/engagements/[id]/` (`attachments/`, `filing/`), `src/components/incorporation/McaFilingCard.tsx`, `src/hooks/use-mca-filing.ts`, `src/jobs/assist-filing-deadlines.ts`, migration `0048_assist_filings`.
 - Edits to the schema, journal, `compliance-subject-scope.ts`, Inngest route, jobs registry, `next.config.mjs`, `package.json` and lock (`pdfjs-dist`), `.env.example`, `EngagementDetail.tsx`, `STATE.md`, the READMEs.
 - The run label changed from "Filed by Assist" to "Reference recorded".
 
@@ -70,9 +72,9 @@ Route R1: a Chrome extension (`vcfo_assist`) fills forms inside the person's own
 
 ## Things to fix or watch
 
-1. **The migration number is out of date.** `ui/prototype-match` now has migrations up to `0045`, including its own `0041_receivables_send_status`. To land this work there: delete `src/db/migrations/0041_assist_filings.sql` and `meta/0041_snapshot.json`, remove its journal entry, then run `npm run db:generate -- --name assist_filings`. That should now give 0046. Local Postgres was at 0040. Apply on RDS before any deploy, and set `VCFO_ASSIST_ENABLED`.
-2. **The work is exposed.** It sits uncommitted in a shared checkout, and another session moved this checkout between branches. Commit `81012c40` on `ui/prototype-match` took these files back out after they landed there by accident. Commit to a dedicated branch as soon as the owner says go.
-3. **Review the extension's diff before committing.** `capture/drive*.sh`, `tools/test_filler.js`, the `START-HERE.md` and `consolidation/BRIEF.md` renames and `docs/context/` are not on my list of this build's changes, so they may be older or from another session.
+1. **Check the migration number when merging.** The migration is now `0048_assist_filings`, numbered after `main` as it stood on 6 November. If `main` has moved past 0047 by then, delete `src/db/migrations/0048_assist_filings.sql` and `meta/0048_snapshot.json`, remove its journal entry, and run `npm run db:generate -- --name assist_filings` again. Apply it on RDS before any deploy, and set `VCFO_ASSIST_ENABLED`.
+2. **Nothing is pushed.** Both branches exist only on this laptop until the owner says to push them.
+3. **The extension's diff was reviewed before its first commit** on `feat/assist-v2`. `capture/drive*.sh` and the older document moves went in with it.
 4. **Disclosure.** The first three e2e runs, before the name-lookup block, may have loaded the public MCA site with no login, data or filling. This was not established either way.
 5. **September 2026 capture.** Scripts opened MCA forms in a logged-in session, and the log records two clicks on a control named Submit. Who clicked and what was filed is not established. `reference/vcfo_assist/mca-capture/profile` holds browser `Cookies` and `Login Data` files, and the folder is group-writable. Those files were not opened. Do not open them, and do not delete the folder before the CS answers B12.
 
