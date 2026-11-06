@@ -65,8 +65,3 @@ export function datesIn(text: string): FoundDates {
 export function firstDateIn(text: string): string | null {
   return [...datesIn(text).days][0] ?? null;
 }
-
-/** The calendar day in India for an instant. */
-export function istDay(when: Date): string {
-  return when.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-}

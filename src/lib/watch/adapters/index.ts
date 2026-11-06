@@ -1,5 +1,6 @@
 import { parseRssOrAtom, stripHtml } from '@/lib/notifications/announcements';
-import { firstDateIn, istDay } from '../dates';
+import { todayIST } from '@/lib/compliance/filings';
+import { firstDateIn } from '../dates';
 import type { ListedItem, SourceAdapter } from '../types';
 import { linksIn, officialUrl, tableRows, withoutComments } from './html';
 
@@ -22,7 +23,7 @@ function feedAdapter(id: string, noise?: SourceAdapter['noise']): SourceAdapter 
         externalKey: item.externalId,
         title: clean(item.title),
         url: lastAbsolute(item.link),
-        publishedOn: istDay(item.publishedAt),
+        publishedOn: todayIST(item.publishedAt),
         body: item.body,
       }));
     },

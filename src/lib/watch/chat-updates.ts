@@ -6,8 +6,8 @@ import { listUpdatesForChat, type ChatUpdateRow } from '@/db/repositories/reg-up
 import { listPublicSourceStatus, listWatchSources } from '@/db/repositories/reg-sources';
 import { EVERYONE, openList } from '@/lib/ask/metrics/define';
 import type { MetricDefinition, MetricFilters, MetricValue } from '@/lib/ask/metrics/types';
+import { todayIST } from '@/lib/compliance/filings';
 import { formatSourceDate, sourceCoverage, type SourceCoverage } from './source-status';
-import { istDay } from './dates';
 import type { RegArea } from './types';
 
 /**
@@ -106,7 +106,7 @@ async function coverageFor(ctx: AuthContext, clientView: boolean, now: Date): Pr
 
 async function readUpdates(ctx: AuthContext, shell: AskShell, question: UpdatesQuestion, now: Date) {
   const clientView = shell === 'client';
-  const since = istDay(new Date(now.getTime() - (question.days - 1) * 86_400_000));
+  const since = todayIST(new Date(now.getTime() - (question.days - 1) * 86_400_000));
   const { total, rows } = await listUpdatesForChat(ctx, { clientView, area: question.area, since });
   return { total, rows, coverage: await coverageFor(ctx, clientView, now) };
 }

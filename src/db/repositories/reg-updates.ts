@@ -13,7 +13,6 @@ import {
 import type { AuthContext } from '@/auth/guards';
 import { isAdminOrManager, type Role } from '@/lib/auth';
 import { maskIdentityNumbers } from '@/lib/ask/mask';
-import { istDay } from '@/lib/watch/dates';
 import { sha256 } from '@/lib/watch/fetch';
 import { audienceFor, isWatchStaff, WATCH_ROLES, type WatchPerson } from '@/lib/watch/recipients';
 import type {

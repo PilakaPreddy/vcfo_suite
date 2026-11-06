@@ -9,6 +9,7 @@ import { askBudgets, askFlags } from '@/lib/ask/config';
 import { NO_LLM_USAGE, type LlmUsage } from '@/lib/ask/provider';
 import type { ModelSpend } from '@/lib/ask/provider/meter';
 import { estimateCostUsd } from '@/lib/ask/provider/pricing';
+import { todayIST } from '@/lib/compliance/filings';
 import type { AskPath } from '@/lib/ask/paths';
 
 /**
@@ -18,13 +19,9 @@ import type { AskPath } from '@/lib/ask/paths';
  * and the numbers hold no person, client or text. The report is for a super admin only.
  */
 
-function istDay(at: Date): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(at);
-}
-
 export async function systemRecordAskUsage(path: AskPath, spend: readonly ModelSpend[], at: Date = new Date()): Promise<void> {
   if (spend.length === 0) return;
-  const day = istDay(at);
+  const day = todayIST(at);
   await db
     .insert(askUsageDaily)
     .values(
@@ -58,7 +55,7 @@ export async function systemTodayTokenTotal(at: Date = new Date()): Promise<numb
       total: sql<string>`coalesce(sum(${askUsageDaily.inputTokens} + ${askUsageDaily.outputTokens} + ${askUsageDaily.cacheWriteTokens}), 0)`,
     })
     .from(askUsageDaily)
-    .where(eq(askUsageDaily.day, istDay(at)));
+    .where(eq(askUsageDaily.day, todayIST(at)));
   return Number(row?.total ?? 0);
 }
 
@@ -103,7 +100,7 @@ export async function askUsageReport(ctx: AuthContext, input: { days: number; no
         cacheWriteTokens: sql<string>`sum(${askUsageDaily.cacheWriteTokens})`,
       })
       .from(askUsageDaily)
-      .where(gte(askUsageDaily.day, istDay(since)))
+      .where(gte(askUsageDaily.day, todayIST(since)))
       .groupBy(askUsageDaily.path, askUsageDaily.model),
     db
       .select({ path: askMessages.path, messages: sql<string>`count(*)` })

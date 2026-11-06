@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { stripHtml } from '@/lib/notifications/announcements';
 import { officialUrl } from './adapters/html';
-import { istDay } from './dates';
+import { todayIST } from '@/lib/compliance/filings';
 
 /**
  * Reads an official alert mail with code only: a raw message from the mailbox, or text a person pasted
@@ -117,7 +117,7 @@ export function parseAlertMail(raw: string): AlertMail {
     subject: subject || body.split('\n')[0]!.trim().slice(0, 300),
     body,
     link: officialLink(`${parts.plain ?? ''}\n${parts.html ?? ''}`),
-    sentOn: Number.isNaN(sent) ? null : istDay(new Date(sent)),
+    sentOn: Number.isNaN(sent) ? null : todayIST(new Date(sent)),
   };
 }
 

@@ -25,7 +25,7 @@ import {
   type CalendarChange,
   type PeriodRow,
 } from '@/lib/watch/calendar-proposal';
-import { istDay } from '@/lib/watch/dates';
+import { todayIST } from '@/lib/compliance/filings';
 import { formatSourceDate } from '@/lib/watch/source-status';
 import type {
   ComplianceInstance,
@@ -272,7 +272,7 @@ export async function systemGenerateComplianceInstances(
       }),
       changes,
       existing,
-      istDay(asOfDate),
+      todayIST(asOfDate),
     );
 
     let upcoming = 0;
@@ -386,7 +386,7 @@ export async function moveFilingPeriod(
     .update(complianceInstances)
     .set({
       dueDate: newDueDate,
-      status: sql`case when ${complianceInstances.status} = 'overdue' and ${newDueDate}::date >= ${istDay(new Date())}::date then 'upcoming' else ${complianceInstances.status} end`,
+      status: sql`case when ${complianceInstances.status} = 'overdue' and ${newDueDate}::date >= ${todayIST(new Date())}::date then 'upcoming' else ${complianceInstances.status} end`,
     })
     .where(inArray(complianceInstances.id, ids));
   const newDay = formatSourceDate(new Date(`${newDueDate}T12:00:00+05:30`));
