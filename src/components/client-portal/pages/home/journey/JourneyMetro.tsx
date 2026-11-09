@@ -5,9 +5,12 @@
  * line (Incorporation: Part A and Part B; Post-incorporation: its steps; Registration: one line
  * per kind; Compliance: one line per area) and its leaves are the stations. Done stations are
  * filled; the others are hollow. A train sits on the current station and rocks gently. The map
- * scrolls sideways in its own box on phones.
+ * scrolls sideways in its own box: touch scrolls it natively, and a mouse or pen drags it (a drag
+ * of more than 4px does not count as a click on a station).
  */
+import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as RPointerEvent } from 'react';
 import { m } from 'framer-motion';
+import { cn } from '@/lib/utils';
 import type { JNode } from './journey-model';
 import { leavesOf } from './status';
 
@@ -70,8 +73,54 @@ export function JourneyMetro({
   const width = LEFT + (longest - 1) * GAP + 80;
   const height = TOP + lines.length * ROW;
 
+  // Mouse and pen drag-to-scroll. The pointer is captured only once the drag passes 4px, so a
+  // plain click still lands on its station; `dragged` swallows the click that ends a real drag.
+  const drag = useRef<{ id: number; x: number; left: number } | null>(null);
+  const dragged = useRef(false);
+  const [grabbing, setGrabbing] = useState(false);
+
+  const down = (e: RPointerEvent<HTMLDivElement>) => {
+    dragged.current = false;
+    if (e.pointerType === 'touch' || e.button !== 0) return;
+    drag.current = { id: e.pointerId, x: e.clientX, left: e.currentTarget.scrollLeft };
+  };
+  const move = (e: RPointerEvent<HTMLDivElement>) => {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    const dx = e.clientX - d.x;
+    if (!dragged.current) {
+      if (Math.abs(dx) <= 4) return;
+      dragged.current = true;
+      setGrabbing(true);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    e.currentTarget.scrollLeft = d.left - dx;
+  };
+  const up = (e: RPointerEvent<HTMLDivElement>) => {
+    if (drag.current?.id !== e.pointerId) return;
+    drag.current = null;
+    setGrabbing(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+  const swallowDragClick = (e: ReactMouseEvent) => {
+    if (!dragged.current) return;
+    dragged.current = false;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   return (
-    <div className="overflow-x-auto rounded-md border border-line bg-surface-raised">
+    <div
+      className={cn(
+        'select-none overflow-x-auto rounded-md border border-line bg-surface-raised',
+        grabbing ? 'cursor-grabbing [&_*]:!cursor-grabbing' : 'cursor-grab',
+      )}
+      onPointerDown={down}
+      onPointerMove={move}
+      onPointerUp={up}
+      onPointerCancel={up}
+      onClickCapture={swallowDragClick}
+    >
       <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} role="group" aria-label={`${node.label} metro map`} className="block">
         {lines.map((line, li) => {
           const y = TOP + li * ROW + 12;

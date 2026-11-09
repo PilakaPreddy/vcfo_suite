@@ -7,13 +7,26 @@
  *
  * - Click a card to open its panel; the ▸/▾ toggle opens or closes its branch. The current path
  *   starts open.
- * - Drag a card to move it; drag the background to pan; the wheel zooms around the pointer.
- *   Moved positions are kept in localStorage per engagement and root ("Reset layout" clears them).
+ * - Two modes, kept in localStorage. "Move map" (the default, a hand tool): a drag anywhere,
+ *   cards included, pans the view, and a tap on a card still opens it. "Arrange cards": drag a
+ *   card to move it and drag the background to pan. Moved positions are kept in localStorage per
+ *   engagement and root ("Reset layout" clears them).
+ * - The wheel or a two-finger pinch zooms; with the canvas focused, the arrow keys pan by 60px
+ *   and + / - zoom.
  * - Below 640px the same tree is an accordion list, because dragging is hard on phones.
  *
  * Loaded with `next/dynamic` (`ssr: false`), so `window` is always there.
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as RPointerEvent,
+} from 'react';
 import { cn } from '@/lib/utils';
 import { StepMark } from '@/components/ui/step-track';
 import { Bar } from '../../incorporation/spectrum';
@@ -23,14 +36,28 @@ import { STATUS_BAR, STATUS_WORD, markOf, pctOf, readStore, writeStore } from '.
 
 type Pt = { x: number; y: number };
 type View = { x: number; y: number; k: number };
+type Mode = 'move' | 'arrange';
 type Drag =
   | { kind: 'node'; id: string; start: Pt; from: Pt; moved: boolean; last?: Pt }
-  | { kind: 'pan'; start: Pt; from: View; moved: boolean };
+  /** `tap` is the card the pan started on in move mode: a press that never moves selects it. */
+  | { kind: 'pan'; start: Pt; from: View; moved: boolean; tap?: string }
+  | { kind: 'pinch'; dist: number; mid: Pt; from: View };
 
 const MIN_K = 0.35;
 const MAX_K = 1.75;
 const PAD = 24;
+const KEY_STEP = 60;
+const MODE_KEY = 'vcfo.journey.tree-mode';
 const clampK = (k: number) => Math.min(MAX_K, Math.max(MIN_K, k));
+
+const HINT: Record<Mode, string> = {
+  move: 'Drag anywhere to move the map · scroll or pinch to zoom · click a card for details',
+  arrange: 'Drag a card to move it · drag the background to move the map · Reset layout puts cards back',
+};
+
+function loadMode(): Mode {
+  return readStore(MODE_KEY) === 'arrange' ? 'arrange' : 'move';
+}
 
 function loadMoved(key: string): Record<string, Pt> {
   const raw = readStore(key);
@@ -89,7 +116,7 @@ function Toggle({ open, label, onToggle }: { open: boolean; label: string; onTog
         e.stopPropagation();
         onToggle();
       }}
-      className="grid h-6 w-6 flex-none place-items-center rounded-[4px] text-[12px] text-ink-muted hover:bg-surface-sunken hover:text-ink"
+      className="grid h-6 w-6 flex-none cursor-pointer place-items-center rounded-[4px] text-[12px] text-ink-muted hover:bg-surface-sunken hover:text-ink"
     >
       {open ? '▾' : '▸'}
     </button>
@@ -100,12 +127,15 @@ function NodeCard({
   node,
   open,
   onPath,
+  cursor,
   onToggle,
   onSelect,
 }: {
   node: JNode;
   open: boolean;
   onPath: boolean;
+  /** The card's cursor class for the canvas mode (`cursor-grab` or `cursor-move`). */
+  cursor: string;
   onToggle: () => void;
   onSelect: () => void;
 }) {
@@ -122,7 +152,8 @@ function NodeCard({
         }
       }}
       className={cn(
-        'flex h-full w-full cursor-grab select-none items-center gap-2.5 rounded-md border-1.5 bg-surface-raised px-3 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand active:cursor-grabbing',
+        'flex h-full w-full select-none items-center gap-2.5 rounded-md border-1.5 bg-surface-raised px-3 shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-brand',
+        cursor,
         onPath ? 'border-brand-line' : 'border-line',
       )}
     >
@@ -182,7 +213,9 @@ function Accordion({
   );
 }
 
-const CTRL = 'grid h-7 min-w-7 place-items-center rounded-[4px] border border-line bg-surface-raised px-2 text-[12.5px] font-medium text-ink hover:bg-surface-sunken';
+const CTRL =
+  'grid h-7 min-w-7 cursor-pointer place-items-center rounded-[4px] border border-line bg-surface-raised px-2 text-[12.5px] font-medium text-ink hover:bg-surface-sunken';
+const SEG = 'h-7 cursor-pointer px-2.5 text-[12.5px] font-medium first:rounded-l-[4px] last:rounded-r-[4px]';
 
 export function JourneyTree({
   root,
@@ -206,9 +239,14 @@ export function JourneyTree({
   const [expanded, setExpanded] = useState(() => new Set([root.id, ...currentPath, ...open]));
   const [moved, setMoved] = useState<Record<string, Pt>>(() => loadMoved(storageKey));
   const [view, setView] = useState<View>({ x: PAD, y: PAD, k: 1 });
+  const [mode, setModeState] = useState<Mode>(loadMode);
+  const [panning, setPanning] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
+  /** Every pointer that is down on the canvas, for the two-finger pinch. */
+  const pointers = useRef(new Map<number, Pt>());
   const onPath = useMemo(() => new Set(currentPath), [currentPath]);
+  const hintId = useId();
 
   const base = useMemo(() => layoutTree(root, expanded), [root, expanded]);
   const pos = useCallback((id: string, fallback: Pt): Pt => moved[id] ?? fallback, [moved]);
@@ -266,6 +304,11 @@ export function JourneyTree({
     return () => el.removeEventListener('wheel', onWheel);
   }, [narrow]);
 
+  const setMode = (next: Mode) => {
+    setModeState(next);
+    writeStore(MODE_KEY, next);
+  };
+
   const zoom = (f: number) => {
     const el = box.current;
     if (!el) return;
@@ -282,19 +325,55 @@ export function JourneyTree({
     fitTo(base.nodes);
   };
 
+  /** Starts a pinch from the two pointers that are down, replacing any one-pointer drag. */
+  const startPinch = () => {
+    const [a, b] = [...pointers.current.values()];
+    const r = box.current?.getBoundingClientRect();
+    if (!a || !b || !r) return;
+    drag.current = {
+      kind: 'pinch',
+      dist: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)),
+      mid: { x: (a.x + b.x) / 2 - r.left, y: (a.y + b.y) / 2 - r.top },
+      from: view,
+    };
+    setPanning(false);
+  };
+
   const down = (e: RPointerEvent, id?: string) => {
-    if (e.button !== 0) return;
-    const start = { x: e.clientX, y: e.clientY };
-    drag.current = id ? { kind: 'node', id, start, from: at[id] ?? { x: 0, y: 0 }, moved: false } : { kind: 'pan', start, from: view, moved: false };
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (id) e.stopPropagation();
+    const start = { x: e.clientX, y: e.clientY };
+    pointers.current.set(e.pointerId, start);
     box.current?.setPointerCapture(e.pointerId);
+    if (pointers.current.size === 2) {
+      startPinch();
+      return;
+    }
+    if (pointers.current.size > 2) return;
+    drag.current =
+      id && mode === 'arrange'
+        ? { kind: 'node', id, start, from: at[id] ?? { x: 0, y: 0 }, moved: false }
+        : { kind: 'pan', start, from: view, moved: false, tap: id };
   };
   const move = (e: RPointerEvent) => {
+    if (pointers.current.has(e.pointerId)) pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const d = drag.current;
     if (!d) return;
+    if (d.kind === 'pinch') {
+      const [a, b] = [...pointers.current.values()];
+      const r = box.current?.getBoundingClientRect();
+      if (!a || !b || !r) return;
+      const k = clampK(d.from.k * (Math.hypot(b.x - a.x, b.y - a.y) / d.dist));
+      const mx = (a.x + b.x) / 2 - r.left;
+      const my = (a.y + b.y) / 2 - r.top;
+      // Keep the content under the first midpoint under the moving midpoint.
+      setView({ k, x: mx - ((d.mid.x - d.from.x) * k) / d.from.k, y: my - ((d.mid.y - d.from.y) * k) / d.from.k });
+      return;
+    }
     const dx = e.clientX - d.start.x;
     const dy = e.clientY - d.start.y;
     if (!d.moved && Math.hypot(dx, dy) < 4) return;
+    if (!d.moved && d.kind === 'pan') setPanning(true);
     d.moved = true;
     if (d.kind === 'pan') setView({ ...d.from, x: d.from.x + dx, y: d.from.y + dy });
     else {
@@ -304,10 +383,22 @@ export function JourneyTree({
     }
   };
   const up = (e: RPointerEvent) => {
-    const d = drag.current;
-    drag.current = null;
+    pointers.current.delete(e.pointerId);
     if (box.current?.hasPointerCapture(e.pointerId)) box.current.releasePointerCapture(e.pointerId);
-    if (!d || d.kind !== 'node') return;
+    const d = drag.current;
+    if (d?.kind === 'pinch') {
+      // The pinch ends the gesture: the finger left behind does not start a pan or a tap.
+      if (!pointers.current.size) drag.current = null;
+      return;
+    }
+    drag.current = null;
+    setPanning(false);
+    if (!d || e.type === 'pointercancel') return;
+    if (d.kind === 'pan') {
+      const n = !d.moved && d.tap ? at[d.tap] : undefined;
+      if (n) onSelect(n.node);
+      return;
+    }
     if (d.moved) {
       if (d.last) writeStore(storageKey, JSON.stringify({ ...moved, [d.id]: d.last }));
     } else {
@@ -315,6 +406,29 @@ export function JourneyTree({
       if (n) onSelect(n.node);
     }
   };
+
+  const onKey = (e: ReactKeyboardEvent) => {
+    if (e.altKey || e.ctrlKey || e.metaKey) return;
+    const pan: Record<string, Pt> = {
+      ArrowLeft: { x: KEY_STEP, y: 0 },
+      ArrowRight: { x: -KEY_STEP, y: 0 },
+      ArrowUp: { x: 0, y: KEY_STEP },
+      ArrowDown: { x: 0, y: -KEY_STEP },
+    };
+    const step = pan[e.key];
+    if (step) {
+      e.preventDefault();
+      setView((v) => ({ ...v, x: v.x + step.x, y: v.y + step.y }));
+    } else if (e.key === '+' || e.key === '=') {
+      e.preventDefault();
+      zoom(1.2);
+    } else if (e.key === '-' || e.key === '_') {
+      e.preventDefault();
+      zoom(1 / 1.2);
+    }
+  };
+
+  const cardCursor = panning ? 'cursor-grabbing' : mode === 'move' ? 'cursor-grab' : 'cursor-move';
 
   if (narrow) {
     return (
@@ -325,9 +439,22 @@ export function JourneyTree({
   }
 
   return (
+    // The canvas is one keyboard-operable widget (role "application" so screen readers pass the
+    // arrow keys through): focus it, then the arrow keys pan and + / - zoom. jsx-a11y does not
+    // count "application" as interactive, hence the two disables.
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       ref={box}
-      className="relative h-[380px] cursor-grab touch-none overflow-hidden rounded-md border border-line bg-surface-sunken active:cursor-grabbing"
+      role="application"
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      tabIndex={0}
+      aria-label="Journey map. Use the arrow keys to move the map and plus or minus to zoom."
+      aria-describedby={hintId}
+      onKeyDown={onKey}
+      className={cn(
+        'relative h-[380px] touch-none overflow-hidden rounded-md border border-line bg-surface-sunken outline-none focus-visible:ring-2 focus-visible:ring-brand',
+        panning ? 'cursor-grabbing' : 'cursor-grab',
+      )}
       style={{ backgroundImage: 'radial-gradient(oklch(var(--line)) 1px, transparent 1px)', backgroundSize: '18px 18px' }}
       onPointerDown={(e) => down(e)}
       onPointerMove={move}
@@ -362,11 +489,24 @@ export function JourneyTree({
             style={{ left: n.x, top: n.y, width: NODE_W, height: NODE_H }}
             onPointerDown={(e) => down(e, n.id)}
           >
-            <NodeCard node={n.node} open={expanded.has(n.id)} onPath={onPath.has(n.id)} onToggle={() => toggle(n.id)} onSelect={() => onSelect(n.node)} />
+            <NodeCard node={n.node} open={expanded.has(n.id)} onPath={onPath.has(n.id)} cursor={cardCursor} onToggle={() => toggle(n.id)} onSelect={() => onSelect(n.node)} />
           </div>
         ))}
       </div>
-      <div className="absolute right-2 top-2 flex gap-1" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="absolute right-2 top-2 flex cursor-default gap-1" onPointerDown={(e) => e.stopPropagation()}>
+        <div role="group" aria-label="Canvas mode" className="mr-1 flex rounded-[4px] border border-line bg-surface-raised">
+          {(['move', 'arrange'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={mode === m}
+              onClick={() => setMode(m)}
+              className={cn(SEG, mode === m ? 'bg-brand-soft text-brand-text' : 'text-ink hover:bg-surface-sunken')}
+            >
+              {m === 'move' ? '✋ Move map' : 'Arrange cards'}
+            </button>
+          ))}
+        </div>
         <button type="button" className={CTRL} onClick={() => zoom(1.2)} aria-label="Zoom in">
           +
         </button>
@@ -380,7 +520,9 @@ export function JourneyTree({
           Reset layout
         </button>
       </div>
-      <span className="pointer-events-none absolute bottom-2 left-3 text-[11.5px] text-ink-muted">Drag to move · scroll to zoom</span>
+      <span id={hintId} className="pointer-events-none absolute bottom-2 left-3 text-[11.5px] text-ink-muted">
+        {HINT[mode]}
+      </span>
     </div>
   );
 }
