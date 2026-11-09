@@ -1,0 +1,14 @@
+[
+  {
+    "id": "D-T01-01",
+    "test": "T-01",
+    "step": 6,
+    "severity": "S2",
+    "title": "Super admin's \"Portal\" link crashes with \"Something went wrong\"",
+    "who": "super_admin (also any staff member who opens /app/client/overview or /app/client/messages)",
+    "cause": "The client Home and Messages pages read the client portal context, which exists only when a client is signed in. For staff the page threw \"usePortal must be used inside ClientPortalShell\".",
+    "fix": "The client portal gate now shows staff a short note with a link to Clients on those two pages, instead of rendering them. All other client pages were checked and work for staff.",
+    "files": ["src/components/client-portal/ClientPortalGate.tsx", "src/components/client-portal/ClientPortalGate.test.ts"],
+    "status": "fixed"
+  }
+]
