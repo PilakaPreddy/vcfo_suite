@@ -212,7 +212,7 @@ export function SuperFilterChips({
             trigger={
               <button
                 type="button"
-                className="inline-flex h-7 items-center gap-1 whitespace-nowrap rounded-md border-1.5 border-dashed border-line-strong px-2.5 text-[13px] font-medium text-ink-2 hover:bg-surface-sunken"
+                className="inline-flex h-7 items-center gap-1 whitespace-nowrap rounded-md border-1.5 border-line-strong px-2.5 text-[13px] font-medium text-ink-2 hover:bg-surface-sunken"
               >
                 <Plus size={13} strokeWidth={1.6} aria-hidden />
                 {filter.label}

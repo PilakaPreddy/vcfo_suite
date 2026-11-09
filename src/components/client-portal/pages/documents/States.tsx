@@ -2,7 +2,7 @@
 
 /**
  * Documents page states: loading skeleton (s/docs/docs_a_loading.dc.html, grey
- * shapes per R-48), the empty explorer (a dashed area with the action) and the
+ * shapes per R-48), the empty explorer (a plain-edged area with the action) and the
  * load error card. There is no page title; the title lives in the top-bar trail.
  */
 import type { CSSProperties } from 'react';
@@ -92,7 +92,7 @@ export function DocsLoading({ phone }: { phone?: boolean }) {
   );
 }
 
-/** R-48: no documents yet is a dashed area with the actions. */
+/** R-48: no documents yet is a plain-edged area with the actions. */
 export function DocsEmpty({ canUpload, onUpload, onOpenInc }: { canUpload: boolean; onUpload: () => void; onOpenInc: () => void }) {
   return (
     <section className="sx-card" aria-label="Document explorer" style={CARD}>

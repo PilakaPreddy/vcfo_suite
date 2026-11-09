@@ -108,7 +108,7 @@ export function VaultUploadDialog({ open, onOpenChange, engagementId, companyNam
               e.preventDefault();
               pick([...e.dataTransfer.files]);
             }}
-            className="flex flex-col items-center gap-2 rounded-md border-dash-fine bg-surface-raised px-5 py-6 text-center hover:[--dash-color:oklch(var(--brand-line))]"
+            className="flex flex-col items-center gap-2 rounded-md border-fine bg-surface-raised px-5 py-6 text-center hover:[--edge-color:oklch(var(--brand-line))]"
           >
             <span className="grid h-10 w-10 place-items-center rounded-md bg-brand-soft text-brand-text" aria-hidden>
               <Upload className="h-[18px] w-[18px]" strokeWidth={1.6} />

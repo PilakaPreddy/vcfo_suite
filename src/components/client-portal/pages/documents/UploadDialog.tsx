@@ -9,7 +9,7 @@
  * answer one request in a single upload; each file gets its own row with its own progress and,
  * when the server refuses it, its own reason. Undo on the page removes the whole batch.
  * VCFO Spectrum (prototype src/components/cards/UploadDialog.tsx): a 52 px head,
- * the requests as one radio list with due chips, a dashed drop zone, file rows
+ * the requests as one radio list with due chips, a plain-edged drop zone, file rows
  * with R-26 badges, Cancel and a blurple Upload in the footer.
  */
 import { useCallback, useEffect, useRef, useState, type DragEvent } from 'react';

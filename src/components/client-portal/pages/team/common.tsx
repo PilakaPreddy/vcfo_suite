@@ -4,7 +4,7 @@
  * Shared pieces of the five "team" pages (Team, Announcements, Notifications,
  * Audit, Settings): the board dialog (`.ov.tb-ov > .dlg`, bottom sheet on phones
  * for drill-downs), the segmented switch, the Spectrum card head tile, the
- * dashed empty state, the shared status chips inside a `.cp-tw` island and
+ * plain-edged empty state, the shared status chips inside a `.cp-tw` island and
  * small helpers. VCFO Spectrum drops the bot bubble and the (i) pop-overs
  * (R-04, R-06).
  */
@@ -323,7 +323,7 @@ export function CardHead({
   );
 }
 
-/** R-48: an empty state is a dashed area with the action. */
+/** R-48: an empty state is a plain-edged area with the action. */
 export function Empty({ children, action, role }: { children: ReactNode; action?: ReactNode; role?: string }) {
   return (
     <div className="sx-empty" role={role ?? 'status'}>

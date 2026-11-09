@@ -3,7 +3,7 @@
 /**
  * Pieces shared by the Documents explorer (desktop/tablet), the phone board,
  * the drill-down, the upload flow and the Library pages. There is no bot
- * figure (R-04): empty states are dashed areas with the action (R-48).
+ * figure (R-04): empty states are plain-edged areas with the action (R-48).
  */
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';

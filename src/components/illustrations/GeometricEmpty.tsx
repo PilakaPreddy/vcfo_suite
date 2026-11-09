@@ -20,7 +20,7 @@ export function GeometricEmpty({ variant = 'empty', className }: GeometricEmptyP
     <div className={cn('mx-auto flex h-20 w-20 items-center justify-center', className)} aria-hidden>
       <svg viewBox="0 0 80 80" className="h-full w-full">
         <circle cx="40" cy="40" r="28" fill="oklch(var(--brand-soft) / 0.65)" stroke={stroke} strokeWidth="1.25" />
-        <circle cx="40" cy="40" r="16" fill="none" stroke={stroke} strokeWidth="1" strokeDasharray="3 3" opacity="0.7" />
+        <circle cx="40" cy="40" r="16" fill="none" stroke={stroke} strokeWidth="1" opacity="0.7" />
         {variant === 'success' && (
           <path d="M30 41 L37 48 L51 32" fill="none" stroke={stroke} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         )}
@@ -38,7 +38,7 @@ export function GeometricEmpty({ variant = 'empty', className }: GeometricEmptyP
           </>
         )}
         {variant === 'empty' && (
-          <rect x="30" y="30" width="20" height="20" rx="4" fill="none" stroke={stroke} strokeWidth="1.5" strokeDasharray="3 3" />
+          <rect x="30" y="30" width="20" height="20" rx="4" fill="none" stroke={stroke} strokeWidth="1.5" />
         )}
       </svg>
     </div>

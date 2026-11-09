@@ -53,7 +53,7 @@ export function NoticePreview({
                     value={p}
                     rows={Math.max(2, Math.ceil(p.length / 90))}
                     onChange={(e) => onBody?.(paragraphs.map((x, j) => (j === i ? e.target.value : x)))}
-                    className="w-full resize-y rounded-sm border border-dashed border-brand bg-brand-soft/30 p-1.5 font-serif text-[13.5px] leading-relaxed outline-none focus:border-solid"
+                    className="w-full resize-y rounded-sm border border-brand bg-brand-soft/30 p-1.5 font-serif text-[13.5px] leading-relaxed outline-none focus:border-solid"
                   />
                 ) : (
                   <p key={i} className="m-0 text-justify">
@@ -67,7 +67,7 @@ export function NoticePreview({
                 </p>
               ))}
               <div className="mt-2 flex flex-col">
-                <span className="grid h-9 w-44 place-items-center rounded border border-dashed border-line-strong font-sans text-[11px] text-ink-faint">Signature</span>
+                <span className="grid h-9 w-44 place-items-center rounded border border-line-strong font-sans text-[11px] text-ink-faint">Signature</span>
                 {n.signatory.map((s, i) => (
                   <span key={s} className={i === 0 ? 'mt-1 font-bold' : 'font-bold'}>
                     {s}

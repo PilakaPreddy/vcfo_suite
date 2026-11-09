@@ -68,7 +68,7 @@ const CELL_CLASS: Record<SuperRegCell, string> = {
   waiting: 'bg-waiting-soft text-waiting',
   overdue: 'bg-danger-soft text-danger',
   'not-needed': 'text-ink-faint',
-  locked: 'border-1.5 border-dashed border-line',
+  locked: 'border-1.5 border-line',
 };
 
 function CellMark({ cell }: { cell: SuperRegCell }) {

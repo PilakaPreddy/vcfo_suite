@@ -8,7 +8,7 @@
  *     with earlier S3 uploads of the same field as "Replaced" versions
  *   - indexed `documents` rows shared with the client
  *   - the finalized board resolution (+ the signed copy)
- *   - document requests: open ones as dashed "missing" rows, answered ones
+ *   - document requests: open ones as outlined "missing" rows, answered ones
  *     as files (with their own version history)
  * The page builds the phase → step (or category) tree from it with the
  * shared step model (`usePortalIncorporation()`).

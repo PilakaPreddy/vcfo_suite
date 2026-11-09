@@ -100,7 +100,7 @@ export function DocPackPreviewPanel({
             <IncorporationDocxPreview downloadUrl={previewUrl} previewLabel={name ?? 'Document'} refreshKey={item.key} className="rounded-sm shadow-none" />
           </FitToWidth>
         ) : (
-          <div className="mx-auto grid aspect-[3/4] w-full max-w-[300px] content-center gap-2 rounded-sm border-dash-fine bg-surface-raised p-5 text-center text-[13px] text-ink-muted">
+          <div className="mx-auto grid aspect-[3/4] w-full max-w-[300px] content-center gap-2 rounded-sm border-fine bg-surface-raised p-5 text-center text-[13px] text-ink-muted">
             {!item ? (
               <span>No document picked</span>
             ) : item.missing.length > 0 ? (

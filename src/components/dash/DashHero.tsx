@@ -10,8 +10,8 @@ import {
   CalendarDays,
   CheckCheck,
   CheckCircle2,
+  Circle,
   CircleAlert,
-  CircleDashed,
   Gauge,
   KeyRound,
   ListChecks,
@@ -107,7 +107,8 @@ const TILE_ICONS: Record<Exclude<TileIconName, keyof typeof CARD_HEAD_ICONS>, Lu
   gauge: Gauge,
   'trending-up': TrendingUp,
   trophy: Trophy,
-  'circle-dashed': CircleDashed,
+  // A plain circle: the owner ruled out dashed strokes, icons included.
+  'circle-dashed': Circle,
 };
 
 function tileIcon(label: string): LucideIcon {
@@ -266,7 +267,7 @@ function WashTile({ stat, strip }: { stat: DashHeroStat; strip?: boolean }) {
         ) : stat.trendEmpty ? (
           <span className={cn('flex flex-none flex-col items-end gap-0.5 self-end', strip && 'max-sm:hidden')} title={stat.trendEmpty}>
             <svg viewBox="0 0 64 26" className="h-[14px] w-12 text-line-strong sm:w-16" aria-hidden>
-              <line x1="2" y1="13" x2="62" y2="13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeDasharray="3 3" />
+              <line x1="2" y1="13" x2="62" y2="13" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
             </svg>
             <span className="whitespace-nowrap text-[10.5px] leading-none text-ink-faint">{stat.trendEmpty}</span>
           </span>

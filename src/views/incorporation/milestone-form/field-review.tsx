@@ -13,7 +13,7 @@ import { errorMessage, toastError, toastSuccess } from '@/lib/toast-errors';
  * PER-FIELD REVIEW on a staff step page (prototype step Forms tab, S-496 to S-499).
  *
  * Each field shows a 20px ST5 mark (accepted done, asked teal, review amber, sent back red, not
- * asked dashed) and a 104px chip ("Asked · 3d", "Review", "Accepted", "Sent back"). The actions
+ * asked outlined) and a 104px chip ("Asked · 3d", "Review", "Accepted", "Sent back"). The actions
  * follow the state: "Ask client" on a field not asked, "Send reminder" on an asked field (it posts
  * one message on the client thread), "Accept" and "Reject" on a field under review, "Ask again" on
  * a field sent back. The data is `step_field_states` through

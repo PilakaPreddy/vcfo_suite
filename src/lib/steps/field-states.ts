@@ -30,7 +30,7 @@ function daysSince(iso: string | null | undefined, now: Date = new Date()): numb
 /**
  * The 104px chip and the ST5 mark of one field (prototype step page): "Asked · 3d" teal,
  * "Review" amber (answered, waiting for a decision), "Accepted" green, "Sent back" red.
- * A field with no row is "Not asked" (dashed mark, no chip).
+ * A field with no row is "Not asked" (outlined mark, no chip).
  */
 export function fieldStatePresentation(
   s: Pick<StepFieldState, 'state' | 'askedAt'> | null | undefined,

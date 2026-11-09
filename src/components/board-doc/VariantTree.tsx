@@ -10,7 +10,7 @@ import styles from './VariantTree.module.css';
  * C8 "Why VCFO chose this template", shared by the client and staff pages (D5: everyone sees the
  * full tree). The path that `resolveNocVariant()` takes lights up in the brand colour, with
  * numbered badges on the decisions and "CHOSEN" under the result. Other branches stay grey;
- * "Not chosen yet" and "No NOC yet" are grey and dashed, never amber (P4). The page owns the
+ * "Not chosen yet" and "No NOC yet" are grey and outlined, never amber (P4). The page owns the
  * Replay button and bumps `replayKey`: the path lights again in about one second, at once with
  * reduced motion. The evidence rows sit under it in the shared `EvidenceTable`.
  */

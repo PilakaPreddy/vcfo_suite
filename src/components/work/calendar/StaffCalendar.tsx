@@ -79,7 +79,7 @@ export interface StaffCalEvent {
   hollow?: boolean;
   /** R-35: the block's client colour (`brand`, `identity`, `waiting`, `warning`, `positive`, `upcoming`). */
   client?: string;
-  /** The person's own block, not tied to a work item: a dashed edge. */
+  /** The person's own block, not tied to a work item: a solid grey edge. */
   own?: boolean;
   /** Planned after the item's due date: an amber ring. */
   late?: boolean;

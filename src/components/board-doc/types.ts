@@ -53,7 +53,7 @@ export interface MergeValue {
   key: string;
   value: string;
   source: string;
-  /** The value is still a template placeholder: it shows faint and dashed, "Not given yet". */
+  /** The value is still a template placeholder: it shows faint and outlined, "Not given yet". */
   missing?: boolean;
 }
 

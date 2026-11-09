@@ -309,10 +309,10 @@ export function TextCard({ title, sop, children }: { title: string; sop?: boolea
   );
 }
 
-/** Empty body (R-48): a dashed area with the action. */
+/** Empty body (R-48): a plain-edged area with the action. */
 export function Empty({ children = 'None', action, className }: { children?: ReactNode; action?: ReactNode; className?: string }) {
   return (
-    <div className={cn('m-4 flex flex-col items-center gap-2.5 rounded-md border-dash-fine px-4 py-6 text-center text-[13px] text-ink-muted md:mx-5', className)}>
+    <div className={cn('m-4 flex flex-col items-center gap-2.5 rounded-md border-fine px-4 py-6 text-center text-[13px] text-ink-muted md:mx-5', className)}>
       <span>{children}</span>
       {action}
     </div>

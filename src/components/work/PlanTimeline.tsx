@@ -27,7 +27,7 @@ const LEGEND: [string, string][] = [
   ['Manager date', 'bg-brand'],
   ['Overdue', 'bg-danger-mid'],
   ['Waiting on client', 'border-1.5 border-waiting-mid bg-waiting-soft'],
-  ['My to-do', 'border-1.5 border-dashed border-brand-line bg-brand-soft'],
+  ['My to-do', 'border-1.5 border-brand-line bg-brand-soft'],
 ];
 
 function Legend() {
@@ -53,7 +53,7 @@ function Legend() {
 
 /**
  * The Planner's Timeline (prototype `PlanTimeline`): 14 days with one row per open item. Manager
- * dates are hatched with a lock, my to-dos dashed, waiting on the client teal, overdue solid red.
+ * dates are hatched with a lock, my to-dos outlined, waiting on the client teal, overdue solid red.
  * A diamond marks the due day and a filing has only its diamond: orange when due, red once late,
  * so "Filing due" never reads as "Overdue". The line marks today.
  */
@@ -119,7 +119,7 @@ export function PlanTimeline({ items, now, onOpen }: { items: InternWorkItem[]; 
                       className={cn(
                         'relative z-[1] flex h-4 min-w-0 items-center gap-1 self-center overflow-hidden whitespace-nowrap rounded-bar px-1.5 text-[11px] font-medium hover:opacity-90',
                         kind === 'locked' && (late ? 'bg-danger-mid text-on-brand' : 'hatch text-brand-text'),
-                        kind === 'mine' && (late ? 'bg-danger-mid text-on-brand' : 'border-1.5 border-dashed border-brand-line bg-brand-soft text-brand-text'),
+                        kind === 'mine' && (late ? 'bg-danger-mid text-on-brand' : 'border-1.5 border-brand-line bg-brand-soft text-brand-text'),
                         kind === 'wait' && 'bg-waiting-soft text-waiting',
                       )}
                     >

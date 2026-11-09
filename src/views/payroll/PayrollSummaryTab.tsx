@@ -82,7 +82,7 @@ export function PayrollSummaryTab({ payroll, cycle, companyName }: { payroll: Pa
         </div>
 
         {state.rows.length === 0 ? (
-          <p className="mt-6 rounded-md border-1.5 border-dashed border-line py-8 text-center text-[14px] text-ink-muted">
+          <p className="mt-6 rounded-md border-1.5 border-line py-8 text-center text-[14px] text-ink-muted">
             No salaries yet. Add them in the Salary updates tab.
           </p>
         ) : (

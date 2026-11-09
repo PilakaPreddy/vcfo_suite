@@ -182,8 +182,8 @@ export function UploadDialog({
             add(e.dataTransfer.files);
           }}
           className={cn(
-            'grid cursor-pointer place-items-center gap-1 rounded-md border-dash-fine px-4 py-7 text-center outline-none focus-visible:ring-2 focus-visible:ring-brand-line',
-            over ? 'bg-brand-soft [--dash-color:oklch(var(--brand))]' : 'bg-surface-sunken hover:[--dash-color:oklch(var(--brand-line))]',
+            'grid cursor-pointer place-items-center gap-1 rounded-md border-fine px-4 py-7 text-center outline-none focus-visible:ring-2 focus-visible:ring-brand-line',
+            over ? 'bg-brand-soft [--edge-color:oklch(var(--brand))]' : 'bg-surface-sunken hover:[--edge-color:oklch(var(--brand-line))]',
           )}
         >
           <Upload size={18} strokeWidth={1.6} className={over ? 'text-brand-text' : 'text-ink-muted'} aria-hidden />

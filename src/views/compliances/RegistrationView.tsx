@@ -191,7 +191,7 @@ export function RegistrationView({
                   const next = mark !== 'done';
                   const late = mark === 'now' && row.word === 'Overdue';
                   const card = (
-                    <div className={cn('min-w-0 rounded-md border-1.5 px-3 py-2', next && !late ? 'border-dashed border-line-strong' : late ? 'border-warning-mid bg-warning-soft' : 'border-line')}>
+                    <div className={cn('min-w-0 rounded-md border-1.5 px-3 py-2', next && !late ? 'border-line-strong' : late ? 'border-warning-mid bg-warning-soft' : 'border-line')}>
                       <b className={cn('block truncate text-[13px] font-medium', late ? 'text-warning' : next ? 'text-ink-2' : 'text-ink')}>
                         {mark === 'next' ? `Next: ${l.title}` : l.title}
                       </b>
@@ -201,7 +201,7 @@ export function RegistrationView({
                   return (
                     <div key={l.title} className="contents">
                       <div className="min-w-0">{l.side === 'a' ? card : null}</div>
-                      <div className={cn('grid place-items-center rounded-md px-1 py-1.5 text-center leading-tight', next ? 'border-1.5 border-dashed border-line-strong' : 'bg-surface-sunken')}>
+                      <div className={cn('grid place-items-center rounded-md px-1 py-1.5 text-center leading-tight', next ? 'border-1.5 border-line-strong' : 'bg-surface-sunken')}>
                         <b className="text-[13px] font-medium text-ink">{mark === 'now' ? 'Today' : mark === 'done' ? 'Done' : '-'}</b>
                       </div>
                       <div className="min-w-0">{l.side === 's' ? card : null}</div>

@@ -252,7 +252,7 @@ export function AgendaPickerDialog({
               ))}
             </div>
             <div
-              className={cn('flex max-h-[520px] flex-1 flex-col gap-0.5 overflow-auto p-1.5', overLibrary && 'bg-danger-soft/40 outline-dashed outline-1.5 -outline-offset-4 outline-danger/50')}
+              className={cn('flex max-h-[520px] flex-1 flex-col gap-0.5 overflow-auto p-1.5', overLibrary && 'bg-danger-soft/40 outline outline-1.5 -outline-offset-4 outline-danger/50')}
               aria-label="Agenda library"
               onDragOver={(e) => {
                 if (drag?.from !== 'agenda') return;
@@ -332,7 +332,7 @@ export function AgendaPickerDialog({
               </Button>
             </div>
             <ol
-              className={cn('m-0 flex max-h-[520px] flex-1 list-none flex-col gap-0.5 overflow-auto p-1.5', drag?.from === 'lib' && 'bg-brand-soft/40 outline-dashed outline-1.5 -outline-offset-4 outline-brand/50')}
+              className={cn('m-0 flex max-h-[520px] flex-1 list-none flex-col gap-0.5 overflow-auto p-1.5', drag?.from === 'lib' && 'bg-brand-soft/40 outline outline-1.5 -outline-offset-4 outline-brand/50')}
               aria-label="This meeting's agenda"
               onDragOver={(e) => {
                 if (!drag) return;

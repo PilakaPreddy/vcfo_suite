@@ -110,7 +110,7 @@ export default function EngagementStepDetail() {
     if (!engagementsSettled || !user) return <StepLoadingShapes />;
     return <RedirectTo href={listRedirect} />;
   }
-  /* S-519: an unknown step shows a "Step" card with a dashed "No step" area, not a bounce. */
+  /* S-519: an unknown step shows a "Step" card with a outlined "No step" area, not a bounce. */
   if (!item) {
     return (
       <DashSection title="Step" bodyClassName="p-4">

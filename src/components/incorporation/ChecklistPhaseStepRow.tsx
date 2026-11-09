@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
  * Done: a green square with a tick, "Done 14 Oct" and a green chip. Live: a ring with a soft halo,
  * the row tinted inside the card padding, who holds it and since when ("With SBC · 3 days" in
  * teal), the lead's face from 768px and the 104px status chip; a sent-back step is red. Upcoming:
- * a dashed square, the typical time and an empty 104px slot. A 1.5px line joins the marks, green
+ * an outlined square, the typical time and an empty 104px slot. A 1.5px line joins the marks, green
  * under done steps. "What's this?" (from 640px) opens the step's Ask VCFO panel.
  *
  * The dates and the holder come from the incorporation step model (`facts`, the same model the

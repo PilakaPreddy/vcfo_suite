@@ -206,7 +206,7 @@ export function SalaryUpdatesTab({
         ) : null}
 
         {state.rows.length === 0 ? (
-          <div className="mt-6 flex flex-col items-center gap-3 rounded-md border-1.5 border-dashed border-line py-10 text-center">
+          <div className="mt-6 flex flex-col items-center gap-3 rounded-md border-1.5 border-line py-10 text-center">
             <p className="text-[14px] text-ink-muted">No salaries for this cycle yet.</p>
             <div className="flex gap-2">
               <Button size="sm" variant="outline" disabled={locked} onClick={() => fileInput.current?.click()}>

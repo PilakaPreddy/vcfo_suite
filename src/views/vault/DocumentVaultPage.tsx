@@ -42,7 +42,7 @@ import { renderTreeBody } from '@/views/vault/document-vault/tree-body';
 /** R-10 toggle filter: on is the soft blurple fill, off is a plain edge (R-56). */
 const FILTER = 'inline-flex h-[30px] flex-none items-center gap-2 rounded-md border-1.5 px-2.5 text-[13px] font-medium';
 const FILTER_ON = 'border-brand-line bg-brand-soft text-brand-text';
-const FILTER_OFF = 'border-dashed border-line-strong text-ink-2 hover:bg-surface-sunken';
+const FILTER_OFF = 'border-line-strong text-ink-2 hover:bg-surface-sunken';
 
 export default function DocumentVaultPage() {
   return (
