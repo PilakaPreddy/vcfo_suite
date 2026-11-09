@@ -4,14 +4,14 @@ import { randomUUID } from 'node:crypto';
 import type { AuthContext } from '@/auth/guards';
 import type { AnswerEnvelope, AskShell } from '@/data/ask/schema';
 import { getOwnAskAttachments, createAskAttachment, updateOwnAskAttachment, type AskAttachmentRow } from '@/db/repositories/ask-attachments';
-import { createAskChangeset } from '@/db/repositories/ask-changesets';
+import { appendAskChangesetRows, createAskChangeset } from '@/db/repositories/ask-changesets';
 import { listManagerIdsForEngagement } from '@/db/repositories/engagement-managers-membership';
 import { checklistStateFromRow, getEngagementBySlug, getEngagementById, listEngagements } from '@/db/repositories/engagements';
 import { createNotificationsForUsers } from '@/db/repositories/notifications';
 import { appendAskRunStep, createAskRun, findWaitingAskRun, lockAskRun } from '@/db/repositories/ask-runs';
 import { checklist } from '@/data/checklist';
 import { changesetHash } from '@/lib/ask/changeset/hash';
-import type { JsonValue } from '@/lib/ask/changeset/types';
+import type { ChangesetRowDraft, JsonValue } from '@/lib/ask/changeset/types';
 import { askBudgets, askConfig, askFlags } from '@/lib/ask/config';
 import { catalogSynonyms } from '@/lib/ask/data-router/candidates';
 import { companiesNamed, documentMatches, lockEngagement } from '@/lib/ask/data-router/lock';
@@ -20,6 +20,7 @@ import { planRows } from '@/lib/ask/data-router/plan';
 import { instructionOf, looksLikeData, readFile, readPaste, ReadRefused } from '@/lib/ask/data-router/read';
 import type { ReadResult } from '@/lib/ask/data-router/types';
 import { normalizeLabel } from '@/lib/ask/field-catalog/rules';
+import { parseDropReply } from '@/lib/ask/drop/classify';
 import { maskIdentityNumbers } from '@/lib/ask/mask';
 import { limitAnswer } from '@/lib/ask/refusals';
 import { createRunContext, RUN_OVER_BUDGET_COPY, type DoEvent, type DoWorkResult, type RunContext } from './run-context';
@@ -106,11 +107,15 @@ export async function pendingDoRun(ctx: AuthContext, conversationId: string | nu
   if (!conversationId || !message) return null;
   const run = await findWaitingAskRun(ctx, conversationId, now);
   if (!run) return null;
-  // A drop's "Where should these go?" question keeps its own state; phase B of the drop answers it.
-  if (run.workflow === 'drop') return null;
   const state = run.state as unknown as PendingState;
+  // A drop's "Where should these go?" question keeps its own state and is answered in `drop/reply.ts`.
+  if (run.workflow === 'drop') {
+    const waiting = ((run.state as { unplaced?: unknown[] } | null)?.unplaced ?? []).length;
+    const engagements = (await listEngagements(ctx)).map((e) => ({ id: e.id, slug: e.slug, companyName: e.companyName }));
+    return parseDropReply(message, waiting, engagements) ? { run, state, drop: true as const } : null;
+  }
   const named = companiesNamed(message, state.options);
-  if (CANCEL.test(message) || CONFIRM.test(message) || named.length > 0) return { run, state };
+  if (CANCEL.test(message) || CONFIRM.test(message) || named.length > 0) return { run, state, drop: false as const };
   return null;
 }
 
@@ -139,6 +144,10 @@ export async function handleDoWork(
   if (flags.killedPaths.has('fixed_workflow') || flags.killedTiers.has('T2')) return { answer: limitAnswer(shell, 'pathStopped'), metered: null };
   const { conversationId, now, pending } = context;
   const attachmentIds = request.attachmentIds ?? [];
+  if (pending?.drop) {
+    const { answerDropReply } = await import('@/lib/ask/drop/reply');
+    return answerDropReply(ctx, pending.run, message, { now, emit });
+  }
 
   // Prose the router sent here that names no fact goes back to the plain line, at no cost.
   if (!pending && attachmentIds.length === 0 && !isDataMessage(message) && !mayHoldValues(message)) return null;
@@ -295,6 +304,14 @@ export async function prepareClientCard(
     instruction: string;
     conversationId: string | null;
     now: Date;
+    /** Drop only: file rows (labour, compliance, vault, checklist uploads) to put on the same card. */
+    fileRows?: readonly ChangesetRowDraft[];
+    /** Drop only: which read files may become a director's identity copy row. Defaults to all. */
+    copyFor?: (attachmentId: string) => boolean;
+    /** Drop only: the card's title from its rows, in place of "Details for <client>". */
+    title?: (rows: ReadonlyArray<Pick<ChangesetRowDraft, 'action'>>) => string;
+    /** Drop only: the client's open card to add the rows to; a new card is made when it is closed. */
+    appendTo?: string | null;
   },
 ): Promise<PreparedCard> {
   const { row, state, reads, instruction, conversationId, now } = input;
@@ -306,18 +323,24 @@ export async function prepareClientCard(
   const questions = [...placeQuestions];
 
   progress('Checking the rules…');
-  const plan = planRows({ role: ctx.role, engagementId: row.id, companyName: row.companyName, engagement: row, state, placed, files, instruction });
+  const copyFiles = input.copyFor ? files.filter((f) => input.copyFor!(f.attachmentId)) : files;
+  const plan = planRows({ role: ctx.role, engagementId: row.id, companyName: row.companyName, engagement: row, state, placed, files: copyFiles, instruction });
   questions.push(...plan.questions);
+  if (input.fileRows?.length) plan.draft.rows.push(...input.fileRows);
+  if (input.title) plan.draft.title = input.title(plan.draft.rows);
 
   if (plan.draft.rows.length === 0) return { kind: 'nothing', placed: placed.length, questions };
+  const appended = input.appendTo ? await appendAskChangesetRows(ctx, input.appendTo, plan.draft.rows, now, { title: input.title }) : false;
   const contentHash = changesetHash(plan.draft.rows.map((r) => ({ action: r.action, target: r.target, newValue: r.newValue })));
-  const changesetId = await createAskChangeset(ctx, {
-    draft: plan.draft,
-    contentHash,
-    conversationId,
-    runId,
-    expiresAt: new Date(now.getTime() + CARD_DAYS * 86_400_000),
-  });
+  const changesetId = appended
+    ? input.appendTo!
+    : await createAskChangeset(ctx, {
+        draft: plan.draft,
+        contentHash,
+        conversationId,
+        runId,
+        expiresAt: new Date(now.getTime() + CARD_DAYS * 86_400_000),
+      });
   if (!changesetId) return { kind: 'unavailable', questions };
   await appendAskRunStep(ctx, runId, { kind: 'approval', name: 'changeset', status: 'waiting', changesetId, output: { rows: plan.draft.rows.length } });
 

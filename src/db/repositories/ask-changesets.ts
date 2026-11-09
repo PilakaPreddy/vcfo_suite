@@ -1,13 +1,14 @@
 import 'server-only';
 
-import { and, asc, eq, gt, inArray } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, max } from 'drizzle-orm';
 import type { AuthContext } from '@/auth/guards';
 import { db } from '@/db/client';
 import { assertEngagementAccess } from '@/db/repositories/engagements';
 import { askChangesetRows, askChangesets } from '@/db/schema-ask';
 import { isAdminOrManager } from '@/lib/auth';
 import { AskForbiddenError, assertAskRole } from '@/lib/ask/access';
-import type { ChangesetDraft, ChangesetStatus } from '@/lib/ask/changeset/types';
+import { changesetHash } from '@/lib/ask/changeset/hash';
+import type { ChangesetDraft, ChangesetRowDraft, ChangesetStatus, JsonValue } from '@/lib/ask/changeset/types';
 
 /**
  * Review cards. A card belongs to the person it was prepared for, inside an engagement they can
@@ -74,6 +75,57 @@ export async function createAskChangeset(
       })),
     );
     return row!.id;
+  });
+}
+
+/**
+ * Adds rows to the caller's own card while it still waits for its first decision, for the drop's
+ * "Where should these go?" reply. The content hash is recomputed over every row, so a person looking
+ * at the card before the rows arrived is asked to look again before accepting. Returns false, adding
+ * nothing, when the card is not the caller's, was decided, or has expired.
+ */
+export async function appendAskChangesetRows(
+  ctx: AuthContext,
+  id: string,
+  drafts: readonly ChangesetRowDraft[],
+  now: Date,
+  opts: { title?: (rows: ReadonlyArray<{ action: string }>) => string } = {},
+): Promise<boolean> {
+  assertAskRole(ctx);
+  if (drafts.length === 0) return true;
+  return db.transaction(async (tx) => {
+    const [open] = await tx
+      .select({ id: askChangesets.id })
+      .from(askChangesets)
+      .where(and(eq(askChangesets.id, id), eq(askChangesets.profileId, ctx.userId), eq(askChangesets.status, 'proposed'), gt(askChangesets.expiresAt, now)))
+      .for('update')
+      .limit(1);
+    if (!open) return false;
+    const [last] = await tx.select({ ordinal: max(askChangesetRows.ordinal) }).from(askChangesetRows).where(eq(askChangesetRows.changesetId, id));
+    const start = (last?.ordinal ?? -1) + 1;
+    await tx.insert(askChangesetRows).values(
+      drafts.map((draft, i) => ({
+        changesetId: id,
+        ordinal: start + i,
+        action: draft.action,
+        target: draft.target,
+        label: draft.label,
+        oldValue: draft.oldValue,
+        newValue: draft.newValue,
+        displayOld: draft.displayOld,
+        displayNew: draft.displayNew,
+        sensitive: draft.sensitive,
+        source: draft.source,
+        checks: draft.checks,
+        status: draft.heldReason ? 'held' : 'proposed',
+        heldReason: draft.heldReason,
+      })),
+    );
+    const rows = await tx.select().from(askChangesetRows).where(eq(askChangesetRows.changesetId, id)).orderBy(asc(askChangesetRows.ordinal));
+    const contentHash = changesetHash(rows.map((r) => ({ action: r.action, target: r.target as JsonValue, newValue: r.newValue as JsonValue })));
+    // The title counts every row, so a card that gained rows from a reply says so.
+    await tx.update(askChangesets).set({ contentHash, ...(opts.title ? { title: opts.title(rows) } : {}) }).where(eq(askChangesets.id, id));
+    return true;
   });
 }
 

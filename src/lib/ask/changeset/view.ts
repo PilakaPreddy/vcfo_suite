@@ -1,10 +1,11 @@
 import 'server-only';
 
 import type { AuthContext } from '@/auth/guards';
-import { getItem } from '@/data/checklist';
 import { getAskChangesetSummary } from '@/db/repositories/ask-changesets';
 import { fieldOf, rowCanApply, type ResponseTarget } from '@/lib/actions/checklist/rules';
+import { SLOT_LABEL } from '@/lib/actions/labour/upload-sheet';
 import { canDecideRow, rowValueEditable } from './apply';
+import { groupChangesetRows, rowPlace } from './view-groups';
 import type { ChangesetRowStatus, ChangesetStatus } from './types';
 import type { ChangesetRowView, ChangesetView } from './view-types';
 
@@ -18,12 +19,13 @@ export async function loadChangesetView(ctx: AuthContext, id: string): Promise<C
     const pageNote = row.source?.page ? `page ${row.source.page}` : '';
     const source =
       row.source?.kind === 'attachment' ? [row.source.fileName, pageNote].filter(Boolean).join(', ') || 'Attached file' : row.source?.kind === 'paste' ? 'Pasted text' : row.source?.kind === 'message' ? 'Your message' : null;
+    const place = rowPlace(row, (slot) => SLOT_LABEL[slot as keyof typeof SLOT_LABEL] ?? slot);
     const open = row.status === 'proposed' || row.status === 'edited' || row.status === 'held' || row.status === 'failed';
     return {
       id: row.id,
       stepId: target.stepId ?? null,
-      stepTitle: target.stepId ? (getItem(target.stepId)?.title ?? target.stepId) : null,
-      label: row.label,
+      stepTitle: place.stepTitle,
+      label: place.label,
       displayOld: row.displayOld,
       displayNew: row.displayNew,
       sensitive: row.sensitive,
@@ -38,6 +40,10 @@ export async function loadChangesetView(ctx: AuthContext, id: string): Promise<C
       editable: open && rowValueEditable(row.action),
       ...(field?.options?.length ? { options: field.options.map((o) => ({ value: o.value, label: o.label })) } : {}),
       inputType: field?.options?.length ? 'choice' : field?.type === 'date' ? 'date' : 'text',
+      groupKey: place.groupKey,
+      groupTitle: place.groupTitle,
+      groupKind: place.kind,
+      sourceFile: place.sourceFile,
     };
   });
   return {
@@ -52,5 +58,6 @@ export async function loadChangesetView(ctx: AuthContext, id: string): Promise<C
     expiresAt: changeset.expiresAt.toISOString(),
     canUndo: (found.owner || changeset.decidedById === ctx.userId) && found.rows.some((row) => row.status === 'applied'),
     rows,
+    groups: groupChangesetRows(rows),
   };
 }

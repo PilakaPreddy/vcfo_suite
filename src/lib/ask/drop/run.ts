@@ -20,6 +20,7 @@ import { maskIdentityNumbers } from '@/lib/ask/mask';
 import { DROP_MAX_BYTES, DROP_MAX_FILES } from '@/lib/upload-limits';
 import { getObjectBuffer, putObject } from '@/storage/s3';
 import { assembleDrop, type DropRead } from './assemble';
+import { dropSummaryLine, NOT_READ_BUDGET } from './summary';
 import { dropContentType, dropFileRefusal, isZipName, safeFileName } from './extensions';
 import { ASK_DROP_EVENT, DROP_WORKFLOW, emptyDropState, type DropFile, type DropState } from './types';
 import { DEFAULT_UNZIP_LIMITS, unzipDrop, UnzipRefused } from './unzip';
@@ -40,11 +41,11 @@ import { DEFAULT_UNZIP_LIMITS, unzipDrop, UnzipRefused } from './unzip';
  * does not.
  */
 
-export { ASK_DROP_EVENT };
+export { ASK_DROP_EVENT, dropSummaryLine };
 
-const NOT_READ_BUDGET = 'Not read: the drop used up its reading budget.';
 
-function stateOf(run: AskRunRow): DropState {
+/** A drop run's state, with every field present. */
+export function dropStateOf(run: Pick<AskRunRow, 'state'>): DropState {
   const raw = (run.state ?? null) as unknown as Partial<DropState> | null;
   return { ...emptyDropState(), ...(raw ?? {}) };
 }
@@ -60,7 +61,7 @@ async function openDrop(runId: string): Promise<{ ctx: AuthContext; run: AskRunR
   const found = await askRunActor(runId);
   if (!found || found.run.workflow !== DROP_WORKFLOW) return null;
   if (found.run.status !== 'queued' && found.run.status !== 'running') return null;
-  return { ...found, state: stateOf(found.run) };
+  return { ...found, state: dropStateOf(found.run) };
 }
 
 function pathOf(row: AskAttachmentRow): string {
@@ -218,15 +219,12 @@ export async function dropReadStep(runId: string, attachmentId: string): Promise
   }
 }
 
-/** Step 3. Sorts what was read into review cards, through `assembleDrop`. */
-export async function dropAssembleStep(runId: string): Promise<{ groups: number; unplaced: number } | null> {
-  const open = await openDrop(runId);
-  if (!open) return null;
-  const { ctx, run, state } = open;
-  if (state.groups.length > 0 || state.unplaced.length > 0) return { groups: state.groups.length, unplaced: state.unplaced.length };
-  const runCtx = createRunContext({ ctx, run, now: new Date() });
-
-  const readFiles = state.files.filter((f) => f.status === 'read');
+/**
+ * What was read from each of these files, from storage. A file whose stored read is gone is marked
+ * failed in place, so the caller's state says so.
+ */
+export async function loadDropReads(ctx: AuthContext, runId: string, files: DropFile[]): Promise<DropRead[]> {
+  const readFiles = files.filter((f) => f.status === 'read');
   const rows = await getOwnAskAttachments(ctx, readFiles.map((f) => f.attachmentId));
   const reads: DropRead[] = [];
   for (const file of readFiles) {
@@ -238,11 +236,30 @@ export async function dropAssembleStep(runId: string): Promise<{ groups: number;
     }
     reads.push({ attachment: { id: attachment.id, kind: attachment.kind, fileName: attachment.fileName }, path: file.path, result: JSON.parse(stored.toString('utf8')) as ReadResult });
   }
+  return reads;
+}
+
+/** Step 3. Sorts what was read into review cards, through `assembleDrop`. */
+export async function dropAssembleStep(runId: string): Promise<{ groups: number; unplaced: number } | null> {
+  const open = await openDrop(runId);
+  if (!open) return null;
+  const { ctx, run, state } = open;
+  if (state.groups.length > 0 || state.unplaced.length > 0) return { groups: state.groups.length, unplaced: state.unplaced.length };
+  const runCtx = createRunContext({ ctx, run, now: new Date() });
+
+  const reads = await loadDropReads(ctx, runId, state.files);
 
   let next: DropState = { ...state, progress: { ...state.progress, label: 'Sorting…' } };
   try {
     const result = await assembleDrop({ runCtx, conversationId: run.conversationId, instruction: state.instruction, page: state.page, reads, files: state.files, now: new Date() });
-    next = { ...next, files: result.files, groups: result.groups, unplaced: result.unplaced, notes: result.notes.map(maskIdentityNumbers) };
+    next = {
+      ...next,
+      files: result.files,
+      groups: result.groups,
+      unplaced: result.unplaced,
+      notes: result.notes.map(maskIdentityNumbers),
+      ...(result.overBudget ? { overBudget: true } : {}),
+    };
   } catch (error) {
     if (!(error instanceof RunOverBudget)) throw error;
     next = { ...next, overBudget: true, notes: [RUN_OVER_BUDGET_COPY] };
@@ -252,27 +269,16 @@ export async function dropAssembleStep(runId: string): Promise<{ groups: number;
   return { groups: next.groups.length, unplaced: next.unplaced.length };
 }
 
-const listOf = (items: string[], max: number) => {
-  const shown = items.slice(0, max).join(', ');
-  return items.length > max ? `${shown} and ${items.length - max} more` : shown;
-};
-
-/** The closing message: one line per card, the files that need an answer, and what was not read. */
-export function dropSummaryLine(state: DropState): string {
-  const parts: string[] = [];
-  const { groups, unplaced, files } = state;
-  if (groups.length === 1) parts.push(`I prepared a card for ${groups[0]!.companyName}. Nothing is saved until you accept.`);
-  else if (groups.length > 1) parts.push(`I prepared ${groups.length} cards, one for each client: ${groups.map((g) => g.companyName).join(', ')}. Nothing is saved until you accept.`);
-  if (unplaced.length > 0) {
-    parts.push(`Where should ${unplaced.length === 1 ? 'this' : 'these'} go? ${unplaced.slice(0, 5).map((u, i) => `${i + 1}. ${u.path}: ${u.reason}`).join(' ')}${unplaced.length > 5 ? ` And ${unplaced.length - 5} more.` : ''}`);
-  }
-  const unread = files.filter((f) => f.reason === NOT_READ_BUDGET).map((f) => f.path);
-  if (state.overBudget) parts.push(`${RUN_OVER_BUDGET_COPY}${unread.length > 0 ? ` Not read: ${listOf(unread, 5)}.` : ''}`);
-  const failed = files.filter((f) => (f.status === 'failed' || f.status === 'skipped') && f.reason !== NOT_READ_BUDGET);
-  if (failed.length > 0) parts.push(`${failed.length === 1 ? 'One file was' : `${failed.length} files were`} left out: ${listOf(failed.map((f) => `${f.path} (${f.reason ?? 'not read'})`), 3)}.`);
-  for (const note of state.notes ?? []) if (!parts.includes(note)) parts.push(note);
-  if (groups.length === 0 && unplaced.length === 0 && parts.length === 0) parts.push('I found nothing to file in these files. Nothing was saved.');
-  return maskIdentityNumbers(parts.join(' ')).slice(0, 1200);
+/**
+ * The status a drop settles in. A drop with files still waiting for "Where should these go?" waits
+ * for the reply even when it already made cards, because the reply is how those files are placed;
+ * the cards are open either way.
+ */
+export function dropStatus(state: DropState): string {
+  if (state.overBudget) return 'over_budget';
+  if (state.unplaced.length > 0) return 'waiting_reply';
+  if (state.groups.length > 0) return 'waiting_approval';
+  return state.files.some((f) => f.status === 'placed' || f.status === 'read' || f.status === 'skipped') ? 'done' : 'failed';
 }
 
 /** Step 4. Writes the closing message into the conversation and settles the run's status. */
@@ -280,10 +286,10 @@ export async function dropFinishStep(runId: string): Promise<{ status: string } 
   const open = await openDrop(runId);
   if (!open) return null;
   const { ctx, run, state } = open;
-  const status = state.overBudget ? 'over_budget' : state.groups.length > 0 ? 'waiting_approval' : state.unplaced.length > 0 ? 'waiting_reply' : state.files.some((f) => f.status === 'placed' || f.status === 'read' || f.status === 'skipped') ? 'done' : 'failed';
+  const status = dropStatus(state);
   const next: DropState = { ...state, progress: { ...state.progress, done: state.progress.total, label: 'Done' } };
   if (!next.answerMessageId && run.conversationId) {
-    const text = dropSummaryLine(state);
+    const text = dropSummaryLine(state, { role: ctx.role });
     const answer: AnswerEnvelope = {
       line: text,
       citations: [],
@@ -308,7 +314,7 @@ export async function failAskDrop(runId: string, error: unknown): Promise<void> 
   const { ctx, run } = found;
   if (run.status !== 'queued' && run.status !== 'running') return;
   console.error('[ask-vcfo] drop failed', runId, maskIdentityNumbers(error instanceof Error ? (error.stack ?? error.message) : String(error)));
-  const state = stateOf(run);
+  const state = dropStateOf(run);
   const text = 'Something went wrong while I was working through these files, so I stopped. Nothing was saved. Please try the drop again.';
   if (!state.answerMessageId && run.conversationId) {
     const message = await appendAskMessage(ctx, run.conversationId, {
