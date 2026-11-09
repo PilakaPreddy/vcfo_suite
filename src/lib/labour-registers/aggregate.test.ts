@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { formById } from '@/data/labour-registers/forms';
-import { AGGREGATORS, headCountNote, isAggregateField } from './aggregate';
+import { AGGREGATORS, headCountNote } from './aggregate';
 import { monthPeriod } from './catalogue';
 import { buildDataset, type SlotInput } from './dataset';
 import { ProjectionError, projectForm } from './project';
@@ -88,11 +88,6 @@ describe('figures about an establishment', () => {
     const ctx = { period: dataset.period, days: dataset.days };
     expect(AGGREGATORS.totalGrossWages(dataset.employees, ctx)).toBe(70000);
     expect(AGGREGATORS.totalNetWages(dataset.employees, ctx)).toBe(66400);
-  });
-
-  it('knows which fields are figures about a place rather than a person', () => {
-    expect(isAggregateField('countWomen')).toBe(true);
-    expect(isAggregateField('netPay')).toBe(false);
   });
 });
 

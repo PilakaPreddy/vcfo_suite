@@ -56,11 +56,6 @@ export const AGGREGATORS: Record<string, Aggregator> = {
   totalLeaveAvailed: (employees) => sum(employees, 'leavesAvailed'),
 };
 
-/** True when this field is a figure about the establishment rather than about a person. */
-export function isAggregateField(field: string): boolean {
-  return field in AGGREGATORS;
-}
-
 /**
  * The note a return carries when its head count does not add up.
  *

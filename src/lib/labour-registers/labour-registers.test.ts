@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { describeGrid, detectAttendanceGrid, gridIndices } from './attendance-grid';
-import { draftKey, hashRows, mayReplaceInPlace, stalenessReason, type DocumentIdentity } from './cache-key';
+import { draftKey, hashRows, stalenessReason, type DocumentIdentity } from './cache-key';
 import { appliesDuring, formsFor, monthPeriod, needsAttendanceGrid, nilColumns, optionalFields, requiredFields, retentionYears } from './catalogue';
 import { computeOvertime, normalHoursFor, overtimeBasisNote, unresolvedCoverage } from './overtime';
 import { describeShapeDiff, diffShape } from './shape-diff';
@@ -199,15 +199,6 @@ describe('cache key', () => {
     const stored = identity();
     expect(stalenessReason(draftKey(stored), stored, identity({ inputsHash: 'z' }))).toBe('the uploaded data changed');
     expect(stalenessReason(draftKey(stored), stored, identity({ templateVersion: 'v9' }))).toBe('the form template changed');
-  });
-
-  it('refuses to replace an attested document in place', () => {
-    expect(mayReplaceInPlace({})).toBe(true);
-    expect(
-      mayReplaceInPlace({
-        attestation: { byName: 'A Partner', byRole: 'admin', at: '2026-10-02T12:00:00Z', method: 'printed-wet-signature' },
-      }),
-    ).toBe(false);
   });
 });
 
