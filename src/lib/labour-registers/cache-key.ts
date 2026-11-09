@@ -170,15 +170,6 @@ export interface EvidenceManifest {
 }
 
 /**
- * Whether a stored document may be replaced in place. A draft may; anything attested may not,
- * and a correction has to be issued as a new document that supersedes it. The caller is
- * expected to branch on this rather than reason about it again.
- */
-export function mayReplaceInPlace(manifest: Pick<EvidenceManifest, 'attestation'>): boolean {
-  return !manifest.attestation;
-}
-
-/**
  * Why a stored document is stale, for the screen that offers to rebuild it. Returns null when
  * the stored key still matches, which is the common case and the whole point of the design.
  */
