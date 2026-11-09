@@ -1,8 +1,8 @@
 'use client';
 
-import { useId, useRef, useState } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { AlertCircle, CheckCircle2, Columns3, FileSpreadsheet, Upload } from 'lucide-react';
+import { AlertCircle, CalendarCheck, CheckCircle2, Columns3, FileSpreadsheet, Upload } from 'lucide-react';
 import type { UploadSlot } from '@/lib/labour-registers/parse';
 import { cn } from '@/lib/utils';
 import { maxUploadSizeLabel } from '@/lib/upload-limits';
@@ -87,6 +87,7 @@ function Slot({
   error,
   disabled,
   mapHref,
+  note,
   onPick,
 }: {
   spec: SlotSpec;
@@ -94,6 +95,8 @@ function Slot({
   busy: boolean;
   error?: string;
   disabled: boolean;
+  /** A warning about this input, shown on its own row (the missing attendance sheet). */
+  note?: ReactNode;
   /** Where the column reconciliation for this slot lives, once something is uploaded. */
   mapHref?: string;
   onPick: (file: File) => void;
@@ -182,6 +185,12 @@ function Slot({
         <Upload className="size-3.5" strokeWidth={1.8} aria-hidden="true" />
         {busy ? 'Reading…' : state ? 'Replace' : 'Choose file'}
       </button>
+      {note ? (
+        <div className="flex basis-full items-start gap-2 rounded-[var(--lr-radius-control)] bg-[var(--lr-warn-soft)] px-3 py-2 text-[12.5px] leading-relaxed text-[var(--lr-warn)]" role="status">
+          <CalendarCheck className="mt-0.5 size-3.5 flex-none" strokeWidth={1.8} aria-hidden="true" />
+          <span className="min-w-0">{note}</span>
+        </div>
+      ) : null}
     </li>
   );
 }
@@ -192,10 +201,13 @@ export function UploadCard({
   errors,
   locked = false,
   mapHref,
+  notes,
   onPick,
   className,
 }: {
   uploads: Partial<Record<SlotKey, SlotState>>;
+  /** Warnings shown on the input they are about, so the fix sits next to its Choose file. */
+  notes?: Partial<Record<SlotKey, ReactNode>>;
   /** The slot currently uploading, if any. */
   busySlot?: SlotKey | null;
   errors?: Partial<Record<SlotKey, string>>;
@@ -230,6 +242,7 @@ export function UploadCard({
             error={errors?.[spec.key]}
             disabled={locked}
             mapHref={mapHref?.(spec.key)}
+            note={notes?.[spec.key]}
             onPick={(file) => onPick(spec.key, file)}
           />
         ))}
