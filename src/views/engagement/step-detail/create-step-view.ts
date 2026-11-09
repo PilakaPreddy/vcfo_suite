@@ -16,6 +16,7 @@ import {
 } from '@/lib/incorporation/pre-inc-direct-flow';
 import { journeyRailItems, lastEditedLine } from '@/views/engagement/step-detail/helpers';
 import type { useEngagementStepDetail } from '@/views/engagement/step-detail/use-engagement-step-detail';
+import { getSentBackNotice } from '@/lib/checklist/checklist-item-review';
 
 type StepDetailState = ReturnType<typeof useEngagementStepDetail>;
 
@@ -161,6 +162,9 @@ export function createStepView(state: StepDetailState, eng: Engagement, item: Ch
       ? `${stepSlice?.waitingOnLeadByName?.trim() || 'The client'} submitted their part. Fill the NIC codes, then submit to complete this step.`
       : null;
 
+  /** The manager's reason on a sent-back step, for every staff reader (UAT D-T07-02). */
+  const sentBackNotice = isClientRoute ? null : getSentBackNotice(stepSlice);
+
   const docPackHref = docPackVisible
     ? docPackPagePath(eng, docPackShell, internPhase?.id === 'pre-inc-phase-1' ? 'part-a' : 'part-b')
     : null;
@@ -181,6 +185,7 @@ export function createStepView(state: StepDetailState, eng: Engagement, item: Ch
     checklistLoading,
     handleCompleted,
     clientNothingYet,
+    sentBackNotice,
     staffAwaitingLead,
     nothingYetIntro,
     railItems,

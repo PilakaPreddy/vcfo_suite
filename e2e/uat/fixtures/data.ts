@@ -22,7 +22,7 @@ export const TRACK_A = {
   ownership: 'Independent',
   stage: 'Pre-Incorporation',
   nicCode: '62011',
-  nicWords: 'software',
+  nicWords: 'computer program',
   authorisedCapital: 1000000,
   paidUpCapital: 100000,
   faceValue: 10,

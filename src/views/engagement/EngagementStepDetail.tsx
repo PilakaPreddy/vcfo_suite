@@ -146,6 +146,7 @@ export default function EngagementStepDetail() {
     editedLine,
     gateNotice,
     leadWaitingNotice,
+    sentBackNotice,
     docPackHref,
     selfRow,
     selfStatus,
@@ -196,12 +197,17 @@ export default function EngagementStepDetail() {
     </header>
   );
   const stepMetaRow =
-    editedLine || gateNotice || leadWaitingNotice ? (
+    editedLine || gateNotice || leadWaitingNotice || sentBackNotice ? (
       <div className="-mt-2 mb-4 space-y-2">
         {editedLine ? <p className="text-[12.5px] text-ink-muted">{editedLine}</p> : null}
         {gateNotice ? (
           <p role="status" className="rounded-md border-1.5 border-line bg-surface-sunken px-3 py-2 text-[13.5px] text-ink">
             {gateNotice}
+          </p>
+        ) : null}
+        {sentBackNotice ? (
+          <p role="status" className="rounded-md border-1.5 border-warning bg-warning-soft px-3 py-2 text-[13.5px] text-ink">
+            {sentBackNotice}
           </p>
         ) : null}
         {leadWaitingNotice ? (

@@ -1,11 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
-import { resetRecords, as, closeAll, noteEmails, note, saveTeamLogin, shot, signIn, sql, step, sweepSidebar, team, totpNow, setState, type Role } from './helpers/uat';
+import { firstStart, resetRecords, as, closeAll, noteEmails, note, saveTeamLogin, shot, signIn, sql, step, sweepSidebar, team, totpNow, setState, type Role } from './helpers/uat';
 import { TEAM, UAT_PASSWORD } from './fixtures/data';
 
 /** T-02 Logins, roles and access (staff part; the client logins come in T-03). */
 const T = 'T-02';
 const TEMP = 'SBC@2026';
-const startedAt = new Date().toISOString();
+
 
 test.afterAll(closeAll);
 test.beforeAll(() => resetRecords(T));
@@ -172,5 +172,5 @@ test('T-02 Logins, roles and access', async ({ browser }) => {
 
   note({ test: T, step: 6, status: 'untestable', caption: 'Each lead connects Outlook in Settings.', detail: 'Needs a real Microsoft 365 sign-in. A person must click "Connect Outlook" in Settings once and check that it shows "Connected".' });
 
-  await noteEmails(T, startedAt, false);
+  await noteEmails(T, firstStart(T), false);
 });

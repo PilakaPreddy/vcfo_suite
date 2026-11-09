@@ -1,6 +1,7 @@
 import type { Engagement } from '@/data/engagements';
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
 import { isClientFillPending } from '@/lib/checklist/checklist-client-fill';
+import { checklist } from '@/data/checklist';
 import { primaryPhaseItems } from '@/lib/projects/project-stuck';
 import { isAwaitingManagerDecision, isDirectFlowStep, MANAGER_APPROVAL_STEP_ID } from '@/lib/incorporation/pre-inc-direct-flow';
 
@@ -27,10 +28,13 @@ export function listPendingApprovals(
   stateFor: (engagement: ApprovalEngagement) => Record<string, ChecklistItemStateSlice | undefined>,
 ): PendingApprovalRow[] {
   const out: PendingApprovalRow[] = [];
+  // Registration steps (the statutory bucket) also go lead → manager → client and email the
+  // manager, so they belong in the inbox at every stage (UAT D-T07-01).
+  const registrationItems = checklist.filter((i) => i.bucket === 'statutory');
   for (const eng of engagements) {
-    if (eng.stage === 'Operational Readiness') continue;
     const state = stateFor(eng);
-    for (const item of primaryPhaseItems()) {
+    const items = eng.stage === 'Operational Readiness' ? registrationItems : [...primaryPhaseItems(), ...registrationItems];
+    for (const item of items) {
       const slice = state[item.id];
       if (isAwaitingManagerDecision(item.id, slice)) {
         out.push({

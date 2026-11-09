@@ -324,3 +324,29 @@ export function totpNow(base32: string, offsetSteps = 0): string {
   const code = ((h.readUInt32BE(o) & 0x7fffffff) % 1_000_000).toString().padStart(6, '0');
   return code;
 }
+
+/** The first visible element with this text (pages often keep a hidden copy for phones). */
+export function seen(page: Page, text: string | RegExp): Locator {
+  return page.getByText(text).locator('visible=true').first();
+}
+
+/** Wait until the page shows real content (the client portal renders after its data loads). */
+export async function settle(page: Page, text?: string | RegExp) {
+  await page.waitForLoadState('networkidle').catch(() => {});
+  if (text) await seen(page, text).waitFor({ timeout: 30_000 });
+  else await page.waitForFunction(() => (document.body?.innerText ?? '').trim().length > 40, null, { timeout: 30_000 });
+}
+
+/** The time a test first ran, kept across re-runs, so its email check also counts the first run's mail. */
+export function firstStart(test: string): string {
+  const key = `start_${test}`;
+  const st = state<Record<string, string>>();
+  if (!st[key]) setState({ [key]: new Date(Date.now() - 1000).toISOString() });
+  return state<Record<string, string>>()[key];
+}
+
+/** One checklist step's stored state (engagements.checklist_state[itemId]). */
+export async function stepState(engagementId: string, itemId: string): Promise<Record<string, any>> {
+  const [row] = await sql<{ s: Record<string, any> | null }>(`select checklist_state->$2 as s from engagements where id = $1`, [engagementId, itemId]);
+  return row?.s ?? {};
+}

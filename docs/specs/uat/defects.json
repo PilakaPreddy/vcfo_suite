@@ -8,7 +8,99 @@
     "who": "super_admin (also any staff member who opens /app/client/overview or /app/client/messages)",
     "cause": "The client Home and Messages pages read the client portal context, which exists only when a client is signed in. For staff the page threw \"usePortal must be used inside ClientPortalShell\".",
     "fix": "The client portal gate now shows staff a short note with a link to Clients on those two pages, instead of rendering them. All other client pages were checked and work for staff.",
-    "files": ["src/components/client-portal/ClientPortalGate.tsx", "src/components/client-portal/ClientPortalGate.test.ts"],
+    "files": [
+      "src/components/client-portal/ClientPortalGate.tsx",
+      "src/components/client-portal/ClientPortalGate.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T04-01",
+    "test": "T-04",
+    "step": 1,
+    "severity": "S3",
+    "title": "\"Proposed Directors\" tab never shows its tick, though every required answer is in",
+    "who": "client and project lead, on Part A (and nine other optional note fields on later steps)",
+    "cause": "The tab tick treats a field as required unless it is marked optional. The director middle names, and eight note fields, say \"(optional)\" in their label but were not marked optional in the field list, so an empty middle name kept the tab open.",
+    "fix": "The ten fields labelled \"(optional)\" are now marked optional. A unit test fails if any field labelled \"(optional)\" is ever required again.",
+    "files": [
+      "src/lib/checklist/checklist-responses.ts",
+      "src/lib/checklist/milestone-section-completion.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "O-T05-01",
+    "test": "T-05",
+    "step": 1,
+    "severity": "owner",
+    "title": "Part B capital is not checked against the authorised capital from Part A",
+    "who": "project lead, on Capital Structure (step 6)",
+    "cause": "Part A records authorised capital \u20b910,00,000. Part B accepted 6,000 equity shares at \u20b91,00,000 each (\u20b960 crore) with no warning. The validator checks only that each number is positive.",
+    "fix": "Not changed: this is a business rule. Decide whether Part B should warn, or refuse, when the equity and preference capital exceed the authorised capital.",
+    "files": [
+      "src/lib/checklist/checklist-part-b-validation.ts"
+    ],
+    "status": "owner-decision"
+  },
+  {
+    "id": "O-T06-01",
+    "test": "T-06",
+    "step": 3,
+    "severity": "owner",
+    "title": "KYC Review asks for \"review notes / correction requests\" even when everything is approved",
+    "who": "project lead, on KYC Review & DSC (step 10)",
+    "cause": "The notes field is required on every submit. A lead who finds nothing to correct must still type something.",
+    "fix": "Not changed: a process choice. Decide whether the notes should be optional when every document is approved.",
+    "files": [
+      "src/lib/checklist/checklist-responses.ts"
+    ],
+    "status": "owner-decision"
+  },
+  {
+    "id": "D-T06-01",
+    "test": "T-06",
+    "step": 1,
+    "severity": "S2",
+    "title": "Requesting a file from the Vault never tells the client",
+    "who": "client (never told); project lead and manager (they believe the client was asked)",
+    "cause": "POST /api/requests drafts the email to the client and returns it, for the lead to send from the compose window. The Vault's \"Request a file\" form ignored that reply, so the window never opened and no email went out. Four KYC requests in T-06 produced no email to the client.",
+    "fix": "The Vault form now hands the reply to the same helper the rest of the app uses, so the compose window opens with the drafted email. A component test checks it.",
+    "files": [
+      "src/views/vault/VaultRequestsSection.tsx",
+      "src/views/vault/VaultRequestsSection.test.tsx"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T07-01",
+    "test": "T-07",
+    "step": 4,
+    "severity": "S2",
+    "title": "Approvals page shows \"0 waiting\" while registration steps wait for the manager",
+    "who": "managers and firm admins",
+    "cause": "The Approvals inbox scanned only incorporation and post-incorporation steps. Registration steps (GST, PF, ESI, PT, LEI\u2026) also go lead \u2192 manager \u2192 client, and the manager is emailed \"approval needed\", but the inbox never listed them.",
+    "fix": "The inbox now lists registration steps at every stage, both lead requests and requests to send a step to the client. Two unit tests cover it.",
+    "files": [
+      "src/lib/projects/pending-approvals.ts",
+      "src/lib/projects/pending-approvals.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T07-02",
+    "test": "T-07",
+    "step": 2,
+    "severity": "S2",
+    "title": "The manager's reason for sending a step back is stored but never shown to the lead",
+    "who": "project lead",
+    "cause": "Reject saves the reason on the step. The lead's bell says only \"Corrections requested\", and the step page showed nothing, so the lead could not see what to fix.",
+    "fix": "The step page now shows \"Sent back by the manager: \u201creason\u201d\" to staff while the step is open again. Unit tests cover the wording.",
+    "files": [
+      "src/lib/checklist/checklist-item-review.ts",
+      "src/views/engagement/step-detail/create-step-view.ts",
+      "src/views/engagement/EngagementStepDetail.tsx"
+    ],
     "status": "fixed"
   }
 ]

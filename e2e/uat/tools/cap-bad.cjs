@@ -1,0 +1,22 @@
+const { chromium } = require('@playwright/test');
+(async () => {
+  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const ctx = await b.newContext({ storageState: `e2e/uat/.auth/super.state.json`, baseURL: 'http://localhost:3000', viewport: { width: 1440, height: 900 } });
+  const p = await ctx.newPage();
+  p.on('response', async r => { if (r.url().includes('/api/') && r.request().method() !== 'GET') console.log('API', r.status(), r.url().replace('http://localhost:3000','').slice(0,80), (await r.text().catch(()=>'')).slice(0,200)); });
+  p.on('console', m => { if (m.type()==='error') console.log('CONSOLE', m.text().slice(0,300)); });
+  await p.goto('/app/admin/projects/kaveri-foods-private-limited/step/capital-structure'); await p.waitForLoadState('networkidle'); await p.waitForTimeout(1500);
+  console.log('URL', p.url());
+  await p.locator('[role=radiogroup]').locator('visible=true').nth(0).getByRole('radio', { name: 'Yes' }).click();
+  await p.waitForTimeout(400);
+  await p.locator('#pre-13-equityQuantity').fill('6000');
+  await p.locator('#pre-13-equityNominalValue').fill('100000');
+  await p.locator('[role=radiogroup]').locator('visible=true').nth(1).getByRole('radio', { name: 'No' }).click();
+  await p.waitForTimeout(1500);
+  const sub = p.getByRole('button', { name: /^Submit$/ }).locator('visible=true').first();
+  console.log('SUBMIT enabled', await sub.isEnabled());
+  await sub.click(); await p.waitForTimeout(3000);
+  console.log('STATUS', JSON.stringify(await p.locator('[role=status],[role=alert]').allInnerTexts()));
+  await p.screenshot({ path: 'e2e/uat/results/debug.png' });
+  await b.close();
+})();
