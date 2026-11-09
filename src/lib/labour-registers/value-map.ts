@@ -130,3 +130,24 @@ export function valueLookup(matches: ValueMatch[]): Record<string, string> {
 export function unresolvedValues(matches: ValueMatch[]): ValueMatch[] {
   return matches.filter((m) => m.bucket !== 'auto');
 }
+
+/**
+ * How many attendance codes in a sheet nobody has a target for.
+ *
+ * Shared by the mapping screen, which lists them, and the batch screen, which blocks the
+ * close on them. It was only in the mapping screen, and the batch screen passed a constant
+ * zero — so the block existed, had a fix link, and could never fire. A preparer could close a
+ * month whose muster rolls carried codes this product does not understand.
+ *
+ * `resolved` is the value map the firm has already confirmed for this client. A code it names
+ * is not unresolved however little the matcher recognises it: the preparer has answered.
+ */
+export function unresolvedCodeCount(rawValues: Iterable<string>, resolved?: Record<string, string>): number {
+  const seen = new Set<string>();
+  for (const value of rawValues) {
+    const trimmed = value.trim();
+    if (trimmed && !resolved?.[trimmed]) seen.add(trimmed);
+  }
+  if (seen.size === 0) return 0;
+  return unresolvedValues(matchValues('attendanceGrid', seen)).length;
+}
