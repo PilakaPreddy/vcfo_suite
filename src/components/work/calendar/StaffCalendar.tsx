@@ -255,7 +255,9 @@ export function StaffCalendar({
           {locked || ev.kind === 'client-agreed' ? <Lock className="vc-ev__lock" strokeWidth={1.8} aria-hidden /> : null}
           <span className="vc-ev__text">{ev.title}</span>
         </span>
-        {ev.sub && !arg.event.allDay && arg.view.type !== 'dayGridMonth' ? <span className="vc-ev__sub">{arg.timeText ? `${arg.timeText} · ` : ''}{ev.sub}</span> : null}
+        {/* A timed block reads: title, whose work and which part, then the time. */}
+        {ev.sub && !arg.event.allDay && arg.view.type !== 'dayGridMonth' ? <span className="vc-ev__sub">{ev.sub}</span> : null}
+        {!arg.event.allDay && arg.view.type !== 'dayGridMonth' && arg.timeText ? <span className="vc-ev__time">{arg.timeText}</span> : null}
         {ev.sub && arg.event.allDay && arg.view.type === 'timeGridDay' ? <span className="vc-ev__sub">{ev.sub}</span> : null}
       </span>
     );

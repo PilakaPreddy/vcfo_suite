@@ -258,30 +258,69 @@
   border-radius: 1px;
 }
 
-/* Blocks in the client's colour (R-35): a soft fill, no edge. An own block is dashed. */
+/*
+ * Client colour (R-35). Every client keeps one of six tones on every staff screen; a class sets
+ * the tone's fill, outline and ink, and the event rules below read them. A time block is filled
+ * and outlined in its client's tone; the person's own time (no work item) is a plain grey block.
+ * Both have a solid outline, so a block reads as one object, never a dotted placeholder.
+ */
+.vc-cal .vc-client--brand { --vc-fill: oklch(var(--brand-soft)); --vc-line: oklch(var(--brand)); --vc-ink: oklch(var(--brand-text)); }
+.vc-cal .vc-client--identity { --vc-fill: oklch(var(--identity-soft)); --vc-line: oklch(var(--identity-mid)); --vc-ink: oklch(var(--identity)); }
+.vc-cal .vc-client--waiting { --vc-fill: oklch(var(--waiting-soft)); --vc-line: oklch(var(--waiting-mid)); --vc-ink: oklch(var(--waiting)); }
+.vc-cal .vc-client--warning { --vc-fill: oklch(var(--warning-soft)); --vc-line: oklch(var(--warning-mid)); --vc-ink: oklch(var(--warning)); }
+.vc-cal .vc-client--positive { --vc-fill: oklch(var(--positive-soft)); --vc-line: oklch(var(--positive-mid)); --vc-ink: oklch(var(--positive)); }
+.vc-cal .vc-client--upcoming { --vc-fill: oklch(var(--surface-sunken)); --vc-line: oklch(var(--upcoming-mid)); --vc-ink: oklch(var(--ink)); }
+
+/* Time blocks: the client's fill with a solid outline in the client's colour. */
 .vc-cal .fc-timegrid-event.vc-ev {
-  border-left: 0;
+  border: 1.5px solid var(--vc-line, oklch(var(--line-strong)));
+  background: var(--vc-fill, oklch(var(--surface-sunken)));
+  color: var(--vc-ink, oklch(var(--ink-2)));
   box-shadow: none;
 }
-.vc-cal .fc-timegrid-event.vc-client--brand { background: oklch(var(--brand-soft)); color: oklch(var(--brand-text)); }
-.vc-cal .fc-timegrid-event.vc-client--identity { background: oklch(var(--identity-soft)); color: oklch(var(--identity)); }
-.vc-cal .fc-timegrid-event.vc-client--waiting { background: oklch(var(--waiting-soft)); color: oklch(var(--waiting)); }
-.vc-cal .fc-timegrid-event.vc-client--warning { background: oklch(var(--warning-soft)); color: oklch(var(--warning)); }
-.vc-cal .fc-timegrid-event.vc-client--positive { background: oklch(var(--positive-soft)); color: oklch(var(--positive)); }
-.vc-cal .fc-timegrid-event.vc-client--upcoming { background: oklch(var(--surface-sunken)); color: oklch(var(--ink-2)); }
+.vc-cal .fc-timegrid-event.vc-ev:hover {
+  filter: brightness(0.97);
+}
+/* The person's own time: grey fill, solid grey outline. */
 .vc-cal .fc-timegrid-event.vc-ev--own {
-  border: 1.5px dashed currentColor;
-  background: oklch(var(--surface-raised));
+  border: 1.5px solid oklch(var(--line-strong));
+  background: oklch(var(--surface-sunken));
+  color: oklch(var(--ink-2));
 }
 .vc-cal .fc-timegrid-event.vc-ev--late {
   box-shadow: 0 0 0 2px oklch(var(--warning-mid));
 }
-/* All-day row: a white tag with a coloured left edge. */
-.vc-cal .fc-daygrid-event.vc-ev {
-  background: oklch(var(--surface-raised));
-  box-shadow: inset 0 0 0 1px oklch(var(--line));
-  color: oklch(var(--ink));
+/* Text stays inside its block; a short block shows what fits. */
+.vc-cal .fc-timegrid-event .fc-event-main {
+  overflow: hidden;
 }
+.vc-ev__time {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+/* In a block the client and the part may wrap, so both stay readable in a tall block. */
+.vc-cal .fc-timegrid-event .vc-ev__sub {
+  white-space: normal;
+  font-weight: 500;
+  opacity: 0.85;
+}
+/* All-day and month rows: the client's fill and outline; the left edge keeps the status colour
+   (a regulator colour, where an event has one, still wins it). */
+.vc-cal .fc-daygrid-event.vc-ev {
+  border: 1px solid var(--vc-line, oklch(var(--line)));
+  border-left-width: 3px;
+  background: var(--vc-fill, oklch(var(--surface-raised)));
+  box-shadow: none;
+  color: var(--vc-ink, oklch(var(--ink)));
+}
+.vc-cal .fc-daygrid-event.vc-ev--overdue:not([class*='vc-reg--']) { border-left-color: oklch(var(--danger-mid)); }
+.vc-cal .fc-daygrid-event.vc-ev--due-soon:not([class*='vc-reg--']) { border-left-color: oklch(var(--warning-mid)); }
+.vc-cal .fc-daygrid-event.vc-ev--done:not([class*='vc-reg--']) { border-left-color: oklch(var(--positive-mid)); }
+.vc-cal .fc-daygrid-event.vc-ev--statutory:not([class*='vc-reg--']) { border-left-color: oklch(var(--danger-mid)); }
+.vc-cal .fc-daygrid-event.vc-ev--upcoming:not([class*='vc-reg--']) { border-left-color: oklch(var(--upcoming-mid)); }
 
 /* To-do rows that drag onto the calendar. */
 [data-plan-key] {

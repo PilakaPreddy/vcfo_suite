@@ -307,6 +307,21 @@ function catalogShortLabel(item: ChecklistItem): string {
   return item.title;
 }
 
+/**
+ * The part of the work an item belongs to, in the words staff use: a filing is Compliance, a
+ * checklist step is Incorporation, Post-incorporation or Registration by its catalogue id, a
+ * document request is Documents and anything else a Task. The planner shows it on every block.
+ */
+export function workPart(item: Pick<InternWorkItem, 'source' | 'catalogId'>): string {
+  if (item.source === 'filing') return 'Compliance';
+  if (item.source === 'request') return 'Documents';
+  if (item.source === 'task') return 'Task';
+  const id = item.catalogId ?? '';
+  if (/^reg-/i.test(id)) return 'Registration';
+  if (/^post-/i.test(id)) return 'Post-incorporation';
+  return 'Incorporation';
+}
+
 export function internWorkStepTitle(item: ChecklistItem): string {
   const short = catalogShortLabel(item);
   if (short === item.title) return item.title;
