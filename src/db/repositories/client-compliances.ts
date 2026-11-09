@@ -37,6 +37,7 @@ import {
   todayIso,
   type PortalFiling,
 } from '@/lib/client-portal/compliances';
+import { titleWithPeriod } from '@/lib/compliance/period-title';
 
 /**
  * CLIENT COMPLIANCES REPOSITORY — the client portal's calendar / filings read,
@@ -411,7 +412,7 @@ export async function addClientFilingProof(
     .where(eq(complianceInstances.id, inst.id))
     .limit(1);
   const filingName = about
-    ? `${displayName(about.particular)}${about.periodLabel ? ` · ${about.periodLabel}` : ''}`
+    ? titleWithPeriod(displayName(about.particular), about.periodLabel)
     : 'a filing';
 
   await recordAuditEvent(ctx, {

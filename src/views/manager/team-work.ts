@@ -1,4 +1,5 @@
 import type { ComplianceFiling } from '@/data/compliance';
+import { regOf } from '@/lib/ui/regulator';
 import type { DocRequest, Engagement, TaskInstance } from '@/data/engagements';
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
 import {
@@ -190,12 +191,14 @@ export interface AreaSplit {
 export function areaSplit(items: Array<{ area: string; status: TodayStatus }>): AreaSplit[] {
   const out = new Map<string, AreaSplit>();
   for (const i of items) {
-    const row = out.get(i.area) ?? { area: i.area, done: 0, pending: 0, late: 0, total: 0 };
+    // Group by the regulator the area pill shows, so "MCA" and "Corporate Compliance" are one MCA row.
+    const key = regOf(i.area) ?? i.area;
+    const row = out.get(key) ?? { area: i.area, done: 0, pending: 0, late: 0, total: 0 };
     row.total += 1;
     if (i.status === 'Done') row.done += 1;
     else if (i.status === 'Overdue') row.late += 1;
     else row.pending += 1;
-    out.set(i.area, row);
+    out.set(key, row);
   }
   return [...out.values()];
 }

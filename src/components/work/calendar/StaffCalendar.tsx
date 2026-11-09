@@ -228,6 +228,13 @@ export function StaffCalendar({
     ref.current?.getApi().changeView(MODE_VIEW[mode]);
   }, [mode, MODE_VIEW]);
 
+  // A seven-day grid does not fit a phone (it stopped partway through Thursday), so a phone
+  // opens on one day; the Week button still shows the whole week.
+  useEffect(() => {
+    if (initialMode === 'week' && modes.includes('day') && window.matchMedia('(max-width: 639px)').matches) setMode('day');
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount
+  }, []);
+
   useEffect(() => {
     const cal = ref.current?.getApi();
     if (!cal || !date) return;

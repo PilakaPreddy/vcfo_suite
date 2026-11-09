@@ -81,7 +81,7 @@ section.card>div:first-of-type{flex-wrap:wrap;row-gap:8px}
  .vh-segwrap{display:flex!important;flex-wrap:wrap;gap:2px}
  .vh-segwrap>.thumb{display:none}
  .vh-segwrap button{flex:1 1 auto}
- .vh-segwrap button.on{background:oklch(var(--navy-fill));color:#fff}
+ .vh-segwrap button.on{background:oklch(var(--navy-fill));color:oklch(var(--on-navy))}
 }
 /* pop-ups always fit the viewport; closed ones take no space (no phantom page scroll) */
 .info .pop{max-width:min(280px,calc(100vw - 24px));display:none}
@@ -94,7 +94,7 @@ section.card>div:first-of-type{flex-wrap:wrap;row-gap:8px}
  .vh-dd .seg{display:flex!important;flex-wrap:nowrap;overflow-x:auto;gap:2px}
  .vh-dd .seg>.thumb{display:none}
  .vh-dd .seg button{flex:none}
- .vh-dd .seg button.on{background:oklch(var(--navy-fill));color:#fff}
+ .vh-dd .seg button.on{background:oklch(var(--navy-fill));color:oklch(var(--on-navy))}
  .vh-dd .ddrow{grid-template-columns:minmax(0,1fr) 116px 16px}
  .vh-dd .ddrow>.mono{display:none}
 }

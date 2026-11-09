@@ -490,11 +490,11 @@ export function CommandPalette() {
         aria-keyshortcuts="Control+K Meta+K"
         aria-haspopup="dialog"
         aria-expanded={commandOpen}
-        className="ml-auto hidden h-9 w-9 flex-none items-center gap-2 rounded-md border-1.5 border-line bg-surface-sunken text-[14px] text-ink-muted transition-colors hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:flex md:w-[380px] md:flex-initial md:shrink md:pl-3 md:pr-2"
+        className="ml-auto hidden h-9 w-9 flex-none items-center gap-2 rounded-md border-1.5 border-line bg-surface-sunken text-[14px] text-ink-muted transition-colors hover:border-line-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring sm:flex md:w-[240px] md:flex-initial md:shrink md:pl-3 md:pr-2 xl:w-[380px]"
       >
         <Search className="mx-auto h-4 w-4 flex-none md:mx-0" strokeWidth={1.6} aria-hidden />
         <span className="hidden min-w-0 flex-1 truncate text-left md:inline">Search clients, filings, documents</span>
-        <Kbd className="ml-auto hidden md:inline-flex">Ctrl K</Kbd>
+        <Kbd className="ml-auto hidden xl:inline-flex">Ctrl K</Kbd>
       </button>
     </Tip>
   );

@@ -33,6 +33,7 @@ import {
 } from '@/lib/compliance-tasks/model';
 import type { ReminderLine } from '@/lib/compliance-tasks/reminder-email';
 import type { WhatsAppGatePrefs } from '@/lib/notify/prefs-gate';
+import { titleWithPeriod } from '@/lib/compliance/period-title';
 
 /**
  * COMPLIANCE REMINDER SCHEDULE — the six reminders of one item (COMPLIANCE-MODEL 3.4, D-2.3)
@@ -247,7 +248,7 @@ export async function systemPlanComplianceReminders(today: string): Promise<Plan
         id: task.id,
         engagementId: task.engagementId,
         companyName,
-        title: task.periodLabel ? `${task.name} · ${task.periodLabel}` : task.name,
+        title: titleWithPeriod(task.name, task.periodLabel),
         dueDate: task.dueDate,
         key,
         label: RULE.get(key)!.label,
@@ -304,7 +305,7 @@ export async function systemPlanComplianceReminders(today: string): Promise<Plan
         id: r.inst.id,
         engagementId: r.inst.engagementId,
         companyName: r.companyName,
-        title: period ? `${r.particular} · ${period}` : r.particular,
+        title: titleWithPeriod(r.particular, period),
         dueDate: r.inst.dueDate,
         key,
         label: RULE.get(key)!.label,

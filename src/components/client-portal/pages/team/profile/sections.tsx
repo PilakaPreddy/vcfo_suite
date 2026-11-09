@@ -39,7 +39,8 @@ export const LABEL: Record<SecKey, string> = {
   look: 'Appearance',
   company: 'Company',
   team: 'Team',
-  settings: 'Settings',
+  // The overview of every setting on one page; "Settings" inside Settings read as a loop.
+  settings: 'All settings',
 };
 
 /** One form row: label with a hint on the left, the control on the right (464 px column). */
@@ -244,7 +245,7 @@ function AboutSection() {
         {!emailOpen ? (
           <Button
             size="sm"
-            variant="ghost"
+            variant="secondary"
             disabled={!p}
             onClick={() => {
               setEmail(p?.email ?? '');

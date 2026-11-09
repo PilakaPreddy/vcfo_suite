@@ -140,7 +140,8 @@ export function LeadActionQueue({
     <DashSection
       icon={ListTodo}
       title="Action queue"
-      meta={`${openItems.length} open`}
+      // Every open item, yours and those waiting on others; the hero's "Needs action" counts only yours.
+      meta={`${openItems.length} open in all`}
       right={
         <span className="flex flex-wrap items-center gap-3">
           {stuck.length > 0 ? (

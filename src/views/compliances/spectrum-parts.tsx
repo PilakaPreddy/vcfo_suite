@@ -283,9 +283,10 @@ export function FlowCard({ title, steps }: { title: string; steps: Array<{ label
         {steps.map((s, i) => (
           <Fragment key={s.label}>
             {i > 0 ? <ChevronRight className="h-2.5 w-2.5 flex-none self-center text-ink-faint" strokeWidth={1.6} aria-hidden /> : null}
-            <div className="grid min-w-0 flex-1 place-items-center content-center gap-0.5 rounded-md bg-surface-sunken px-0.5 py-2.5 text-center">
+            {/* Numbers share one top line; every label keeps room for two lines, so a wrapped label never lifts its number. */}
+            <div className="grid min-w-0 flex-1 place-items-center content-start gap-0.5 rounded-md bg-surface-sunken px-0.5 py-2.5 text-center">
               <b className="text-[18px] font-medium tabular-nums text-ink">{s.value}</b>
-              <span className="text-[11px] leading-tight text-ink-muted">{s.label}</span>
+              <span className="min-h-[2.5em] text-[11px] leading-tight text-ink-muted">{s.label}</span>
             </div>
           </Fragment>
         ))}

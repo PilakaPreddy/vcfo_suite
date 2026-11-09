@@ -70,6 +70,7 @@ import { prefillNotes } from '@/lib/client-portal/step-progress';
 import { portalFor } from './portals';
 import { FieldArea, PortalModal } from './modal';
 import { Col, Cols, Dot, DropZone, Empty, Island, ListRow, PageHead, Pager, SCard, markState, markTone, stepChip, useGo } from './spectrum';
+import { formLabel } from '@/lib/ui/form-label';
 
 /* ---------------- answers ---------------- */
 
@@ -507,7 +508,7 @@ export default function StepPage({ stepParam }: { stepParam: string }) {
   const late = s.late && k !== 'done';
   const inPhase = phase.steps;
   const portalLink = s.n !== 2 ? portalFor(s.item) : null;
-  const forms = (s.item.forms ?? []).slice(0, 3);
+  const forms = (s.item.forms ?? []).slice(0, 3).map(formLabel);
   const showDocs = view === 'docs' && docsCount > 0;
   // C-218: the client edits text answers on a step it fills that is still open. The draft route
   // repeats every check; this only decides which rows draw an input.

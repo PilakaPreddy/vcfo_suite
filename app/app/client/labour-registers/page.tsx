@@ -34,7 +34,12 @@ export default async function Page({
     /* A client may read a batch and never write to one. The write routes refuse them anyway;
        this stops the controls being drawn, because a client pressing "Mark as ready" and
        getting a 403 is a bug report. */
-    return <BatchPage view={view} shellBase="/app/client" canPrepare={false} />;
+    // cp-tw: the client portal keeps Tailwind only inside `.cp-tw` islands.
+    return (
+      <div className="cp-tw">
+        <BatchPage view={view} shellBase="/app/client" canPrepare={false} />
+      </div>
+    );
   }
 
   return <ClientRegistersPage shellBase="/app/client" stateCode={one('state')} period={one('period')} />;

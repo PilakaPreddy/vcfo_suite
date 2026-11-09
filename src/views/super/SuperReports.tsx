@@ -199,7 +199,7 @@ export default function SuperReports() {
               </div>
             </section>
             <section>
-              <h3 className="mb-1 text-[15px] font-medium text-ink">Top risks for {nextMonthName(month.key)}</h3>
+              <h3 className="mb-1 text-[15px] font-medium text-ink">Top risks going into {nextMonthName(month.key)}</h3>
               {risks.length === 0 ? (
                 <p className="text-[13.5px] text-ink-2">None</p>
               ) : (

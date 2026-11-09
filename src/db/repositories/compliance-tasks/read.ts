@@ -54,6 +54,7 @@ import {
   type Person,
   type TaskRow,
 } from './shared';
+import { titleWithPeriod } from '@/lib/compliance/period-title';
 
 export interface TaskRowDto {
   id: string;
@@ -150,7 +151,7 @@ function toTaskRowDto(t: TaskRow, x: RowExtras): TaskRowDto {
     activityName: x.activityName,
     name: t.name,
     periodLabel: t.periodLabel ?? null,
-    title: t.periodLabel ? `${t.name} · ${t.periodLabel}` : t.name,
+    title: titleWithPeriod(t.name, t.periodLabel),
     startDate: t.startDate,
     dueDate: t.dueDate,
     urgency,

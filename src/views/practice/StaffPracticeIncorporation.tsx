@@ -24,6 +24,7 @@ import {
 } from '@/lib/practice/practice-incorporation';
 import type { CurrentStepDays } from '@/lib/metrics/practice-metrics';
 import { cn } from '@/lib/utils';
+import { stepNumbers } from '@/lib/client-portal/documents';
 
 /**
  * INCORPORATION on the admin, manager and lead shells (rule R-51, D-29; prototype
@@ -46,11 +47,15 @@ type WithKey = '' | 'client' | 'sbc' | 'manager';
 
 const WITH_WORD: Record<Exclude<WithKey, ''>, string> = { client: 'Client', sbc: 'SBC', manager: 'Manager' };
 
-/** "pre-7" → "Pre-7", "post-3" → "Post-3"; other ids have no short code. */
+const STEP_NO = stepNumbers();
+
+/**
+ * The step's number in the client order ("Step 10"), as the project page shows it. The internal
+ * id ("pre-7") counts differently, so showing it made one step look like two.
+ */
 function stepCode(stepId: string | undefined): string | null {
-  const m = /^(pre|post)-(\d+)$/i.exec(stepId ?? '');
-  if (!m) return null;
-  return `${m[1].toLowerCase() === 'pre' ? 'Pre' : 'Post'}-${m[2]}`;
+  const n = stepId ? STEP_NO[stepId]?.n : undefined;
+  return n ? `Step ${n}` : null;
 }
 
 /** A row is late when a step is overdue, the client is blocked, or the step's window has passed. */

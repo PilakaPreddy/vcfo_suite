@@ -14,6 +14,7 @@ import { CardHeadTile } from "@/components/common/CardHeadTile";
 import { Chip } from "@/components/ui/spectrum-chip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { plainDay } from "@/lib/date-format";
 
 export function TimelineRequestsPanel({ engagementId, canDecide }: { engagementId: string; canDecide: boolean }) {
   const qc = useQueryClient();
@@ -64,7 +65,7 @@ export function TimelineRequestsPanel({ engagementId, canDecide }: { engagementI
           <ul className="grid gap-1 sm:grid-cols-2">
             {r.phases.map((p) => (
               <li key={p.id} className="tabular-nums text-xs">
-                {p.name}: {p.from} → {p.to}
+                {p.name}: {plainDay(p.from)} → {plainDay(p.to)}
               </li>
             ))}
           </ul>

@@ -11,6 +11,7 @@ import { useAskOptional } from '@/components/ask/ask-context';
 import { useAssistProfile } from '@/hooks/use-assist-profile';
 import { ASSIST_PROFILE_STEP_IDS } from '@/lib/assist-profile/paths';
 import { missingInputLabel } from '@/lib/doc-pack/unblock';
+import { formLabel } from '@/lib/ui/form-label';
 
 /**
  * "WHAT'S THIS?" PANEL on staff screens (prototype `AboutStepPanel`, D-053): a 420px side panel
@@ -97,7 +98,7 @@ function StepAboutBody({
             </ul>
           ) : null}
           <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-ink-muted">
-            {item.forms.length > 0 ? <span className="font-mono text-[12px]">{item.forms.join(' · ')}</span> : null}
+            {item.forms.length > 0 ? <span className="font-mono text-[12px]">{item.forms.map(formLabel).join(' · ')}</span> : null}
             <a
               href="https://www.mca.gov.in"
               target="_blank"

@@ -261,7 +261,8 @@ function WashTile({ stat, strip }: { stat: DashHeroStat; strip?: boolean }) {
           {note ? <span className="truncate text-[12px] text-ink-muted">{note}</span> : null}
         </span>
         {stat.trend && stat.trend.length > 1 ? (
-          <TrendLine points={stat.trend} className={cn(TREND[tone], strip && 'max-sm:hidden')} />
+          // A line that never leaves zero carries no alarm, so it is muted, not red.
+          <TrendLine points={stat.trend} className={cn(stat.trend.every((v) => v === 0) ? 'text-ink-faint' : TREND[tone], strip && 'max-sm:hidden')} />
         ) : stat.trendEmpty ? (
           <span className={cn('flex flex-none flex-col items-end gap-0.5 self-end', strip && 'max-sm:hidden')} title={stat.trendEmpty}>
             <svg viewBox="0 0 64 26" className="h-[14px] w-12 text-line-strong sm:w-16" aria-hidden>

@@ -61,8 +61,11 @@ export function PortalTopBar({ onSearch, hasAnnouncements }: { onSearch: () => v
             go('home');
           }}
         >
+          {/* The black-letter logo disappears on the dark top bar, so dark mode shows the white-letter lockup. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/client-portal/sbc-logo-top.webp" alt="SBC" style={{ height: 26, width: 'auto' }} />
+          <img className="tbar-logo-l" src="/client-portal/sbc-logo-top.webp" alt="SBC" style={{ height: 26, width: 'auto' }} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="tbar-logo-d" src="/sbc-logo-dark.png" alt="SBC" style={{ height: 26, width: 'auto' }} />
         </a>
         <nav aria-label="Location" className="tbar-nav">
           <ol className="tbar-ol">

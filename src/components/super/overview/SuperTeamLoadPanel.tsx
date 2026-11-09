@@ -43,7 +43,8 @@ export function SuperTeamLoadPanel({ insights }: { insights: SuperInsights }) {
                   </span>
                 </span>
                 <span className="block truncate text-[12.5px] text-ink-muted">
-                  {m.openSteps} open · {m.overdueSteps} overdue{room !== null ? ` · room for ${room}` : ''}
+                  {/* Overdue steps and filings, the same count as the Managers table's Late column. */}
+                  {m.openSteps} open · {m.overdueSteps + m.overdueFilings} overdue{room !== null ? ` · room for ${room}` : ''}
                 </span>
                 {load?.pct != null ? <ToneBar pct={load.pct} tone={LOAD_TONE[load.tone]} className="mt-2" /> : null}
               </li>

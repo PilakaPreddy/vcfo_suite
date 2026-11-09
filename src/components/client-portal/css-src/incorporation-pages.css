@@ -35,7 +35,7 @@ button:where(:not(.cp-tw *)){font:inherit;color:inherit}
 .ibtn svg{width:15px;height:15px}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;border-radius:6px;font:500 13px var(--font-sans),sans-serif;border:1px solid var(--border);background:oklch(var(--surface-raised));color:var(--fg);cursor:pointer;white-space:nowrap;transition:transform .12s,background .15s;text-decoration:none}
 .btn:hover{background:var(--raised)}.btn:active{transform:scale(.98)}
-.btn.p{background:oklch(var(--navy-fill));border-color:transparent;color:#fff}.btn.p:hover{background:oklch(var(--navy-fill-hover))}
+.btn.p{background:oklch(var(--navy-fill));border-color:transparent;color:oklch(var(--on-navy))}.btn.p:hover{background:oklch(var(--navy-fill-hover))}
 .btn.nv{background:var(--navy);border-color:var(--navy);color:#fff}.btn.nv:hover{background:#173c66}
 .btn svg{width:16px;height:16px;flex:none}
 .btn.sm{height:32px;padding:0 11px;font-size:12.5px}
@@ -477,7 +477,7 @@ a.rr:hover{background:var(--raised)}
 .ip-pop{position:absolute;z-index:2147482600;width:290px;max-width:calc(100vw - 24px);background:oklch(var(--surface-raised));border:1px solid var(--border);border-radius:6px;box-shadow:var(--pop);padding:12px;font:500 12.5px/1.5 var(--font-sans),system-ui,sans-serif;color:var(--fg)}
 .ip-pop p{margin:0}
 .ip-pop button{margin-top:10px;width:100%;display:flex;align-items:center;gap:8px;border:0;border-top:1px solid var(--hair);background:none;padding:10px 0 0;font:500 12.5px var(--font-sans),sans-serif;color:var(--primary);cursor:pointer;text-align:left}
-#ip-tt{position:fixed;z-index:2147483002;pointer-events:none;background:oklch(var(--navy-fill));color:#fff;font:500 12px/1.35 var(--font-sans),system-ui,sans-serif;padding:6px 9px;border-radius:6px;white-space:nowrap;max-width:calc(100vw - 16px);overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s;left:0;top:0;box-shadow:var(--pop)}
+#ip-tt{position:fixed;z-index:2147483002;pointer-events:none;background:oklch(var(--navy-fill));color:oklch(var(--on-navy));font:500 12px/1.35 var(--font-sans),system-ui,sans-serif;padding:6px 9px;border-radius:6px;white-space:nowrap;max-width:calc(100vw - 16px);overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s;left:0;top:0;box-shadow:var(--pop)}
 #ip-tt.on{opacity:1;transform:none}
 /* ---------- tablet ---------- */
 @media (max-width:1279px){

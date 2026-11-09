@@ -6,6 +6,7 @@
 import { sep } from '@/lib/date-format';
 import type { ClientOverview } from '@/lib/client/client-overview';
 import { getActiveCatalogItems, getIncorporationPhases } from '@/data/checklist';
+import { titleWithPeriod } from '@/lib/compliance/period-title';
 
 export const BEFORE_QUESTIONS = ['What is my next step?', 'Where is my incorporation now?', 'Which documents are missing?'] as const;
 export const AFTER_QUESTIONS = ['What is due next?', 'Which registrations are pending?', 'When is FC-GPR due?'] as const;
@@ -68,7 +69,7 @@ export function portalAnswer(question: string, o: ClientOverview, now: Date = ne
     const [a, b] = up;
     return {
       kind: 'ok',
-      text: `${a!.title}${a!.periodLabel ? ` · ${a!.periodLabel}` : ''} is due ${fmt(a!.dueDate)}.${b ? ` Next is ${b.title} on ${fmt(b.dueDate)}.` : ''}`,
+      text: `${titleWithPeriod(a!.title, a!.periodLabel)} is due ${fmt(a!.dueDate)}.${b ? ` Next is ${b.title} on ${fmt(b.dueDate)}.` : ''}`,
     };
   }
 

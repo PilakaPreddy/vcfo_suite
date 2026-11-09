@@ -43,7 +43,7 @@ a:where(:not(.cp-tw *)){color:oklch(var(--brand-text));text-decoration:none;font
 .idm{font-family:var(--font-mono),monospace;font-feature-settings:"tnum"} /* identifiers only: CIN, PAN, GSTIN, SRN, ARN, file names */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;border-radius:6px;font:500 13px var(--font-sans),sans-serif;border:1px solid transparent;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background-color .15s,box-shadow .15s,transform .15s}
 .btn:active{transform:scale(.98)}
-.btn-p{background:oklch(var(--navy-fill));color:#fff}.btn-p:hover{background:oklch(var(--navy-fill-hover));color:#fff}
+.btn-p{background:oklch(var(--navy-fill));color:oklch(var(--on-navy))}.btn-p:hover{background:oklch(var(--navy-fill-hover));color:oklch(var(--on-navy))}
 .btn-o{background:var(--panel);color:var(--fg);border-color:var(--border)}
 .bar{height:8px;border-radius:3px;background:var(--raised);overflow:hidden;flex:1}
 .bar>span{display:block;height:100%;border-radius:3px;transform-origin:left;animation:grow .9s cubic-bezier(.2,.7,.2,1) .2s backwards}

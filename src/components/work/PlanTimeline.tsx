@@ -44,7 +44,7 @@ function Legend() {
         Step due
       </span>
       <span className="flex items-center gap-1.5">
-        <i className="h-2 w-2 rotate-45 rounded-[1px] bg-danger-mid" aria-hidden />
+        <i className="h-2 w-2 rotate-45 rounded-[1px] bg-highlight-bright" aria-hidden />
         Filing due
       </span>
     </span>
@@ -54,14 +54,15 @@ function Legend() {
 /**
  * The Planner's Timeline (prototype `PlanTimeline`): 14 days with one row per open item. Manager
  * dates are hatched with a lock, my to-dos dashed, waiting on the client teal, overdue solid red.
- * A diamond marks the due day and a filing has only its diamond. The line marks today.
+ * A diamond marks the due day and a filing has only its diamond: orange when due, red once late,
+ * so "Filing due" never reads as "Overdue". The line marks today.
  */
 export function PlanTimeline({ items, now, onOpen }: { items: InternWorkItem[]; now: Date; onOpen: (item: InternWorkItem) => void }) {
   const today = ymdInIst(now);
   const gantt = internTimelineGantt(items.filter((i) => i.kind !== 'done'), now);
   const todayCol = gantt.window.indexOf(today);
   const rows = gantt.rows.slice(0, MAX_ROWS);
-  const grid = { gridTemplateColumns: `minmax(150px,190px) repeat(${gantt.window.length}, minmax(30px, 1fr))` };
+  const grid = { gridTemplateColumns: `minmax(190px,250px) repeat(${gantt.window.length}, minmax(30px, 1fr))` };
   const first = gantt.window[0];
   const last = gantt.window[gantt.window.length - 1];
 
@@ -71,7 +72,7 @@ export function PlanTimeline({ items, now, onOpen }: { items: InternWorkItem[]; 
         <EmptyState title="Nothing dated" className="m-4" />
       ) : (
         <div className="overflow-x-auto">
-          <div className="min-w-[640px]">
+          <div className="min-w-[680px]">
             <div className="grid h-9 items-center border-b-1.5 border-line text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted" style={grid}>
               <span className="px-4 md:px-5">Task</span>
               {gantt.window.map((ymd, i) => {
@@ -129,7 +130,7 @@ export function PlanTimeline({ items, now, onOpen }: { items: InternWorkItem[]; 
                   )}
                   {item.dueAt ? (
                     <span className="z-[2] grid place-items-center self-center" style={{ gridColumn: `${row.endIdx + 2} / span 1`, gridRow: 1 }} title={`${item.title} · ${item.why}`}>
-                      <i className={cn('h-3 w-3 rotate-45 rounded-[2px]', filing ? 'bg-danger-mid' : 'bg-ink-2')} aria-hidden />
+                      <i className={cn('h-3 w-3 rotate-45 rounded-[2px]', filing ? (late ? 'bg-danger-mid' : 'bg-highlight-bright') : 'bg-ink-2')} aria-hidden />
                     </span>
                   ) : null}
                 </div>

@@ -97,8 +97,9 @@ export function FilingsMatrix({ filings, engagements, now }: { filings: Complian
                   Client
                 </th>
                 {forms.map((form) => (
-                  <th key={form} scope="col" className="h-9 w-[58px] whitespace-nowrap border-b-1.5 border-line px-1 text-center text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted">
-                    {form}
+                  <th key={form} scope="col" title={form} className="h-9 w-[58px] whitespace-nowrap border-b-1.5 border-line px-1 text-center text-[11.5px] font-medium uppercase tracking-[.07em] text-ink-muted">
+                    {/* "MGT-7" fits the 58px column; "Form MGT-7" ran past the card edge. */}
+                    {form.replace(/^form\s+/i, '')}
                   </th>
                 ))}
               </tr>

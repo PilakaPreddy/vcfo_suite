@@ -27,6 +27,7 @@ import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { assertEngagementAccess, listScopedEngagementIds } from '@/db/repositories/engagements';
 import { currentItemWindow, resolveWorkItem } from '@/db/repositories/work-items';
 import { setComplianceInstanceWindow, setEngagementWindow } from '@/db/repositories/schedule';
+import { titleWithPeriod } from '@/lib/compliance/period-title';
 
 /**
  * ITEM WINDOW REQUESTS — a lead asks the manager to move a manager-set date window on
@@ -78,7 +79,7 @@ async function itemTitles(rows: Row[]): Promise<Map<string, { title: string; win
     .where(inArray(complianceInstances.id, [...new Set(filingIds)]));
   for (const inst of instances) {
     out.set(`filing:${inst.id}`, {
-      title: inst.periodLabel ? `${inst.particular} · ${inst.periodLabel}` : inst.particular,
+      title: titleWithPeriod(inst.particular, inst.periodLabel),
       window: inst.windowFrom && inst.windowTo ? { from: inst.windowFrom, to: inst.windowTo } : null,
     });
   }

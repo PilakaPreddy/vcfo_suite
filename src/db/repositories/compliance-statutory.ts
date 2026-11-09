@@ -52,6 +52,7 @@ import {
   type StatusWord,
   type StepOut,
 } from '@/lib/compliance-tasks/model';
+import { titleWithPeriod } from '@/lib/compliance/period-title';
 
 /**
  * COMPLIANCE STATUTORY — the statutory detail page (D-1 to D-4) and its workflow.
@@ -277,7 +278,7 @@ async function buildDetail(
     name: obligation.particular,
     periodLabel: period,
     fyLabel: inst.fyLabel ?? null,
-    title: period ? `${obligation.particular} · ${period}` : obligation.particular,
+    title: titleWithPeriod(obligation.particular, period),
     area: obligation.complianceArea,
     authority: obligation.authority,
     frequency: obligation.frequency,
@@ -414,7 +415,7 @@ export async function updateStatutory(ctx: AuthContext, instanceId: string, inpu
   const stage = statutoryStage(inst, workflow);
   const reviewerId = workflow?.reviewerId ?? engagementReviewerId(engagement);
   const mayReview = canManage(ctx.role) || reviewerId === ctx.userId;
-  const title = inst.periodLabel ? `${obligation.particular} · ${inst.periodLabel}` : obligation.particular;
+  const title = titleWithPeriod(obligation.particular, inst.periodLabel);
 
   switch (input.action) {
     case 'stage': {

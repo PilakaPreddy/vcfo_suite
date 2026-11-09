@@ -33,17 +33,6 @@ const AXIS_Y = {
   tick: { ...chartAxisProps.tick, fontSize: 11.5, fill: 'oklch(var(--ink-faint))' },
 } as const;
 
-/**
- * The completion axis starts at 70% as in the prototype, so a month near the target reads
- * clearly. A real month below 70% must stay visible, so the floor drops to the next ten below it.
- */
-export function completionFloor(data: AnalyticsChartRow[]): number {
-  const rates = data.map((r) => r.completion).filter((v): v is number => v !== null);
-  if (rates.length === 0) return 70;
-  const low = Math.min(...rates);
-  return low >= 70 ? 70 : Math.max(0, Math.floor(low / 10) * 10);
-}
-
 function ChartPlaceholder() {
   return <div className="h-full w-full animate-pulse rounded-md bg-surface-sunken" aria-hidden />;
 }
@@ -59,7 +48,8 @@ export function AnalyticsCompletionChart({ data, target = 95 }: { data: Analytic
       <BarChart data={data} margin={{ top: 16, right: 4, left: -10, bottom: 0 }} barCategoryGap="28%">
         <CartesianGrid {...chartGridProps} />
         <XAxis dataKey="m" interval={0} {...AXIS_X} />
-        <YAxis domain={[completionFloor(data), 100]} unit="%" allowDecimals={false} allowDataOverflow={false} {...AXIS_Y} />
+        {/* Bars start at zero; a cut-off axis makes a 66% month look like a sliver and a month at the floor vanish. */}
+        <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} unit="%" allowDecimals={false} allowDataOverflow={false} {...AXIS_Y} />
         <Tooltip
           cursor={{ fill: CHART_CHROME.cursor }}
           content={<ChartTooltip valueFormatter={(v) => `${v}% on time`} />}
@@ -105,7 +95,8 @@ export function AnalyticsDelayChart({ data, benchmark = 2 }: { data: AnalyticsCh
           isAnimationActive={false}
           dot={{ r: 4, fill: CHART_CHROME.surface, stroke: CHART_STATUS.active, strokeWidth: 2 }}
           activeDot={{ r: 5, fill: CHART_STATUS.active, stroke: CHART_CHROME.surface, strokeWidth: 2 }}
-          label={{ position: 'top', fill: CHART_CHROME.ink, fontSize: 11 }}
+          // A "0" label would sit on the axis line and the month names; zero months need no label.
+          label={{ position: 'top', fill: CHART_CHROME.ink, fontSize: 11, formatter: (v: unknown) => (Number(v) ? String(v) : '') }}
         />
       </LineChart>
     </ResponsiveContainer>

@@ -62,7 +62,8 @@ export function BoardResolutionStepLink({
       : status === 'draft'
         ? 'Draft saved'
         : status === 'none'
-          ? 'Not started'
+          ? // The step can be done by hand without a draft made here, so say what is missing, not "Not started".
+            'Not generated'
           : null;
 
   if (variant === 'button') {
@@ -77,13 +78,13 @@ export function BoardResolutionStepLink({
     <Link
       href={internBoardResolutionPath(engagement)}
       className={cn(
-        'group flex min-h-11 items-center gap-3 rounded-md border-1.5 border-line bg-surface-raised px-3 py-2',
+        'group flex min-h-11 flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md border-1.5 border-line bg-surface-raised px-3 py-2',
         'transition-colors hover:border-line-strong hover:bg-surface-sunken/60',
         className,
       )}
     >
       <FileBadge type="DOCX" />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-[9rem] flex-1">
         <p className="text-[14px] font-medium text-ink group-hover:underline">{label}</p>
       </div>
       {statusLabel && (

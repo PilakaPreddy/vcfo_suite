@@ -141,6 +141,9 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid oklch
 .pb::after{transform:translateY(3px)}.pb:hover::after,.pb:focus-visible::after{transform:none}
 .pb:hover::before,.pb:focus-visible::before,.kb:hover::before,.kb:focus-visible::before{content:none}
 .kb.tip::after,.kb.tip:hover::after,.kb.tip:focus-visible::after{left:auto;right:0;animation:none}
+/* The edge buttons sit at the card's right edge: a centred tooltip there, hidden or not, widened the page by a few px on tablets. */
+.vdoc-ph .sx-ib.edge.tip::after,.vdoc-ph .sx-ib.edge.tip:hover::after,.vdoc-ph .sx-ib.edge.tip:focus-visible::after{left:auto;right:0}
+.vdoc-ph .sx-ib.edge.tip::after{transform:translate(0,3px)}.vdoc-ph .sx-ib.edge.tip:hover::after,.vdoc-ph .sx-ib.edge.tip:focus-visible::after{transform:none}
 .kb.tip::after{transform:translate(0,3px)}.kb.tip:hover::after,.kb.tip:focus-visible::after{transform:none}
 /* ---------- prototype DocumentsScreen (2c978c5) parity, round 2 ---------- */
 /* By step / By category: the shared Tabs look (1.5 px edge, 3 px padding, 22 px buttons) */
@@ -168,7 +171,7 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid oklch
 .vdoc-ex .tr .main{padding-left:8px}
 /* one line per document: the name, then the secondary text in faint ink, then the status chip */
 .tr .lb.fl{flex:0 1 auto}
-.vdoc-sub{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 13px var(--font-sans),sans-serif;color:oklch(var(--ink-faint))}
+.vdoc-sub{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:400 13px var(--font-sans),sans-serif;color:oklch(var(--ink-muted))}
 .vdoc-st{flex:none;display:inline-flex}
 .tr.fd .lb{font-weight:500}
 .tr.over{background:oklch(var(--brand-soft));box-shadow:inset 0 0 0 1.5px oklch(var(--brand))}

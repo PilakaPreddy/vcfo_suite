@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/auth/guards';
 import { ClientDocumentsForbiddenError, readClientDocumentFile } from '@/db/repositories/client-documents';
+import { fileErrorResponse } from '@/lib/api/file-error';
 
 /**
  * GET /api/client/documents/file?ref=&dl=1 — the bytes of one client
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
   if (!ref || ref.length > 600) return NextResponse.json({ error: 'invalid_ref' }, { status: 400 });
   try {
     const file = await readClientDocumentFile(guard.ctx, ref, url.searchParams.get('engagement') ?? undefined);
-    if (!file) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    if (!file) return fileErrorResponse(request, 'not_found', 404);
     const safe = file.fileName.replace(/["\\\r\n]/g, '_');
     const disposition = url.searchParams.get('dl') === '1' ? 'attachment' : 'inline';
     return new NextResponse(new Uint8Array(file.bytes), {
@@ -30,8 +31,10 @@ export async function GET(request: Request) {
       },
     });
   } catch (e) {
-    if (e instanceof ClientDocumentsForbiddenError) return NextResponse.json({ error: e.message }, { status: 403 });
+    if (e instanceof ClientDocumentsForbiddenError) {
+      return request.headers.get('accept')?.includes('text/html') ? fileErrorResponse(request, 'forbidden', 403) : NextResponse.json({ error: e.message }, { status: 403 });
+    }
     console.error('[client-documents] file failed', e);
-    return NextResponse.json({ error: 'download_failed' }, { status: 500 });
+    return fileErrorResponse(request, 'download_failed', 500);
   }
 }

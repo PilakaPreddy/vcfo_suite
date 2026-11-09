@@ -257,40 +257,46 @@ export function AdminDashboardView({
           </Button>
         </DashHero>
 
+        {/*
+          One grid with two independent columns, so a tall rail never leaves a gap under the main column.
+          Below lg the column wrappers are display: contents and `order` keeps the phone reading order:
+          team tasks, the first rail cards, the queues, then the rest of the rail.
+        */}
         <div className={GRID}>
-          <div id="team-tasks" className="min-w-0 scroll-mt-24">
-            <TeamTasksCard rows={teamRows} tools={tools} loading={engagementsLoading} />
+          <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5">
+            <div id="team-tasks" className="order-1 min-w-0 scroll-mt-24">
+              <TeamTasksCard rows={teamRows} tools={tools} loading={engagementsLoading} />
+            </div>
+            <div className="order-3 flex min-w-0 flex-col gap-5">
+              <LeadActionQueue
+                userId={user?.id ?? ''}
+                items={teamItems}
+                now={now}
+                statusOf={(i) => team.byId.get(i.id)?.status ?? 'In progress'}
+                stuck={stuck}
+                loading={engagementsLoading}
+                workHref={projectBase === '/app/manager' ? '/app/manager/work' : `${projectBase}/projects?tab=leads`}
+                companyHref={(id) => {
+                  const e = engById.get(id);
+                  return e ? adminProjectPath(e, projectBase) : `${projectBase}/projects`;
+                }}
+              />
+              {scope !== 'compliance' && phaseRows.length > 0 ? <PhaseProgressGrid rows={phaseRows} meta={`${phaseRows.length} incorporating`} /> : null}
+              {scope !== 'incorporating' ? <FilingsMatrix filings={scopedFilings} engagements={scoped} now={now} /> : null}
+            </div>
           </div>
-          <div className="flex min-w-0 flex-col gap-5">
-            <DashboardApprovalsPanel />
-            <TaskStatusCard rows={teamRows} />
-            <WorkloadByLeadCard rows={teamRows} rebalanceHref={`${projectBase}/team`} />
-          </div>
-        </div>
-
-        <div className={GRID}>
-          <div className="flex min-w-0 flex-col gap-5">
-            <LeadActionQueue
-              userId={user?.id ?? ''}
-              items={teamItems}
-              now={now}
-              statusOf={(i) => team.byId.get(i.id)?.status ?? 'In progress'}
-              stuck={stuck}
-              loading={engagementsLoading}
-              workHref={projectBase === '/app/manager' ? '/app/manager/work' : `${projectBase}/projects?tab=leads`}
-              companyHref={(id) => {
-                const e = engById.get(id);
-                return e ? adminProjectPath(e, projectBase) : `${projectBase}/projects`;
-              }}
-            />
-            {scope !== 'compliance' && phaseRows.length > 0 ? <PhaseProgressGrid rows={phaseRows} meta={`${phaseRows.length} incorporating`} /> : null}
-            {scope !== 'incorporating' ? <FilingsMatrix filings={scopedFilings} engagements={scoped} now={now} /> : null}
-          </div>
-          <div className="flex min-w-0 flex-col gap-5">
-            {userId ? <LeadInboxCard userId={userId} items={teamItems} engagementIds={scopedIds} /> : null}
-            <LeadSideRail items={teamItems} mailHref={`${staffBase}/mail`} />
-            <BoardMeetingsCard />
-            {userId ? <TeamTodosPanel userId={userId} /> : null}
+          <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-5">
+            <div className="order-2 flex min-w-0 flex-col gap-5">
+              <DashboardApprovalsPanel />
+              <TaskStatusCard rows={teamRows} />
+              <WorkloadByLeadCard rows={teamRows} rebalanceHref={`${projectBase}/team`} />
+            </div>
+            <div className="order-4 flex min-w-0 flex-col gap-5">
+              {userId ? <LeadInboxCard userId={userId} items={teamItems} engagementIds={scopedIds} /> : null}
+              <LeadSideRail items={teamItems} mailHref={`${staffBase}/mail`} />
+              <BoardMeetingsCard />
+              {userId ? <TeamTodosPanel userId={userId} /> : null}
+            </div>
           </div>
         </div>
       </div>

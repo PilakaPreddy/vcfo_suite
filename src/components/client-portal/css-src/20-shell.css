@@ -78,7 +78,9 @@
 .vps.vps-icons .vps-i{justify-content:center;gap:0;height:40px;padding:0}
 .vps.vps-icons .vps-pill{left:12px;right:12px}
 .vps.vps-icons .vps-rail{left:12px}
-.vps.vps-icons .vps-i .vps-b{position:absolute;top:3px;left:calc(50% + 3px);min-width:18px;height:18px;padding:0 5px;border-radius:6px;font-size:11px;box-shadow:0 0 0 2px #0f2a4a}
+.vps.vps-icons .vps-i .vps-b{position:absolute;top:2px;left:calc(50% + 5px);min-width:18px;height:18px;padding:0 5px;border-radius:6px;font-size:11px;box-shadow:0 0 0 2px oklch(var(--side))}
+/* A plain count in the rail gets a filled badge too; with no fill its digit sat on the icon's lines. */
+.vps.vps-icons .vps-i .vps-b:not(.hot){background:oklch(var(--side-active));color:oklch(var(--side-ink))}
 .vps.vps-icons .vps-g:after{content:"";position:absolute;right:5px;bottom:5px;border-style:solid;border-width:0 0 5px 5px;border-color:transparent transparent #7f90a9 transparent}
 .vps.vps-icons .vps-i[aria-expanded=true]{background:rgba(255,255,255,.1);color:#fff}
 .vps .vps-bar{flex:0 0 auto;padding:8px;border-top:1px solid rgba(255,255,255,.1)}
@@ -139,7 +141,7 @@
 #vp-drawer .vps-meb{min-height:48px}
 #vp-drawer .vps-menu button{height:44px}
 .vps.vps-mbar{top:0;left:0;right:0;width:auto;height:var(--vp-menu-offset,56px);z-index:44;flex-direction:row;align-items:center;gap:10px;padding:0 8px;overflow:visible;background:oklch(var(--surface-raised));color:oklch(var(--ink));box-shadow:0 1px 0 #e3e8ef}
-.vps .vps-mb{width:40px;height:40px;border-radius:6px;display:grid;place-items:center;background:oklch(var(--navy-fill));color:#fff}
+.vps .vps-mb{width:40px;height:40px;border-radius:6px;display:grid;place-items:center;background:oklch(var(--navy-fill));color:oklch(var(--on-navy))}
 .vps .vps-mbl{display:block;height:28px;width:auto;max-width:120px;object-fit:contain}
 html[data-vp-menu-fallback] body{padding-top:var(--vp-menu-offset,56px)!important}
 html[data-vp-menu-fallback] [data-vp="top"]{top:var(--vp-menu-offset,56px)!important}

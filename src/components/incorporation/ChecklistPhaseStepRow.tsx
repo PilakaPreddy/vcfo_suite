@@ -97,15 +97,19 @@ export function ChecklistPhaseStepRow({
 
   const chipWord = state === 'done' ? 'Done' : sentBack ? 'Sent back' : late ? 'Overdue' : waiting ? 'Waiting' : 'In progress';
 
+  // With the board resolution box under the title, the mark and chip line up with the title, not the block.
+  const withDoc = !!showBoardResolutionLink && item.id === 'pre-2';
+
   return (
     <div
       className={cn(
-        'group relative -mx-2.5 flex items-center gap-3 rounded-md px-2.5 py-2 transition-colors',
+        'group relative -mx-2.5 flex gap-3 rounded-md px-2.5 py-2 transition-colors',
+        withDoc ? 'items-start' : 'items-center',
         live ? 'bg-surface-sunken' : 'hover:bg-surface-sunken/60',
       )}
       data-ask-focus={item.id}
     >
-      <StepLink x={21} up={connectorAbove} down={connector && (state === 'done' ? 'done' : 'todo')} />
+      <StepLink x={21} y={withDoc ? 19 : undefined} up={connectorAbove} down={connector && (state === 'done' ? 'done' : 'todo')} />
       <StepMark state={state} tone={tone} label={sentBack ? 'Sent back' : base.label} className="relative z-[1]" />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex min-w-0 items-baseline gap-2">
@@ -133,7 +137,7 @@ export function ChecklistPhaseStepRow({
           ) : null}
         </span>
         {sub ? <span className={cn('truncate text-[12.5px]', subTone)}>{sub}</span> : null}
-        {showBoardResolutionLink && item.id === 'pre-2' ? (
+        {withDoc ? (
           <span className="relative z-[1] mt-1.5 block">
             <BoardResolutionStepLink engagement={engagement} />
           </span>

@@ -254,7 +254,8 @@ export function CalendarMobile({ state, onOpenFilings }: { state: ReturnType<typ
         </div>
       </div>
       {/* C-338: the rail cards stack under the agenda, as on the desktop page; C-337: the Filings link stays. */}
-      <div style={{ marginTop: 12 }}>
+      {/* The rail and the Filings link keep the page's 16px side gutter, like the agenda above them. */}
+      <div style={{ marginTop: 12, padding: '0 16px' }}>
         <Rail
           after={after}
           loading={loading}
@@ -266,7 +267,7 @@ export function CalendarMobile({ state, onOpenFilings }: { state: ReturnType<typ
           openDrill={openDrill}
         />
       </div>
-      <Island className="mt-3">
+      <Island className="mt-3 block px-4 pb-4">
         <Button asChild variant="secondary" className="h-10 w-full font-semibold text-ink">
           <a
             href={`${portalHref('filings')}?fy=${todayFy}`}

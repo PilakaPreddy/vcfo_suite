@@ -76,7 +76,7 @@ function attention(d: OverviewPayload, today = new Date()): DevAttentionRow[] {
       tint: 'idle',
       title: `${d.secrets.demoLogins} seeded demo logins still work`,
       sub: 'Purge them before real users sign in',
-      chip: { label: 'Before launch', tone: 'warn' },
+      chip: { label: 'Pre-launch', tone: 'warn' },
       href: '/app/dev/access',
     });
   return rows;
@@ -214,10 +214,11 @@ export default function DevOverview() {
           how: 'Inngest job runs that ended in failure since midnight.',
         },
         {
-          label: 'Messages failed, 24 hours',
+          // Short enough for the tile; the 24-hour window moves into the note.
+          label: 'Failed messages',
           value: d.messages.failed,
           hot: d.messages.failed > 0,
-          note: `${d.messages.sent} sent`,
+          note: `${d.messages.sent} sent · 24 hours`,
           trend: trendWithLive(trends, 'messagesFailed', d.messages.failed),
           trendTone: 'bad',
           href: '/app/dev/messages',

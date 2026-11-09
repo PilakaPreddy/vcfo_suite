@@ -1,7 +1,7 @@
 /* @cp-scope shared */
 /* Prototype proto.js styles (tooltip, launcher, chat). The toast and the drill-down are
    Tailwind islands in PortalProvider.tsx (VCFO Spectrum), so they have no rules here. */
-#vp-bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:2147483000;display:flex;align-items:center;gap:6px;padding:5px;border-radius:6px;background:oklch(var(--navy-fill));box-shadow:var(--pop);font:500 12px var(--font-sans),system-ui,sans-serif;color:#fff}
+#vp-bar{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:2147483000;display:flex;align-items:center;gap:6px;padding:5px;border-radius:6px;background:oklch(var(--navy-fill));box-shadow:var(--pop);font:500 12px var(--font-sans),system-ui,sans-serif;color:oklch(var(--on-navy))}
 #vp-bar .vp-tag{padding:0 8px;color:#c9a24b;font-weight:500;font-size:11px}
 #vp-bar .vp-seg{position:relative;display:flex;background:rgba(255,255,255,.1);border-radius:6px;padding:2px}
 #vp-bar .vp-seg button{position:relative;z-index:1;border:0;background:none;color:rgba(255,255,255,.75);font:500 12px var(--font-sans),sans-serif;height:26px;padding:0 10px;border-radius:5px;cursor:pointer}
@@ -10,7 +10,7 @@
 #vp-bar select option{color:oklch(var(--ink))}
 #vp-bar .vp-x{width:26px;height:26px;border:0;border-radius:6px;background:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:14px}
 #vp-mini{position:fixed;left:14px;bottom:14px;z-index:2147483000;border:0;border-radius:6px;background:oklch(var(--navy-fill));color:#c9a24b;font:500 11px var(--font-sans),sans-serif;letter-spacing:.08em;padding:8px 10px;cursor:pointer;box-shadow:var(--pop)}
-#vp-tip{position:fixed;z-index:2147483002;pointer-events:none;background:oklch(var(--navy-fill));color:#fff;font:500 12px/1.3 var(--font-sans),sans-serif;padding:5px 9px;border-radius:6px;white-space:nowrap;opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
+#vp-tip{position:fixed;z-index:2147483002;pointer-events:none;background:oklch(var(--navy-fill));color:oklch(var(--on-navy));font:500 12px/1.3 var(--font-sans),sans-serif;padding:5px 9px;border-radius:6px;white-space:nowrap;opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #vp-tip.on{opacity:1;transform:none}
 html.vp-enter body{animation:vpIn .26s cubic-bezier(.22,1,.36,1) both}
 html.vp-leave body{opacity:.35;transition:opacity .14s}
@@ -36,8 +36,8 @@ html.vp-endpad body::after{width:100%;background:var(--vp-endpad-bg,transparent)
 #vp-launch .vpv-head{pointer-events:visiblePainted;cursor:pointer}
 #vp-launch.yield .vpl-lift,#vp-launch.open .vpl-lift,body.sheet-open #vp-launch .vpl-lift{transform:translate3d(0,100%,0);transition:transform .32s cubic-bezier(.5,0,.75,.4)}
 #vp-launch.yield .vpv-head,#vp-launch.open .vpv-head{pointer-events:none}
-#vp-launch .vpl-pill{pointer-events:auto;flex:none;position:relative;display:inline-flex;align-items:center;gap:7px;height:var(--vpl-ph);margin:0 0 var(--vpl-in);padding:0 14px 0 12px;border:0;border-radius:6px;background:oklch(var(--navy-fill));color:#fff;font:500 13px/1 var(--font-sans),system-ui,sans-serif;letter-spacing:0;white-space:nowrap;cursor:pointer;box-shadow:var(--pop),inset 0 0 0 1px rgba(255,255,255,.08);-webkit-tap-highlight-color:transparent;transition:background-color .15s,transform .15s,opacity .2s,visibility .2s}
-#vp-launch .vpl-pill:hover{background:#17396b}#vp-launch .vpl-pill:active{transform:scale(.97)}
+#vp-launch .vpl-pill{pointer-events:auto;flex:none;position:relative;display:inline-flex;align-items:center;gap:7px;height:var(--vpl-ph);margin:0 0 var(--vpl-in);padding:0 14px 0 12px;border:0;border-radius:6px;background:oklch(var(--navy-fill));color:oklch(var(--on-navy));font:500 13px/1 var(--font-sans),system-ui,sans-serif;letter-spacing:0;white-space:nowrap;cursor:pointer;box-shadow:var(--pop),inset 0 0 0 1px rgba(255,255,255,.08);-webkit-tap-highlight-color:transparent;transition:background-color .15s,transform .15s,opacity .2s,visibility .2s}
+#vp-launch .vpl-pill:hover{background:oklch(var(--navy-fill-hover))}#vp-launch .vpl-pill:active{transform:scale(.97)}
 #vp-launch .vpl-pill:focus-visible{outline:3px solid light-dark(#7DD3FC, oklch(32% 0.1 230.3));outline-offset:2px}
 #vp-launch .vpl-dot{flex:none;width:8px;height:8px;border-radius:50%;background:#2DD4BF;box-shadow:0 0 0 3px rgba(45,212,191,.22)}
 #vp-launch .vpl-c{display:none;align-items:center;gap:6px}#vp-launch .vpl-c svg{width:14px;height:14px}

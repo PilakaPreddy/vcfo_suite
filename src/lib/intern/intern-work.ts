@@ -30,6 +30,7 @@ import { deriveStuckReason } from '@/lib/projects/project-stuck';
 import { gateActiveCatalog } from '@/lib/checklist/checklist-step-gate';
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
 import { isDirectFlowStep, isDirectFlowStepComplete } from '@/lib/incorporation/pre-inc-direct-flow';
+import { titleWithPeriod } from '@/lib/compliance/period-title';
 
 export type InternChipTone =
   | 'primary'
@@ -670,7 +671,7 @@ export function buildInternWorkItems(opts: {
       source: 'filing',
       engagementId: engagement.id,
       companyName: engagement.companyName,
-      title: `${filing.filing}${filing.periodLabel ? ` · ${filing.periodLabel}` : ''}`,
+      title: titleWithPeriod(filing.filing, filing.periodLabel),
       kind,
       href: internWorkHref({ source: 'filing', engagement }),
       dueAt,

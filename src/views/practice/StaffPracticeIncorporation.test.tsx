@@ -119,7 +119,8 @@ describe('staff Incorporation page (R-51)', () => {
     expect(screen.queryByText('Aurora Mills')).toBeNull();
     expect(screen.getByText('Solstice Foods')).toBeTruthy();
     // Step code and name, steps n / total.
-    expect(screen.getByText('Pre-2')).toBeTruthy();
+    // The step number as the project page shows it, not the internal id "pre-2".
+    expect(screen.getByText('Step 2')).toBeTruthy();
     expect(screen.getByText('Client documents')).toBeTruthy();
 
     // The late row (its step window has passed) is red.

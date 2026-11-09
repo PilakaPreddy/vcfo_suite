@@ -15,6 +15,7 @@ import { CardHeadTile } from "@/components/common/CardHeadTile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Check } from "lucide-react";
+import { plainDay } from "@/lib/date-format";
 
 interface Item {
   id: string;
@@ -56,7 +57,7 @@ export function WorkItemsPanel({ engagementId }: { engagementId: string }) {
       <div className="flex min-h-[52px] min-w-0 items-center gap-2.5 border-b border-line-soft px-4 py-2">
         <CardHeadTile title="What SBC is doing" />
         <h2 className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">What SBC is doing</h2>
-        <span className="text-[12.5px] text-ink-muted">Client home</span>
+        <span className="text-[12.5px] text-ink-muted">Shown on the client&apos;s Home</span>
       </div>
       <div className="p-4">
       {items.length ? (
@@ -64,9 +65,11 @@ export function WorkItemsPanel({ engagementId }: { engagementId: string }) {
           {items.map((it) => (
             <li key={it.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
               {it.status === "done" ? <Check className="h-4 w-4 flex-none text-positive" strokeWidth={2.6} aria-label="Done" /> : null}
-              <span className={`min-w-0 flex-1 truncate ${it.status === "done" ? "text-ink-muted" : ""}`}>{it.title}</span>
+              {/* On a phone the name takes its own line, so the slider and buttons cannot squeeze it to one letter. */}
+              <span className={`min-w-0 basis-[calc(100%-1.5rem)] truncate sm:basis-auto sm:flex-1 ${it.status === "done" ? "text-ink-muted" : ""}`}>{it.title}</span>
               <input
                 type="range"
+                className="w-32 flex-none accent-[oklch(var(--brand))]"
                 min={0}
                 max={100}
                 step={5}
@@ -76,7 +79,7 @@ export function WorkItemsPanel({ engagementId }: { engagementId: string }) {
                 onKeyUp={(e) => save.mutate({ ...it, progressPct: Number((e.target as HTMLInputElement).value) })}
               />
               <span className="w-10 text-right tabular-nums text-xs">{it.progressPct}%</span>
-              <span className="w-24 text-xs text-ink-muted">{it.readyOn ?? "—"}</span>
+              <span className="w-14 text-xs text-ink-muted">{it.readyOn ? plainDay(it.readyOn) : "—"}</span>
               <Button size="sm" variant="ghost" onClick={() => save.mutate({ ...it, status: it.status === "done" ? "active" : "done" })}>
                 {it.status === "done" ? "Reopen" : "Done"}
               </Button>

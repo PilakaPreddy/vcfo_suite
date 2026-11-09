@@ -51,7 +51,7 @@
 #tle .bar .hd.l{left:-2px}#tle .bar .hd.r{right:-2px}
 #tle .bar.ms{width:18px!important;margin-left:-9px;border-radius:3px;transform:rotate(45deg) scale(.78)}
 #tle .bar.ms .hd{display:none}
-#tle .read{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:oklch(var(--navy-fill));color:#fff;font:500 11.5px var(--font-sans);padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s}
+#tle .read{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:oklch(var(--navy-fill));color:oklch(var(--on-navy));font:500 11.5px var(--font-sans);padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .12s}
 #tle .bar.drag .read,#tle .bar.kb .read,#tle .bar:hover .read{opacity:1}
 #tle .bar.ms .read{transform:translateX(-50%) rotate(-45deg)}
 #tle .today{position:absolute;top:44px;bottom:0;width:2px;margin-left:-1px;background:oklch(var(--highlight-bright));pointer-events:none;z-index:2}

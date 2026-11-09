@@ -31,6 +31,7 @@ import { indexPeople, usePeopleMetrics, usePracticeMetrics } from '@/components/
 import { isFirmWideAdmin } from '@/lib/auth';
 import { trendWithLive, useHomeTrends } from '@/hooks/use-home-trends';
 import { useStampHomeTiles } from '@/hooks/use-stamp-home-tiles';
+import { clientRowFacts } from '@/views/admin/clients/client-row';
 
 type ManagerOption = { id: string; name: string; email: string };
 
@@ -68,26 +69,31 @@ export default function FirmDashboard() {
   // "Awaiting approval" is rebuilt from the review history; the other tiles use stamped values.
   const trends = useHomeTrends('admin', { enabled: showGreeting && isFirmWideAdmin(user?.role) });
 
-  const pulse = useMemo(() => {
+  // Not memoised on getStateForEngagement: its identity does not change when the checklist states
+  // finish loading, so a memo kept counts from before and the tiles disagreed with the table.
+  const pulse = (() => {
     let total = 0;
     let pending = 0;
     let good = 0;
     let incorporating = 0;
     let overdue = 0;
     let waitingClient = 0;
+    // Counted the way the clients table below counts: every client, and "Overdue" from the same
+    // health rule, so the tiles and the table never disagree.
     for (const eng of engagements) {
-      if (eng.stage === 'Operational Readiness') continue;
       total += 1;
       const state = getStateForEngagement(eng);
       const reason = deriveStuckReason(eng, state);
       if (reason === 'on_track') good += 1;
       else pending += 1;
       if (reason === 'waiting_client') waitingClient += 1;
-      if (eng.health === 'overdue') overdue += 1;
+      // The health chip shows a Stuck client as "Overdue · Stuck", so it is counted here too.
+      const health = clientRowFacts(eng, state).health;
+      if (health === 'Overdue' || health === 'Stuck') overdue += 1;
       if (!isIncorporated(eng, state)) incorporating += 1;
     }
     return { total, pending, good, incorporating, overdue, waitingClient };
-  }, [engagements, getStateForEngagement]);
+  })();
   // Clients, Incorporating, In compliance and Stuck keep no history (stage and stuck reason are
   // current state only), so their lines come from the values this home showed on earlier days.
   useStampHomeTiles(
@@ -209,7 +215,8 @@ export default function FirmDashboard() {
                 how: 'Clients with a step or filing past its due date, across all managers.',
               },
               {
-                label: 'Stuck',
+                // Every client not on track (waiting on the client included), not only stuck ones.
+                label: 'Not on track',
                 icon: Clock,
                 value: pulse.pending,
                 href: '/app/admin/projects?view=stuck',
@@ -246,6 +253,8 @@ export default function FirmDashboard() {
         />
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,2.4fr)_minmax(300px,1fr)]">
+          {/* The to-dos sit under Managers in the main column, so the taller rail leaves no gap beside them. */}
+          <div className="flex min-w-0 flex-col gap-5">
           {/* Managers (K-37, C-0034): a T1 grid. */}
           <DashSection title="Managers" meta={managerStrip.length || undefined} flush>
             <EFilingGrid
@@ -274,7 +283,7 @@ export default function FirmDashboard() {
                   header: 'Overdue',
                   width: '90px',
                   align: 'right',
-                  render: (row) => <span className={cn('tabular-nums', row.overdue > 0 && 'font-medium text-danger')}>{row.overdue || ''}</span>,
+                  render: (row) => <span className={cn('tabular-nums', row.overdue > 0 && 'font-medium text-danger')}>{row.overdue}</span>,
                 },
                 { key: 'ontime', header: 'On time', width: '90px', align: 'right', render: (row) => <OnTimeCell person={people.byProfileId.get(row.managerId)} /> },
                 { key: 'load', header: 'Load', width: '150px', render: (row) => <LoadCell person={people.byProfileId.get(row.managerId)} /> },
@@ -295,19 +304,19 @@ export default function FirmDashboard() {
               ]}
             />
           </DashSection>
+          {user?.id ? (
+            <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
+              <LeadFocusCard userId={user.id} items={[]} />
+              <TeamTodosPanel userId={user.id} />
+            </div>
+          ) : null}
+          </div>
 
           <div className="flex min-w-0 flex-col gap-5">
             <FirmDecisionsCard engagements={engagements} />
             <BoardMeetingsCard />
           </div>
         </div>
-
-        {user?.id ? (
-          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
-            <LeadFocusCard userId={user.id} items={[]} />
-            <TeamTodosPanel userId={user.id} />
-          </div>
-        ) : null}
       </div>
       <AssignTaskDialog
         open={assignOpen}

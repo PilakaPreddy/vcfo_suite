@@ -87,7 +87,7 @@ export function CreateProjectFormFlow({
                   <span
                     className={cn(
                       'text-[10.5px] font-medium leading-tight',
-                      active ? 'text-brand' : done ? 'text-positive' : 'text-ink-muted',
+                      active ? 'text-brand-text' : done ? 'text-positive' : 'text-ink-muted',
                     )}
                   >
                     {step.label}
@@ -125,7 +125,8 @@ export function CreateProjectFormFlow({
           >
             {readyCount}
           </motion.span>
-          <span className="font-medium text-ink-muted"> / {FORM_STEPS.length}</span>
+          {/* Sections complete, not the step you are on (Team starts complete: you are its manager). */}
+          <span className="font-medium text-ink-muted"> / {FORM_STEPS.length} done</span>
         </p>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-brand-soft ring-1 ring-brand/20">
           <motion.div

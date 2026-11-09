@@ -19,8 +19,9 @@
 .tb-seat{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:12px;padding:12px;border-radius:6px;background:oklch(var(--surface-sunken))}
 /* phones: the people table keeps every column, the name column sticks, the table scrolls sideways */
 @media (max-width:767px){
-  .tb-team .tb-people{min-width:760px}
-  .tb-team .tb-people .tb-d{display:table-cell!important}
+  .tb-team .tb-people{min-width:920px}
+  /* Email and Since stay on one line; left to wrap "anywhere", the email column shrank to a few letters a line. */
+  .tb-team .tb-people .tb-d{display:table-cell!important;white-space:nowrap}
   .tb-team .tb-people .tb-m{display:none!important}
   .tb-team .tb-people th:first-child,.tb-team .tb-people td:first-child{position:sticky;left:0;z-index:1;background:oklch(var(--surface-raised))}
 }

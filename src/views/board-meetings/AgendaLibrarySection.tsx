@@ -112,7 +112,9 @@ export function AgendaLibrarySection({ canEdit }: { canEdit: boolean }) {
           />
           <span className="text-[12.5px] text-ink-muted">{shown.length} shown</span>
         </div>
-        <ul className="m-0 max-h-[640px] list-none overflow-y-auto p-0">
+        {/* The list scrolls inside the card; a fade at its foot says so, and the end padding lets the last row clear it. */}
+        <div className="relative">
+        <ul className="m-0 max-h-[640px] list-none overflow-y-auto p-0 pb-8">
           {shown.map((i) => (
             <li key={i.id} className="flex flex-col gap-2 border-b border-line-soft px-4 py-3 last:border-b-0">
               {editing?.id === i.id ? (
@@ -142,6 +144,8 @@ export function AgendaLibrarySection({ canEdit }: { canEdit: boolean }) {
             </li>
           ))}
         </ul>
+          <span aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-surface-raised to-transparent" />
+        </div>
       </DashSection>
 
       <DashSection title="Agenda templates" meta={String(templates.data?.length ?? 0)}>

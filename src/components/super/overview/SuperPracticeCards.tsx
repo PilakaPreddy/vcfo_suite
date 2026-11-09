@@ -231,8 +231,9 @@ export function SuperManagersPanel({
     },
     {
       key: 'ontime',
-      header: 'On time',
-      width: '80px',
+      // Filings filed on time, not open work, which Late counts.
+      header: 'Filed on time',
+      width: '112px',
       align: 'right',
       render: (m) => {
         const filed = m.filedOnTime + m.filedLate;
