@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VCFO Test Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+@page { size: A3 landscape; margin: 0; }
+:root {
+  --ink: #14161f; --ink-2: #4a4f63; --ink-3: #868b9e; --line: #d7d9e2; --line-2: #eceef3; --paper: #fff; --wash: #f6f7fa;
+  --brand: #3a3fd8; --brand-ink: #23279b;
+  --base: #5b6178; --pre: #3a3fd8; --post: #7b3fd8; --reg: #0f8a8a; --comp: #c2410c; --ops: #15803d; --ask: #b4234f; --msg: #a16207; --end: #14161f;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #e9ebf0; color: var(--ink); font-family: 'Public Sans', 'Inter', Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.mono { font-family: 'IBM Plex Mono', 'DejaVu Sans Mono', monospace; }
+.b { font-weight: 700; } .c { text-align: center; } .nowrap { white-space: nowrap; }
+.sheet { width: 420mm; height: 297mm; padding: 11mm 12mm 9mm; background: var(--paper); margin: 0 auto 10mm; display: flex; flex-direction: column; gap: 4.5mm; overflow: hidden; page-break-after: always; break-after: page; }
+@media print { html, body { background: #fff; } .sheet { margin: 0; } }
+.sh { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--ink); padding-bottom: 2.5mm; }
+.sh-l { display: flex; align-items: baseline; gap: 4mm; }
+.brand { font-weight: 800; font-size: 13pt; letter-spacing: -0.01em; color: var(--brand); }
+.sh-t { font-size: 11pt; font-weight: 600; }
+.sh-r { display: flex; gap: 6mm; font-size: 8.5pt; color: var(--ink-2); }
+.pg { font-weight: 700; color: var(--ink); }
+.hero { display: flex; justify-content: space-between; align-items: flex-end; }
+h1 { margin: 0; font-size: 26pt; letter-spacing: -0.02em; line-height: 1.05; }
+.sub { margin: 1.5mm 0 0; font-size: 11pt; color: var(--ink-2); }
+.hero-meta { display: flex; gap: 3mm; }
+.hero-meta div { border: 1px solid var(--line); border-radius: 2mm; padding: 2mm 4mm; min-width: 30mm; }
+.hero-meta small { display: block; font-size: 7pt; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); }
+.hero-meta b { font-size: 12pt; }
+.grid1 { flex: 1; display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 4.5mm; }
+.card { border: 1px solid var(--line); border-radius: 2.5mm; padding: 4mm 4.5mm; }
+h2 { margin: 0 0 2.5mm; font-size: 11.5pt; display: flex; align-items: center; gap: 2mm; }
+h2.mt { margin-top: 4mm; }
+h3 { margin: 3.5mm 0 1.5mm; font-size: 8.5pt; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-2); }
+.num { display: inline-grid; place-items: center; width: 5.5mm; height: 5.5mm; border-radius: 50%; background: var(--ink); color: #fff; font-size: 8pt; }
+.note { margin: 0 0 2mm; font-size: 8pt; color: var(--ink-2); }
+ol, ul { margin: 0; padding: 0; }
+.how { padding-left: 4.5mm; font-size: 9.5pt; line-height: 1.45; } .how li { margin-bottom: 1mm; }
+.report { padding-left: 4.5mm; font-size: 8.5pt; line-height: 1.5; columns: 2; column-gap: 5mm; }
+table { border-collapse: collapse; width: 100%; }
+.mini td { font-size: 9pt; padding: 1.8mm 1.5mm; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+.mini td:first-child { width: 1%; white-space: nowrap; }
+.team th, .log th { font-size: 7.3pt; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); text-align: left; padding: 1.2mm 1.5mm; border-bottom: 1.5px solid var(--ink); }
+.team td { font-size: 9pt; padding: 1.4mm 1.5mm; border-bottom: 1px solid var(--line); height: 9mm; }
+.team td.line { min-width: 30mm; }
+.loop td { font-size: 9pt; padding: 2mm 1.5mm; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+.loop td:first-child, .loop td:nth-child(2) { width: 1%; white-space: nowrap; }
+.checks { list-style: none; counter-reset: c; }
+.checks li { display: flex; gap: 2mm; align-items: flex-start; font-size: 9.3pt; line-height: 1.35; padding: 2mm 0; border-bottom: 1px dotted var(--line); counter-increment: c; }
+.checks li::after { content: counter(c); margin-left: auto; font-size: 7pt; color: var(--ink-3); font-family: 'IBM Plex Mono', monospace; }
+.box { display: inline-block; flex: none; width: 4mm; height: 4mm; border: 1.3px solid var(--ink); border-radius: .6mm; background: #fff; vertical-align: middle; }
+.box.lg { width: 7mm; height: 7mm; border-width: 1.8px; border-radius: 1mm; }
+.role { display: inline-grid; place-items: center; width: 5mm; height: 5mm; border-radius: 1mm; font-size: 7.5pt; font-weight: 800; color: #fff; }
+.r-S { background: var(--ink); } .r-A { background: #3a3fd8; } .r-M { background: #7b3fd8; } .r-L { background: #0f8a8a; } .r-C { background: #c2410c; }
+.badge { display: inline-block; font-size: 6.8pt; font-weight: 700; padding: .5mm 1.6mm; border-radius: 4mm; white-space: nowrap; border: 1px solid; }
+.b-live { color: #15803d; border-color: #15803d; background: #effaf2; }
+.b-main { color: #a16207; border-color: #ca8a04; background: #fef9e7; }
+.b-fresh { color: #b91c1c; border-color: #b91c1c; background: #fdf0f0; }
+.b-off { color: #5b6178; border-color: #8b90a3; background: #f2f3f6; }
+.b-ops { color: #14161f; border-color: #14161f; background: #fff; }
+.sv { display: inline-block; font-weight: 800; font-size: 8pt; padding: .3mm 1.6mm; border-radius: 1mm; color: #fff; }
+.sv-S1 { background: #b91c1c; } .sv-S2 { background: #ca8a04; } .sv-S3 { background: #5b6178; }
+.g-base { --g: var(--base); } .g-pre { --g: var(--pre); } .g-post { --g: var(--post); } .g-reg { --g: var(--reg); } .g-comp { --g: var(--comp); } .g-ops { --g: var(--ops); } .g-ask { --g: var(--ask); } .g-msg { --g: var(--msg); } .g-end { --g: var(--end); }
+.legend { display: flex; flex-wrap: wrap; gap: 2mm 5mm; margin: -1mm 0 2mm; font-size: 8pt; }
+.lg { display: inline-flex; align-items: center; gap: 1.5mm; }
+.sw { width: 3.5mm; height: 3.5mm; border-radius: .7mm; background: var(--g); }
+.tl-card { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.tl th { font-size: 7.5pt; color: var(--ink-2); padding: 1mm; border-bottom: 1.5px solid var(--ink); text-align: left; }
+.tl th.tl-d { text-align: center; } .tl th small { display: block; font-weight: 500; color: var(--ink-3); }
+.tl td { font-size: 8.3pt; padding: .55mm 1mm; border-bottom: 1px solid var(--line-2); height: 4.9mm; }
+.tl .tl-id { width: 12mm; } .tl .tl-n { width: 72mm; } .tl .tl-x { width: 12mm; text-align: center; }
+.tl td.tl-c { border-left: 1px solid var(--line-2); padding: .6mm .5mm; }
+.tl-card.big .tl td { font-size: 10.5pt; height: 9.6mm; } .tl-card.big .tl th { font-size: 9pt; } .tl-card.big .tl .tl-n { width: 95mm; } .tl-card.big .bar { height: 5.5mm; } .tl-card.big .legend { font-size: 9.5pt; margin-bottom: 3mm; }
+.bar { display: block; height: 3.2mm; border-radius: .8mm; background: var(--g); }
+/* matrix */
+.mx { table-layout: fixed; }
+.mx col.c-done { width: 15mm; } .mx col.c-id { width: 22mm; } .mx col.c-feat { width: 62mm; } .mx col.c-steps { width: auto; }
+.mx col.c-pass { width: 72mm; } .mx col.c-msg { width: 38mm; } .mx col.c-role { width: 8.5mm; } .mx col.c-def { width: 24mm; }
+.mx th { font-size: 7.3pt; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); text-align: left; padding: 1.4mm 1.6mm; border-bottom: 2px solid var(--ink); }
+.mx th.rc { text-align: center; padding: 1mm 0; }
+.mx td { vertical-align: top; padding: 1.9mm 1.8mm; border-bottom: 1px solid var(--line); font-size: 9pt; line-height: 1.3; }
+.mx tr.band td { padding: 1mm 2mm; font-size: 7.6pt; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #fff; background: var(--g); border: 0; }
+.mx td.done { text-align: center; border-left: 3px solid transparent; }
+.sig { margin-top: 1.5mm; font-size: 6pt; line-height: 1.6; color: var(--ink-3); text-transform: uppercase; letter-spacing: .05em; }
+.tid { font-size: 13pt; font-weight: 700; }
+.day { font-size: 8pt; font-weight: 700; margin-top: .6mm; } .trk { font-size: 7pt; color: var(--ink-2); margin-top: .4mm; }
+.fn { font-size: 10.8pt; font-weight: 700; line-height: 1.2; margin-bottom: 1.2mm; }
+.bf { margin-top: 1.4mm; font-size: 8.4pt; color: var(--ink-2); } .bf b { display: block; font-size: 6.6pt; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); }
+.steps ol { list-style: none; }
+.steps li { display: flex; gap: 1.8mm; align-items: flex-start; padding: .45mm 0; }
+.steps .box { margin-top: .2mm; }
+.sn { flex: none; width: 3mm; font-size: 7pt; color: var(--ink-3); padding-top: .3mm; }
+.pass ul { padding-left: 3.5mm; } .pass li { margin-bottom: .6mm; }
+.msg { display: table-cell; } .msg .box { float: left; margin: .2mm 1.5mm 0 0; }
+.mx td.rc { text-align: center; border-left: 1px solid var(--line-2); padding-top: 2.2mm; }
+.na { color: var(--ink-3); }
+.mx td.def { border-left: 1px solid var(--line-2); background: repeating-linear-gradient(to bottom, transparent 0 5.4mm, var(--line-2) 5.4mm 5.6mm); }
+.foot { display: flex; justify-content: space-between; font-size: 7.8pt; color: var(--ink-2); border-top: 1px solid var(--line); padding-top: 2mm; margin-top: auto; }
+/* logs */
+.log td { border: 1px solid var(--line); height: 8.6mm; font-size: 8pt; }
+.log th { border-bottom: 1.5px solid var(--ink); }
+.log .w-id { width: 22mm; } .log .w-t { width: 24mm; } .log .w-r { width: 14mm; } .log .w-s { width: 14mm; } .log .w-o { width: 24mm; } .log .w-b { width: 30mm; } .log .w-x { width: 15mm; text-align: center; }
+.daily td { height: 7.4mm; padding: 0 2mm; }
+.mt { margin-top: 0; }
+</style></head><body>
+<section class="sheet">
+  <header class="sh">
+    <div class="sh-l"><div class="brand">VCFO&nbsp;Suite</div><div class="sh-t">Plan, team and Day 0</div></div>
+    <div class="sh-r"><span>Day 0: Mon 9 Nov 2026 · Day 1 to Day 10: Tue 10 Nov to Thu 19 Nov 2026</span><span class="pg">Sheet 1 of 6</span></div>
+  </header>
+  <div class="hero">
+    <div>
+      <h1>VCFO Suite — Production Test Plan</h1>
+      <p class="sub">10 days · real users · one real client · test and build at the same time</p>
+    </div>
+    <div class="hero-meta">
+      <div><small>Version</small><b>v2 · 9 Nov 2026</b></div>
+      <div><small>Tests</small><b>21</b></div>
+      <div><small>Steps</small><b>102</b></div>
+      <div><small>Go-live decision</small><b>D10 · Thu 19 Nov</b></div>
+    </div>
+  </div>
+
+  <div class="grid1">
+    <div class="card">
+      <h2><span class="num">1</span>How to use this plan</h2>
+      <ol class="how">
+        <li>Do the tests in ID sequence. Each test has a day on the schedule (right).</li>
+        <li>Tick each step box when the step is done and correct.</li>
+        <li>If a step fails, write a defect on sheet 4. Write the defect ID in the test row. Continue with the next step if you can.</li>
+        <li>Tick the role boxes when each role saw the correct result.</li>
+        <li>Tick "Done" only when all steps and all roles pass. Write your initials and the date.</li>
+      </ol>
+      <h3>Two tracks</h3>
+      <table class="mini">
+        <tr><td class="mono b">Track A</td><td>The real client project. It moves at the speed of the real client.</td></tr>
+        <tr><td class="mono b">Track B</td><td>A sandbox project with test data and a past CIN date. It lets you test post-incorporation, registrations and compliance on schedule.</td></tr>
+      </table>
+      <h3>Build status in each row</h3>
+      <table class="mini"><tr><td><span class="badge b-live">Live since 3 Nov</span></td><td>Deployed before. Expect few defects.</td></tr><tr><td><span class="badge b-main">In main · first deploy D0</span></td><td>Built and merged, never in production. Expect defects.</td></tr><tr><td><span class="badge b-fresh">In main · never tested</span></td><td>Built with no tests. Expect many defects. Give extra time.</td></tr><tr><td><span class="badge b-off">Built · switched off</span></td><td>Works only after setup outside the app.</td></tr></table>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">2</span>Test team</h2>
+      <table class="team">
+        <thead><tr><th>Code</th><th>Role in app</th><th>Name</th><th>Login email</th><th>Login made</th><th>Two-step</th></tr></thead>
+        <tbody>
+          <tr><td><span class="role r-S">S</span></td><td>super_admin (owner)</td><td class="line"></td><td class="line"></td><td class="c"><span class="box "></span></td><td class="c"><span class="box "></span></td></tr><tr><td><span class="role r-A">A</span></td><td>admin</td><td class="line"></td><td class="line"></td><td class="c"><span class="box "></span></td><td class="c"><span class="box "></span></td></tr><tr><td><span class="role r-M">M</span></td><td>manager</td><td class="line"></td><td class="line"></td><td class="c"><span class="box "></span></td><td class="c"><span class="box "></span></td></tr><tr><td><span class="role r-L">L</span></td><td>project lead (intern) 1</td><td class="line"></td><td class="line"></td><td class="c"><span class="box "></span></td><td class="c"><span class="box "></span></td></tr><tr><td><span class="role r-L">L</span></td><td>project lead (intern) 2</td><td class="line"></td><td class="line"></td><td class="c"><span class="box "></span></td><td class="c"><span class="box "></span></td></tr><tr><td><span class="role r-L">L</span></td><td>project lead (intern) 3</td><td class="line"></td><td class="line"></td><td class="c"><span class="box "></span></td><td class="c"><span class="box "></span></td></tr><tr><td><span class="role r-C">C</span></td><td>client (Track A, real)</td><td class="line"></td><td class="line"></td><td class="c"><span class="box "></span></td><td class="c"><span class="box "></span></td></tr><tr><td><span class="role r-C">C</span></td><td>client (Track B, team)</td><td class="line"></td><td class="line"></td><td class="c"><span class="box "></span></td><td class="c"><span class="box "></span></td></tr>
+        </tbody>
+      </table>
+      <h2 class="mt"><span class="num">3</span>Daily loop: test and build</h2>
+      <table class="loop"><tr><td class="mono b">09:30</td><td class="b">Smoke</td><td>Each tester signs in and opens their sidebar pages on the new build.</td></tr><tr><td class="mono b">10:00</td><td class="b">Test</td><td>Do the tests of the day in ID sequence. Tick each step.</td></tr><tr><td class="mono b">13:30</td><td class="b">Triage</td><td>Read the new defects. Set severity and owner. Give S1 and S2 to Claude.</td></tr><tr><td class="mono b">14:00</td><td class="b">Build</td><td>Claude fixes on a branch. Each fix gets a test. npm run check passes.</td></tr><tr><td class="mono b">18:30</td><td class="b">Deploy</td><td>Merge, apply new migrations, deploy. Write the build tag on the daily log.</td></tr><tr><td class="mono b">09:30+1</td><td class="b">Retest</td><td>Do the failed steps again on the new build. Close or reopen the defect.</td></tr></table>
+      <h3>Severity</h3>
+      <table class="mini sev"><tr><td><span class="sv sv-S1">S1</span></td><td>Stops the workflow, loses data or shows data of a different client.</td><td class="b nowrap">Fix the same day</td></tr><tr><td><span class="sv sv-S2">S2</span></td><td>Wrong result. A workaround is possible.</td><td class="b nowrap">Fix in 2 days</td></tr><tr><td><span class="sv sv-S3">S3</span></td><td>Text, layout or colour problem.</td><td class="b nowrap">Fix after D10</td></tr></table>
+    </div>
+
+    <div class="card">
+      <h2><span class="num">4</span>Day 0 checklist · Mon 9 Nov</h2>
+      <p class="note">Do the items in sequence. Stop if an item fails. The data delete cannot be undone.</p>
+      <ol class="checks"><li><span class="box "></span><span>Make an RDS snapshot. Wait for "available".</span></li><li><span class="box "></span><span>Copy the S3 bucket to a backup prefix.</span></li><li><span class="box "></span><span>Write down the deployed image tag (for rollback).</span></li><li><span class="box "></span><span>Delete all data rows. Keep the super_admin login.</span></li><li><span class="box "></span><span>Delete all S3 objects of the old data.</span></li><li><span class="box "></span><span>Apply migrations 0035 to 0049 on RDS.</span></li><li><span class="box "></span><span>Set CREDENTIALS_ENCRYPTION_KEY on App Runner.</span></li><li><span class="box "></span><span>Set ASK_VCFO_ENABLED=true.</span></li><li><span class="box "></span><span>Make sure SES is out of sandbox mode.</span></li><li><span class="box "></span><span>Check the six WhatsApp templates. Set WHATSAPP_ENABLED only if approved.</span></li><li><span class="box "></span><span>Run npm run check on main. It must pass.</span></li><li><span class="box "></span><span>Deploy main. Status must be SUCCEEDED.</span></li><li><span class="box "></span><span>Read the App Runner logs for 10 minutes. No errors.</span></li><li><span class="box "></span><span>Create the staff logins (T-02).</span></li></ol>
+      <h3>Give Claude each defect with</h3>
+      <ol class="report"><li>Test ID and step number (for example T-07 step 2)</li><li>Role and login email</li><li>Page URL</li><li>What you did, in steps</li><li>What you expected</li><li>What happened</li><li>Screenshot</li></ol>
+    </div>
+  </div>
+
+</section>
+<section class="sheet">
+  <header class="sh">
+    <div class="sh-l"><div class="brand">VCFO&nbsp;Suite</div><div class="sh-t">Schedule</div></div>
+    <div class="sh-r"><span>Day 0: Mon 9 Nov 2026 · Day 1 to Day 10: Tue 10 Nov to Thu 19 Nov 2026</span><span class="pg">Sheet 2 of 6</span></div>
+  </header>
+  <div class="card tl-card big">
+    <h2><span class="num">5</span>Schedule: one bar for each day of work</h2>
+    <div class="legend"><span class="lg"><span class="sw g-base"></span>Base</span><span class="lg"><span class="sw g-pre"></span>Pre-incorporation</span><span class="lg"><span class="sw g-post"></span>Post-incorporation</span><span class="lg"><span class="sw g-reg"></span>Registration</span><span class="lg"><span class="sw g-comp"></span>Compliance</span><span class="lg"><span class="sw g-ops"></span>Labour registers · Payroll · Budgets</span><span class="lg"><span class="sw g-ask"></span>Chatbot</span><span class="lg"><span class="sw g-msg"></span>Emails and WhatsApp</span><span class="lg"><span class="sw g-end"></span>Close</span></div>
+    <table class="tl"><thead><tr><th class="tl-id">ID</th><th class="tl-n">Feature</th><th class="tl-d"><b>D0</b><small>Mon 9</small></th><th class="tl-d"><b>D1</b><small>Tue 10</small></th><th class="tl-d"><b>D2</b><small>Wed 11</small></th><th class="tl-d"><b>D3</b><small>Thu 12</small></th><th class="tl-d"><b>D4</b><small>Fri 13</small></th><th class="tl-d"><b>D5</b><small>Sat 14</small></th><th class="tl-d"><b>D6</b><small>Sun 15</small></th><th class="tl-d"><b>D7</b><small>Mon 16</small></th><th class="tl-d"><b>D8</b><small>Tue 17</small></th><th class="tl-d"><b>D9</b><small>Wed 18</small></th><th class="tl-d"><b>D10</b><small>Thu 19</small></th><th class="tl-x">Done</th></tr></thead><tbody><tr><td class="tl-id mono">T-01</td><td class="tl-n">Data reset and deploy</td><td class="tl-c"><span class="bar g-base"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-02</td><td class="tl-n">Logins, roles and access</td><td class="tl-c"><span class="bar g-base"></span></td><td class="tl-c"><span class="bar g-base"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-03</td><td class="tl-n">Project creation and client invite</td><td class="tl-c"></td><td class="tl-c"><span class="bar g-base"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-04</td><td class="tl-n">Client questionnaire (Part A)</td><td class="tl-c"></td><td class="tl-c"><span class="bar g-pre"></span></td><td class="tl-c"><span class="bar g-pre"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-05</td><td class="tl-n">SPICe+ checklist (Part B)</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-pre"></span></td><td class="tl-c"><span class="bar g-pre"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-06</td><td class="tl-n">KYC, DSC and document vault</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-pre"></span></td><td class="tl-c"><span class="bar g-pre"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-07</td><td class="tl-n">Manager approvals and step visibility</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-pre"></span></td><td class="tl-c"><span class="bar g-pre"></span></td><td class="tl-c"><span class="bar g-pre"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-08</td><td class="tl-n">MCA document pack</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-pre"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-09</td><td class="tl-n">Board resolutions</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-pre"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-10</td><td class="tl-n">Incorporation close (CIN) and stage change</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-post"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-11</td><td class="tl-n">Board meetings</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-post"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-12</td><td class="tl-n">Registrations</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-reg"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-13</td><td class="tl-n">Compliance calendar and filings</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-comp"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-14</td><td class="tl-n">Reminders and overdue items</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-comp"></span></td><td class="tl-c"><span class="bar g-comp"></span></td><td class="tl-c"><span class="bar g-comp"></span></td><td class="tl-c"><span class="bar g-comp"></span></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-15</td><td class="tl-n">Labour registers</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-ops"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-16</td><td class="tl-n">Payroll</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-ops"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-17</td><td class="tl-n">Budgets and variance</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-ops"></span></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-18</td><td class="tl-n">Ask VCFO (chatbot)</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-ask"></span></td><td class="tl-c"></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-19</td><td class="tl-n">Email</td><td class="tl-c"></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-20</td><td class="tl-n">WhatsApp</td><td class="tl-c"></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-msg"></span></td><td class="tl-x"><span class="box "></span></td></tr><tr><td class="tl-id mono">T-21</td><td class="tl-n">Regression, security and sign-off</td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"></td><td class="tl-c"><span class="bar g-end"></span></td><td class="tl-x"><span class="box "></span></td></tr></tbody></table>
+  </div>
+  <div class="foot"><span>Track A is the real client. Track B is the sandbox project. A test on Track A can move if the real client is late; Track B keeps the schedule.</span><span>Tick "Done" here when the test row is done.</span></div>
+</section>
+<section class="sheet">
+  <header class="sh">
+    <div class="sh-l"><div class="brand">VCFO&nbsp;Suite</div><div class="sh-t">Test matrix 1 of 3 · T-01 to T-07 · Base · Pre-incorporation</div></div>
+    <div class="sh-r"><span>Day 0: Mon 9 Nov 2026 · Day 1 to Day 10: Tue 10 Nov to Thu 19 Nov 2026</span><span class="pg">Sheet 3 of 6</span></div>
+  </header>
+  <table class="mx">
+    <colgroup><col class="c-done"><col class="c-id"><col class="c-feat"><col class="c-steps"><col class="c-pass"><col class="c-msg"><col class="c-role"><col class="c-role"><col class="c-role"><col class="c-role"><col class="c-def"></colgroup>
+    <thead><tr>
+      <th>Done</th><th>Test</th><th>Feature · build · data</th><th>Steps (tick each)</th><th>Pass when</th><th>Email / WhatsApp</th>
+      <th class="rc"><span class="role r-A">A</span></th><th class="rc"><span class="role r-M">M</span></th><th class="rc"><span class="role r-L">L</span></th><th class="rc"><span class="role r-C">C</span></th><th>Defect IDs</th>
+    </tr></thead>
+    <tbody><tr class="band g-base"><td colspan="11">Base</td></tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-01</div><div class="day">D0</div></td>
+      <td class="feat"><div class="fn">Data reset and deploy</div><span class="badge b-ops">Operations task</span><div class="bf"><b>Before you start</b>Day 0 checklist (sheet 1) is open. Owner has AWS console access.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Make an RDS snapshot. Copy the S3 bucket to a backup prefix.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Delete all data rows and S3 objects. Keep the schema and the super_admin login.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Apply migrations 0035 to 0049 on RDS.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Set CREDENTIALS_ENCRYPTION_KEY and ASK_VCFO_ENABLED=true on App Runner.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Run npm run check on main. Deploy main.</span></li><li><span class="box "></span><span class="sn mono">6</span><span>Open each sidebar page as super_admin.</span></li></ol></td>
+      <td class="pass"><ul><li>Snapshot status is "available".</li><li>RDS shows 50 migrations.</li><li>Deploy status is SUCCEEDED.</li><li>No page shows old data or an error.</li></ul></td>
+      <td class="msg"><span class="na">—</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="na">—</span></td><td class="rc"><span class="na">—</span></td><td class="rc"><span class="na">—</span></td>
+      <td class="def"></td>
+    </tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-02</div><div class="day">D0, D1</div></td>
+      <td class="feat"><div class="fn">Logins, roles and access</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>T-01 is done. The name and email of each tester are known.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>super_admin creates 1 admin, 1 manager and 2 or 3 project leads.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Each person sets a password and two-step sign-in.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Each person opens each page in their sidebar.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Each person types the URL of a page of a different role.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Enter a wrong two-step code ten times on one test login.</span></li><li><span class="box "></span><span class="sn mono">6</span><span>Each lead connects Outlook in Settings.</span></li></ol></td>
+      <td class="pass"><ul><li>Each person sees only the pages of their role.</li><li>A wrong-role URL redirects.</li><li>Ten wrong codes lock the login.</li><li>Outlook shows "Connected".</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Welcome email · password reset email</span></td>
+      <td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-03</div><div class="day">D1</div><div class="trk">Track A + B</div></td>
+      <td class="feat"><div class="fn">Project creation and client invite</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>Real client data: company name, type, directors, contact email.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Admin creates the real project (Track A). Set Dependent or Independent.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Admin creates the sandbox project (Track B) with test data.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Assign the manager and one lead to each project.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Invite the client to Track A. Invite a team email to Track B as client.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>The client accepts the invite, sets a password and signs in.</span></li></ol></td>
+      <td class="pass"><ul><li>Each project shows on the admin, manager and lead dashboards.</li><li>The client sees only their own project.</li><li>Parent entity fields show only for Dependent.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Invite email · assignment email to manager and lead</span></td>
+      <td class="rc"><span class="box "></span></td><td class="rc"><span class="na">—</span></td><td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="band g-pre"><td colspan="11">Pre-incorporation</td></tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-04</div><div class="day">D1, D2</div><div class="trk">Track A</div></td>
+      <td class="feat"><div class="fn">Client questionnaire (Part A)</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>T-03 is done. The client has the incorporation details.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Client opens Incorporation and fills each Part A section.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Client leaves one required field empty and tries to submit.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Client searches and selects the NIC code.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Client submits. The lead opens the same answers.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Lead fills the missing fields and requests approval.</span></li></ol></td>
+      <td class="pass"><ul><li>Answers save after a page reload.</li><li>An empty required field stops the submit.</li><li>The lead sees the same answers as the client.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Manager gets "step submitted" · bell</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-05</div><div class="day">D2, D3</div><div class="trk">Track A</div></td>
+      <td class="feat"><div class="fn">SPICe+ checklist (Part B)</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>Part A is approved. Capital, office and director data are known.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Lead fills Capital Structure (step 13).</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Lead fills Registered Office (step 14).</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Lead adds each proposed director (step 15).</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Lead fills the remaining Part B steps in sequence.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Open a step that is not yet open.</span></li><li><span class="box "></span><span class="sn mono">6</span><span>Compare the progress value on the lead, manager and client pages.</span></li></ol></td>
+      <td class="pass"><ul><li>Steps open only in the correct sequence.</li><li>Each director shows in the director list.</li><li>Progress is the same value for each role.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Manager gets each request for approval</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-06</div><div class="day">D2, D3</div><div class="trk">Track A</div></td>
+      <td class="feat"><div class="fn">KYC, DSC and document vault</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>Real KYC files for each director (PAN, Aadhaar, photo, address proof).</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Lead sends a document request to the client.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Client uploads each KYC file from the portal.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Lead marks the DSC status for each director.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Manager opens Vault › Client view and opens each file.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Client downloads all documents as a ZIP.</span></li></ol></td>
+      <td class="pass"><ul><li>Each file opens in the viewer.</li><li>Files are in the correct folder.</li><li>The ZIP holds all files.</li><li>A client cannot see the files of a different client.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Client gets the document request email</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-07</div><div class="day">D2–D4</div><div class="trk">Track A</div></td>
+      <td class="feat"><div class="fn">Manager approvals and step visibility</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>At least three steps wait for approval.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Manager accepts one step from the step page.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Manager rejects one step with a reason.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Manager requests a change on one step.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Manager accepts one step from the bell and one from Approvals.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Client opens the steps before and after each decision.</span></li></ol></td>
+      <td class="pass"><ul><li>A rejected step goes back to the lead with the reason.</li><li>The client sees a step only after the manager accepts it.</li><li>A lead draft is not visible to the manager.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Lead gets reject email · client gets "approved" email · WhatsApp nudge (if on)</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr></tbody>
+  </table>
+  <div class="foot"><span>Roles: <b>A</b> admin · <b>M</b> manager · <b>L</b> project lead · <b>C</b> client · <b>—</b> not in this test</span><span>Tick "Done" only when all steps and all roles pass.</span></div>
+</section>
+<section class="sheet">
+  <header class="sh">
+    <div class="sh-l"><div class="brand">VCFO&nbsp;Suite</div><div class="sh-t">Test matrix 2 of 3 · T-08 to T-14 · Pre-incorporation · Post-incorporation · Registration · Compliance</div></div>
+    <div class="sh-r"><span>Day 0: Mon 9 Nov 2026 · Day 1 to Day 10: Tue 10 Nov to Thu 19 Nov 2026</span><span class="pg">Sheet 4 of 6</span></div>
+  </header>
+  <table class="mx">
+    <colgroup><col class="c-done"><col class="c-id"><col class="c-feat"><col class="c-steps"><col class="c-pass"><col class="c-msg"><col class="c-role"><col class="c-role"><col class="c-role"><col class="c-role"><col class="c-def"></colgroup>
+    <thead><tr>
+      <th>Done</th><th>Test</th><th>Feature · build · data</th><th>Steps (tick each)</th><th>Pass when</th><th>Email / WhatsApp</th>
+      <th class="rc"><span class="role r-A">A</span></th><th class="rc"><span class="role r-M">M</span></th><th class="rc"><span class="role r-L">L</span></th><th class="rc"><span class="role r-C">C</span></th><th>Defect IDs</th>
+    </tr></thead>
+    <tbody><tr class="band g-pre"><td colspan="11">Pre-incorporation</td></tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-08</div><div class="day">D4</div><div class="trk">Track A</div></td>
+      <td class="feat"><div class="fn">MCA document pack</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>All Part B steps are approved.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Lead generates each incorporation document.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Lead generates the drafts for each director.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Lead downloads the document pack as a ZIP.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Manager compares each document with the answers.</span></li></ol></td>
+      <td class="pass"><ul><li>Each .docx opens in Word without a repair message.</li><li>Names, addresses, capital and NIC agree with the answers.</li><li>No field shows a blank or a placeholder.</li></ul></td>
+      <td class="msg"><span class="na">—</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="na">—</span></td>
+      <td class="def"></td>
+    </tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-09</div><div class="day">D4</div><div class="trk">Track A</div></td>
+      <td class="feat"><div class="fn">Board resolutions</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>T-08 is done.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Lead generates the board resolutions.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Lead changes one answer (for example the date).</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Lead generates the resolutions again.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Manager reads each resolution.</span></li></ol></td>
+      <td class="pass"><ul><li>The .docx opens.</li><li>The new value shows in the second file.</li><li>Parent entity data is correct (Dependent only).</li></ul></td>
+      <td class="msg"><span class="na">—</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="na">—</span></td>
+      <td class="def"></td>
+    </tr><tr class="band g-post"><td colspan="11">Post-incorporation</td></tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-10</div><div class="day">D5</div><div class="trk">Track B (A when CIN comes)</div></td>
+      <td class="feat"><div class="fn">Incorporation close (CIN) and stage change</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>Track B project has a past CIN date (for example 1 Aug 2026).</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Manager enters the CIN and the incorporation date.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Manager uploads the certificate of incorporation.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Admin moves the project to Post-Incorporation.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Lead does the post-incorporation steps.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Client opens the dashboard and the compliance pages.</span></li></ol></td>
+      <td class="pass"><ul><li>The stage changes on each dashboard.</li><li>The pre-incorporation notice goes away.</li><li>Compliance due dates start from the CIN date.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Client gets the incorporation email</span></td>
+      <td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-11</div><div class="day">D5</div><div class="trk">Track B</div></td>
+      <td class="feat"><div class="fn">Board meetings</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>T-10 is done. The lead has Outlook connected.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Lead creates the first board meeting from Compliances › Obligations.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Lead sends the notice for approval.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Manager approves the notice.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Open the notice email and the calendar entry.</span></li></ol></td>
+      <td class="pass"><ul><li>The notice has a Word file.</li><li>The calendar entry has a Teams link.</li><li>A failed email shows in the bell.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Directors get the notice email</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="na">—</span></td>
+      <td class="def"></td>
+    </tr><tr class="band g-reg"><td colspan="11">Registration</td></tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-12</div><div class="day">D6</div><div class="trk">Track B</div></td>
+      <td class="feat"><div class="fn">Registrations</div><span class="badge b-main">In main · first deploy D0</span><div class="bf"><b>Before you start</b>T-10 is done. Sample certificates (PDF) are ready.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Lead opens Registrations and starts GST.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Lead starts PF, ESI, PT and Shops and Establishment.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Lead uploads a certificate for two registrations.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Manager approves the registrations.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Client opens Registrations in the portal.</span></li></ol></td>
+      <td class="pass"><ul><li>Each registration shows the correct status.</li><li>Certificates show in the Vault.</li><li>The client sees the same status.</li><li>New obligations show in the compliance calendar.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Client gets request and completion emails</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="band g-comp"><td colspan="11">Compliance</td></tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-13</div><div class="day">D7</div><div class="trk">Track B</div></td>
+      <td class="feat"><div class="fn">Compliance calendar and filings</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>T-10 and T-12 are done.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Each role opens Compliances › Calendar and Filings.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Compare 5 due dates with the statutory due dates.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Lead marks one filing as filed and uploads the proof.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Manager approves the filing.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Admin opens the firm-wide compliance view.</span></li></ol></td>
+      <td class="pass"><ul><li>Due dates are correct.</li><li>Status words and colours are the same for each role.</li><li>The filed item shows as done for the client.</li></ul></td>
+      <td class="msg"><span class="na">—</span></td>
+      <td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-14</div><div class="day">D7–D10</div><div class="trk">Track B</div></td>
+      <td class="feat"><div class="fn">Reminders and overdue items</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>T-13 is done. One filing is due in the next 7 days, one is past due.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Make sure one filing is due soon and one is overdue.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Wait for the daily reminder job.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Each role opens the bell.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Record the time each reminder arrives, each day until D10.</span></li></ol></td>
+      <td class="pass"><ul><li>One reminder for each filing for each day, not more.</li><li>The overdue item shows in red.</li><li>Health of the project changes to at-risk or overdue.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Reminder email · WhatsApp reminder (if on)</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr></tbody>
+  </table>
+  <div class="foot"><span>Roles: <b>A</b> admin · <b>M</b> manager · <b>L</b> project lead · <b>C</b> client · <b>—</b> not in this test</span><span>Tick "Done" only when all steps and all roles pass.</span></div>
+</section>
+<section class="sheet">
+  <header class="sh">
+    <div class="sh-l"><div class="brand">VCFO&nbsp;Suite</div><div class="sh-t">Test matrix 3 of 3 · T-15 to T-21 · Labour registers · Payroll · Budgets · Chatbot · Emails and WhatsApp · Close</div></div>
+    <div class="sh-r"><span>Day 0: Mon 9 Nov 2026 · Day 1 to Day 10: Tue 10 Nov to Thu 19 Nov 2026</span><span class="pg">Sheet 5 of 6</span></div>
+  </header>
+  <table class="mx">
+    <colgroup><col class="c-done"><col class="c-id"><col class="c-feat"><col class="c-steps"><col class="c-pass"><col class="c-msg"><col class="c-role"><col class="c-role"><col class="c-role"><col class="c-role"><col class="c-def"></colgroup>
+    <thead><tr>
+      <th>Done</th><th>Test</th><th>Feature · build · data</th><th>Steps (tick each)</th><th>Pass when</th><th>Email / WhatsApp</th>
+      <th class="rc"><span class="role r-A">A</span></th><th class="rc"><span class="role r-M">M</span></th><th class="rc"><span class="role r-L">L</span></th><th class="rc"><span class="role r-C">C</span></th><th>Defect IDs</th>
+    </tr></thead>
+    <tbody><tr class="band g-ops"><td colspan="11">Labour registers · Payroll · Budgets</td></tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-15</div><div class="day">D8</div><div class="trk">Track B</div></td>
+      <td class="feat"><div class="fn">Labour registers</div><span class="badge b-main">In main · first deploy D0</span><div class="bf"><b>Before you start</b>An employee sheet with at least 10 employees and one month of attendance and wages.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Lead uploads the employee data.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Lead maps the columns and checks the verification page.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Lead generates the registers for one month.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Manager closes the month.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Client opens Labour registers in the portal and downloads one register.</span></li></ol></td>
+      <td class="pass"><ul><li>Each register downloads and opens.</li><li>Totals agree with the uploaded sheet.</li><li>The client sees the registers after the close.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Client gets "registers ready" email</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-16</div><div class="day">D8</div><div class="trk">Track B</div></td>
+      <td class="feat"><div class="fn">Payroll</div><span class="badge b-main">In main · first deploy D0</span><div class="bf"><b>Before you start</b>T-15 is done (same employees).</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Lead adds two salary updates (one increase, one new employee).</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Lead opens the payroll summary for the month.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Manager compares the totals with a manual calculation.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Compare the payroll totals with the wage register.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Client opens Payroll in the portal.</span></li></ol></td>
+      <td class="pass"><ul><li>Totals agree with the manual calculation.</li><li>Payroll and wage register agree.</li><li>The client sees only their own payroll.</li></ul></td>
+      <td class="msg"><span class="na">—</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-17</div><div class="day">D9</div><div class="trk">Track B</div></td>
+      <td class="feat"><div class="fn">Budgets and variance</div><span class="badge b-fresh">In main · never tested</span><div class="bf"><b>Before you start</b>A sample budget in Excel. Two months of actual costs.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Lead creates a budget and fills each section.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Manager approves the budget.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Lead opens Variance, enters the actual costs and submits.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Manager sends the variance back one time, then approves it.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Export the budget to Excel and PDF.</span></li><li><span class="box "></span><span class="sn mono">6</span><span>Client opens Budgets in the portal.</span></li></ol></td>
+      <td class="pass"><ul><li>Variance agrees with a manual calculation.</li><li>Advance tax agrees with a manual calculation.</li><li>Excel and PDF open.</li><li>The client cannot see the Variance tab.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>Client gets the budget email</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="band g-ask"><td colspan="11">Chatbot</td></tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-18</div><div class="day">D9</div><div class="trk">Track A + B</div></td>
+      <td class="feat"><div class="fn">Ask VCFO (chatbot)</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>A list of 10 real questions: 5 about the project, 5 about compliance law.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Lead asks the 5 project questions.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Lead asks the 5 compliance law questions.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Client asks 3 questions about their own project.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Client asks about a different company name.</span></li><li><span class="box "></span><span class="sn mono">5</span><span>Lead pastes director details. Lead accepts one review card.</span></li></ol></td>
+      <td class="pass"><ul><li>Answers are correct and use only the data of the same client.</li><li>A different company gets no data.</li><li>The accepted card changes the correct field only.</li></ul></td>
+      <td class="msg"><span class="na">—</span></td>
+      <td class="rc"><span class="na">—</span></td><td class="rc"><span class="na">—</span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="band g-msg"><td colspan="11">Emails and WhatsApp</td></tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-19</div><div class="day">D1–D10</div><div class="trk">Track A + B</div></td>
+      <td class="feat"><div class="fn">Email</div><span class="badge b-live">Live since 3 Nov</span><div class="bf"><b>Before you start</b>SES is out of sandbox mode (Day 0 checklist).</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Each tester keeps each email from the app in one folder.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Each evening, compare the emails with the email column on this plan.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Click each link in each email.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Record a missing, late or wrong email as a defect.</span></li></ol></td>
+      <td class="pass"><ul><li>Each event sends one email to the correct people.</li><li>No email goes to a wrong client.</li><li>Each link opens the correct page.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>All</span></td>
+      <td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-20</div><div class="day">D1–D10</div><div class="trk">Track A + B</div></td>
+      <td class="feat"><div class="fn">WhatsApp</div><span class="badge b-off">Built · switched off</span><div class="bf"><b>Before you start</b>The six templates are approved. WHATSAPP_ENABLED=true.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Each tester gives consent and adds a phone number in Settings.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Do one event for each of the six templates.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Turn on the kill switch. Do one event.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Turn off the kill switch.</span></li></ol></td>
+      <td class="pass"><ul><li>Each nudge arrives.</li><li>With the kill switch on, no nudge goes and the email still goes.</li><li>A failed number shows as "failed".</li></ul></td>
+      <td class="msg"><span class="box "></span><span>All six templates</span></td>
+      <td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr><tr class="band g-end"><td colspan="11">Close</td></tr><tr class="tr">
+      <td class="done"><span class="box lg"></span><div class="sig">Initials<br>Date</div></td>
+      <td class="idc"><div class="tid mono">T-21</div><div class="day">D10</div><div class="trk">Track A + B</div></td>
+      <td class="feat"><div class="fn">Regression, security and sign-off</div><span class="badge b-ops">Operations task</span><div class="bf"><b>Before you start</b>All earlier tests are ticked or have a defect ID.</div></td>
+      <td class="steps"><ol><li><span class="box "></span><span class="sn mono">1</span><span>Do T-02 to T-07 again, quickly, on the last build.</span></li><li><span class="box "></span><span class="sn mono">2</span><span>Client tries each staff URL. Client tries the ID of the other project.</span></li><li><span class="box "></span><span class="sn mono">3</span><span>Count the open defects by severity.</span></li><li><span class="box "></span><span class="sn mono">4</span><span>Owner decides: go live, or go live with a list, or delay.</span></li></ol></td>
+      <td class="pass"><ul><li>0 open S1 defects.</li><li>Each open S2 defect has an owner and a date.</li><li>The client sees no staff-only data.</li></ul></td>
+      <td class="msg"><span class="box "></span><span>All earlier emails still arrive</span></td>
+      <td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td><td class="rc"><span class="box "></span></td>
+      <td class="def"></td>
+    </tr></tbody>
+  </table>
+  <div class="foot"><span>Roles: <b>A</b> admin · <b>M</b> manager · <b>L</b> project lead · <b>C</b> client · <b>—</b> not in this test</span><span>Tick "Done" only when all steps and all roles pass.</span></div>
+</section>
+<section class="sheet">
+  <header class="sh">
+    <div class="sh-l"><div class="brand">VCFO&nbsp;Suite</div><div class="sh-t">Defect log and daily log</div></div>
+    <div class="sh-r"><span>Day 0: Mon 9 Nov 2026 · Day 1 to Day 10: Tue 10 Nov to Thu 19 Nov 2026</span><span class="pg">Sheet 6 of 6</span></div>
+  </header>
+  <div class="card">
+    <h2><span class="num">6</span>Defect log</h2>
+    <p class="note">ID format: D-day-number, for example D3-02. Give each S1 and S2 defect to Claude at the 13:30 triage.</p>
+    <table class="log">
+      <thead><tr><th class="w-id">Defect ID</th><th class="w-t">Test · step</th><th class="w-r">Role</th><th>Page URL</th><th>What happened (and what you expected)</th><th class="w-s">Sev.</th><th class="w-o">Owner</th><th class="w-b">Fixed in build</th><th class="w-b">Retest by · date</th><th class="w-x">Closed</th></tr></thead>
+      <tbody><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="c"><span class="box "></span></td></tr></tbody>
+    </table>
+  </div>
+  <div class="card mt">
+    <h2><span class="num">7</span>Daily log</h2>
+    <table class="log daily">
+      <thead><tr><th class="w-id">Day</th><th class="w-t">Date</th><th>Tests done</th><th class="w-s">New S1</th><th class="w-s">Open S1</th><th class="w-s">Open S2</th><th>Build deployed (tag)</th><th class="w-b">Owner initials</th></tr></thead>
+      <tbody><tr><td class="mono b">D0</td><td>Mon 9</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="mono b">D1</td><td>Tue 10</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="mono b">D2</td><td>Wed 11</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="mono b">D3</td><td>Thu 12</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="mono b">D4</td><td>Fri 13</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="mono b">D5</td><td>Sat 14</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="mono b">D6</td><td>Sun 15</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="mono b">D7</td><td>Mon 16</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="mono b">D8</td><td>Tue 17</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="mono b">D9</td><td>Wed 18</td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr><td class="mono b">D10</td><td>Thu 19</td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody>
+    </table>
+  </div>
+  <div class="foot"><span>Exit rule on D10: 0 open S1 defects. Each open S2 defect has an owner and a date.</span><span>Plan source: scripts/build-uat-plan.mjs</span></div>
+</section>
+</body></html>
