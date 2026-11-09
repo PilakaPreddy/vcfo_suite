@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 260" width="320" height="260" role="img" aria-label="Ask vCFO assistant">
+<title>Ask vCFO assistant</title>
+<defs>
+  <linearGradient id="vb-head" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4C8DF8"/><stop offset="1" stop-color="#1D4ED8"/></linearGradient>
+  <linearGradient id="vb-hand" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4C8DF8"/><stop offset="1" stop-color="#2563EB"/></linearGradient>
+  <filter id="vb-glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<style>
+.rise { animation: vb-rise 20s infinite; }
+.eyes { animation: vb-look 20s infinite; }
+.eye { transform-box: fill-box; transform-origin: center; animation: vb-blink 20s infinite; }
+.hand { animation: vb-hand 20s infinite; }
+.hand-r { animation-delay: .09s; }
+@keyframes vb-rise {
+  0%, 4.5% { transform: translateY(232px); animation-timing-function: cubic-bezier(.3,.75,.35,1); }
+  16.5%, 28% { transform: translateY(72px); animation-timing-function: cubic-bezier(.3,.75,.35,1); }
+  36%, 43% { transform: translateY(46px); animation-timing-function: cubic-bezier(.3,.75,.35,1); }
+  51.5%, 68% { transform: translateY(0); animation-timing-function: ease-in-out; }
+  76.5%, 82% { transform: translateY(72px); animation-timing-function: cubic-bezier(.5,0,.75,.4); }
+  91%, 100% { transform: translateY(232px); }
+}
+@keyframes vb-look {
+  0%, 16.5% { transform: translate(0, 0); }
+  18%, 22.5% { transform: translate(-12px, -2px); }
+  24%, 27% { transform: translate(12px, -2px); }
+  28.5%, 51.5% { transform: translate(0, 0); }
+  53%, 57.5% { transform: translate(-11px, 3px); }
+  59%, 63.5% { transform: translate(11px, -4px); }
+  65%, 77% { transform: translate(0, 0); }
+  78.5%, 81% { transform: translate(10px, -3px); }
+  82.5%, 100% { transform: translate(0, 0); }
+}
+@keyframes vb-blink {
+  0%, 29%, 29.8%, 40.5%, 41.3%, 41.9%, 42.7%, 66.5%, 67.3%, 100% { transform: scaleY(1); }
+  29.4%, 40.9%, 42.3%, 66.9% { transform: scaleY(.08); }
+}
+@keyframes vb-hand {
+  0% { opacity: 0; transform: translateY(14px); }
+  2%, 92% { opacity: 1; transform: translateY(0); }
+  94%, 100% { opacity: 0; transform: translateY(16px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise, .eyes, .eye, .hand { animation: none; }
+  .rise { transform: translateY(46px); }
+}
+</style><clipPath id="vb-ledge"><rect x="0" y="-300" width="320" height="530"/></clipPath>
+<g clip-path="url(#vb-ledge)"><g transform="translate(40 30)"><g class="rise">
+  <line x1="120" y1="46" x2="120" y2="24" stroke="#1E40AF" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="120" cy="18" r="8" fill="#2DD4BF"/>
+  <rect x="14" y="112" width="20" height="46" rx="10" fill="#1E40AF"/>
+  <rect x="206" y="112" width="20" height="46" rx="10" fill="#1E40AF"/>
+  <rect x="30" y="44" width="180" height="210" rx="56" fill="url(#vb-head)"/>
+  <path d="M62 56 q30 -10 60 -8" stroke="#fff" stroke-opacity=".28" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <rect x="50" y="84" width="140" height="82" rx="36" fill="#0B1736"/>
+  <rect x="64" y="91" width="54" height="7" rx="3.5" fill="#fff" fill-opacity=".08"/>
+  <g class="eyes" filter="url(#vb-glow)" fill="#7DD3FC">
+    <rect class="eye" x="88" y="109" width="22" height="30" rx="11"/>
+    <rect class="eye" x="130" y="109" width="22" height="30" rx="11"/>
+  </g>
+  <rect x="104" y="180" width="32" height="5" rx="2.5" fill="#1E3A8A" fill-opacity=".7"/></g></g></g><g transform="translate(2 208)"><g class="hand">
+  <rect x="2" y="4" width="46" height="22" rx="11" fill="url(#vb-hand)" stroke="#1D4ED8" stroke-opacity=".5"/>
+  <g fill="#1D4ED8"><rect x="6" y="18" width="8.5" height="17" rx="4.25"/><rect x="16" y="18" width="8.5" height="17" rx="4.25"/><rect x="26" y="18" width="8.5" height="17" rx="4.25"/><rect x="36" y="18" width="8.5" height="17" rx="4.25"/></g>
+  <path d="M12 10 h18" stroke="#fff" stroke-opacity=".4" stroke-width="3" stroke-linecap="round"/></g></g>
+<g transform="translate(268 208)"><g class="hand hand-r">
+  <rect x="2" y="4" width="46" height="22" rx="11" fill="url(#vb-hand)" stroke="#1D4ED8" stroke-opacity=".5"/>
+  <g fill="#1D4ED8"><rect x="6" y="18" width="8.5" height="17" rx="4.25"/><rect x="16" y="18" width="8.5" height="17" rx="4.25"/><rect x="26" y="18" width="8.5" height="17" rx="4.25"/><rect x="36" y="18" width="8.5" height="17" rx="4.25"/></g>
+  <path d="M12 10 h18" stroke="#fff" stroke-opacity=".4" stroke-width="3" stroke-linecap="round"/></g></g>
+</svg>
