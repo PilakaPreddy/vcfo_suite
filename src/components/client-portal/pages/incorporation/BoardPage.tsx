@@ -376,8 +376,11 @@ export default function BoardPage() {
                   {variantLabel}
                 </span>
                 <span data-testid="noc-passed-by">Passed by: Board of {parent || 'the parent company'} (the parent)</span>
-                <Dot />
-                <span>Phase 1 · Steps 2–3</span>
+                {/* The dot travels with "Phase 1", so a wrapped line never starts with a stray separator. */}
+                <span className="whitespace-nowrap max-sm:basis-full">
+                  <Dot className="mr-2 max-sm:hidden" />
+                  Phase 1 · Steps 2–3
+                </span>
               </>
             }
             links={stepLinks}

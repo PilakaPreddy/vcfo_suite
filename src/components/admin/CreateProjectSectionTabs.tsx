@@ -44,7 +44,7 @@ export function SectionTabs({
             className={cn(
               'my-2 inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-[13px] font-medium transition-colors',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
-              isActive ? 'bg-navy font-semibold text-on-navy' : 'text-ink-muted hover:text-ink',
+              isActive ? 'bg-brand font-semibold text-on-brand shadow-shine' : 'text-ink-muted hover:text-ink',
             )}
           >
             {done ? (

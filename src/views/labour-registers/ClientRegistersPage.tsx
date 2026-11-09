@@ -118,8 +118,9 @@ export function ClientRegistersPage({
     status,
   }));
 
+  // cp-tw: inside the client portal only `.cp-tw` islands keep Tailwind; without it the page renders unstyled.
   return (
-    <LabourRegistersTheme className="mx-auto flex w-full max-w-[1120px] flex-col gap-3">
+    <LabourRegistersTheme className="cp-tw mx-auto flex w-full max-w-[1120px] flex-col gap-3">
       <LrHero
         eyebrow="Maintained for you by SBC"
         title="Your labour registers"

@@ -301,9 +301,34 @@ function CalendarDesktop({ st, onOpenFilings }: { st: ReturnType<typeof useCalen
         </div>
       </div>
 
-      <div className="cal-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 340px', gap: 16, alignItems: 'start' }}>
+      <div className="cal-layout" style={{ display: 'grid', gridTemplateColumns: after ? 'minmax(0,1fr) 340px' : 'minmax(0,1fr)', gap: 16, alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
           <div className="card t" data-calbody="" data-view={view} style={{ padding: 12, position: 'relative' }}>
+            {emptyOverlay ? (
+              // Above the grid, not over it: a wash over the month hid four dates and made every number faint.
+              <div style={{ display: 'grid', placeItems: 'center', marginBottom: 12 }}>
+                <Island className="w-full max-w-[420px]">
+                  <Empty
+                    className="m-0 bg-surface-raised md:mx-0"
+                    action={
+                      <span className="flex flex-wrap items-center justify-center gap-2">
+                        {emptyOverlay.showAll ? (
+                          <Button size="sm" onClick={() => set({ area: 'all' })}>
+                            Show all areas
+                          </Button>
+                        ) : null}
+                        <Button size="sm" variant="secondary" onClick={() => openChat(emptyOverlay.q)}>
+                          Ask VCFO why
+                        </Button>
+                      </span>
+                    }
+                  >
+                    <span className="block font-medium text-ink">{emptyOverlay.lines[0]}</span>
+                    {emptyOverlay.lines[1] ? <span className="block">{emptyOverlay.lines[1]}</span> : null}
+                  </Empty>
+                </Island>
+              </div>
+            ) : null}
             {q.isError && after ? (
               <div role="alert" style={{ padding: '24px 12px', color: 'var(--over-text)', fontWeight: 500 }}>
                 Could not load the register.{' '}
@@ -333,40 +358,6 @@ function CalendarDesktop({ st, onOpenFilings }: { st: ReturnType<typeof useCalen
             ) : (
               <TimelineView fyStart={fy} rows={[...filterArea(fyRows, area), ...fyTasks]} today={today} onOpen={openDetail} />
             )}
-            {emptyOverlay ? (
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: '44px 14px 14px',
-                  display: 'grid',
-                  placeItems: 'center',
-                  background: 'oklch(var(--surface-raised) / .72)',
-                  borderRadius: 6,
-                  backdropFilter: 'blur(1px)',
-                }}
-              >
-                <Island className="w-full max-w-[420px]">
-                  <Empty
-                    className="m-0 bg-surface-raised md:mx-0"
-                    action={
-                      <span className="flex flex-wrap items-center justify-center gap-2">
-                        {emptyOverlay.showAll ? (
-                          <Button size="sm" onClick={() => set({ area: 'all' })}>
-                            Show all areas
-                          </Button>
-                        ) : null}
-                        <Button size="sm" variant="secondary" onClick={() => openChat(emptyOverlay.q)}>
-                          Ask VCFO why
-                        </Button>
-                      </span>
-                    }
-                  >
-                    <span className="block font-medium text-ink">{emptyOverlay.lines[0]}</span>
-                    {emptyOverlay.lines[1] ? <span className="block">{emptyOverlay.lines[1]}</span> : null}
-                  </Empty>
-                </Island>
-              </div>
-            ) : null}
             {loading && view === 'month' ? (
               <Island className="absolute inset-x-3.5 bottom-3.5 top-11">
                 <div aria-busy="true" aria-label="Loading calendar" className="h-full animate-pulse rounded-md bg-surface-sunken" />
@@ -603,14 +594,9 @@ export function Rail({
   openDrill: ReturnType<typeof useComp>['openDrill'];
 }) {
   const { today } = useComp();
-  if (!after)
-    return (
-      <Island className="cal-rail">
-        <div className={railCard}>
-          <Empty>Starts after incorporation</Empty>
-        </div>
-      </Island>
-    );
+  // Before incorporation the calendar card already says "Starts after incorporation"; a second
+  // copy in the rail repeated it (twice in a row on a phone).
+  if (!after) return null;
   if (loading)
     return (
       <Island className="cal-rail">

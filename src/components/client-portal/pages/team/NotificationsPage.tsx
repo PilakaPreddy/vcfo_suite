@@ -43,11 +43,11 @@ import '../../css/team-notif.css';
 const NOTIF_KEY = ['client-portal', 'notifications'] as const;
 export const PROFILE_KEY = ['client-portal', 'profile'] as const;
 
-type Ty = 'doc' | 'back' | 'step' | 'time' | 'deadline' | 'mail' | 'ann' | 'team';
+type Ty = 'doc' | 'back' | 'step' | 'time' | 'deadline' | 'late' | 'mail' | 'ann' | 'team';
 type Grp = 'Documents' | 'Steps' | 'Deadlines' | 'Messages';
 
 /* VCFO Spectrum: each type shows the shared 28 px icon tile (R-16) and a status chip (R-13). */
-const K: Record<'document' | 'step' | 'deadline' | 'email' | 'announcement' | 'team', { p1: string; tone: TileTone }> = {
+const K: Record<'document' | 'step' | 'deadline' | 'overdue' | 'email' | 'announcement' | 'team', { p1: string; tone: TileTone }> = {
   document: {
     p1: 'M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z M14 2v5a1 1 0 0 0 1 1h5 M10 9H8 M16 13H8 M16 17H8',
     tone: 'brand',
@@ -56,6 +56,10 @@ const K: Record<'document' | 'step' | 'deadline' | 'email' | 'announcement' | 't
   deadline: {
     p1: 'M16 14v2.2l1.6 1 M16 2v3 M21 7.338V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h2.338 M3 9h5.859 M8 2v3 M10 16a6 6 0 1 0 12 0a6 6 0 1 0 -12 0',
     tone: 'amber',
+  },
+  overdue: {
+    p1: 'M16 14v2.2l1.6 1 M16 2v3 M21 7.338V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h2.338 M3 9h5.859 M8 2v3 M10 16a6 6 0 1 0 12 0a6 6 0 1 0 -12 0',
+    tone: 'red',
   },
   email: { p1: 'M22 7l-8.991 5.727a2 2 0 0 1-2.009 0L2 7 M4 4H20a2 2 0 0 1 2 2V18a2 2 0 0 1 -2 2H4a2 2 0 0 1 -2 -2V6a2 2 0 0 1 2 -2z', tone: 'violet' },
   announcement: {
@@ -73,6 +77,7 @@ const T: Record<Ty, [keyof typeof K, Grp, string, ChipTone, string]> = {
   step: ['step', 'Steps', 'Step', 'ok', 'Step done'],
   time: ['step', 'Steps', 'Timeline', 'prog', 'Timeline changed'],
   deadline: ['deadline', 'Deadlines', 'Deadline', 'warn', 'Deadline coming up'],
+  late: ['overdue', 'Deadlines', 'Overdue', 'bad', 'Past its due date'],
   mail: ['email', 'Messages', 'Email', 'prog', 'Email sent'],
   ann: ['announcement', 'Messages', 'Announcement', 'warn', 'Announcement'],
   team: ['team', 'Messages', 'Team', 'prog', 'Team change'],
@@ -97,9 +102,11 @@ function typeOf(n: AppNotification): Ty {
   if (k === 'request.created' || k === 'docs.share') return 'doc';
   if (k === 'request.sent_back' || ((k === 'checklist.review' || k === 'request.uploaded') && /sent back|reject|changes|fix|re-?upload/.test(t))) return 'back';
   if (k === 'request.uploaded') return 'doc';
+  // Overdue first, so a missed filing is never shown as a green "Step".
+  if (/\boverdue\b|passed (its|the) due date|past (its )?due/.test(t)) return 'late';
   if (k.startsWith('timeline.') || /timeline|end date|moved to|schedule/.test(t)) return 'time';
   if (k.startsWith('compliance.') || /\bdue (in|on|today|tomorrow)\b|deadline/.test(t)) return 'deadline';
-  if (k.startsWith('announcement.')) return 'ann';
+  if (k.startsWith('announcement.') || /^new announcement\b/.test(t)) return 'ann';
   return 'step';
 }
 
@@ -123,7 +130,7 @@ function whenText(iso: string, g: number): string {
 function targetOf(n: AppNotification, ty: Ty): string {
   if (n.href && n.href.startsWith('/app/client')) return n.href;
   if (ty === 'doc' || ty === 'back') return portalHref('documents');
-  if (ty === 'deadline') return portalHref('filings');
+  if (ty === 'deadline' || ty === 'late') return portalHref('filings');
   if (ty === 'mail') return portalHref('settings') + '#notifications';
   if (ty === 'ann') return portalHref('announcements');
   if (ty === 'team') return `${portalHref('settings')}#team`;
@@ -142,7 +149,7 @@ function whoOf(n: AppNotification, ty: Ty, staff: string[]): { who: string; pers
   const text = `${n.title} ${n.body}`;
   const hit = staff.find((name) => name && text.includes(name));
   if (hit) return { who: hit, person: true };
-  if (ty === 'mail' || ty === 'deadline' || ty === 'team') return { who: 'VCFO Suite', person: false };
+  if (ty === 'mail' || ty === 'deadline' || ty === 'late' || ty === 'team') return { who: 'VCFO Suite', person: false };
   return { who: 'SBC', person: false };
 }
 
@@ -153,6 +160,7 @@ const LINK_LABEL: Record<Ty, string> = {
   step: 'Open the step',
   time: 'See the timeline',
   deadline: 'Open the filing',
+  late: 'Open the filing',
   mail: 'Email settings',
   ann: 'Read it',
   team: 'Open the team',

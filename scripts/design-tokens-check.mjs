@@ -23,7 +23,7 @@ const PAIRS = [
   ['ink', 'brand-soft', 4.5], ['ink', 'highlight-soft', 4.5], ['ink', 'positive-soft', 4.5],
   ['ink', 'warning-soft', 4.5], ['ink', 'danger-soft', 4.5], ['ink', 'info-soft', 4.5],
   ['ink-muted', 'surface', 4.5], ['ink-muted', 'surface-raised', 4.5], ['ink-muted', 'surface-sunken', 4.5], ['ink-muted', 'brand-soft', 4.5],
-  ['ink-faint', 'surface-raised', 3], ['ink-faint', 'surface', 3],
+  ['ink-faint', 'surface-raised', 4.5], ['ink-faint', 'surface', 4.5], ['ink-faint', 'surface-sunken', 4.5],
   ['brand', 'surface', 4.5], ['brand', 'surface-raised', 4.5], ['brand', 'surface-sunken', 4.5], ['brand', 'brand-soft', 4.5],
   ['brand-strong', 'surface-raised', 4.5],
   ['on-brand', 'brand', 4.5], ['on-brand', 'brand-strong', 4.5],

@@ -35,7 +35,7 @@ button{font-family:inherit}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:36px;padding:0 14px;border-radius:6px;font:500 13px var(--font-sans);border:1px solid transparent;cursor:pointer;white-space:nowrap;transition:transform .12s,background .15s}
 .btn:active{transform:scale(.98)}
 .btn-n{background:var(--navy);color:#fff}.btn-n:hover{background:var(--navy-2)}
-.btn-p{background:oklch(var(--navy-fill));color:#fff}
+.btn-p{background:oklch(var(--navy-fill));color:oklch(var(--on-navy))}
 .btn-o{background:var(--panel);color:var(--fg);border-color:var(--border)}
 .btn-s{height:30px;padding:0 10px;font-size:12px}
 .ibtn{width:30px;height:30px;border-radius:6px;border:1px solid var(--border);background:var(--panel);color:var(--muted);display:grid;place-items:center;cursor:pointer}
@@ -44,7 +44,7 @@ button{font-family:inherit}
 .seg{position:relative;display:inline-grid;grid-auto-flow:column;grid-auto-columns:auto;padding:2px;border-radius:6px;background:oklch(var(--surface-sunken));box-shadow:inset 0 0 0 1px var(--border)}
 .seg>.thumb{display:none}
 .seg button{position:relative;z-index:1;display:inline-flex;align-items:center;gap:6px;border:0;background:none;height:30px;padding:0 12px;border-radius:6px;font:500 12.5px var(--font-sans);color:oklch(var(--ink-muted));cursor:pointer;white-space:nowrap;transition:color .2s}
-.seg button.on{background:oklch(var(--navy-fill));color:#fff;font-weight:500}
+.seg button.on{background:oklch(var(--navy-fill));color:oklch(var(--on-navy));font-weight:500}
 .seg .cnt{font:500 11px var(--font-sans);color:oklch(55% 0.022 255)}
 .seg button.on .cnt{color:oklch(100% 0 0 / .72)}
 .seg .dot{width:7px;height:7px;border-radius:6px}
@@ -217,7 +217,8 @@ circle[data-dd]{transition:stroke-width .15s}circle[data-dd]:hover{stroke-width:
 .cm-root{width:100%;min-height:100vh;min-height:100dvh;background:var(--bg);position:relative;overflow:hidden;font-size:13px}
 .cm-root .tb{width:40px;height:40px}
 .cm-root .ibtn{width:40px;height:40px}
-.cm-seg{overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px}
+.cm-seg{overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 40px 0 16px;-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 40px),transparent)}
+/* The fade at the right edge says the area row scrolls; the 40px end padding lets the last area clear it. */
 .cm-seg::-webkit-scrollbar{display:none}
 .cm-seg .seg button{height:40px}
 /* --- FINAL calendar grid lines + year view (I:358-391) --- */

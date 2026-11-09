@@ -18,6 +18,7 @@ import { appEngagementId, engagementDbId } from '@/lib/projects/legacy-engagemen
 import { clientIncorporationPath } from '@/lib/projects/project-step-path';
 import { isUuid } from '@/lib/slug';
 import { parseItemKey } from '@/lib/work/item-key';
+import { titleWithPeriod } from '@/lib/compliance/period-title';
 
 /**
  * CLIENT REMINDERS REPOSITORY (G-15). Read side of `POST /api/engagements/:id/remind`.
@@ -97,7 +98,7 @@ export async function resolveReminderTarget(
       .where(and(eq(complianceInstances.id, ref.id), eq(complianceInstances.engagementId, access.dbId)))
       .limit(1);
     if (!row) return { ok: false, reason: 'invalid_item' };
-    const itemTitle = row.periodLabel ? `${row.particular} · ${row.periodLabel}` : row.particular;
+    const itemTitle = titleWithPeriod(row.particular, row.periodLabel);
     return { ok: true, target: { ...base, kind: 'filing', itemTitle, clientPath: FILINGS_PATH } };
   }
 

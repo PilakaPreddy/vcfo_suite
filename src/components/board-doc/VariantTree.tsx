@@ -146,6 +146,7 @@ export function VariantTree({ answers, replayKey = 0, className }: { answers: No
           );
         })}
       </svg>
+      <p className={s.hint}>Swipe sideways to see the whole tree.</p>
     </div>
   );
 }

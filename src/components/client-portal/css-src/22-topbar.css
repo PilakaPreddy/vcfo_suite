@@ -10,6 +10,10 @@
 .tbar-menu{display:inline-flex;flex:none;width:40px;height:40px;margin-left:-6px;border:0;border-radius:6px;background:transparent;color:oklch(var(--ink-2));align-items:center;justify-content:center;cursor:pointer;padding:0}
 .tbar-menu:hover{background:oklch(var(--ink) / .06)}
 .tbar-logo{display:flex;flex:none;align-items:center;padding-right:12px;border-right:1px solid oklch(var(--line))}
+/* One logo per theme: the white-letter lockup on the dark top bar. */
+.tbar-logo .tbar-logo-d{display:none}
+html[data-theme="dark"] .tbar-logo .tbar-logo-l{display:none}
+html[data-theme="dark"] .tbar-logo .tbar-logo-d{display:block}
 .tbar-nav{flex:0 1 auto;min-width:0;display:flex;align-items:center;overflow:hidden}
 .tbar-ol{display:flex;align-items:center;gap:8px;min-width:0;margin:0;padding:0;list-style:none;overflow:hidden;font:400 14px var(--font-sans),sans-serif;color:oklch(var(--ink-muted))}
 .tbar-ol li{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}

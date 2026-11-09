@@ -281,7 +281,7 @@ export function HomeCard({ h, onUpload }: { h: HomeData; onUpload: (n?: NeedRow)
           title={`${ring.label} · ${pct}%`}
           className="whitespace-nowrap text-brand-text underline-offset-2 hover:underline"
         >
-          {after ? `${ring.done} of ${ring.total} done` : `${ring.done} of ${ring.total} steps`}
+          {after ? `${ring.done} of ${ring.total} done` : `${ring.done} of ${ring.total} steps to COI`}
         </button>
       }
       stats={stats}

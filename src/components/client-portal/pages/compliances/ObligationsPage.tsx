@@ -333,7 +333,8 @@ function ObligationsBody({ today }: { today: string }) {
                 {hasNs ? <h3 className="mb-2 text-[13px] font-medium text-ink-muted">Statutory</h3> : null}
                 <StackedBar
                   onPick={(k) => setStatus((cur) => (cur === k ? null : (k as CompStatus)))}
-                  segments={STATUS_ORDER.map((s) => ({ key: s, label: WORD[s], value: after ? count(s) : 0, fill: FILL[s] }))}
+                  // Before the certificate every listed obligation is upcoming, so the bar says so instead of 0.
+                  segments={STATUS_ORDER.map((s) => ({ key: s, label: WORD[s], value: after ? count(s) : s === 'up' ? before.length : 0, fill: FILL[s] }))}
                 />
               </>
             ) : null}

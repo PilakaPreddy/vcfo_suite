@@ -81,7 +81,7 @@ export function WorkAreaCard({ items, title = 'By area', loading }: { items: Cou
             return (
               <li
                 key={r.area}
-                className="grid grid-cols-[104px_minmax(0,1fr)_40px] items-center gap-3 text-[12.5px]"
+                className="grid grid-cols-[104px_minmax(0,1fr)_auto] items-center gap-3 text-[12.5px]"
                 title={`${r.area}: ${r.done} done, ${r.pending} pending, ${r.late} overdue`}
               >
                 <AreaPill area={r.area} />
@@ -90,8 +90,8 @@ export function WorkAreaCard({ items, title = 'By area', loading }: { items: Cou
                   {r.pending > 0 ? <i className="block bg-brand" style={{ width: w(r.pending) }} /> : null}
                   {r.late > 0 ? <i className="block bg-danger-mid" style={{ width: w(r.late) }} /> : null}
                 </span>
-                <span className="text-right text-[12.5px] text-ink-muted tabular-nums">
-                  {r.done}/{r.total}
+                <span className="whitespace-nowrap text-right text-[12.5px] text-ink-muted tabular-nums">
+                  {r.done} of {r.total} done
                 </span>
               </li>
             );

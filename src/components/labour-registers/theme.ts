@@ -8,6 +8,10 @@
  * thirty-six, content-width chips rather than the fixed 104, and the system font stack rather
  * than Roboto.
  *
+ * 2026-11: the colours, faces and corner radii now read the shared tokens, so the screens no longer
+ * look like a second product (blue button, system font) and follow dark mode. The variables stay,
+ * so the components did not change.
+ *
  * **They are scoped to this feature on purpose.** Putting them in `app/globals.css` or
  * `tailwind.config.ts` would repaint incorporation, the compliance calendar, the client portal
  * and all six shells — every screen in the product, most of which nobody has looked at in this
@@ -20,35 +24,37 @@
 
 /** The custom properties the feature's components read. Applied by `LabourRegistersTheme`. */
 export const LR_TOKENS = {
-  '--lr-canvas': '#f5f7fa',
-  '--lr-surface': '#ffffff',
-  '--lr-raised': '#eef1f5',
-  '--lr-line': '#e3e7ed',
-  '--lr-line-2': '#d6dbe3',
-  '--lr-ink': '#1f2733',
-  '--lr-ink-2': '#3a4350',
-  '--lr-muted': '#4a5462',
-  '--lr-faint': '#5b6472',
-  '--lr-primary': '#1660d8',
-  '--lr-primary-deep': '#1453b8',
-  '--lr-primary-soft': '#e8f0fe',
-  '--lr-ok': '#0b7a43',
-  '--lr-ok-soft': '#dff5e7',
-  '--lr-warn': '#9a4d00',
-  '--lr-warn-soft': '#fff0d9',
-  '--lr-bad': '#c0182f',
-  '--lr-bad-soft': '#ffe6e9',
-  '--lr-info': '#06708c',
-  '--lr-info-soft': '#dff3f9',
+  // The colours and faces follow the shared design tokens, so the screens match the rest of the app
+  // (brand button, app font) and follow dark mode. Sizes stay the reference's.
+  '--lr-canvas': 'oklch(var(--surface))',
+  '--lr-surface': 'oklch(var(--surface-raised))',
+  '--lr-raised': 'oklch(var(--surface-sunken))',
+  '--lr-line': 'oklch(var(--line))',
+  '--lr-line-2': 'oklch(var(--line-strong))',
+  '--lr-ink': 'oklch(var(--ink))',
+  '--lr-ink-2': 'oklch(var(--ink-2))',
+  '--lr-muted': 'oklch(var(--ink-muted))',
+  '--lr-faint': 'oklch(var(--ink-faint))',
+  '--lr-primary': 'oklch(var(--brand))',
+  '--lr-primary-deep': 'oklch(var(--brand-strong))',
+  '--lr-primary-soft': 'oklch(var(--brand-soft))',
+  '--lr-ok': 'oklch(var(--positive))',
+  '--lr-ok-soft': 'oklch(var(--positive-soft))',
+  '--lr-warn': 'oklch(var(--warning))',
+  '--lr-warn-soft': 'oklch(var(--warning-soft))',
+  '--lr-bad': 'oklch(var(--danger))',
+  '--lr-bad-soft': 'oklch(var(--danger-soft))',
+  '--lr-info': 'oklch(var(--info))',
+  '--lr-info-soft': 'oklch(var(--info-soft))',
   /* The register-green the reference uses for "due" states and the Shops and Establishments act. */
   '--lr-reg': '#6ba815',
   '--lr-reg-soft': 'rgba(107,184,21,0.12)',
-  '--lr-radius-card': '12px',
-  '--lr-radius-control': '8px',
+  '--lr-radius-card': '8px',
+  '--lr-radius-control': '6px',
   '--lr-radius-chip': '6px',
-  '--lr-h-control': '44px',
-  '--lr-font': 'system-ui, -apple-system, "Segoe UI", sans-serif',
-  '--lr-mono': 'ui-monospace, SFMono-Regular, Menlo, monospace',
+  '--lr-h-control': '40px',
+  '--lr-font': 'var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif',
+  '--lr-mono': 'var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace',
 } as const;
 
 /** Ready-made class strings, so the same card is not written two ways on two screens. */

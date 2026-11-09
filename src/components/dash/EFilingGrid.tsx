@@ -30,6 +30,40 @@ export type EFilingRowShortcut<T> = { key: string; run: (row: T) => void };
 export const GRID_SUB = 'grid-sub';
 
 /** E-09: the head sticks only when the table fits its card; a sideways-scrolling table keeps it at the top of the table. */
+/**
+ * A sticky head sticks to the nearest ancestor that clips overflow. When that ancestor is a card
+ * with `overflow: hidden` (it does not scroll), the head's top offset pushes it down over the first
+ * row instead. So the head only sticks when the nearest clipping ancestor really scrolls.
+ */
+function stickyCanWork(wrap: HTMLElement): boolean {
+  for (let el = wrap.parentElement; el && el !== document.body && el !== document.documentElement; el = el.parentElement) {
+    const { overflowY } = getComputedStyle(el);
+    if (overflowY === 'visible' || overflowY === 'clip') continue;
+    return (overflowY === 'auto' || overflowY === 'scroll') && el.scrollHeight > el.clientHeight + 1;
+  }
+  return true;
+}
+
+/** True while a sideways-scrolling table still has columns hidden past its right edge. */
+function useMoreRight(wrap: RefObject<HTMLDivElement | null>) {
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const w = wrap.current;
+    if (!w || typeof ResizeObserver === 'undefined') return;
+    const check = () => setMore(w.scrollWidth - w.clientWidth - w.scrollLeft > 2);
+    check();
+    w.addEventListener('scroll', check, { passive: true });
+    const ro = new ResizeObserver(check);
+    ro.observe(w);
+    if (w.firstElementChild) ro.observe(w.firstElementChild);
+    return () => {
+      w.removeEventListener('scroll', check);
+      ro.disconnect();
+    };
+  }, [wrap]);
+  return more;
+}
+
 function useTableFits(wrap: RefObject<HTMLDivElement | null>, table: RefObject<HTMLTableElement | null>, on: boolean) {
   const [fits, setFits] = useState(false);
   const [width, setWidth] = useState(0);
@@ -38,7 +72,7 @@ function useTableFits(wrap: RefObject<HTMLDivElement | null>, table: RefObject<H
     const t = table.current;
     if (!w || !t || typeof ResizeObserver === 'undefined') return;
     const check = () => {
-      setFits(on && t.offsetWidth <= w.clientWidth + 1);
+      setFits(on && t.offsetWidth <= w.clientWidth + 1 && stickyCanWork(w));
       setWidth(w.clientWidth);
     };
     check();
@@ -200,6 +234,7 @@ export function EFilingGrid<T>({
   const wrapRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<HTMLTableElement>(null);
   const sticky = useTableFits(wrapRef, tableRef, !!stickyHead);
+  const moreRight = useMoreRight(wrapRef);
 
   // E-01
   const [ownPicked, setOwnPicked] = useState<Set<string>>(() => new Set());
@@ -281,7 +316,14 @@ export function EFilingGrid<T>({
 
   return (
     <div className="min-w-0">
-      <div ref={wrapRef} className={cn('max-w-full', sticky.fits ? 'overflow-visible' : 'overflow-x-auto')}>
+      <div className="relative">
+      {/* Columns past the card edge: a fade says the table scrolls sideways. */}
+      {moreRight ? (
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 right-0 z-[5] w-10 bg-gradient-to-l from-surface-raised to-transparent" />
+      ) : null}
+      {/* relative: an absolutely placed child (a screen-reader-only head label) must stay inside the
+          scroll box; without a positioned ancestor here it escaped and widened the whole page. */}
+      <div ref={wrapRef} className={cn('relative max-w-full', sticky.fits ? 'overflow-visible' : 'overflow-x-auto')}>
         <table
           ref={tableRef}
           className={cn('w-full table-fixed border-collapse text-[14px]', compact && '[&_.grid-sub]:hidden')}
@@ -309,7 +351,7 @@ export function EFilingGrid<T>({
               {selectable ? (
                 <th
                   scope="col"
-                  className={cn('h-9 border-b-1.5 border-line pl-2.5 pr-0', stickTh, boxSticky, stickyFirstColumn && 'max-sm:z-[3]')}
+                  className={cn('h-9 border-b-1.5 border-line pl-3.5 pr-0', stickTh, boxSticky, stickyFirstColumn && 'max-sm:z-[3]')}
                   style={headTop !== undefined ? { top: headTop } : undefined}
                 >
                   <RowBox checked={pageAll} mixed={!pageAll && pageSome} onChange={pickPage} label="Pick every row on this page" />
@@ -463,7 +505,7 @@ export function EFilingGrid<T>({
                     onKeyDown={focusable ? onRowKey(row) : undefined}
                   >
                     {selectable ? (
-                      <td className={cn('relative border-b border-line-soft pl-2.5 pr-0 align-middle', boxSticky)}>
+                      <td className={cn('relative border-b border-line-soft pl-3.5 pr-0 align-middle', boxSticky)}>
                         {mark}
                         <RowBox
                           checked={isPicked}
@@ -509,6 +551,7 @@ export function EFilingGrid<T>({
             )}
           </tbody>
         </table>
+      </div>
       </div>
       {showE3 ? (
         <EmptyState

@@ -212,7 +212,8 @@ export default function ManagersPage() {
             rowClassName={(r) => (r.id === picked?.id ? 'bg-brand-soft' : undefined)}
             loading={managersQuery.isLoading}
             empty="No managers yet"
-            minWidth={900}
+            // The fixed columns take 730px; 1000 leaves the name about 240px, so "Joseph Mathew" is not cut.
+            minWidth={1000}
           />
         </DashSection>
 

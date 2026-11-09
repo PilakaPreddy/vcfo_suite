@@ -21,6 +21,7 @@ import {
   type FilingReopen,
   type TrendPeriod,
 } from '@/lib/metrics/home-trends';
+import { titleWithPeriod } from '@/lib/compliance/period-title';
 
 /* ------------------------------------------------------------------ *
  * Shapes
@@ -620,7 +621,7 @@ export function buildRisks(insights: Pick<SuperInsights, 'clients' | 'filings'>,
     out.push({
       id: `filing:${filing.id}`,
       kind: 'filing',
-      title: filing.periodLabel ? `${filing.title} · ${filing.periodLabel}` : filing.title,
+      title: titleWithPeriod(filing.title, filing.periodLabel),
       engagementId: filing.engagementId,
       companyName: filing.companyName,
       href: filing.href,

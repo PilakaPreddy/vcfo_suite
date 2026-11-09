@@ -41,7 +41,8 @@ export function AvatarStack({
   const shown = list.slice(0, max);
   const more = list.length - shown.length;
   const all = label ?? list.map((p) => p.name).join(', ');
-  const overlap = size === 24 ? '-ml-1.5' : '-ml-2';
+  // Overlap stays under a fifth of the circle so two-letter initials are never covered by the next ring.
+  const overlap = size === 24 ? '-ml-1' : '-ml-1.5';
   const box = size === 24 ? 'h-6 w-6 text-[10px]' : 'h-[30px] w-[30px] text-[11px]';
   return (
     <span className={cn('inline-flex flex-none items-center', className)} role="img" aria-label={all} title={all}>

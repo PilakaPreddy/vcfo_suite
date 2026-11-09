@@ -333,7 +333,8 @@ export default function ComposeMail({ path }: Props) {
             href={settingsHref}
             className="text-[13px] font-medium text-brand-text hover:underline"
           >
-            Profile › Email
+            {/* Not a second Settings: this opens the Outlook mailbox page under Profile. */}
+            Outlook mailbox ›
           </Link>
         </div>
 

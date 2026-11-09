@@ -338,18 +338,23 @@ export function useFirmPeople() {
     };
   }, [engagements, getStateForEngagement]);
 
+  // A manager's lists hold only their own team, so a project can name a lead or manager who is not
+  // in them (or the manager themself). Look in every list the page has, then say so in words; an
+  // id is never shown as a name.
   const leadName = (id: string | null | undefined) => {
     if (!id) return '—';
     return (
       teamMembers.find((t) => t.id === id)?.name ??
       leads.find((l) => l.internId === id || l.id === id)?.name ??
-      id
+      people.find((p) => p.internId === id || p.id === id)?.name ??
+      'Another team'
     );
   };
 
   const managerName = (id: string | null | undefined) => {
     if (!id) return '—';
-    return managers.find((m) => m.id === id)?.name ?? id.slice(0, 8);
+    if (id === user?.id) return user.name;
+    return managers.find((m) => m.id === id)?.name ?? people.find((p) => p.id === id)?.name ?? 'Another manager';
   };
 
   /** True when this project is already attached to the person (as PM or lead). */

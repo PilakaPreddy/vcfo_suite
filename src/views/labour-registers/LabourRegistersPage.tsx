@@ -406,7 +406,8 @@ export function LabourRegistersPage({
                     <div className="text-[13px] font-semibold text-[var(--lr-ink)]">
                       Form {form.formNumber} — {form.title}
                     </div>
-                    <div className={`${lr.code} mt-0.5 text-[12px] text-[var(--lr-muted)]`}>
+                    {/* Rule and period are prose, so they read in the body face, not in code mono. */}
+                    <div className="mt-0.5 text-[12.5px] text-[var(--lr-muted)]">
                       {form.rule} · {form.period} · {form.columns.length} columns
                       {form.verification.status === 'unverified'
                         ? ' · not yet checked against the prescribed form'

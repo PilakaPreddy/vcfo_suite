@@ -2,7 +2,7 @@
 
 /**
  * INCORPORATION LANDING (VCFO Spectrum, prototype src/screens/client/IncorporationScreen.tsx).
- * A plain page head with the days to the COI, then the ST5 card beside "This week" and one
+ * A plain page head with the days to the COI, then the ST5 card beside "Up next" and one
  * "Incorporation status" card with four stacked bars (R-25), then the phase timeline (R-21) whose
  * rows open the step tables. Phases 1 to 3 only (D1: no Registration section). Wired to the real
  * step model; every drill, the board resolution link and the timeline editor are kept.
@@ -19,6 +19,7 @@ import { isReviewRejected, isAwaitingReview } from '@/lib/checklist/checklist-it
 import { clientBoardResolutionPath } from '@/lib/projects/project-step-path';
 import type { PortalPhase, PortalStep } from '@/lib/client-portal/step-model';
 import { cn } from '@/lib/utils';
+import { tickHidden } from '@/components/timeline/GanttTimeline';
 import { Button } from '@/components/ui/button';
 import { Chip, OwnerChip } from '@/components/ui/spectrum-chip';
 import { StepMark } from '@/components/ui/step-track';
@@ -175,16 +176,6 @@ function SplitCard({ rows }: { rows: Array<{ title: string; unit: string; segs: 
 
 /* ---------------- dates ---------------- */
 
-function weekRange(today: string): string {
-  const d = pd(today);
-  const dow = (d.getUTCDay() + 6) % 7;
-  const mon = addD(today, -dow);
-  const sun = addD(mon, 6);
-  const a = pd(mon);
-  const b = pd(sun);
-  return a.getUTCMonth() === b.getUTCMonth() ? `${a.getUTCDate()} to ${fmt(sun)}` : `${fmt(mon)} to ${fmt(sun)}`;
-}
-
 /** True below the md breakpoint: the timeline axis shows every second week. */
 function useNarrow() {
   const [narrow, setNarrow] = useState(false);
@@ -235,7 +226,7 @@ function PhaseLineRow({
   const labelLeft = plan ? b > 75 : false;
   const tip = `${PHL[i]} · ${p.done} of ${p.total} done${plan ? ` · ${fmt(plan[0])} → ${fmt(plan[1])}` : ''}`;
   return (
-    <div className="grid h-row grid-cols-[200px_minmax(0,1fr)] items-center px-4 hover:bg-surface-sunken md:grid-cols-[230px_minmax(0,1fr)] md:px-5">
+    <div className="grid h-row grid-cols-[124px_minmax(0,1fr)] items-center px-4 hover:bg-surface-sunken md:grid-cols-[230px_minmax(0,1fr)] md:px-5">
       <button
         type="button"
         onClick={onToggle}
@@ -278,7 +269,7 @@ function PhaseLineRow({
           <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[2px] bg-highlight-bright" style={{ left: `${b}%` }} aria-label={`COI ${fmt(plan[1])}`} />
         ) : null}
         <span
-          className="absolute top-1/2 flex -translate-y-1/2 items-baseline gap-1.5 whitespace-nowrap text-[12.5px] text-ink-muted"
+          className="absolute top-1/2 z-[1] flex -translate-y-1/2 items-baseline gap-1.5 whitespace-nowrap rounded-sm bg-surface-raised px-1 text-[12.5px] text-ink-muted"
           style={!plan ? { left: 0 } : labelLeft ? { right: `calc(${100 - a}% + 12px)` } : { left: `calc(${b}% + 14px)` }}
         >
           <b className="text-[14px] font-medium text-ink">{pct}%</b>
@@ -357,7 +348,7 @@ export default function IncorporationLanding() {
       ) : null}
       <Dot />
       <button type="button" onClick={drillAll} className="text-brand-text hover:underline">
-        {all.done} / {all.total} steps · {all.pct}%
+        {all.done} of {all.total} steps in phases 1–3 · {all.pct}%
       </button>
     </>
   ) : (
@@ -373,7 +364,7 @@ export default function IncorporationLanding() {
       ) : null}
       <Dot />
       <button type="button" onClick={drillAll} className="text-brand-text hover:underline">
-        {all.done} / {all.total} steps · {all.pct}%
+        {all.done} of {all.total} steps in phases 1–3 · {all.pct}%
       </button>
     </>
   );
@@ -403,7 +394,7 @@ export default function IncorporationLanding() {
     </>
   );
 
-  /* ---------- This week ---------- */
+  /* ---------- Up next ---------- */
   const week = useMemo(() => {
     type WRow = { o: 'You' | 'SBC' | 'MCA'; t: string; dt: string; step: PortalStep };
     const rows: WRow[] = [];
@@ -433,11 +424,12 @@ export default function IncorporationLanding() {
       const o = ownKey(s);
       rows.push({ o, t: s.title, dt: o === 'You' ? (s.due ? fmt(s.due) : '-') : !s.due || s.due <= soon ? 'Now' : fmt(s.due), step: s });
     }
-    return { rows: rows.slice(0, 4), range: weekRange(today) };
+    return { rows: rows.slice(0, 4) };
   }, [d.extras?.fileRequests, model, today]);
 
   const weekCard = (
-    <SCard title="This week" meta={week.range} flush>
+    // The next four open items, whatever their date: "This week" with a date range was untrue for a step due next month.
+    <SCard title="Up next" flush>
       {week.rows.length === 0 ? (
         <Empty />
       ) : (
@@ -545,12 +537,12 @@ export default function IncorporationLanding() {
       }
     >
       <div className="overflow-x-auto">
-        <div className="min-w-[680px]">
-          <div className="grid h-[34px] grid-cols-[200px_minmax(0,1fr)] items-end px-4 pb-1.5 text-[11.5px] text-ink-faint md:grid-cols-[230px_minmax(0,1fr)] md:px-5" aria-hidden>
+        <div className="md:min-w-[560px]">
+          <div className="grid h-[34px] grid-cols-[124px_minmax(0,1fr)] items-end px-4 pb-1.5 text-[11.5px] text-ink-faint md:grid-cols-[230px_minmax(0,1fr)] md:px-5" aria-hidden>
             <span />
             <div className="relative h-full">
-              {ticks.map((t) => (
-                <span key={t} className="absolute bottom-0 -translate-x-1/2 whitespace-nowrap" style={{ left: `${pos(t)}%` }}>
+              {ticks.map((t, i) => (
+                <span key={t} className={cn('absolute bottom-0 -translate-x-1/2 whitespace-nowrap', tickHidden(i))} style={{ left: `${pos(t)}%` }}>
                   {fmt(t)}
                 </span>
               ))}
@@ -592,13 +584,13 @@ export default function IncorporationLanding() {
             </div>
           ))}
           {todayX != null ? (
-            <div className="grid h-[26px] grid-cols-[200px_minmax(0,1fr)] px-4 md:grid-cols-[230px_minmax(0,1fr)] md:px-5">
+            <div className="grid h-[32px] grid-cols-[124px_minmax(0,1fr)] px-4 md:grid-cols-[230px_minmax(0,1fr)] md:px-5">
               <span />
               <div className="relative h-full">
                 <span className="absolute inset-y-0 border-l-[1.5px] border-highlight-bright" style={{ left: `${todayX}%` }} aria-hidden />
                 <button
                   type="button"
-                  className="absolute bottom-1 -translate-x-1/2 rounded-sm bg-highlight-bright px-1.5 py-px text-[11px] font-medium text-white"
+                  className="absolute bottom-2 -translate-x-1/2 rounded-sm bg-highlight px-1.5 py-px text-[11px] font-medium text-on-status"
                   style={{ left: `${todayX}%` }}
                   aria-label={`Today · ${wd(today)} ${fmt(today)}`}
                   onClick={() => toast(`Today · ${wd(today)} ${fmtY(today)}`)}

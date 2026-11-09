@@ -226,8 +226,9 @@ export function ProjectsView(props: ProjectsViewProps) {
     },
     {
       key: 'steps',
-      header: 'Steps',
-      width: '72px',
+      // Every step, registrations included (48), so it is not read as the "Step 10 of 14" on the project page.
+      header: 'All steps',
+      width: '84px',
       align: 'right',
       render: (item) => (
         <span className="text-[13px] tabular-nums text-ink-muted">
@@ -289,15 +290,16 @@ export function ProjectsView(props: ProjectsViewProps) {
         path={`${projectBase}/projects`}
       />
 
-      <h1 className="sr-only">Clients</h1>
+      {/* Named as the nav and the top bar name the page. */}
+      <h1 className="sr-only">Projects</h1>
       {view === 'board' ? <div className="mb-4 flex justify-end">{headTools}</div> : null}
 
       {view === 'table' && (
         <section className="surface min-w-0 overflow-hidden" aria-label="Clients">
           {/* DataGrid head (prototype `ClientsGrid`): tile, "Clients", "n of N", stage tabs and filter chips. */}
           <div className="flex min-h-[52px] min-w-0 flex-wrap items-center gap-x-2.5 gap-y-2 border-b border-line-soft px-4 py-2">
-            <CardHeadTile title="Clients" />
-            <h2 className="min-w-0 truncate text-[15px] font-medium text-ink">Clients</h2>
+            <CardHeadTile title="Projects" />
+            <h2 className="min-w-0 truncate text-[15px] font-medium text-ink">Projects</h2>
             {!engagementsLoading ? (
               <span className="shrink-0 text-[12.5px] tabular-nums text-ink-muted">
                 {shownRows.length === enriched.length ? enriched.length : `${shownRows.length} of ${enriched.length}`}

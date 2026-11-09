@@ -10,6 +10,7 @@ import { toastSaved } from '@/components/ui/toast-saved';
 import { isValidWindowRange } from '@/lib/projects/schedule-windows';
 import { errorMessage, toastError } from '@/lib/toast-errors';
 import { cn } from '@/lib/utils';
+import { sep } from '@/lib/date-format';
 
 type WindowValue = { from: string; to: string } | null | undefined;
 
@@ -18,7 +19,8 @@ const DAY_MONTH = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'sho
 /** "14 Oct" from an ISO calendar date (R-29: plain dates). */
 function shortDate(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
-  return Number.isNaN(d.getTime()) ? iso : DAY_MONTH.format(d);
+  // R-29: "26 Sep", never the en-GB "26 Sept".
+  return Number.isNaN(d.getTime()) ? iso : sep(DAY_MONTH.format(d));
 }
 
 /**

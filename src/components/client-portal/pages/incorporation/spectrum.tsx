@@ -360,7 +360,8 @@ function PhaseTrack({ model, current, className, onPhase }: { model: PortalIncor
           </>
         );
         return (
-          <div key={p.id} role="listitem" className="flex min-w-0" style={{ flex: `${Math.max(1, total)} 1 0` }}>
+          // A floor of 8rem keeps a short phase (Name Application, 5 steps) from shrinking to "Name App…".
+          <div key={p.id} role="listitem" className="flex min-w-0 md:min-w-[8rem]" style={{ flex: `${Math.max(1, total)} 1 0` }}>
             {onPhase ? (
               <button type="button" onClick={() => onPhase(p.no)} aria-label={`Phase ${p.no} · ${p.name} · ${done} of ${total}`} className="flex min-w-0 flex-1 flex-col gap-[7px] text-left">
                 {body}
@@ -491,7 +492,8 @@ export function St5Card({
   return (
     <SCard
       title={title}
-      meta={`${done} of ${steps.length}`}
+      // Name the scope: Home counts four phases (registration too), the Incorporation page three.
+      meta={`${done} of ${steps.length} steps in ${model.phases.length} phases`}
       pill
       headIcon={{ icon: ListChecks, tone: 'blue' }}
       className={className}
@@ -591,9 +593,9 @@ export function PageHead({
 }
 
 /** Dot between meta items. */
-export function Dot() {
+export function Dot({ className }: { className?: string } = {}) {
   return (
-    <span className="text-ink-faint" aria-hidden>
+    <span className={cn('text-ink-faint', className)} aria-hidden>
       ·
     </span>
   );

@@ -809,7 +809,7 @@ function SidebarRail({ onPin, onPeek }: { onPin?: () => void; onPeek?: (open: bo
               href={portalHref(n.k!)}
               className="vps-i"
               aria-current={n.k === act ? 'page' : undefined}
-              data-tip={`${n.t}${isInc ? ` · ${incBadge} steps` : n.badge ? ` · ${n.badge}` : ''}`}
+              data-tip={`${n.t}${isInc ? ` · ${incBadge} steps to COI` : n.badge ? ` · ${n.badge}` : ''}`}
               onClick={(e) => {
                 e.preventDefault();
                 closeFly();
@@ -822,7 +822,7 @@ function SidebarRail({ onPin, onPeek }: { onPin?: () => void; onPeek?: (open: bo
               </span>
               <span className="vps-t">
                 {n.t}
-                {isInc ? ` · ${incBadge} steps` : ''}
+                {isInc ? ` · ${incBadge} steps to COI` : ''}
               </span>
               {n.badge && !isInc ? <Badge b={n.badge} /> : null}
             </a>

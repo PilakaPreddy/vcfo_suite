@@ -291,8 +291,9 @@ function InternClientsInner() {
     },
     {
       key: 'steps',
-      header: 'Steps',
-      width: '64px',
+      // The steps of phases 1 to 3 (25), named so it is not read as the project page's "Step 10 of 14".
+      header: 'Phases 1–3',
+      width: '92px',
       align: 'right',
       render: (r) => (
         <span className="text-[13px] tabular-nums text-ink-muted" title={`${r.pct}% done`}>

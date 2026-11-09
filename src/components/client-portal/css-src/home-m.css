@@ -67,7 +67,7 @@ button:where(:not(.cp-tw *)){font:inherit;color:inherit}
 .seg{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);padding:2px;border-radius:6px;background:oklch(var(--surface-sunken));box-shadow:inset 0 0 0 1px var(--border);margin:0 14px 10px}
 .seg .th{display:none}
 .seg button{position:relative;z-index:1;border:0;background:none;height:38px;min-width:0;padding:0 4px;border-radius:6px;font:500 12px var(--font-sans);color:oklch(var(--ink-muted));cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px}
-.seg button[aria-selected=true]{background:oklch(var(--navy-fill));color:#fff}
+.seg button[aria-selected=true]{background:oklch(var(--navy-fill));color:oklch(var(--on-navy))}
 .seg .c{font:500 11px var(--font-sans);opacity:.75}
 /* rows */
 .row{display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 14px;border-top:1px solid var(--hair);width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;cursor:pointer;color:inherit}

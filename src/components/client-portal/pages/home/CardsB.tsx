@@ -14,6 +14,7 @@ import { AreaPill, Chip, OwnerChip, type ChipTone } from '@/components/ui/spectr
 import { regOf, type Regulator } from '@/lib/ui/regulator';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { StepMark } from '@/components/ui/step-track';
+import { tickHidden } from '@/components/timeline/GanttTimeline';
 import { phaseHref, portalHref, stepHref } from '@/components/client-portal/routes';
 import type { DrillConfig } from '@/components/client-portal/PortalProvider';
 import type { HomeFiling } from '@/lib/client/client-home';
@@ -151,21 +152,22 @@ export function TimelineCard({ h, phases, onEdit, className }: { h: HomeData; ph
     mca: [one('pre-11'), 2, undefined],
     coi: [one('pre-12'), 3, undefined],
   };
-  const cols = 'grid-cols-[200px_minmax(0,1fr)_72px] md:grid-cols-[280px_minmax(0,1fr)_100px]';
+  // Phones get a narrow name column so the chart fits the card instead of scrolling out of sight.
+  const cols = 'grid-cols-[124px_minmax(0,1fr)_56px] md:grid-cols-[280px_minmax(0,1fr)_100px]';
   return (
     <SCard title="Timeline" meta={h.after ? undefined : changed} flush className={className} right={right}>
       <div className="overflow-x-auto">
-        <div className="min-w-[680px] md:min-w-[560px]">
+        <div className="md:min-w-[560px]">
           <div className={cn('grid h-[46px] items-end px-4 pb-1.5 text-[11.5px] text-ink-faint md:px-5', cols)}>
             <span />
             <div className="relative h-full">
               {axis.ticks.map((k, i) => (
-                <span key={k.iso} className={cn('absolute bottom-0 -translate-x-1/2 whitespace-nowrap', i % 2 === 1 && 'max-md:invisible')} style={{ left: `${k.pct}%` }}>
+                <span key={k.iso} className={cn('absolute bottom-0 -translate-x-1/2 whitespace-nowrap', tickHidden(i), Math.abs(k.pct - todayX) < 7.5 && 'invisible')} style={{ left: `${k.pct}%` }}>
                   {dShort(k.iso)}
                 </span>
               ))}
               <span className="absolute -bottom-1.5 h-[22px] border-l-[1.5px] border-highlight-bright" style={{ left: `${todayX}%` }}>
-                <span className="absolute -left-6 -top-[22px] whitespace-nowrap rounded-sm bg-highlight-bright px-1.5 py-px text-[10.5px] font-medium text-white">Today</span>
+                <span className="absolute -left-6 -top-[22px] whitespace-nowrap rounded-sm bg-highlight px-1.5 py-px text-[10.5px] font-medium text-on-status">Today</span>
               </span>
             </div>
             <span />

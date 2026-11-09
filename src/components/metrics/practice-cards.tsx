@@ -105,7 +105,7 @@ export function AdminPracticeCards({
               .map((t) => (
                 <li
                   key={t.id}
-                  className="grid grid-cols-[minmax(0,110px)_minmax(0,1fr)_28px] items-center gap-3 text-[12.5px]"
+                  className="grid grid-cols-[minmax(0,110px)_minmax(0,1fr)_auto] items-center gap-3 text-[12.5px]"
                   title={`${t.title}: ${t.done} done, ${t.inProgress} in progress, ${t.pending} pending`}
                 >
                   <span className="truncate font-medium">{t.title}</span>
@@ -118,7 +118,10 @@ export function AdminPracticeCards({
                       { label: 'Pending', value: t.pending, tone: 'warn' },
                     ]}
                   />
-                  <b className="text-right font-medium tabular-nums">{t.inProgress + t.pending}</b>
+                  {/* The bar is done / in progress / pending; the number counts what is still open, so it says so. */}
+                  <span className="whitespace-nowrap text-right tabular-nums text-ink-muted">
+                    <b className="font-medium text-ink">{t.inProgress + t.pending}</b> open
+                  </span>
                 </li>
               ))}
           </ul>

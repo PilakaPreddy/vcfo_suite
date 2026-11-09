@@ -66,7 +66,7 @@ export function SegmentedPicker<T extends string>({
               'inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-center font-medium transition-colors duration-150',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring',
               size === 'sm' ? 'h-7 px-2 text-[12px]' : 'h-8 px-3 text-[12.5px]',
-              active ? 'bg-navy font-semibold text-on-navy' : 'text-ink-muted hover:text-ink',
+              active ? 'bg-brand font-semibold text-on-brand shadow-shine' : 'text-ink-muted hover:text-ink',
             )}
           >
             {opt.label}

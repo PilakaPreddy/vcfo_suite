@@ -134,13 +134,13 @@
       {
         "name": "ink-faint",
         "value": {
-          "light": "#8896a8",
-          "dark": "#6b7482"
+          "light": "#627086",
+          "dark": "#868f9d"
         },
-        "usage": "Placeholders, disabled labels, locked steps, the Other series. 3:1 only; never body text.",
+        "usage": "Placeholders, empty-state copy, dashes, locked steps, the Other series. Lighter than ink-muted but still 4.5:1 on surface, surface-raised and surface-sunken, because it is used for readable text.",
         "oklch": {
-          "light": "66.8% 0.031 255",
-          "dark": "55.6% 0.024 259"
+          "light": "54.2% 0.038 259",
+          "dark": "64.7% 0.023 259"
         }
       },
       {

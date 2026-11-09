@@ -69,12 +69,12 @@ import { useTasks, type TaskRowDto } from '@/views/compliances/tasks/api';
 import { fyRange, taskAsFilingRow, taskHintOf, taskIdOfRow, taskStatus } from '@/views/compliances/tasks/task-calendar';
 import { statHref, taskHref } from '@/views/compliances/tasks/task-list';
 import { showStat, showTasks, type CatFilter } from '@/views/compliances/tasks/task-model';
+import { sep } from '@/lib/date-format';
 
 type CalendarView = 'month' | 'year' | 'timeline' | 'statutory';
 const ALL_AREAS = 'all';
 const LONG_DOW = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const LONG_MON = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const SHORT_DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function firstOfMonth(date: Date): Date {
   return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
@@ -455,7 +455,8 @@ function CalDateTile({ iso, status, className }: { iso: string; status: FilingSt
   return (
     <span className={cn('grid h-12 w-11 flex-none place-content-center rounded-md text-center leading-none', STATUS_TILE[status], className)} aria-hidden>
       <b className="text-[18px] font-medium tabular-nums">{d ? d.getUTCDate() : '—'}</b>
-      <small className="mt-1 text-[11px] font-medium opacity-85">{d ? SHORT_DOW[d.getUTCDay()] : ''}</small>
+      {/* The list runs across months, so the tile names the month (as every other date tile does), not the weekday. */}
+      <small className="mt-1 text-[11px] font-medium opacity-85">{d ? sep(d.toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' })) : ''}</small>
     </span>
   );
 }

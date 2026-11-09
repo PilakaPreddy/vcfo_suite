@@ -419,7 +419,9 @@ function SbcRow({ p }: { p: ClientPortalContact }) {
       target: href && (kind === 'wa' || kind === 'teams') ? '_blank' : undefined,
       rel: 'noopener noreferrer',
       'aria-label': `${label} ${p.name}`,
-      'data-tip': label,
+      // No contact set: the button shows as unavailable (dimmed) instead of looking ready to use.
+      'aria-disabled': href ? undefined : ('true' as const),
+      'data-tip': href ? label : `${label} is not set up yet`,
       onClick: (e: React.MouseEvent) => {
         if (!href) {
           e.preventDefault();

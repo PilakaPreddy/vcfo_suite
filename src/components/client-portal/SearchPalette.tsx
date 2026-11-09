@@ -30,6 +30,7 @@ import { useAskOptional } from '@/components/ask/ask-context';
 import { stepChip } from './pages/incorporation/spectrum';
 import { buildRegistrations } from './pages/registrations/model';
 import { registrationHref } from './pages/registrations/parts';
+import { formLabel } from '@/lib/ui/form-label';
 
 type Hit = SearchHit & { icon?: keyof typeof SHELL_PATHS };
 
@@ -221,7 +222,7 @@ function SearchBody({ onClose }: { onClose: () => void }) {
           .map((s) => ({
             group: 'Steps' as const,
             title: `Step ${s.n} · ${s.title}`,
-            meta: s.item.forms?.join(' · '),
+            meta: s.item.forms?.map(formLabel).join(' · '),
             href: stepHref(s.id),
             status: stepChip(s).label,
             code: s.item.forms?.[0],
@@ -229,7 +230,7 @@ function SearchBody({ onClose }: { onClose: () => void }) {
       : getActiveCatalogItems().map((it, i) => ({
           group: 'Steps' as const,
           title: `Step ${i + 1} · ${it.title}`,
-          meta: it.forms?.join(' · '),
+          meta: it.forms?.map(formLabel).join(' · '),
           href: stepHref(it.id),
           code: it.forms?.[0],
         }));
