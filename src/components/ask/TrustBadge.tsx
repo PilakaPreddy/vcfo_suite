@@ -8,12 +8,14 @@ import { Chip } from '@/components/ui/spectrum-chip';
  * badge. Drawn as the Spectrum status chip (green reviewed, amber AI answer,
  * grey draft).
  */
-export function TrustBadge({ answer, firmName }: { answer: AnswerEnvelope; firmName: string }) {
+export function TrustBadge({ answer, firmName, staff = false }: { answer: AnswerEnvelope; firmName: string; staff?: boolean }) {
   if (answer.origin === 'refusal' || answer.origin === 'work') return null;
+  // Staff run the work themselves, so "check with your lead" would point a lead at themselves.
+  const check = staff ? 'check the source' : 'check with your lead';
   if (answer.draft) {
     return (
       <Chip tone="idle" className="w-fit">
-        Not yet reviewed · check with your lead
+        Not yet reviewed · {check}
       </Chip>
     );
   }
@@ -26,7 +28,7 @@ export function TrustBadge({ answer, firmName }: { answer: AnswerEnvelope; firmN
   }
   return (
     <Chip tone="warn" className="w-fit">
-      AI answer · check with your lead
+      AI answer · {check}
     </Chip>
   );
 }

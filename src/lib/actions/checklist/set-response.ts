@@ -149,6 +149,7 @@ function previewOf(label: string, action: string, input: ResponseTarget & { valu
 export const setResponse = defineAction({
   name: 'checklist.setResponse',
   description: 'Fill one answer on an incorporation checklist step, after a person approves it on a review card.',
+  capability: 'Fill checklist answers from details you paste or a file you attach (you review a card before anything saves)',
   input: setInput,
   tier: 'T2',
   roles: STAFF,
@@ -167,6 +168,7 @@ export const setResponse = defineAction({
 export const attachFile = defineAction({
   name: 'checklist.attachFile',
   description: 'Attach a file from the chat to an upload field on an incorporation checklist step, after a person approves it.',
+  capability: 'Attach a file from the chat to a checklist upload field (after you approve it)',
   input: attachInput,
   tier: 'T2',
   roles: STAFF,

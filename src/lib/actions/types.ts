@@ -47,6 +47,11 @@ export interface Action<Input = unknown> {
   name: string;
   /** What the model reads to choose this action. */
   description: string;
+  /**
+   * One plain line for "What can you do?", starting with a verb (for example "Create a task for a
+   * client"). An action without it still works but is not listed to the person.
+   */
+  capability?: string;
   /** Sent to the model as a strict tool schema; every input is parsed with it again at execution. */
   input: z.ZodType<Input>;
   tier: ActionTier;

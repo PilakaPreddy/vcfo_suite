@@ -5,7 +5,7 @@ import type { GlossaryTerm } from './schema';
  * (≤ 120 chars); `topicSlug` powers "Explain more".
  */
 export const GLOSSARY: readonly GlossaryTerm[] = [
-  { term: 'SPICe+', aliases: ['SPICe Plus', 'Spice Part A', 'Spice Part B', 'INC-32'], short: 'The single online form used to incorporate a company in India.', topicSlug: 'spice-plus-part-a' },
+  { term: 'SPICe+', aliases: ['SPICe Plus', 'Spice Part A', 'Spice Part B', 'Spice A', 'Spice B', 'INC-32'], short: 'The single online form used to incorporate a company in India.', topicSlug: 'spice-plus-part-a' },
   { term: 'DIN', aliases: ['Director Identification Number'], short: 'A unique number every company director in India holds.', topicSlug: 'director-kyc' },
   { term: 'DSC', aliases: ['Digital Signature Certificate'], short: 'An electronic signature used to sign government filings online.' },
   { term: 'MOA', aliases: ['Memorandum of Association'], short: "The company's charter: its name, objects and share capital." },

@@ -148,7 +148,7 @@ export async function decideChangeset(ctx: AuthContext, id: string, input: { con
     statusById.set(row.id, outcome.patch.status!);
     if (outcome.patch.status === 'applied') {
       result.applied += 1;
-      fields.push(`${String(row.target.stepId)}/${String(row.target.fieldId)}`);
+      fields.push(typeof row.target.fieldId === 'string' ? `${String(row.target.stepId)}/${row.target.fieldId}` : `${row.action}:${row.label}`);
     } else if (outcome.patch.status === 'held') result.held += 1;
     else result.failed += 1;
   }
@@ -160,7 +160,7 @@ export async function decideChangeset(ctx: AuthContext, id: string, input: { con
     await recordAuditEvent(ctx, {
       engagementId: found.changeset.engagementId,
       action: 'ask.changeset.applied',
-      summary: `Saved ${result.applied} value${result.applied === 1 ? '' : 's'} from an Ask VCFO card`,
+      summary: `Applied ${result.applied} change${result.applied === 1 ? '' : 's'} from an Ask VCFO card`,
       metadata: { via: 'ask', changesetId: id, runId: found.changeset.runId, fields },
       result: 'ok',
     });

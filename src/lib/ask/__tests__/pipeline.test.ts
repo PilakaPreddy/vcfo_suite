@@ -44,6 +44,7 @@ const defaultSnapshotLoad = () => ({
 vi.mock('@/db/repositories/ask-saved-answers', () => ({ findSavedAnswer: vi.fn(async () => null), saveAnswer: vi.fn(async () => undefined) }));
 vi.mock('@/lib/ask/knowledge-version', () => ({ currentKnowledgeVersion: vi.fn(async () => 'kv') }));
 vi.mock('@/lib/ask/retrieve', () => ({ retrieveSources: vi.fn(async () => []) }));
+const { retrieveSources: retrieveSourcesMock } = vi.mocked(await import('@/lib/ask/retrieve'));
 vi.mock('@/lib/ask/tools/staff-data', () => ({
   loadStaffData: (...a: unknown[]) => loadStaffData(...a),
   loadStaffEngagements: vi.fn(async () => []),
@@ -406,12 +407,63 @@ describe('path, usage and limits', () => {
     expect(lastStored()).toMatchObject({ path: 'document_answer' });
   });
 
-  it('asks to do work get a plain line and no generation', async () => {
-    const provider = mockProvider([guard('do_work')]);
+  it('asks to do work that no action covers get the list of what works, and no generation', async () => {
+    const none = result([{ type: 'text', text: JSON.stringify({ action: 'none', company: '', step: '', title: '', status: '', dueDate: '', note: '', subject: '', body: '', assignToMe: false }) } as unknown as LlmResult['content'][number]], 'end_turn');
+    const provider = mockProvider([guard('do_work'), none]);
     setAskProviderForTests(provider);
     const { answer } = await run('admin', { shell: 'admin', message: 'Send the reminder' });
-    expect(provider.calls).toHaveLength(1);
+    // The router, then the action reader; no answer generation.
+    expect(provider.calls).toHaveLength(2);
+    expect(String(answer?.line).startsWith(REFUSAL_COPY.doWorkStaff)).toBe(true);
+    expect(answer?.line).not.toMatch(/lead/i);
+  });
+
+  it('a client asking for work still gets the plain refusal', async () => {
+    const provider = mockProvider([guard('do_work')]);
+    setAskProviderForTests(provider);
+    const { answer } = await run('client', { shell: 'client', engagementId: 'eng-1', message: 'Send the reminder' });
     expect(answer?.line).toBe(REFUSAL_COPY.doWork);
+  });
+
+  it('answers "what can you do?" from code, with no model call', async () => {
+    const provider = mockProvider([]);
+    setAskProviderForTests(provider);
+    const { answer } = await run('admin', { shell: 'admin', message: 'what are the things you can do from chat in spice a' });
+    expect(provider.calls).toHaveLength(0);
+    expect(answer?.origin).toBe('deterministic');
+    expect(answer?.line).toContain('Nothing saves until you approve');
+    expect(answer?.line).not.toMatch(/read only|your (project )?lead/i);
+    expect(lastStored()).toMatchObject({ path: 'greeting_local' });
+  });
+
+  it('gives the staff model staff rules: no "ask your lead", and the real list of changes', async () => {
+    const provider = mockProvider([guard('explain'), rendered()]);
+    setAskProviderForTests(provider);
+    await run('intern', { shell: 'admin', message: 'Explain the stamp duty rule for Part A' });
+    const system = provider.calls[1]!.system.map((b) => b.text).join('\n');
+    expect(system).not.toMatch(/project lead can confirm|add the askLead action/);
+    expect(system).toContain('never tell them to ask or check with their project lead');
+    expect(system).toContain('Fill checklist answers');
+    expect(system).not.toMatch(/read-only/);
+  });
+
+  it('drops citations from an answer that says it is not certain', async () => {
+    retrieveSourcesMock.mockResolvedValueOnce([{ id: 'src-1', kind: 'chunk', label: 'SPICe+ Part A', text: 'Part A reserves the name.' }]);
+    const provider = mockProvider([
+      guard('explain'),
+      rendered({ line: "I'm not certain, because my sources don't cover that.", citations: [{ id: 'src-1', label: 'SPICe+ Part A' }] }),
+    ]);
+    setAskProviderForTests(provider);
+    const { answer } = await run('admin', { shell: 'admin', message: 'What does Part A allow from chat?' });
+    expect(answer?.citations).toEqual([]);
+  });
+
+  it('answers the router capabilities intent from code', async () => {
+    const provider = mockProvider([guard('capabilities')]);
+    setAskProviderForTests(provider);
+    const { answer } = await run('admin', { shell: 'admin', message: 'tell me everything this assistant is able to change for me please' });
+    expect(provider.calls).toHaveLength(1);
+    expect(answer?.origin).toBe('deterministic');
   });
 
   it('routes the router and document answers to Haiku, thinking off for the router', async () => {

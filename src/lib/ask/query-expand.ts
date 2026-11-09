@@ -36,6 +36,9 @@ const SYNONYMS: ReadonlyArray<readonly [RegExp, string]> = [
   [/\b(commencement of business|start(?:ing)? business)\b/, 'INC-20A'],
   [/\b(pf|provident fund)\b/, 'PF EPF'],
   [/\b(incorporate|incorporating|set up a company|new company)\b/, 'SPICe+ incorporation'],
+  // "spice a", "spice+ part b", "spice plus a": people type the part letter without "Part".
+  [/\bspice\s*(?:\+|plus)?\s*(?:part\s*)?a\b/, 'SPICe+ Part A'],
+  [/\bspice\s*(?:\+|plus)?\s*(?:part\s*)?b\b/, 'SPICe+ Part B'],
 ];
 
 export function expandQuery(query: string): string {
