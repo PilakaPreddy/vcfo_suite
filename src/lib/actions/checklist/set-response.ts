@@ -3,7 +3,6 @@ import 'server-only';
 import { z } from 'zod';
 import type { AuthContext } from '@/auth/guards';
 import { checklistStateFromRow, getEngagementById } from '@/db/repositories/engagements';
-import { getOwnAskAttachments } from '@/db/repositories/ask-attachments';
 import { indexMilestoneUpload } from '@/db/repositories/documents';
 import { MILESTONE_DOCUMENTS_BUCKET, milestoneDocumentObjectPath } from '@/lib/documents/milestone-document-storage';
 import { applyChecklistPatch, ChecklistPatchRefused } from '@/lib/incorporation/apply-checklist-patch';
@@ -12,10 +11,12 @@ import { isRepeatField, removeRepeatEntry, repeatEntries } from '@/lib/checklist
 import { getClientResponseFields } from '@/lib/checklist/checklist-responses';
 import { checklistGateViewerFrom, gateActiveCatalog, getStepGate } from '@/lib/checklist/checklist-step-gate';
 import { getItem } from '@/data/checklist';
-import { bucketKey, getObjectBuffer, putObject } from '@/storage/s3';
+import { bucketKey, putObject } from '@/storage/s3';
+import { isUploadField } from '@/lib/ask/field-catalog/upload-fields';
 import type { JsonValue } from '@/lib/ask/changeset/types';
+import { copyAskAttachment, findAskAttachment } from '../shared';
 import { defineAction, type ActionContext, type ActionRecheck, type ActionResult } from '../types';
-import { checkResponseRow, displayValue, fieldOf, responseKey, rowCanApply, type ResponseTarget } from './rules';
+import { checkResponseRow, displayValue, fieldOf, heldReasonOf, responseKey, rowCanApply, type ResponseTarget } from './rules';
 
 /**
  * Filling one checklist field from an approved card. The write goes through `applyChecklistPatch`,
@@ -50,6 +51,16 @@ async function recheck(actx: ActionContext, input: ResponseTarget & { value: str
     return { checks: [{ rule: 'gate', ok: false, message: 'This project is not available.' }], heldReason: 'This project is not available.', canApply: false, oldValue: '', value: input.value, displayOld: '', displayNew: '', sensitive: false };
   }
   const result = checkResponseRow({ role: actx.auth.role, target: input, value: input.value, state: loaded.state, pending, engagement: loaded.row, isFile });
+  if (isFile) {
+    // Any upload field on an incorporation step takes a file, and only an upload field does. Both
+    // refusals use the `condition` rule, so they hold the row the way a field that does not apply does.
+    const upload = isUploadField(input.stepId, input.fieldId);
+    if (!upload) result.checks.push({ rule: 'condition', ok: false, message: 'Held: this field does not take a file.' });
+    if (upload && input.attachmentId && !(await findAskAttachment(actx, input.attachmentId))) {
+      result.checks.push({ rule: 'condition', ok: false, message: 'Held: the file is no longer available.' });
+    }
+    result.heldReason = heldReasonOf(result.checks);
+  }
   const options = fieldOf(input)?.options;
   return {
     checks: result.checks,
@@ -167,7 +178,7 @@ export const setResponse = defineAction({
 
 export const attachFile = defineAction({
   name: 'checklist.attachFile',
-  description: 'Attach a file from the chat to an upload field on an incorporation checklist step, after a person approves it.',
+  description: 'Attach a file from the chat to any upload field on an incorporation checklist step, after a person approves it.',
   capability: 'Attach a file from the chat to a checklist upload field (after you approve it)',
   input: attachInput,
   tier: 'T2',
@@ -178,12 +189,12 @@ export const attachFile = defineAction({
   recheck: (actx, input, pending) => recheck(actx, input, pending, true),
   async execute(actx, input) {
     const { value: _value, ...target } = input;
-    const [attachment] = await getOwnAskAttachments(actx.auth, [input.attachmentId]);
-    const bytes = attachment?.s3Key ? await getObjectBuffer(attachment.s3Key) : null;
-    if (!attachment || !bytes) return { ok: false, error: 'The file is no longer available.' };
+    if (!isUploadField(input.stepId, input.fieldId)) return { ok: false, error: 'This field does not take a file.' };
+    const attachment = await copyAskAttachment(actx, input.attachmentId);
+    if (!attachment) return { ok: false, error: 'The file is no longer available.' };
     const key = responseKey(input);
     const path = milestoneDocumentObjectPath(input.engagementId, key, attachment.fileName);
-    await putObject(bucketKey(MILESTONE_DOCUMENTS_BUCKET, path), bytes, attachment.contentType ?? undefined);
+    await putObject(bucketKey(MILESTONE_DOCUMENTS_BUCKET, path), attachment.bytes, attachment.contentType ?? undefined);
     await indexMilestoneUpload(actx.auth, {
       engagementId: input.engagementId,
       fieldId: key,

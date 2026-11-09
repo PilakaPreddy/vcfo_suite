@@ -13,7 +13,9 @@ import { ComplianceTaskError, STAFF, canManage, forbidden, notFound, notifyTask,
  * task read, so a file of another tenant reads as not found.
  */
 
-const MAX_BYTES = 15 * 1024 * 1024;
+/** The largest file a task takes; the Ask VCFO evidence action checks it before copying. */
+export const TASK_ATTACHMENT_MAX_BYTES = 15 * 1024 * 1024;
+const MAX_BYTES = TASK_ATTACHMENT_MAX_BYTES;
 
 export interface AttachmentDto {
   id: string;
@@ -101,4 +103,16 @@ export async function removeTaskAttachment(ctx: AuthContext, taskId: string, att
     console.error('[compliance-tasks] could not delete the stored file', err);
   }
   await db.insert(complianceTaskEvents).values({ taskId: task.id, actorId: ctx.userId, label: `Removed ${row.fileName}` });
+}
+
+/**
+ * Make one of a task's files its deliverable again, for the undo of an Ask VCFO evidence row that
+ * replaced it. Staff only, as for marking a deliverable on upload; the one-deliverable rule holds.
+ */
+export async function markTaskDeliverable(ctx: AuthContext, taskId: string, attachmentId: string): Promise<void> {
+  if (!STAFF.has(ctx.role)) throw forbidden();
+  const { task, row } = await scopedAttachment(ctx, taskId, attachmentId);
+  await db.update(complianceTaskAttachments).set({ isDeliverable: false }).where(eq(complianceTaskAttachments.taskId, task.id));
+  await db.update(complianceTaskAttachments).set({ isDeliverable: true }).where(eq(complianceTaskAttachments.id, row.id));
+  await db.insert(complianceTaskEvents).values({ taskId: task.id, actorId: ctx.userId, label: `Marked ${row.fileName} as the deliverable` });
 }

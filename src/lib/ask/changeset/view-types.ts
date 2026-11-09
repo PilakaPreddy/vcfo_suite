@@ -21,7 +21,29 @@ export interface ChangesetRowView {
   needsLook: boolean;
   editable: boolean;
   options?: Array<{ value: string; label: string }>;
+  /** What the editor starts on when it is not the shown value, for example a labour sheet's state code. */
+  editValue?: string;
+  /** The editor's label when the row edits something other than its value, for example "State for pay.xlsx". */
+  editLabel?: string;
   inputType: 'text' | 'date' | 'choice';
+  /** The section this row sits in on a big card; see `view-groups.ts`. */
+  groupKey: string;
+  groupTitle: string;
+  groupKind: ChangesetGroupKind;
+  /** The file the row came from, so a section can gather rows by file. */
+  sourceFile: string | null;
+}
+
+/** The destinations a card is split into. */
+export type ChangesetGroupKind = 'values' | 'uploads' | 'labour' | 'compliance' | 'vault';
+
+/** One section of the card: a destination, its rows in display order, and how many are ready, held or saved. */
+export interface ChangesetGroupView {
+  key: string;
+  title: string;
+  kind: ChangesetGroupKind;
+  rowIds: string[];
+  counts: { ready: number; held: number; applied: number };
 }
 
 export interface ChangesetView {
@@ -37,4 +59,6 @@ export interface ChangesetView {
   expiresAt: string;
   canUndo: boolean;
   rows: ChangesetRowView[];
+  /** The rows by destination, then by source file. Every row is in exactly one group. */
+  groups: ChangesetGroupView[];
 }

@@ -87,7 +87,7 @@ function listEnv<T extends string>(name: string, allowed: readonly T[]): Readonl
 export interface AskFlags {
   /** Portal checks. Default off in production until the site-terms check is done, on locally. */
   watch: boolean;
-  /** Identity documents, extraction only and masked everywhere. Default off. */
+  /** Identity documents, read by the model and masked everywhere. Default on; ASK_ID_DOC_READING=false turns it off. */
   idDocReading: boolean;
   /** "Prepare filing run" for VCFO Assist. Default off until the written CS opinion exists. */
   assistHandoff: boolean;
@@ -101,7 +101,7 @@ export interface AskFlags {
 export function askFlags(): AskFlags {
   return {
     watch: flagEnv('WATCH_ENABLED', process.env.NODE_ENV !== 'production'),
-    idDocReading: flagEnv('ASK_ID_DOC_READING', false),
+    idDocReading: flagEnv('ASK_ID_DOC_READING', true),
     assistHandoff: flagEnv('ASK_ASSIST_HANDOFF_ENABLED', false),
     proactive: flagEnv('ASK_PROACTIVE_ENABLED', false),
     killedPaths: listEnv('ASK_KILL_PATHS', ASK_PATHS),
@@ -117,6 +117,8 @@ export interface AskBudgets {
   answerMaxTokens: number;
   /** Across all paths, per day (IST); reaching it stops model calls until the next day. */
   dailyTokens: number;
+  /** Input plus output tokens for one drop of many files; past it the drop stops and keeps what it prepared. */
+  dropMaxTokens: number;
 }
 
 export function askBudgets(): AskBudgets {
@@ -125,6 +127,7 @@ export function askBudgets(): AskBudgets {
     runMaxTokens: intEnv('ASK_RUN_MAX_TOKENS', 200_000),
     answerMaxTokens: intEnv('ASK_ANSWER_MAX_TOKENS', 40_000),
     dailyTokens: intEnv('ASK_DAILY_TOKEN_BUDGET', 2_000_000),
+    dropMaxTokens: intEnv('ASK_DROP_MAX_TOKENS', 400_000),
   };
 }
 

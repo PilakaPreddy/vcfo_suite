@@ -115,7 +115,7 @@ export const askRuns = pgTable(
     /** Name of the fixed workflow, for example `data_router`. */
     workflow: text('workflow'),
     trigger: text('trigger').notNull().default('chat'), // chat|schedule
-    status: text('status').notNull().default('queued'), // queued|running|waiting_approval|done|failed|cancelled|over_budget
+    status: text('status').notNull().default('queued'), // queued|running|waiting_reply|waiting_approval|done|failed|cancelled|over_budget
     /** The request with identity numbers masked. */
     goal: text('goal').notNull(),
     /** What a loop needs to resume after an approval. Masked like the rest of the trace. */
@@ -137,6 +137,8 @@ export const askRuns = pgTable(
     profileIdx: index('ask_runs_profile_idx').on(t.profileId, t.createdAt),
     statusIdx: index('ask_runs_status_idx').on(t.status, t.createdAt),
     conversationIdx: index('ask_runs_conversation_idx').on(t.conversationId),
+    /** A reopened chat looks up its active drop by conversation and status. */
+    conversationStatusIdx: index('ask_runs_conversation_status_idx').on(t.conversationId, t.status),
     engagementIdx: index('ask_runs_engagement_idx').on(t.engagementId),
     messageIdx: index('ask_runs_message_idx').on(t.messageId),
   }),
@@ -260,9 +262,14 @@ export const askAttachments = pgTable(
     /** True for identity documents, which only `ASK_ID_DOC_READING` allows to be read. */
     sensitive: boolean('sensitive').notNull().default(false),
     error: text('error'),
+    /** The folder path the file was dropped with, or its path inside a ZIP. Only a hint for placing it. */
+    relativePath: text('relative_path'),
+    /** The ZIP this file was unpacked from. Deleting the ZIP's row deletes its entries. */
+    parentId: uuid('parent_id').references((): AnyPgColumn => askAttachments.id, { onDelete: 'cascade' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
+    parentIdx: index('ask_attachments_parent_idx').on(t.parentId),
     conversationIdx: index('ask_attachments_conversation_idx').on(t.conversationId, t.createdAt),
     profileIdx: index('ask_attachments_profile_idx').on(t.profileId, t.createdAt),
     engagementIdx: index('ask_attachments_engagement_idx').on(t.engagementId),

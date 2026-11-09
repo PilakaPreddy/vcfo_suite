@@ -2,7 +2,9 @@
 
 import { createContext, useContext } from 'react';
 import type { AnswerDepth, AnswerEnvelope, AskShell } from '@/data/ask/schema';
-import type { ChatBody } from '@/hooks/ask/ask-api';
+import type { ChatBody, UploadProgress } from '@/hooks/ask/ask-api';
+import type { DropRunView } from '@/lib/ask/drop/types';
+import type { DropPick, SkippedFile } from './drop/collect';
 
 export type ThreadItem =
   | { id: string; kind: 'user'; text: string }
@@ -38,6 +40,14 @@ export type AskInput = {
   attachmentIds?: string[];
 };
 
+/** Files sent as a background drop (staff only): a folder, a ZIP or more than five files. */
+export type AskDropInput = {
+  message?: string;
+  files: DropPick[];
+  /** Each file's upload, for the composer's progress list. */
+  onProgress?: (progress: UploadProgress[]) => void;
+};
+
 export interface AskContextValue {
   enabled: boolean;
   firmName: string;
@@ -56,6 +66,14 @@ export interface AskContextValue {
   busy: boolean;
   conversationId: string | null;
   ask: (input: AskInput) => Promise<void>;
+  /**
+   * Opens a drop, uploads the files into it and starts the background job. Resolves with the files
+   * the server refused (empty when all went up), or null when nothing could be sent.
+   */
+  sendDrop: (input: AskDropInput) => Promise<SkippedFile[] | null>;
+  /** The drop the background job is working on in this chat, polled every two seconds. */
+  activeRunId: string | null;
+  run: DropRunView | null;
   /** Re-read a topic at another depth without a model call. */
   showTopic: (slug: string, depth?: AnswerDepth, label?: string) => Promise<void>;
   reset: () => void;

@@ -3,11 +3,13 @@ import 'server-only';
 import { z } from 'zod';
 import type { AuthContext } from '@/auth/guards';
 import { getItem } from '@/data/checklist';
+import { getOwnAskAttachments, type AskAttachmentRow } from '@/db/repositories/ask-attachments';
 import { resolveEngagementRecipients } from '@/db/repositories/engagement-recipients';
 import { checklistStateFromRow, getEngagementById } from '@/db/repositories/engagements';
-import type { ChangesetDraft, ChangesetRecipient, JsonValue, RowCheck } from '@/lib/ask/changeset/types';
+import type { ChangesetDraft, ChangesetRecipient, JsonValue, RowCheck, RowSource } from '@/lib/ask/changeset/types';
 import { engagementDbId } from '@/lib/projects/legacy-engagement-ids';
-import type { ActionRecheck } from './types';
+import { getObjectBuffer } from '@/storage/s3';
+import type { ActionContext, ActionRecheck } from './types';
 
 /**
  * Helpers the chat actions share. Every read goes through a scoped repository as the person, so an
@@ -55,6 +57,8 @@ export function oneRow(input: {
   label: string;
   checked: ActionRecheck;
   recipients?: ChangesetRecipient[];
+  /** Where the change came from; a file action names its chat attachment. Defaults to the message. */
+  source?: RowSource;
 }): ChangesetDraft {
   const { checked } = input;
   return {
@@ -72,7 +76,7 @@ export function oneRow(input: {
         displayOld: checked.displayOld,
         displayNew: checked.displayNew,
         sensitive: false,
-        source: { kind: 'message' },
+        source: input.source ?? { kind: 'message' },
         checks: checked.checks,
         ...(checked.heldReason ? { heldReason: checked.heldReason } : {}),
       },
@@ -89,3 +93,32 @@ export function recheckOf(checks: RowCheck[], fields: Pick<ActionRecheck, 'oldVa
 export function jsonTarget(input: Record<string, unknown>): { [key: string]: JsonValue } {
   return Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined)) as { [key: string]: JsonValue };
 }
+
+/**
+ * A file the person attached in chat, read as that person: `getOwnAskAttachments` only returns the
+ * caller's own uploads, so a row naming somebody else's file finds nothing. It reads the row only;
+ * `copyAskAttachment` reads the bytes too.
+ */
+export async function findAskAttachment(actx: Pick<ActionContext, 'auth'>, attachmentId: string): Promise<AskAttachmentRow | null> {
+  const [row] = await getOwnAskAttachments(actx.auth, [attachmentId]);
+  return row?.s3Key ? row : null;
+}
+
+export interface CopiedAttachment {
+  bytes: Buffer;
+  fileName: string;
+  contentType: string | null;
+  sizeBytes: number;
+}
+
+/**
+ * The bytes of a chat attachment, for an action that files them somewhere else. Each action writes
+ * them under its own key (milestone documents, the vault, a labour batch), so this only reads.
+ */
+export async function copyAskAttachment(actx: Pick<ActionContext, 'auth'>, attachmentId: string): Promise<CopiedAttachment | null> {
+  const row = await findAskAttachment(actx, attachmentId);
+  const bytes = row?.s3Key ? await getObjectBuffer(row.s3Key) : null;
+  if (!row || !bytes) return null;
+  return { bytes, fileName: row.fileName, contentType: row.contentType ?? null, sizeBytes: bytes.byteLength };
+}
+

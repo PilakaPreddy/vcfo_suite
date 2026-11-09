@@ -1,11 +1,10 @@
-import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { publicErrorMessage } from '@/lib/api-error';
 
 import { requireAnyRole } from '@/auth/guards';
 import { rejectLargeBody } from '@/lib/api/body-limit';
-import { getBatch, recordUpload } from '@/db/repositories/labour-registers';
-import { formatForFileName, UPLOAD_SLOTS, parseWorkbook, type UploadSlot } from '@/lib/labour-registers/parse';
+import { getBatch } from '@/db/repositories/labour-registers';
+import { ingestRegisterUpload, RegisterUploadRefused } from '@/lib/labour-registers/ingest-upload';
+import { UPLOAD_SLOTS, type UploadSlot } from '@/lib/labour-registers/parse';
 import {
   LABOUR_REGISTER_EXTENSIONS,
   LABOUR_REGISTER_FILE_ERROR,
@@ -14,7 +13,6 @@ import {
   MAX_UPLOAD_BYTES,
   validateUploadFileType,
 } from '@/lib/upload-limits';
-import { putObject } from '@/storage/s3';
 
 /**
  * Upload one of a batch's four inputs.
@@ -69,48 +67,26 @@ export async function POST(request: Request) {
 
   /* The batch is read through the repository, so a batch belonging to another firm is a 404
      here exactly as it is everywhere else. Locked periods stop accepting inputs: that is what
-     the close means. */
+     the close means, and `ingestRegisterUpload` refuses them. */
   const batch = await getBatch(guard.ctx, batchId);
   if (!batch) return NextResponse.json({ error: 'not_found' }, { status: 404 });
-  if (batch.markedReadyAt) {
-    return NextResponse.json({ error: 'The period is closed. Reopen the inputs to change them.' }, { status: 409 });
-  }
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  if (bytes.byteLength === 0) return NextResponse.json({ error: 'The file is empty.' }, { status: 400 });
-
-  let parsed;
+  let ingested;
   try {
-    parsed = await parseWorkbook(bytes, {
-      format: formatForFileName(file.name),
-      preferSheet: typeof sheet === 'string' && sheet ? sheet : undefined,
+    ingested = await ingestRegisterUpload(guard.ctx, {
+      batch,
+      slot: slot as UploadSlot,
+      bytes,
+      fileName: file.name,
+      contentType: labourRegisterContentType(file),
+      sheet: typeof sheet === 'string' && sheet ? sheet : undefined,
     });
   } catch (e) {
-    /* The reader's own message is the useful one — "The workbook has no sheet with any rows in
-       it" tells a preparer more than a generic parse failure would. */
-    return NextResponse.json({ error: publicErrorMessage(e, 'The file could not be read.') }, { status: 400 });
+    if (e instanceof RegisterUploadRefused) return NextResponse.json({ error: e.message }, { status: e.status });
+    throw e;
   }
-  if (parsed.headers.length === 0) {
-    return NextResponse.json({ error: 'No column headings were found in that sheet.' }, { status: 400 });
-  }
-
-  const sha256 = createHash('sha256').update(bytes).digest('hex');
-  const objectKey = `labour-registers/${batch.engagementId}/${batch.id}/${slot}-${sha256.slice(0, 12)}`;
-  await putObject(objectKey, bytes, labourRegisterContentType(file));
-
-  const upload = await recordUpload(guard.ctx, {
-    batchId: batch.id,
-    slot: slot as UploadSlot,
-    fileName: file.name,
-    objectKey,
-    sha256,
-    sheetName: parsed.sheetName,
-    headerRow: parsed.headerRow,
-    headers: parsed.headers,
-    rowCount: parsed.rows.length,
-    gridDetection: parsed.grid,
-  });
-  if (!upload) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  const { upload, parsed } = ingested;
 
   return NextResponse.json({
     upload: { id: upload.id, slot: upload.slot, fileName: upload.fileName, rowCount: upload.rowCount },
@@ -118,7 +94,7 @@ export async function POST(request: Request) {
       sheetName: parsed.sheetName,
       headerRow: parsed.headerRow,
       headers: parsed.headers,
-      rowCount: parsed.rows.length,
+      rowCount: parsed.rowCount,
       grid: parsed.grid,
     },
   });

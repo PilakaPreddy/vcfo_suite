@@ -7,7 +7,8 @@ import { runFillCase, summarise, type CaseOutcome } from './run';
 /**
  * The golden set with the model replaced: code paths run for real, and the model's replies are the
  * ones written in `cases.ts`. It proves the plumbing, not the model. `npm run eval:fill:live`
- * measures the correct-field rate against the real model.
+ * measures the correct-field rate against the real model. The drop's golden set (`DROP_CASES`) runs
+ * through the whole drop job in `drop-golden.test.ts`.
  */
 function mockFor(fill: FillCase): LlmProvider {
   return {

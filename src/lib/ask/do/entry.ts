@@ -4,15 +4,14 @@ import { randomUUID } from 'node:crypto';
 import type { AuthContext } from '@/auth/guards';
 import type { AnswerEnvelope, AskShell } from '@/data/ask/schema';
 import { getOwnAskAttachments, createAskAttachment, updateOwnAskAttachment, type AskAttachmentRow } from '@/db/repositories/ask-attachments';
-import { createAskChangeset } from '@/db/repositories/ask-changesets';
+import { appendAskChangesetRows, createAskChangeset } from '@/db/repositories/ask-changesets';
 import { listManagerIdsForEngagement } from '@/db/repositories/engagement-managers-membership';
 import { checklistStateFromRow, getEngagementBySlug, getEngagementById, listEngagements } from '@/db/repositories/engagements';
 import { createNotificationsForUsers } from '@/db/repositories/notifications';
-import { appendAskRunStep, createAskRun, findWaitingAskRun, lockAskRun, updateAskRun } from '@/db/repositories/ask-runs';
-import { systemTodayTokenTotal } from '@/db/repositories/ask-usage';
+import { appendAskRunStep, createAskRun, findWaitingAskRun, lockAskRun } from '@/db/repositories/ask-runs';
 import { checklist } from '@/data/checklist';
 import { changesetHash } from '@/lib/ask/changeset/hash';
-import type { JsonValue } from '@/lib/ask/changeset/types';
+import type { ChangesetRowDraft, JsonValue } from '@/lib/ask/changeset/types';
 import { askBudgets, askConfig, askFlags } from '@/lib/ask/config';
 import { catalogSynonyms } from '@/lib/ask/data-router/candidates';
 import { companiesNamed, documentMatches, lockEngagement } from '@/lib/ask/data-router/lock';
@@ -21,11 +20,10 @@ import { planRows } from '@/lib/ask/data-router/plan';
 import { instructionOf, looksLikeData, readFile, readPaste, ReadRefused } from '@/lib/ask/data-router/read';
 import type { ReadResult } from '@/lib/ask/data-router/types';
 import { normalizeLabel } from '@/lib/ask/field-catalog/rules';
+import { parseDropReply } from '@/lib/ask/drop/classify';
 import { maskIdentityNumbers } from '@/lib/ask/mask';
-import { addLlmUsage, getAskProvider, NO_LLM_USAGE } from '@/lib/ask/provider';
-import { meterProvider, type MeteredProvider } from '@/lib/ask/provider/meter';
-import { checkAskRateLimit } from '@/lib/ask/rate-limit';
-import { limitAnswer, REFUSAL_COPY } from '@/lib/ask/refusals';
+import { limitAnswer } from '@/lib/ask/refusals';
+import { createRunContext, RUN_OVER_BUDGET_COPY, type DoEvent, type DoWorkResult, type RunContext } from './run-context';
 import { getObjectBuffer, putObject } from '@/storage/s3';
 
 /**
@@ -36,12 +34,7 @@ import { getObjectBuffer, putObject } from '@/storage/s3';
  * run row, so the next message can finish it.
  */
 
-export type DoEvent = { type: 'progress'; runId: string; label: string } | { type: 'run'; runId: string; status: string };
-
-export interface DoWorkResult {
-  answer: AnswerEnvelope;
-  metered: MeteredProvider | null;
-}
+export type { DoEvent, DoWorkResult };
 
 export interface DoWorkRequest {
   shell: AskShell;
@@ -72,14 +65,33 @@ const line = (text: string, extra: Partial<AnswerEnvelope> = {}): AnswerEnvelope
   ...extra,
 });
 
-/** A message worth a look by the router: a labelled line, or a long paste. */
+/** "Fill this in", "add these details", "update Acme from the below" and the like. */
+const FILL_INSTRUCTION = /\b(?:fill|file|add|enter|put|update|record|use)\b[^.\n]{0,40}?\b(?:in|this|these|it|them|details|below|following|from)\b/i;
+
+/** Characters of text beyond the instruction itself that make a message a paste, not a command. */
+const FILL_PASTE_MIN = 60;
+
+/**
+ * Loose prose (an email, meeting notes) pasted with a "fill this in" kind of instruction. The
+ * instruction alone ("fill this in for Acme") is not a paste: there must be text beyond it to read.
+ * A question is never a paste.
+ */
+function isPasteWithFill(message: string): boolean {
+  if (message.trim().endsWith('?')) return false;
+  const found = FILL_INSTRUCTION.exec(message);
+  if (!found) return false;
+  const rest = `${message.slice(0, found.index)} ${message.slice(found.index + found[0].length)}`.replace(/\s+/g, ' ').trim();
+  return rest.length >= FILL_PASTE_MIN;
+}
+
+/** A message worth a look by the router: a labelled line, a long paste, or prose given with a fill instruction. */
 export function isDataMessage(message: string): boolean {
-  return message.length > 2000 || looksLikeData(message);
+  return message.length > 2000 || looksLikeData(message) || isPasteWithFill(message);
 }
 
 /** A message the router sent as work, which still has to name a fact or a number to be data. */
 function mayHoldValues(message: string): boolean {
-  if (/\d/.test(message)) return true;
+  if (/\d/.test(message) || isPasteWithFill(message)) return true;
   const text = ` ${normalizeLabel(message)} `;
   for (const synonym of catalogSynonyms()) {
     if (synonym.length >= MIN_SYNONYM_LENGTH && text.includes(` ${synonym} `)) return true;
@@ -96,8 +108,14 @@ export async function pendingDoRun(ctx: AuthContext, conversationId: string | nu
   const run = await findWaitingAskRun(ctx, conversationId, now);
   if (!run) return null;
   const state = run.state as unknown as PendingState;
+  // A drop's "Where should these go?" question keeps its own state and is answered in `drop/reply.ts`.
+  if (run.workflow === 'drop') {
+    const waiting = ((run.state as { unplaced?: unknown[] } | null)?.unplaced ?? []).length;
+    const engagements = (await listEngagements(ctx)).map((e) => ({ id: e.id, slug: e.slug, companyName: e.companyName }));
+    return parseDropReply(message, waiting, engagements) ? { run, state, drop: true as const } : null;
+  }
   const named = companiesNamed(message, state.options);
-  if (CANCEL.test(message) || CONFIRM.test(message) || named.length > 0) return { run, state };
+  if (CANCEL.test(message) || CONFIRM.test(message) || named.length > 0) return { run, state, drop: false as const };
   return null;
 }
 
@@ -126,49 +144,25 @@ export async function handleDoWork(
   if (flags.killedPaths.has('fixed_workflow') || flags.killedTiers.has('T2')) return { answer: limitAnswer(shell, 'pathStopped'), metered: null };
   const { conversationId, now, pending } = context;
   const attachmentIds = request.attachmentIds ?? [];
+  if (pending?.drop) {
+    const { answerDropReply } = await import('@/lib/ask/drop/reply');
+    return answerDropReply(ctx, pending.run, message, { now, emit });
+  }
 
   // Prose the router sent here that names no fact goes back to the plain line, at no cost.
   if (!pending && attachmentIds.length === 0 && !isDataMessage(message) && !mayHoldValues(message)) return null;
 
-  const config = askConfig();
   const budgets = askBudgets();
-  let metered: MeteredProvider | null = null;
-  const provider = async () => {
-    if (metered) return metered;
-    if ((await systemTodayTokenTotal(now)) >= budgets.dailyTokens) throw new ReadRefused(REFUSAL_COPY.budgetReached);
-    if (!(await checkAskRateLimit(ctx, config.rateLimit, now)).ok) throw new ReadRefused(REFUSAL_COPY.rateLimited);
-    const configured = await getAskProvider();
-    if (!configured) throw new ReadRefused('Reading this needs the Ask VCFO model, which is not available right now. Please type the details as "Label: value" lines.');
-    metered = meterProvider(configured);
-    return metered;
-  };
-  const deps = { provider, model: config.models.extract, idDocReading: flags.idDocReading };
-
   const run = pending?.run ?? (await createAskRun(ctx, { conversationId, workflow: 'data_router', goal: instructionOf(message) || (attachmentIds.length > 0 ? `${attachmentIds.length} attached file(s)` : 'Pasted details'), budgetTokens: budgets.runMaxTokens }));
   const runId = run.id;
   emit({ type: 'run', runId, status: 'running' });
-  const progress = (label: string) => emit({ type: 'progress', runId, label });
-
-  const close = async (status: string, state?: PendingState, error?: string) => {
-    const spend = metered?.spend() ?? [];
-    const usage = spend.reduce((sum, s) => addLlmUsage(sum, s.usage), NO_LLM_USAGE);
-    await updateAskRun(ctx, runId, {
-      status,
-      inputTokens: usage.inputTokens,
-      outputTokens: usage.outputTokens,
-      cacheReadTokens: usage.cacheReadTokens,
-      cacheWriteTokens: usage.cacheWriteTokens,
-      model: metered?.lastModel() ?? null,
-      ...(state ? { state: state as unknown as JsonValue } : {}),
-      ...(error ? { error } : {}),
-      ...(status === 'waiting_reply' || status === 'waiting_approval' ? {} : { finishedAt: new Date() }),
-    });
-    emit({ type: 'run', runId, status });
-  };
-  const finish = async (answer: AnswerEnvelope, status = 'done', state?: PendingState, error?: string): Promise<DoWorkResult> => {
-    await close(status, state, error);
-    return { answer: { ...answer, runId }, metered };
-  };
+  // The provider, the budgets and the close live in run-context, shared with the drop job.
+  const runCtx = createRunContext({ ctx, run, now, emit });
+  const { deps, progress } = runCtx;
+  const close = (status: string, state?: PendingState, error?: string) =>
+    runCtx.close(status, { ...(state ? { state: state as unknown as JsonValue } : {}), ...(error ? { error } : {}) });
+  const finish = (answer: AnswerEnvelope, status = 'done', state?: PendingState, error?: string): Promise<DoWorkResult> =>
+    runCtx.finish(answer, status, { ...(state ? { state: state as unknown as JsonValue } : {}), ...(error ? { error } : {}) });
 
   if (pending && CANCEL.test(message)) return finish(line('All right, I have left this as it is. Nothing was saved.'), 'cancelled');
 
@@ -218,7 +212,7 @@ export async function handleDoWork(
       await appendAskRunStep(ctx, runId, { kind: result.usedModel ? 'model' : 'tool', name: 'read', label: 'Reading', output: { docType: result.docType, values: result.values.length } });
     } catch (error) {
       const known = error instanceof ReadRefused;
-      if (!known) console.error('[ask-vcfo] read failed', error);
+      if (!known) console.error('[ask-vcfo] read failed', maskIdentityNumbers(error instanceof Error ? (error.stack ?? error.message) : String(error)));
       const text = known ? error.message : 'This file could not be read. Please type the details in instead.';
       refusals.push(text);
       if (attachment) await updateOwnAskAttachment(ctx, attachment.id, { status: 'failed', error: text, runId });
@@ -226,6 +220,11 @@ export async function handleDoWork(
   };
   if (paste) await readOne(null, () => readPaste(paste, deps));
   for (const attachment of rows) {
+    // Past the run's budget no file is read; the ones left are named in the answer.
+    if (runCtx.overBudget()) {
+      refusals.push(`${RUN_OVER_BUDGET_COPY} Not read: ${attachment.fileName}.`);
+      continue;
+    }
     const bytes = attachment.s3Key ? await getObjectBuffer(attachment.s3Key) : null;
     await readOne(attachment, async () => {
       if (!bytes) throw new ReadRefused('That file is no longer available. Please attach it again.');
@@ -266,34 +265,88 @@ export async function handleDoWork(
     });
   }
 
-  // Find the place for each value: code first, then one small-model call for the rest.
-  progress('Finding the right fields…');
-  const { placed, questions: placeQuestions, files, chooseCalls } = await placeValues(reads, { instruction, provider, model: config.models.extract });
-  if (chooseCalls > 0) await appendAskRunStep(ctx, runId, { kind: 'model', name: 'choose', output: { asked: chooseCalls, chosen: placed.length } });
-  const questions = [...new Set(refusals), ...placeQuestions];
-
-  progress('Checking the rules…');
-  const plan = planRows({ role: ctx.role, engagementId: row.id, companyName: row.companyName, engagement: row, state, placed, files, instruction });
-  questions.push(...plan.questions);
+  const card = await prepareClientCard(ctx, runCtx, { row, state, reads, instruction, conversationId, now });
+  const questions = [...new Set(refusals), ...card.questions];
   const askMore = questions.length > 0 ? ` ${[...new Set(questions)].slice(0, 5).join(' ')}` : '';
-
-  if (plan.draft.rows.length === 0) {
-    const nothing = placed.length > 0 ? `Everything here is already saved for ${row.companyName}.` : `I found nothing to save for ${row.companyName}.`;
+  if (card.kind === 'nothing') {
+    const nothing = card.placed > 0 ? `Everything here is already saved for ${row.companyName}.` : `I found nothing to save for ${row.companyName}.`;
     return finish(line(`${nothing}${askMore}`));
   }
+  if (card.kind === 'unavailable') return finish(line('That project is not available.'), 'failed');
+  const { count, held, managerRows, changesetId } = card;
+  const heldNote = held > 0 ? ` ${held} ${held === 1 ? 'is' : 'are'} held, with the reason on the row.` : '';
+  const managerNote = managerRows > 0
+    ? ` ${managerRows} ${managerRows === 1 ? 'value needs' : 'values need'} your manager's approval as well; I have told them.`
+    : '';
+  return finish(
+    line(`I prepared ${count} value${count === 1 ? '' : 's'} for ${row.companyName}. Nothing is saved until you accept.${heldNote}${managerNote}${askMore}`, { changesetId }),
+    'waiting_approval',
+  );
+}
+
+export type PreparedCard =
+  | { kind: 'card'; changesetId: string; count: number; held: number; /** Rows that wait for a manager the lead cannot stand in for; 0 for a manager or admin. */ managerRows: number; placed: number; questions: string[] }
+  | { kind: 'nothing'; placed: number; questions: string[] }
+  | { kind: 'unavailable'; questions: string[] };
+
+/**
+ * One client's review card from what was read: find the place for each value, run the screen's rules,
+ * store the changeset, and tell the managers when a row needs one. The chat's data router and the
+ * drop's assembly share it, so a card is built the same way whichever path read the files.
+ */
+export async function prepareClientCard(
+  ctx: AuthContext,
+  runCtx: Pick<RunContext, 'runId' | 'provider' | 'progress'>,
+  input: {
+    row: NonNullable<Awaited<ReturnType<typeof getEngagementById>>>;
+    state: ReturnType<typeof checklistStateFromRow>;
+    reads: readonly SourceRead[];
+    instruction: string;
+    conversationId: string | null;
+    now: Date;
+    /** Drop only: file rows (labour, compliance, vault, checklist uploads) to put on the same card. */
+    fileRows?: readonly ChangesetRowDraft[];
+    /** Drop only: which read files may become a director's identity copy row. Defaults to all. */
+    copyFor?: (attachmentId: string) => boolean;
+    /** Drop only: the card's title from its rows, in place of "Details for <client>". */
+    title?: (rows: ReadonlyArray<Pick<ChangesetRowDraft, 'action'>>) => string;
+    /** Drop only: the client's open card to add the rows to; a new card is made when it is closed. */
+    appendTo?: string | null;
+  },
+): Promise<PreparedCard> {
+  const { row, state, reads, instruction, conversationId, now } = input;
+  const { runId, provider, progress } = runCtx;
+  // Find the place for each value: code first, then one small-model call for the rest.
+  progress('Finding the right fields…');
+  const { placed, questions: placeQuestions, files, chooseCalls } = await placeValues(reads, { instruction, provider, model: askConfig().models.extract });
+  if (chooseCalls > 0) await appendAskRunStep(ctx, runId, { kind: 'model', name: 'choose', output: { asked: chooseCalls, chosen: placed.length } });
+  const questions = [...placeQuestions];
+
+  progress('Checking the rules…');
+  const copyFiles = input.copyFor ? files.filter((f) => input.copyFor!(f.attachmentId)) : files;
+  const plan = planRows({ role: ctx.role, engagementId: row.id, companyName: row.companyName, engagement: row, state, placed, files: copyFiles, instruction });
+  questions.push(...plan.questions);
+  if (input.fileRows?.length) plan.draft.rows.push(...input.fileRows);
+  if (input.title) plan.draft.title = input.title(plan.draft.rows);
+
+  if (plan.draft.rows.length === 0) return { kind: 'nothing', placed: placed.length, questions };
+  const appended = input.appendTo ? await appendAskChangesetRows(ctx, input.appendTo, plan.draft.rows, now, { title: input.title }) : false;
   const contentHash = changesetHash(plan.draft.rows.map((r) => ({ action: r.action, target: r.target, newValue: r.newValue })));
-  const changesetId = await createAskChangeset(ctx, {
-    draft: plan.draft,
-    contentHash,
-    conversationId,
-    runId,
-    expiresAt: new Date(now.getTime() + CARD_DAYS * 86_400_000),
-  });
-  if (!changesetId) return finish(line('That project is not available.'), 'failed');
+  const changesetId = appended
+    ? input.appendTo!
+    : await createAskChangeset(ctx, {
+        draft: plan.draft,
+        contentHash,
+        conversationId,
+        runId,
+        expiresAt: new Date(now.getTime() + CARD_DAYS * 86_400_000),
+      });
+  if (!changesetId) return { kind: 'unavailable', questions };
   await appendAskRunStep(ctx, runId, { kind: 'approval', name: 'changeset', status: 'waiting', changesetId, output: { rows: plan.draft.rows.length } });
 
   const managerRows = plan.draft.rows.filter((r) => r.target.needsManager === true);
-  if (managerRows.length > 0 && ctx.role !== 'manager' && ctx.role !== 'admin' && ctx.role !== 'super_admin') {
+  const waitsForManager = managerRows.length > 0 && ctx.role !== 'manager' && ctx.role !== 'admin' && ctx.role !== 'super_admin';
+  if (waitsForManager) {
     const managers = await listManagerIdsForEngagement(row.id);
     await createNotificationsForUsers(
       managers.map((userId) => ({
@@ -307,16 +360,13 @@ export async function handleDoWork(
       })),
     ).catch((error) => console.warn('[ask-vcfo] manager notice failed', error));
   }
-
-  const count = plan.draft.rows.length;
-  const held = plan.draft.rows.filter((r) => r.heldReason).length;
-  const heldNote = held > 0 ? ` ${held} ${held === 1 ? 'is' : 'are'} held, with the reason on the row.` : '';
-  const waitsForManager = managerRows.length > 0 && ctx.role !== 'manager' && ctx.role !== 'admin' && ctx.role !== 'super_admin';
-  const managerNote = waitsForManager
-    ? ` ${managerRows.length} ${managerRows.length === 1 ? 'value needs' : 'values need'} your manager's approval as well; I have told them.`
-    : '';
-  return finish(
-    line(`I prepared ${count} value${count === 1 ? '' : 's'} for ${row.companyName}. Nothing is saved until you accept.${heldNote}${managerNote}${askMore}`, { changesetId }),
-    'waiting_approval',
-  );
+  return {
+    kind: 'card',
+    changesetId,
+    count: plan.draft.rows.length,
+    held: plan.draft.rows.filter((r) => r.heldReason).length,
+    managerRows: waitsForManager ? managerRows.length : 0,
+    placed: placed.length,
+    questions,
+  };
 }

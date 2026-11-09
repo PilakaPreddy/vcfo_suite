@@ -44,6 +44,8 @@ export interface RowSource {
   fileName?: string;
   page?: number;
   quote?: string;
+  /** The folder path the file was dropped with, or its path inside a ZIP. */
+  path?: string;
 }
 
 export interface ChangesetRowDraft {

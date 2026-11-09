@@ -1,6 +1,7 @@
 import 'server-only';
 
 import type { AuthContext } from '@/auth/guards';
+import { stateByCode } from '@/data/labour-registers/states';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import {
   claimAskChangeset,
@@ -15,6 +16,7 @@ import { responseKey } from '@/lib/actions/checklist/rules';
 import { getAction } from '@/lib/actions/registry';
 import { agentMayExecute, type ActionContext, type AnyAction } from '@/lib/actions/types';
 import { askFlags } from '@/lib/ask/config';
+import { maskIdentityNumbers } from '@/lib/ask/mask';
 import { changesetHash } from './hash';
 import type { JsonValue } from './types';
 
@@ -75,8 +77,9 @@ async function recheckRows(actx: ActionContext, rows: readonly AskChangesetRowRo
         heldReason: checked.heldReason,
         status: checked.heldReason ? 'held' : row.status === 'held' ? 'proposed' : row.status,
         oldValue: checked.oldValue,
-        displayOld: checked.displayOld,
-        displayNew: checked.displayNew,
+        // A file named with an identity number shows it masked, as the drop's first preview did.
+        displayOld: maskIdentityNumbers(checked.displayOld),
+        displayNew: maskIdentityNumbers(checked.displayNew),
       },
     });
     const value = typeof row.newValue === 'string' ? row.newValue : '';
@@ -95,12 +98,60 @@ function keyOf(row: AskChangesetRowRow): string | null {
  * A person's correction to one row. It is a server call of its own, so the value is checked and the
  * hash recomputed before the card can show it. A sensitive value is typed in full and shown masked.
  */
+/**
+ * The actions whose value a person may change on the card. Only a checklist answer is a value; every
+ * file row (a checklist upload, a labour sheet, compliance evidence, a vault file) carries a file
+ * that cannot be retyped, so it is accepted or left, never edited. The card and the edit route both
+ * use this, so a hand-made request cannot edit what the card does not offer.
+ */
+const VALUE_EDIT_ACTIONS: ReadonlySet<string> = new Set(['checklist.setResponse']);
+
+/**
+ * The one part of a file row a person may change: a labour sheet's state, which the drop may have
+ * assumed from the registered office or read from a folder name (owner decision 7). The edit's value
+ * is the state code; the file, slot and month stay as they are.
+ */
+const STATE_EDIT_ACTIONS: ReadonlySet<string> = new Set(['labour.uploadSheet']);
+
+export function rowValueEditable(action: string): boolean {
+  return VALUE_EDIT_ACTIONS.has(action);
+}
+
+export function rowStateEditable(action: string): boolean {
+  return STATE_EDIT_ACTIONS.has(action);
+}
+
+/** Whether the card offers "Edit" on this row at all. */
+export function rowEditable(action: string): boolean {
+  return rowValueEditable(action) || rowStateEditable(action);
+}
+
+/** A labour row moved to another state: its target changes, the assumed flags go, and every row is checked again. */
+async function editRowState(ctx: AuthContext, found: ChangesetAccess, row: AskChangesetRowRow, value: string, now: Date): Promise<void> {
+  const code = value.trim().toUpperCase();
+  if (!stateByCode(code)) throw new ChangesetRefused('Choose a state from the list.', 400);
+  const { stateAssumed: _assumed, stateNew: _new, ...rest } = row.target;
+  const target = { ...rest, stateCode: code };
+  const actx = actionContext(ctx, found, now);
+  const action = await getAction(row.action);
+  if (!action?.recheck || !action.input.safeParse({ ...target, value: row.newValue }).success) throw new ChangesetRefused('This state cannot be used.', 400);
+  const edited = found.rows.map((r) => (r.id === row.id ? { ...r, target, status: 'edited' } : r));
+  const updates = await recheckRows(actx, edited);
+  await updateAskChangesetRows(
+    ctx,
+    found,
+    updates.map((update) => (update.id === row.id ? { ...update, patch: { ...update.patch, target } } : update)),
+    changesetHash(edited.map((r) => ({ action: r.action, target: r.target, newValue: r.newValue as JsonValue }))),
+  );
+}
+
 export async function editChangesetRow(ctx: AuthContext, id: string, rowId: string, value: string): Promise<void> {
   const now = new Date();
   const found = await loadOpen(ctx, id, now);
   const row = found.rows.find((r) => r.id === rowId);
   if (!row || !canDecideRow(found, row)) throw new ChangesetRefused('This row is not yours to change.', 403);
-  if (row.action === 'checklist.attachFile' || row.status === 'applied') throw new ChangesetRefused('This row cannot be edited.');
+  if (!rowEditable(row.action) || row.status === 'applied') throw new ChangesetRefused('This row cannot be edited.');
+  if (rowStateEditable(row.action)) return editRowState(ctx, found, row, value, now);
   const actx = actionContext(ctx, found, now);
   const action = await getAction(row.action);
   const parsed = action?.input.safeParse({ ...row.target, value });

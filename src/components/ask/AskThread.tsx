@@ -9,6 +9,8 @@ import { AskHandoffForm } from './AskHandoffForm';
 import { useApp } from '@/context/AppContext';
 import { useAskOptional } from './ask-context';
 import { AskAvatar, AskUserBubble } from './AskUserBubble';
+import { DropProgress } from './drop/DropProgress';
+import { DropRunCards } from './drop/DropRunCards';
 
 /** An answer row: the VCFO mark, then the answer (owner item F2). */
 function AnswerRow({ children }: { children: ReactNode }) {
@@ -28,7 +30,7 @@ export function AskThread() {
   const count = ask?.thread.length ?? 0;
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
-  }, [count, ask?.status, ask?.handoffDraft]);
+  }, [count, ask?.status, ask?.handoffDraft, ask?.activeRunId]);
   if (!ask) return null;
 
   let lastQuestion = '';
@@ -71,11 +73,17 @@ export function AskThread() {
                 <AskChangesetCard changesetId={item.answer.changesetId} />
               </div>
             ) : null}
+            {item.answer.runId && ask.shell !== 'client' ? <DropRunCards runId={item.answer.runId} shownChangesetId={item.answer.changesetId} /> : null}
           </AnswerRow>
         );
       })}
+      {ask.activeRunId && ask.run ? (
+        <AnswerRow>
+          <DropProgress run={ask.run} />
+        </AnswerRow>
+      ) : null}
       <div aria-live="polite" className="min-h-[1.25rem]">
-        {ask.busy ? (
+        {ask.busy || (ask.activeRunId && !ask.run) ? (
           <p className="flex items-center gap-2 rounded-md bg-surface-sunken px-3 py-2 text-[12.5px] font-medium text-ink">
             <span className="h-1.5 w-1.5 flex-none animate-pulse rounded-[2px] bg-brand" aria-hidden />
             {ask.status ?? 'Working…'}
