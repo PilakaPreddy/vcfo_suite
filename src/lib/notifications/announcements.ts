@@ -517,9 +517,20 @@ function chunks(xml: string, tag: string): string[] {
   return xml.match(re) ?? [];
 }
 
+/**
+ * SEBI's feed writes item dates as "05 Nov, 2026 +0530": a comma after the month and no time.
+ * `Date.parse` rejects that, so it is rewritten to "05 Nov 2026 00:00:00 +0530" before parsing.
+ */
+const DAY_MONTH_YEAR_ZONE = /^(\d{1,2}\s+[A-Za-z]{3,9}),?\s+(\d{4})\s+([+-]\d{4})$/;
+
 function parseDate(raw: string | undefined): Date {
-  if (!raw?.trim()) return new Date();
-  const parsed = Date.parse(raw.trim());
+  const text = raw?.trim();
+  if (!text) return new Date();
+  let parsed = Date.parse(text);
+  if (Number.isNaN(parsed)) {
+    const match = DAY_MONTH_YEAR_ZONE.exec(text);
+    if (match) parsed = Date.parse(`${match[1]} ${match[2]} 00:00:00 ${match[3]}`);
+  }
   return Number.isNaN(parsed) ? new Date() : new Date(parsed);
 }
 

@@ -149,3 +149,15 @@ Then run `npm run totp:reencrypt` through the tunnel (docs/context/AWS-DEPLOY.md
 | Rollback image | ✓ | `vcfo-suite:rollback-b54acd9d`. |
 | Image | ✓ | `vcfo-suite:832949e1` and `:latest`. App Runner deployment succeeded at 09:24 IST. |
 | Live check | ✓ | `/`, `/login` and `/receivables/login` answer 200. No errors in the application log. Not checked signed in. |
+
+## 12. Deploy, 9 Nov 2026 15:54 IST
+
+| Step | Done | Detail |
+|---|---|---|
+| `main` | ✓ | `9bbf5af8`: every merge since 4 Nov, including the website match (#18), the audit fixes (#19, #22), labour registers (#20, #23, #26, #27, #31), Ask VCFO (#21, #24), the Budget module (#25) with its Variance tab, advance tax and PDF pages (#28), payroll and the demo seed clients. |
+| Gate | Partly | 0 type errors, 0 lint errors (532 warnings). 5,089 tests pass, 3 fail, all outside the budget work: the Ask VCFO field catalog is stale (run `npm run ask:catalog` after the checklist change in #21), and one Watch adapter test depends on today's date. |
+| RDS snapshot | ✓ | `vcfo-suite-db-pre-0041-20261109`. |
+| Migrations | ✓ | RDS already held 0041 to 0048. 0049 (budget variance tables) was applied through the SSM tunnel; RDS stayed private; the tunnel is closed. No duplicate bank references before 0043. |
+| Rollback image | ✓ | `vcfo-suite:rollback-832949e1`. |
+| Image | ✓ | `vcfo-suite:9bbf5af8` and `:latest`. App Runner deployment succeeded at 15:54 IST. |
+| Live check | ✓ | `/`, `/login` and `/receivables/login` answer 200. No errors in the application log in the first minutes. Not checked signed in. |
