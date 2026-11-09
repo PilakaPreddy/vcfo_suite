@@ -23,7 +23,7 @@ import { toastError, toastSuccess } from '@/lib/toast-errors';
 
 const RUN_LOOK: Record<AssistAgentRunStatus, { label: string; tone: ChipTone }> = {
   running: { label: 'In progress', tone: 'prog' },
-  waiting_user: { label: 'Waiting on you', tone: 'teal' },
+  waiting_user: { label: 'Waiting', tone: 'teal' },
   done: { label: 'Done', tone: 'ok' },
   failed: { label: 'Failed', tone: 'bad' },
   cancelled: { label: 'Cancelled', tone: 'idle' },
@@ -208,7 +208,15 @@ export default function AssistRunsPage() {
           </p>
         ) : runs.length === 0 ? (
           <div className="p-4">
-            <EmptyState title="No agent runs yet" />
+            <EmptyState
+              title="No agent runs yet"
+              action={
+                <span className="max-w-[460px] text-[13px]">
+                  A run shows here when someone fills a portal form with the VCFO Assist side panel in Chrome, next to a signed-in
+                  Suite tab.
+                </span>
+              }
+            />
           </div>
         ) : (
           <RunsTable runs={runs} />
@@ -232,7 +240,14 @@ export default function AssistRunsPage() {
           <SkeletonRows />
         ) : patches.length === 0 ? (
           <div className="p-4">
-            <EmptyState title={view === 'proposed' ? 'No fixes waiting for review' : 'No fixes here'} />
+            <EmptyState
+              title={view === 'proposed' ? 'No fixes waiting for review' : 'No fixes here'}
+              action={
+                view === 'proposed' ? (
+                  <span className="max-w-[460px] text-[13px]">When an agent finds a better way to reach a field, it proposes the fix here.</span>
+                ) : undefined
+              }
+            />
           </div>
         ) : (
           <ul>

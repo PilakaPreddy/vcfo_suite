@@ -27,6 +27,7 @@ import { ChecklistStatusPill } from '@/components/incorporation/ChecklistStatusB
 import { DocPackHeaderButton } from '@/components/doc-pack/DocPackHeaderButton';
 import { DocPackRailCard } from '@/components/doc-pack/DocPackRailCard';
 import { CopyForAssist } from '@/components/assist-profile/CopyForAssist';
+import { AssistAgentHint } from '@/components/assist-profile/AssistAgentHint';
 import { ReopenStepButton } from '@/components/incorporation/ReopenStepButton';
 import { ASSIST_PROFILE_STEP_IDS } from '@/lib/assist-profile/paths';
 import { useState } from 'react';
@@ -247,6 +248,8 @@ export default function EngagementStepDetail() {
     />
   ) : null;
 
+  const assistHint = !isClientRoute ? <AssistAgentHint stepId={item.id} /> : null;
+
   const stepFormBody = (
     <>
       <StepDetailContent
@@ -419,6 +422,7 @@ export default function EngagementStepDetail() {
           {stepTitleRow}
           {stepMetaRow}
           {stepWindowBar}
+          {assistHint}
           {internPhase ? (
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
               <div className="min-w-0">
@@ -452,6 +456,7 @@ export default function EngagementStepDetail() {
             {stepTitleRow}
             {stepMetaRow}
             {stepWindowBar}
+            {assistHint}
             {stepForm}
             {!isClientRoute ? <ClientFileRequestsPanel engagementId={eng.id} item={item} /> : null}
           </div>

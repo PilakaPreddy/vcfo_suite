@@ -178,3 +178,11 @@ until `ASSIST_LIVE_PORTALS=true`. A finished run's SRN is appended to the step's
 spice-a (pre-4), spice-b (pre-10) and inc-20a (post-6) through `applyChecklistPatch`; every other
 sub-agent keeps the SRN on the run. Staff page "Assist runs" at `/app/{super,admin,manager,intern}/assist-runs`.
 Typecheck clean outside `extensions/`, lint 0 errors, tests pass, migrated locally.
+
+Browser check, 9 Nov night: the Assist runs page loads for a demo admin and a demo lead, with the
+sidebar entry and empty states that explain how runs appear. Two runs and two patches were inserted
+through the real API. Approve and Reject work, and the SRN AB1234567 landed in Northwind's pre-4
+filing note. Open bug: `record-srn.ts` passes a slug to `getEngagementById`, so the write-back
+answers `checklist_refused` when the run URL uses the project slug (a uuid works). The staff step
+page shows a "VCFO Assist can fill ..." hint card on every step the catalog maps
+(`src/components/assist-profile/AssistAgentHint.tsx`). The owner's summary is `docs/OVERNIGHT-REPORT.md`.
