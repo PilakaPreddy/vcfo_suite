@@ -35,8 +35,8 @@ function metroLines(node: JNode): MetroLine[] {
   return [{ id: node.id, label: node.label, stations: node.children.length ? node.children : [node] }];
 }
 
-function short(label: string): string {
-  return label.length > 14 ? `${label.slice(0, 13)}…` : label;
+function short(label: string, max = 14): string {
+  return label.length > max ? `${label.slice(0, max - 1)}…` : label;
 }
 
 function Train({ reduce }: { reduce: boolean }) {
@@ -131,7 +131,7 @@ export function JourneyMetro({
           return (
             <g key={line.id}>
               <text x={12} y={y + 4} className="fill-ink text-[12.5px] font-medium">
-                {short(line.label)}
+                {short(line.label, 19)}
               </text>
               {line.stations.length > 1 ? <line x1={x0} y1={y} x2={x1} y2={y} strokeWidth={6} strokeLinecap="round" className={stroke} /> : null}
               {line.stations.map((s, si) => {

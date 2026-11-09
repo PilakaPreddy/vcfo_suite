@@ -1,8 +1,8 @@
-# Client journey map (plan, awaiting owner approval)
+# Client journey map
 
-Status: planning only. Nothing here is wired into the app. The draft code in
-`src/components/client-portal/pages/home/journey/` is not imported anywhere, so the live client
-home page does not change until the owner approves.
+Status: approved and live on `ui/spectrum` (2026-11-09, not deployed). `JourneyMap` is the first
+card of the client home page (`HomePage.tsx`). How to run and test it locally is in `TESTING.md`;
+screenshots are in `screens/`.
 
 ## The problem
 
@@ -39,9 +39,9 @@ short celebration when a stage is done, and the lead's photo on the active stage
 
 | File | Purpose | Status |
 |---|---|---|
-| `journey/journey-model.ts` and test | Pure function that turns real data into the tree, stops and current path | Draft |
-| `journey/layout.ts` and test | Tidy-tree layout for the Tree view | Draft |
-| `journey/JourneyMap.tsx`, `TrackerBar.tsx`, `JourneyTree.tsx`, `JourneyMetro.tsx`, `NodePanel.tsx`, `Celebrate.tsx` | UI parts | Draft, not imported |
+| `journey/journey-model.ts` and test | Pure function that turns real data into the tree, stops, current path and SRNs | Live |
+| `journey/layout.ts` and test | Tidy-tree layout for the Tree view | Live |
+| `journey/JourneyMap.tsx`, `TrackerBar.tsx`, `JourneyTree.tsx`, `JourneyMetro.tsx`, `NodePanel.tsx`, `Celebrate.tsx` | UI parts | Live on the client home |
 
 The HTML prototype the owner reviews lives outside the repository, as a published artifact.
 

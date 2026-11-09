@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { PortalIncorporationModel, PortalPhase, PortalStep } from '@/lib/client-portal/step-model';
 import type { HomeFiling } from '@/lib/client/client-home';
 import type { RegCat, RegRow } from '../derive';
-import { buildJourney, stepStatus } from './journey-model';
+import { buildJourney, srnOf, stepStatus } from './journey-model';
 
 const TODAY = '2026-11-09';
 
@@ -205,5 +205,19 @@ describe('edge cases', () => {
     expect(j.byId['f-old']!.status).toBe('late');
     expect(j.byId['comp-area-GST']!.status).toBe('late');
     expect(j.byId.comp!.status).toBe('late');
+  });
+});
+
+describe('srnOf', () => {
+  const withResponses = (responses?: Record<string, string>) => ({ ...step(3, ['post-9', 'done']), slice: responses ? { status: 'completed', responses } : undefined }) as PortalStep;
+
+  it('reads the first non-empty field ending in Srn', () => {
+    expect(srnOf(withResponses({ notes: 'x', inc22Srn: '  AB1234567 ' }))).toBe('AB1234567');
+    expect(srnOf(withResponses({ mgt4Srn: '', mgt5Srn: 'F98765' }))).toBe('F98765');
+  });
+
+  it('returns undefined without a slice or an SRN field', () => {
+    expect(srnOf(withResponses())).toBeUndefined();
+    expect(srnOf(withResponses({ notes: 'filed' }))).toBeUndefined();
   });
 });

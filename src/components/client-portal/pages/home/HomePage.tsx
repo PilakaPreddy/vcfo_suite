@@ -2,7 +2,8 @@
 
 /**
  * Client portal Home (`/app/client/overview`), VCFO Spectrum (prototype
- * src/screens/client/HomeScreen.tsx). The shared compact home card (`DashHero`, R-17), then
+ * src/screens/client/HomeScreen.tsx). The journey map (`journey/JourneyMap`) comes first, then
+ * the shared compact home card (`DashHero`, R-17), then
  * two columns: the wide one with the ST5 steps card and the Gantt timeline, the 360px one with
  * what the client owes and who holds the work. After the COI the compliance cards join and
  * Registrations runs full width. Below 1024px the columns dissolve and `order` sets the phone
@@ -33,6 +34,7 @@ import { AreaCard, CompCard, IdsCard, NextCard, PostIncCard, RegCard, TimelineCa
 import { TimelineEditor } from './TimelineEditor';
 import { MeetingsCard } from './MeetingsCard';
 import { MessagesCard } from './MessagesCard';
+import { JourneyMap } from './journey/JourneyMap';
 import { UploadDialog } from './UploadDialog';
 import { complianceDrill, dLong, docUrl, type DocItem, type NeedRow } from './derive';
 
@@ -167,6 +169,7 @@ export function HomePage() {
   return (
     <div className="cp-home">
       <Island className={FRAME}>
+        <JourneyMap h={h} onNeed={upload} />
         <HomeCard h={h} onUpload={upload} />
         {h.after ? (
           <>

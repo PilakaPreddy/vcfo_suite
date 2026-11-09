@@ -2,6 +2,7 @@
  * Journey status helpers shared by the tracker, the tree, the metro map and the panel: one place
  * maps a journey status to its word, chip tone, step mark and bar tone.
  */
+import { useEffect, useState } from 'react';
 import type { ChipTone } from '@/components/ui/spectrum-chip';
 import type { StepState, StepTone } from '@/components/ui/step-track';
 import type { BarTone } from '../../incorporation/spectrum';
@@ -52,4 +53,17 @@ export function writeStore(key: string, value: string | null): void {
   } catch {
     /* storage is a convenience only */
   }
+}
+
+/** True below 640px (the phone layout); follows the viewport. False on the server and first render. */
+export function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const on = () => setNarrow(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return narrow;
 }

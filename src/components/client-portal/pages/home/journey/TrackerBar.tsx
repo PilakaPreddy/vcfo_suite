@@ -103,17 +103,23 @@ export function TrackerBar({
                 type="button"
                 onClick={() => onSelect(s.id)}
                 aria-pressed={isSel}
-                aria-label={`${s.label}: ${s.done} of ${s.total}, ${STATUS_WORD[s.status]}`}
+                aria-label={s.total ? `${s.label}: ${s.done} of ${s.total}, ${STATUS_WORD[s.status]}` : `${s.label}: starts later`}
                 className={cn(
                   'flex min-w-0 flex-col items-center gap-1.5 rounded-md px-1 pb-1.5 pt-0.5 text-center outline-none focus-visible:ring-2 focus-visible:ring-brand',
                   isSel ? 'bg-brand-soft/60' : 'hover:bg-surface-sunken',
                 )}
               >
                 <StepMark state={mark.state} tone={mark.tone} />
-                <span className={cn('max-w-full truncate text-[12.5px] font-medium sm:text-[13.5px]', i === current ? 'text-brand-text' : 'text-ink')}>{s.label}</span>
+                <span className={cn('max-w-full break-words text-[11.5px] font-medium leading-tight sm:truncate sm:text-[13.5px]', i === current ? 'text-brand-text' : 'text-ink')}>{s.label}</span>
                 <span className="text-[11.5px] tabular-nums text-ink-muted sm:text-[12px]">
-                  {s.done} of {s.total}
-                  <span className="max-sm:hidden"> · {STATUS_WORD[s.status]}</span>
+                  {s.total ? (
+                    <>
+                      {s.done} of {s.total}
+                      <span className="max-sm:hidden"> · {STATUS_WORD[s.status]}</span>
+                    </>
+                  ) : (
+                    'Starts later'
+                  )}
                 </span>
               </button>
             </li>

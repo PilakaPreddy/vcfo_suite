@@ -34,6 +34,8 @@ export interface JNode {
   doneOn?: string;
   /** Short line, e.g. 'Waiting on you', 'Due 18 Nov', 'Filed 2 Oct'. */
   note?: string;
+  /** The MCA service request number the firm recorded on the step (any response field ending in `Srn`). */
+  srn?: string;
   children: JNode[];
 }
 
@@ -82,8 +84,19 @@ function stepNote(s: PortalStep, status: JStatus): string | undefined {
   }
 }
 
+/** The first non-empty response whose field id ends in `Srn` (`inc22Srn`, `mgt4Srn`, ...). */
+export function srnOf(s: PortalStep): string | undefined {
+  const r = s.slice?.responses;
+  if (!r) return undefined;
+  for (const [k, v] of Object.entries(r)) {
+    if (/srn$/i.test(k) && typeof v === 'string' && v.trim()) return v.trim();
+  }
+  return undefined;
+}
+
 function stepLeaf(s: PortalStep, label: string = s.title): JNode {
   const status = stepStatus(s);
+  const srn = srnOf(s);
   return {
     id: s.id,
     label,
@@ -97,6 +110,7 @@ function stepLeaf(s: PortalStep, label: string = s.title): JNode {
     due: s.due,
     doneOn: s.doneOn,
     note: stepNote(s, status),
+    ...(srn ? { srn } : {}),
     children: [],
   };
 }

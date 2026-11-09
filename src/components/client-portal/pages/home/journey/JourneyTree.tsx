@@ -32,7 +32,7 @@ import { StepMark } from '@/components/ui/step-track';
 import { Bar } from '../../incorporation/spectrum';
 import type { JNode } from './journey-model';
 import { NODE_H, NODE_W, layoutTree } from './layout';
-import { STATUS_BAR, STATUS_WORD, markOf, pctOf, readStore, writeStore } from './status';
+import { STATUS_BAR, STATUS_WORD, markOf, pctOf, readStore, useNarrow, writeStore } from './status';
 
 type Pt = { x: number; y: number };
 type View = { x: number; y: number; k: number };
@@ -46,6 +46,10 @@ type Drag =
 const MIN_K = 0.35;
 const MAX_K = 1.75;
 const PAD = 24;
+/** Room for the toolbar at the top of the canvas. */
+const TOP_PAD = 52;
+/** The smallest zoom the first fit uses, so card labels stay readable. */
+const READ_K = 0.8;
 const KEY_STEP = 60;
 const MODE_KEY = 'vcfo.journey.tree-mode';
 const clampK = (k: number) => Math.min(MAX_K, Math.max(MIN_K, k));
@@ -68,19 +72,6 @@ function loadMoved(key: string): Record<string, Pt> {
   } catch {
     return {};
   }
-}
-
-/** True below 640px; follows the viewport. */
-function useNarrow(): boolean {
-  const [narrow, setNarrow] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 639px)');
-    const on = () => setNarrow(mq.matches);
-    on();
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
-  }, []);
-  return narrow;
 }
 
 /** A smoothstep edge: out of the parent's right side, one vertical run, into the child's left side. */
@@ -264,7 +255,11 @@ export function JourneyTree({
     [],
   );
 
-  const fitTo = useCallback((nodes: Pt[]) => {
+  /**
+   * Fits the nodes in the canvas, below the toolbar. With `focus`, a fit that would shrink the
+   * cards below READ_K (too small to read) stays at READ_K and centres the focus card instead.
+   */
+  const fitTo = useCallback((nodes: Pt[], focus?: Pt) => {
     const el = box.current;
     if (!el || !nodes.length) return;
     const { width, height } = el.getBoundingClientRect();
@@ -272,18 +267,31 @@ export function JourneyTree({
     const minY = Math.min(...nodes.map((n) => n.y));
     const w = Math.max(...nodes.map((n) => n.x)) + NODE_W - minX;
     const h = Math.max(...nodes.map((n) => n.y)) + NODE_H - minY;
-    const k = clampK(Math.min(1, (width - PAD * 2) / w, (height - PAD * 2) / h));
-    setView({ k, x: (width - w * k) / 2 - minX * k, y: (height - h * k) / 2 - minY * k });
+    const availH = height - TOP_PAD - PAD;
+    const k = clampK(Math.min(1, (width - PAD * 2) / w, availH / h));
+    if (focus && k < READ_K) {
+      const fx = focus.x + NODE_W / 2;
+      const fy = focus.y + NODE_H / 2;
+      const x = w * READ_K <= width - PAD * 2 ? (width - w * READ_K) / 2 - minX * READ_K : width / 2 - fx * READ_K;
+      setView({ k: READ_K, x, y: TOP_PAD + availH / 2 - fy * READ_K });
+      return;
+    }
+    setView({ k, x: (width - w * k) / 2 - minX * k, y: TOP_PAD + (availH - h * k) / 2 - minY * k });
   }, []);
   const fit = () => fitTo(placed);
 
-  // Fit once the canvas is on screen (and again when the phone accordion gives way to it).
+  // Fit once the canvas is on screen (and again when the phone accordion gives way to it),
+  // keeping the current step readable.
   const placedRef = useRef(placed);
   useEffect(() => {
     placedRef.current = placed;
   });
   useEffect(() => {
-    if (!narrow) fitTo(placedRef.current);
+    if (narrow) return;
+    const nodes = placedRef.current;
+    const focusId = [...currentPath].reverse().find((id) => nodes.some((n) => n.id === id));
+    fitTo(nodes, nodes.find((n) => n.id === focusId));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount and on the phone switch
   }, [narrow, fitTo]);
 
   // The wheel zooms around the pointer; a non-passive listener so the page does not scroll.
@@ -493,7 +501,7 @@ export function JourneyTree({
           </div>
         ))}
       </div>
-      <div className="absolute right-2 top-2 flex cursor-default gap-1" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="absolute right-2 top-2 flex cursor-default gap-1 rounded-md bg-surface-sunken/90 p-1 backdrop-blur-sm" onPointerDown={(e) => e.stopPropagation()}>
         <div role="group" aria-label="Canvas mode" className="mr-1 flex rounded-[4px] border border-line bg-surface-raised">
           {(['move', 'arrange'] as const).map((m) => (
             <button
@@ -520,7 +528,7 @@ export function JourneyTree({
           Reset layout
         </button>
       </div>
-      <span id={hintId} className="pointer-events-none absolute bottom-2 left-3 text-[11.5px] text-ink-muted">
+      <span id={hintId} className="pointer-events-none absolute bottom-2 left-2 rounded-[4px] bg-surface-sunken/90 px-1.5 py-0.5 text-[11.5px] text-ink-muted">
         {HINT[mode]}
       </span>
     </div>
