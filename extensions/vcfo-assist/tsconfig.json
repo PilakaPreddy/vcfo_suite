@@ -1,0 +1,11 @@
+{
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "resolveJsonModule": true,
+    "types": ["chrome", "vitest/globals"]
+  },
+  "exclude": [".output", "node_modules", "src/suite/contract.test.ts"]
+}

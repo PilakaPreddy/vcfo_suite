@@ -46,6 +46,7 @@
     "e2e",
     "vitest.config.ts",
     "supabase/functions",
-    "scripts"
+    "scripts",
+    "extensions"
   ]
 }

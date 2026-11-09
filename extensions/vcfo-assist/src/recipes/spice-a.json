@@ -1,0 +1,185 @@
+{
+  "id": "spice-a",
+  "version": "1.1.0",
+  "title": "SPICe+ Part A (name reservation), mock",
+  "subAgent": "spice-a",
+  "verifiedAgainst": "mock",
+  "pages": [
+    {
+      "id": "part-a",
+      "title": "SPICe+ Part A",
+      "urlPattern": "/content/mca/global/en/mca/e-filing/incorporation-change-services/spice-plus*",
+      "ready": {
+        "som": "guide[0].guide1[0].guideRootPanel[0]"
+      }
+    }
+  ],
+  "fields": [
+    {
+      "key": "company.type",
+      "page": "part-a",
+      "som": "guide[0].guide1[0].guideRootPanel[0].companyType[0]",
+      "css": "[name=\"companyType\"]",
+      "label": "Type of company",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "company.class",
+      "page": "part-a",
+      "som": "guide[0].guide1[0].guideRootPanel[0].companyClass[0]",
+      "css": "[name=\"companyClass\"]",
+      "label": "Class of company",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "company.category",
+      "page": "part-a",
+      "som": "guide[0].guide1[0].guideRootPanel[0].companyCategory[0]",
+      "css": "[name=\"companyCategory\"]",
+      "label": "Category of the company",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "company.subCategory",
+      "page": "part-a",
+      "som": "guide[0].guide1[0].guideRootPanel[0].companySubCategory[0]",
+      "css": "[name=\"companySubCategory\"]",
+      "label": "Sub-category of the company",
+      "transform": "none",
+      "required": true,
+      "note": "Derived from the project ownership; confirm the selection on the portal."
+    },
+    {
+      "key": "company.nicCode",
+      "page": "part-a",
+      "som": "guide[0].guide1[0].guideRootPanel[0].mainDivision[0]",
+      "css": "[name=\"mainDivision\"]",
+      "label": "Main division of industrial activity of the company",
+      "transform": "nicDivision",
+      "required": true,
+      "note": "The NIC row itself is picked from the popup by the user."
+    },
+    {
+      "key": "company.proposedNames[0]",
+      "page": "part-a",
+      "som": "guide[0].guide1[0].guideRootPanel[0].proposedName1[0]",
+      "css": "[name=\"proposedName1\"]",
+      "label": "Proposed name 1",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "company.proposedNames[1]",
+      "page": "part-a",
+      "som": "guide[0].guide1[0].guideRootPanel[0].proposedName2[0]",
+      "css": "[name=\"proposedName2\"]",
+      "label": "Proposed name 2",
+      "transform": "none",
+      "required": false,
+      "note": "Only before name approval; after approval one name is filed."
+    },
+    {
+      "key": "company.nameSignificance",
+      "page": "part-a",
+      "som": "guide[0].guide1[0].guideRootPanel[0].significance[0]",
+      "css": "[name=\"significance\"]",
+      "label": "Significance of key/coined word(s) of the proposed name",
+      "transform": "none",
+      "required": true,
+      "askUser": true,
+      "note": "Suite does not collect this yet; the user types it on the portal."
+    },
+    {
+      "key": "company.trademarkSimilar",
+      "page": "part-a",
+      "som": "guide[0].guide1[0].guideRootPanel[0].trademarkSimilar[0]",
+      "css": "[name=\"trademarkSimilar\"]",
+      "label": "Whether the proposed name is similar to a registered trademark",
+      "transform": "yesNo",
+      "required": true,
+      "askUser": true,
+      "note": "Suite does not collect this yet; the user answers it on the portal."
+    }
+  ],
+  "actions": [
+    {
+      "id": "save-draft",
+      "label": "Save",
+      "kind": "safe",
+      "match": {
+        "text": "Save"
+      }
+    },
+    {
+      "id": "check-form",
+      "label": "Check form",
+      "kind": "safe",
+      "match": {
+        "text": "Check form"
+      }
+    },
+    {
+      "id": "download-pdf",
+      "label": "Download PDF",
+      "kind": "safe",
+      "match": {
+        "text": "Download PDF"
+      }
+    },
+    {
+      "id": "attach-pdf",
+      "label": "Attach PDF",
+      "kind": "safe",
+      "match": {
+        "css": "#signed-pdf"
+      }
+    },
+    {
+      "id": "submit",
+      "label": "Submit",
+      "kind": "human",
+      "match": {
+        "text": "Submit"
+      }
+    },
+    {
+      "id": "pay",
+      "label": "Pay",
+      "kind": "human",
+      "match": {
+        "text": "Pay"
+      }
+    }
+  ],
+  "gates": [
+    "LOGIN",
+    "DSC",
+    "SUBMIT",
+    "PAY"
+  ],
+  "expect": [
+    {
+      "id": "srn",
+      "kind": "srn",
+      "pattern": "\\b[A-Z]{1,2}\\d{7,8}\\b"
+    },
+    {
+      "id": "saved",
+      "kind": "text",
+      "pattern": "[Ss]aved successfully"
+    },
+    {
+      "id": "checked",
+      "kind": "text",
+      "pattern": "[Cc]heck passed"
+    },
+    {
+      "id": "pdf-ready",
+      "kind": "text",
+      "pattern": "PDF ready"
+    }
+  ]
+}
