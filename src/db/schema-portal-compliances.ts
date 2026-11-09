@@ -269,3 +269,52 @@ export const assistFilingDocuments = pgTable(
     formIdx: index('assist_filing_documents_form_idx').on(t.engagementId, t.form, t.createdAt),
   }),
 );
+
+/**
+ * What staff confirmed about a signer's MCA set-up: Business User registration and DSC
+ * association. Suite cannot read these from the portal, so a person records the date they checked.
+ * One row per engagement and signer; `signer_id` is the `KnownSigner` id (a `pre-15` entry id or a
+ * subscriber key). No MCA login, password, OTP or DSC PIN is ever stored here.
+ */
+export const assistFilingSigners = pgTable(
+  'assist_filing_signers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    engagementId: uuid('engagement_id')
+      .notNull()
+      .references(() => engagements.id, { onDelete: 'cascade' }),
+    signerId: text('signer_id').notNull(),
+    businessUserOn: date('business_user_on'),
+    dscAssociatedOn: date('dsc_associated_on'),
+    updatedBy: uuid('updated_by').references(() => profiles.id, { onDelete: 'set null' }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    signerIdx: uniqueIndex('assist_filing_signers_engagement_signer_idx').on(t.engagementId, t.signerId),
+  }),
+);
+
+/**
+ * Frozen filing packets: the assist profile, attachment list, signer list and missing keys of an
+ * engagement at one moment, numbered per engagement. A later change in Suite shows against the
+ * latest packet. `content` holds no storage key and no file bytes.
+ */
+export const assistFilingPackets = pgTable(
+  'assist_filing_packets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    engagementId: uuid('engagement_id')
+      .notNull()
+      .references(() => engagements.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    /** SHA-256 of the canonical JSON of `content`. */
+    hash: text('hash').notNull(),
+    content: jsonb('content').notNull(),
+    note: text('note'),
+    createdBy: uuid('created_by').references(() => profiles.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    versionIdx: uniqueIndex('assist_filing_packets_engagement_version_idx').on(t.engagementId, t.version),
+  }),
+);

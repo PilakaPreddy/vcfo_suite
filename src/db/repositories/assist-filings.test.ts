@@ -16,7 +16,7 @@ const calls: Call[] = [];
 let results: unknown[][] = [];
 function chain(call: Call): unknown {
   const c: Record<string, unknown> = {};
-  for (const m of ['from', 'leftJoin', 'innerJoin', 'orderBy', 'limit', 'returning', 'onConflictDoNothing']) c[m] = () => c;
+  for (const m of ['from', 'leftJoin', 'innerJoin', 'orderBy', 'limit', 'returning', 'onConflictDoNothing', 'onConflictDoUpdate']) c[m] = () => c;
   c.where = (w: SQL) => {
     call.where = w;
     return c;
@@ -297,5 +297,77 @@ describe('the deadline job', () => {
     const update = calls.find((c) => c.op === 'update')!;
     expect(update.set).toEqual({ alertedOn: { upload: '2026-11-14' } });
     expect(paramsOf(update)).toEqual(['f1']);
+  });
+});
+
+describe('signer confirmations, packets and remark causes', () => {
+  const content = { profile: {}, attachments: [], signers: [], missing: [] } as never;
+  const packetRow = (over: Record<string, unknown> = {}) => ({ id: 'p1', engagementId: OWN, version: 1, hash: 'h1', content, note: null, createdBy: null, createdAt: now, ...over });
+
+  it.each(['client', 'developer', 'partner'] as const)('refuses %s before any query', async (role) => {
+    await expect(filings.setSignerFacts(ctx(role), OWN, 'd1', { businessUserOn: '2026-11-01' })).rejects.toThrow(AssistForbiddenError);
+    await expect(filings.freezePacket(ctx(role), OWN, content, 'h', null)).rejects.toThrow(AssistForbiddenError);
+    await expect(filings.readPacket(ctx(role), OWN, 1)).rejects.toThrow(AssistForbiddenError);
+    await expect(filings.remarkCausesSince(ctx(role), '2025-11-09T00:00:00Z')).rejects.toThrow(AssistForbiddenError);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('reads another firm’s engagement as not found and writes nothing', async () => {
+    assertEngagementAccess.mockResolvedValue({ ok: false, dbId: OTHER, forbidden: true });
+    expect(await filings.setSignerFacts(ctx('intern'), OTHER, 'd1', { businessUserOn: '2026-11-01' })).toBeNull();
+    expect(await filings.freezePacket(ctx('intern'), OTHER, content, 'h', null)).toBeNull();
+    expect(await filings.readPacket(ctx('intern'), OTHER, 1)).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
+  describe('within scope', () => {
+    beforeEach(() => {
+      assertEngagementAccess.mockResolvedValue({ ok: true, dbId: OWN, row: { id: OWN, companyName: 'Acme' } });
+    });
+
+    it('refuses a confirmation date in the future before any write', async () => {
+      await expect(filings.setSignerFacts(ctx('intern'), 'acme', 'd1', { dscAssociatedOn: '2999-01-01' })).rejects.toThrow(FilingRefusal);
+      expect(writes()).toHaveLength(0);
+    });
+
+    it('saves a confirmation under the approved engagement id', async () => {
+      results = [[], [{ engagementId: OWN, signerId: 'd1', businessUserOn: '2026-11-01', dscAssociatedOn: null }]];
+      const out = await filings.setSignerFacts(ctx('intern'), 'acme', 'd1', { businessUserOn: '2026-11-01' });
+      expect(out?.facts).toEqual({ businessUserOn: '2026-11-01', dscAssociatedOn: null });
+      const insert = calls.find((c) => c.op === 'insert')!;
+      expect(insert.values).toMatchObject({ engagementId: OWN, signerId: 'd1', businessUserOn: '2026-11-01', updatedBy: 'user-intern' });
+      expect(insert.values).not.toHaveProperty('dscAssociatedOn');
+    });
+
+    it('adds nothing when the data is the same as the latest packet', async () => {
+      results = [[packetRow()]];
+      const out = await filings.freezePacket(ctx('manager'), 'acme', content, 'h1', null);
+      expect(out).toMatchObject({ created: false, packet: { version: 1 } });
+      expect(writes()).toHaveLength(0);
+    });
+
+    it('freezes changed data as the next version', async () => {
+      results = [[packetRow()], [packetRow({ id: 'p2', version: 2, hash: 'h2', note: 'Before Part B' })]];
+      const out = await filings.freezePacket(ctx('manager'), 'acme', content, 'h2', 'Before Part B');
+      expect(out).toMatchObject({ created: true, packet: { version: 2, note: 'Before Part B' } });
+      const insert = calls.find((c) => c.op === 'insert')!;
+      expect(insert.values).toMatchObject({ engagementId: OWN, version: 2, hash: 'h2', createdBy: 'user-manager' });
+    });
+
+    it('counts only causes recorded inside the window, and returns no remark text', async () => {
+      results = [
+        [
+          {
+            remarks: [
+              { at: '2025-01-01T00:00:00Z', byName: 'A', text: 'old', cause: 'name' },
+              { at: '2026-10-01T00:00:00Z', byName: 'A', text: 'Bill is old', cause: 'office_proof' },
+              { at: '2026-10-02T00:00:00Z', byName: 'A', text: 'A note with no cause' },
+            ],
+          },
+        ],
+      ];
+      const out = await filings.remarkCausesSince(ctx('intern'), '2025-11-09T00:00:00Z');
+      expect(out).toEqual(['office_proof']);
+    });
   });
 });

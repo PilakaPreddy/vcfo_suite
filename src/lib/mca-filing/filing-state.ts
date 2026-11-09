@@ -142,11 +142,11 @@ export function istMidnight(dateOnly: string): Date {
   return new Date(`${dateOnly}T00:00:00+05:30`);
 }
 
-function addDays(dateOnly: string, days: number): string {
+export function addDays(dateOnly: string, days: number): string {
   return new Date(Date.parse(`${dateOnly}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 }
 
-function daysBetween(from: string, to: string): number {
+export function daysBetween(from: string, to: string): number {
   return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / DAY_MS);
 }
 
@@ -218,6 +218,8 @@ export interface FilingRemark {
   at: string;
   byName: string;
   text: string;
+  /** What the remark was about (`REMARK_CAUSES` in readiness.ts). Absent on older remarks. */
+  cause?: string;
 }
 
 export interface FilingPatch {
@@ -225,6 +227,7 @@ export interface FilingPatch {
   srn?: string;
   srnOn?: string;
   remark?: string;
+  remarkCause?: string;
   paidOn?: string;
   signedUploadedOn?: string;
 }
@@ -273,7 +276,9 @@ export function planFilingPatch(facts: FilingFacts, patch: FilingPatch, now: Dat
     const text = patch.remark.trim();
     if (!text) throw new FilingRefusal('empty_remark', 'Write the remark first.', 422);
     set.lastRemark = text;
-    set.remarks = [...facts.remarks, { at: now.toISOString(), byName, text }];
+    set.remarks = [...facts.remarks, { at: now.toISOString(), byName, text, ...(patch.remarkCause ? { cause: patch.remarkCause } : {}) }];
+  } else if (patch.remarkCause !== undefined) {
+    throw new FilingRefusal('empty_remark', 'A cause goes with a remark. Write the remark first.', 422);
   }
 
   const signedUploadedAt = patch.signedUploadedOn ? pastDate(patch.signedUploadedOn, today, 'upload') : null;

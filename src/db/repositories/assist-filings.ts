@@ -1,13 +1,15 @@
 import 'server-only';
 
 import { randomUUID } from 'node:crypto';
-import { and, desc, eq, inArray, isNull, notInArray } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, notInArray } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { assistFilingDocuments, assistFilings, engagements, profiles } from '@/db/schema';
+import { assistFilingDocuments, assistFilingPackets, assistFilingSigners, assistFilings, engagements, profiles } from '@/db/schema';
 import type { AuthContext } from '@/auth/guards';
 import { AssistForbiddenError } from '@/db/repositories/assist-runs';
 import { isStaff, scopeEngagement } from '@/db/repositories/compliance-subject-scope';
 import { leadProfileId } from '@/db/repositories/board-meetings/shared';
+import { checklistStateFromRow } from '@/db/repositories/engagements/read';
+import { displayName, readProposedDirectors } from '@/lib/incorporation/proposed-directors';
 import { ENGAGEMENT_DOCUMENTS_BUCKET } from '@/lib/board-resolution/board-resolution-storage';
 import { appEngagementId } from '@/lib/projects/legacy-engagement-ids';
 import { internEngagementPath } from '@/lib/projects/project-step-path';
@@ -27,13 +29,15 @@ import {
   type FilingState,
 } from '@/lib/mca-filing/filing-state';
 import type { PdfCompareResult } from '@/lib/mca-filing/pdf-compare';
+import { dscDeadlinesToAlert, packetChanges, type DscDeadline, type PacketContent, type PacketPart, type SignerPortalFacts } from '@/lib/mca-filing/readiness';
 import type { SignerMatch } from '@/lib/mca-filing/signers';
 import type { FilingDocumentDto, FilingDto, SignatureRequestEntry } from '@/lib/mca-filing/types';
 import { bucketKey, getObjectBuffer, putObject, signedDownloadUrl } from '@/storage/s3';
 
 /**
- * ASSIST FILINGS (migration 0041) — the human filing record of SPICe+ Part A and Part B, and the
- * portal and signed PDFs. Suite never drives the MCA portal; these rows only record what people
+ * ASSIST FILINGS (migrations 0048 and 0049) — the human filing record of SPICe+ Part A and Part B,
+ * the portal and signed PDFs, what staff confirmed about each signer's MCA set-up, and the frozen
+ * filing packets. Suite never drives the MCA portal; these rows only record what people
  * did. No MCA login, password, OTP, DSC PIN or token is ever stored.
  *
  * >>> ACCESS CONTROL (Path A) <<<
@@ -420,6 +424,8 @@ export interface FilingAlert {
   recipientId: string;
   href: string;
   due: FilingDeadline[];
+  /** DSCs that lapse soon, on one filing per engagement only. */
+  dsc: DscDeadline[];
   alertedOn: Record<string, string>;
 }
 
@@ -434,6 +440,11 @@ export async function systemFilingAlertsDue(today: string): Promise<FilingAlert[
     .innerJoin(engagements, eq(engagements.id, assistFilings.engagementId))
     .where(and(isNull(engagements.deletedAt), notInArray(assistFilings.state, ['submitted', 'approved', 'resubmit', 'cancelled'])))
     .limit(2000);
+  // DSC alerts go on one filing per engagement, Part B when it is open, so two forms cannot repeat them.
+  const dscRow = new Map<string, string>();
+  for (const { filing } of rows) {
+    if (!dscRow.has(filing.engagementId) || filing.form === 'spice-part-b') dscRow.set(filing.engagementId, filing.id);
+  }
   const out: FilingAlert[] = [];
   for (const { filing, engagement } of rows) {
     const alertedOn = (filing.alertedOn ?? {}) as Record<string, string>;
@@ -442,7 +453,13 @@ export async function systemFilingAlertsDue(today: string): Promise<FilingAlert[
       today,
       alertedOn,
     );
-    if (due.length === 0) continue;
+    const directors = dscRow.get(filing.engagementId) === filing.id ? readProposedDirectors(checklistStateFromRow(engagement)) : [];
+    const dsc = dscDeadlinesToAlert(
+      directors.map((d) => ({ id: d.id, name: displayName(d.values), hasDsc: d.values.hasDsc === 'no' ? false : d.values.hasDsc === 'yes' ? true : null, dscExpiry: d.values.dscExpiryDate || null })),
+      today,
+      alertedOn,
+    );
+    if (due.length === 0 && dsc.length === 0) continue;
     const leadId = await leadProfileId(engagement);
     const recipientId = leadId ?? engagement.managerId ?? engagement.adminId ?? null;
     if (!recipientId) continue;
@@ -456,6 +473,7 @@ export async function systemFilingAlertsDue(today: string): Promise<FilingAlert[
       // The card is on the engagement page, not on the project page.
       href: leadId ? internEngagementPath({ id: appId, slug: engagement.slug }) : `/app/${engagement.managerId ? 'manager' : 'admin'}/engagements/${appId}`,
       due,
+      dsc,
       alertedOn,
     });
   }
@@ -468,3 +486,143 @@ export async function systemMarkFilingAlerted(filingId: string, alertedOn: Recor
   for (const key of keys) next[key] = today;
   await db.update(assistFilings).set({ alertedOn: next }).where(eq(assistFilings.id, filingId));
 }
+
+/* ---------------------------------------------------------------------------------------- */
+/* Signers' MCA set-up                                                                         */
+/* ---------------------------------------------------------------------------------------- */
+
+const dateText = (v: string | Date | null | undefined): string | null => (v ? (v instanceof Date ? istDate(v) : String(v).slice(0, 10)) : null);
+
+/** What staff confirmed for each signer of one engagement, by signer id. */
+export async function signerFactsOf(dbId: string): Promise<Map<string, SignerPortalFacts>> {
+  const rows = await db.select().from(assistFilingSigners).where(eq(assistFilingSigners.engagementId, dbId)).limit(200);
+  return new Map(rows.map((r) => [r.signerId, { businessUserOn: dateText(r.businessUserOn), dscAssociatedOn: dateText(r.dscAssociatedOn) }]));
+}
+
+export interface SignerFactsPatch {
+  businessUserOn?: string | null;
+  dscAssociatedOn?: string | null;
+}
+
+/**
+ * Record or clear what staff confirmed about one signer. The caller has checked that the signer
+ * belongs to this engagement. A date cannot be in the future. Null when out of scope.
+ */
+export async function setSignerFacts(ctx: AuthContext, engagementParam: string, signerId: string, patch: SignerFactsPatch): Promise<{ dbId: string; facts: SignerPortalFacts } | null> {
+  const scope = await staffScope(ctx, engagementParam);
+  if (!scope) return null;
+  const today = istDate(new Date());
+  for (const v of [patch.businessUserOn, patch.dscAssociatedOn]) {
+    if (v && v > today) throw new FilingRefusal('date_in_future', 'A confirmation date cannot be in the future.', 422);
+  }
+  const set: Partial<typeof assistFilingSigners.$inferInsert> = { updatedBy: ctx.userId, updatedAt: new Date() };
+  if (patch.businessUserOn !== undefined) set.businessUserOn = patch.businessUserOn;
+  if (patch.dscAssociatedOn !== undefined) set.dscAssociatedOn = patch.dscAssociatedOn;
+  await db
+    .insert(assistFilingSigners)
+    .values({ engagementId: scope.dbId, signerId, ...set })
+    .onConflictDoUpdate({ target: [assistFilingSigners.engagementId, assistFilingSigners.signerId], set });
+  const facts = (await signerFactsOf(scope.dbId)).get(signerId) ?? { businessUserOn: null, dscAssociatedOn: null };
+  return { dbId: scope.dbId, facts };
+}
+
+/* ---------------------------------------------------------------------------------------- */
+/* Filing packets                                                                               */
+/* ---------------------------------------------------------------------------------------- */
+
+export interface PacketSummary {
+  version: number;
+  hash: string;
+  note: string | null;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+type PacketRow = typeof assistFilingPackets.$inferSelect;
+
+async function latestPacketRow(dbId: string): Promise<PacketRow | null> {
+  const [row] = await db
+    .select()
+    .from(assistFilingPackets)
+    .where(eq(assistFilingPackets.engagementId, dbId))
+    .orderBy(desc(assistFilingPackets.version))
+    .limit(1);
+  return row ?? null;
+}
+
+async function summaryOf(row: PacketRow): Promise<PacketSummary> {
+  const names = await namesOf([row.createdBy]);
+  return { version: row.version, hash: row.hash, note: row.note ?? null, createdBy: row.createdBy ? (names.get(row.createdBy) ?? null) : null, createdAt: iso(row.createdAt)! };
+}
+
+/** The latest packet and what differs from the current data. `dbId` comes from a scoped read. */
+export async function packetStatus(dbId: string, current: PacketContent, currentHash: string): Promise<{ latest: PacketSummary | null; changed: PacketPart[] }> {
+  const row = await latestPacketRow(dbId);
+  if (!row) return { latest: null, changed: [] };
+  return { latest: await summaryOf(row), changed: row.hash === currentHash ? [] : packetChanges(row.content as PacketContent, current) };
+}
+
+/**
+ * Freeze the current data as the next packet. The same data as the latest packet adds nothing,
+ * so a repeated press is safe. A concurrent freeze loses the race on the unique version and is
+ * read back. Null when out of scope.
+ */
+export async function freezePacket(
+  ctx: AuthContext,
+  engagementParam: string,
+  content: PacketContent,
+  hash: string,
+  note: string | null,
+): Promise<{ dbId: string; packet: PacketSummary; created: boolean } | null> {
+  const scope = await staffScope(ctx, engagementParam);
+  if (!scope) return null;
+  const latest = await latestPacketRow(scope.dbId);
+  if (latest && latest.hash === hash) return { dbId: scope.dbId, packet: await summaryOf(latest), created: false };
+  const version = (latest?.version ?? 0) + 1;
+  const [row] = await db
+    .insert(assistFilingPackets)
+    .values({ engagementId: scope.dbId, version, hash, content, note, createdBy: ctx.userId })
+    .onConflictDoNothing()
+    .returning();
+  if (!row) {
+    const now = await latestPacketRow(scope.dbId);
+    if (!now) throw new FilingRefusal('packet_conflict', 'Another freeze is running. Try again.', 409);
+    return { dbId: scope.dbId, packet: await summaryOf(now), created: false };
+  }
+  return { dbId: scope.dbId, packet: await summaryOf(row), created: true };
+}
+
+/** One packet in full, for download. Null when out of scope or not found. */
+export async function readPacket(ctx: AuthContext, engagementParam: string, version: number): Promise<{ summary: PacketSummary; content: PacketContent; companyName: string } | null> {
+  const scope = await staffScope(ctx, engagementParam);
+  if (!scope) return null;
+  const [row] = await db
+    .select()
+    .from(assistFilingPackets)
+    .where(and(eq(assistFilingPackets.engagementId, scope.dbId), eq(assistFilingPackets.version, version)))
+    .limit(1);
+  if (!row) return null;
+  return { summary: await summaryOf(row), content: row.content as PacketContent, companyName: scope.row.companyName };
+}
+
+/* ---------------------------------------------------------------------------------------- */
+/* Remark causes                                                                               */
+/* ---------------------------------------------------------------------------------------- */
+
+/**
+ * The cause of every MCA remark recorded since `sinceIso`, across the firm. Counts only: no
+ * company, remark text or name leaves this function, so every staff member may see them.
+ */
+export async function remarkCausesSince(ctx: AuthContext, sinceIso: string): Promise<string[]> {
+  if (!isStaff(ctx)) throw new AssistForbiddenError('Only firm staff can read remark causes');
+  const rows = await db
+    .select({ remarks: assistFilings.remarks })
+    .from(assistFilings)
+    .innerJoin(engagements, eq(engagements.id, assistFilings.engagementId))
+    .where(and(isNull(engagements.deletedAt), gte(assistFilings.updatedAt, new Date(sinceIso))))
+    .limit(5000);
+  const out: string[] = [];
+  for (const r of rows) for (const m of asRemarks(r.remarks)) if (m.cause && m.at >= sinceIso) out.push(m.cause);
+  return out;
+}
+

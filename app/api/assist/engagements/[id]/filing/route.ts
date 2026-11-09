@@ -4,6 +4,7 @@ import { updateFiling } from '@/db/repositories/assist-filings';
 import { recordAuditEvent } from '@/db/repositories/audit-events';
 import { filingBundle } from '@/lib/mca-filing/filing-service';
 import { FILING_FORM_LABEL, FILING_STATES } from '@/lib/mca-filing/filing-state';
+import { REMARK_CAUSES } from '@/lib/mca-filing/readiness';
 import { NO_STORE, assistStaff, filingError, formSchema, notFound } from '@/lib/mca-filing/route-helpers';
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -18,6 +19,7 @@ const patchSchema = z
     srn: z.string().trim().min(1).max(40).optional(),
     srnOn: dateOnly.optional(),
     remark: z.string().trim().min(1).max(2000).optional(),
+    remarkCause: z.enum(REMARK_CAUSES).optional(),
     paidOn: dateOnly.optional(),
     signedUploadedOn: dateOnly.optional(),
   })

@@ -2,7 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { FilingForm, FilingPatch } from '@/lib/mca-filing/filing-state';
-import type { AssistAttachmentItem, FilingBundle, SignatureRequestEntry } from '@/lib/mca-filing/types';
+import type { SignerPortalFacts } from '@/lib/mca-filing/readiness';
+import type { AssistAttachmentItem, FilingBundle, PacketSummaryDto, SignatureRequestEntry } from '@/lib/mca-filing/types';
 
 const base = (engagementId: string) => `/api/assist/engagements/${encodeURIComponent(engagementId)}`;
 
@@ -74,8 +75,21 @@ export function useMcaFilingActions(engagementId: string) {
       send<{ requests: SignatureRequestEntry[] }>(`${path}/filing/signature-requests`, { method: 'POST', body: JSON.stringify(input) }),
     onSuccess,
   });
-  return { patch, upload, review, askSignatures };
+  const signerFacts = useMutation({
+    mutationFn: (input: { signerId: string } & Partial<SignerPortalFacts>) =>
+      send<{ signerId: string; facts: SignerPortalFacts }>(`${path}/filing/signers`, { method: 'PATCH', body: JSON.stringify(input) }),
+    onSuccess,
+  });
+  const freezePacket = useMutation({
+    mutationFn: (input: { note?: string }) =>
+      send<{ packet: PacketSummaryDto; created: boolean }>(`${path}/filing/packets`, { method: 'POST', body: JSON.stringify(input) }),
+    onSuccess,
+  });
+  return { patch, upload, review, askSignatures, signerFacts, freezePacket };
 }
+
+/** The URL that downloads one frozen packet as a JSON file. */
+export const filingPacketUrl = (engagementId: string, version: number) => `${base(engagementId)}/filing/packets/${version}`;
 
 /** One filing PDF, opened from the base64 route in a new tab. */
 export async function openFilingDocument(engagementId: string, documentId: string): Promise<void> {

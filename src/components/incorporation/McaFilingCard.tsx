@@ -10,7 +10,7 @@ import { FilterSelect } from '@/components/ui/native-select';
 import { Chip, type ChipTone } from '@/components/ui/spectrum-chip';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { openFilingDocument, useAssistAttachments, useMcaFiling, useMcaFilingActions } from '@/hooks/use-mca-filing';
+import { filingPacketUrl, openFilingDocument, useAssistAttachments, useMcaFiling, useMcaFilingActions } from '@/hooks/use-mca-filing';
 import {
   FILING_FORMS,
   FILING_FORM_LABEL,
@@ -20,6 +20,7 @@ import {
   type FilingForm,
   type FilingState,
 } from '@/lib/mca-filing/filing-state';
+import { REMARK_CAUSES, REMARK_CAUSE_INFO, isRemarkCause, type PacketPart, type SignerReadiness } from '@/lib/mca-filing/readiness';
 import type { KnownSigner, SignedPdfCheck, SignerMatch } from '@/lib/mca-filing/signers';
 import type { AssistAttachmentItem, FilingBundle, FilingDocumentDto, FilingDto, PortalPdfCheck } from '@/lib/mca-filing/types';
 
@@ -86,6 +87,114 @@ function Deadlines({ filing }: { filing: FilingDto }) {
           </li>
         ))}
       </ul>
+    </Block>
+  );
+}
+
+const PART_LABEL: Record<PacketPart, string> = {
+  profile: 'form values',
+  attachments: 'attachment list',
+  signers: 'signers',
+  missing: 'missing values',
+};
+
+/** One verdict per form from the server: blockers stop the filing, warnings are read first. */
+function Verdict({ bundle, form }: { bundle: FilingBundle; form: FilingForm }) {
+  const verdict = bundle.readiness?.[form];
+  if (!verdict) return null;
+  return (
+    <Block
+      title="Ready to file"
+      meta={
+        <Chip tone={verdict.ready ? 'ok' : 'bad'} raw>
+          {verdict.ready ? 'Ready' : `${verdict.blockers.length} to fix`}
+        </Chip>
+      }
+    >
+      {verdict.blockers.length === 0 && verdict.warnings.length === 0 && verdict.checks.length === 0 ? (
+        <p className="text-[13px] text-ink-muted">Nothing that Suite can check stops this form. Check the rest by hand on the portal.</p>
+      ) : null}
+      {verdict.blockers.length ? (
+        <ul className="space-y-1 text-[13px] text-danger">
+          {verdict.blockers.map((b) => (
+            <li key={`${b.group}-${b.text}`}>{b.text}</li>
+          ))}
+        </ul>
+      ) : null}
+      {verdict.warnings.length ? (
+        <ul className="mt-1.5 space-y-1 text-[13px] text-warning">
+          {verdict.warnings.map((w) => (
+            <li key={`${w.group}-${w.text}`}>{w.text}</li>
+          ))}
+        </ul>
+      ) : null}
+      {verdict.checks.length ? (
+        <div className="mt-2.5">
+          <p className="text-[12.5px] text-ink-muted">MCA raised these causes more than once in the last 12 months. Check them before you file.</p>
+          <ul className="mt-1 space-y-1 text-[13px] text-ink">
+            {verdict.checks.map((c) => (
+              <li key={c.cause}>
+                <span className="font-medium">{c.label}</span> <span className="text-ink-muted">({c.count} times):</span> {c.check}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </Block>
+  );
+}
+
+/** The frozen filing packet: one numbered copy of the data the forms are filled from. */
+function Packet({ bundle }: { bundle: FilingBundle }) {
+  const actions = useMcaFilingActions(bundle.engagementId);
+  const [note, setNote] = useState('');
+  const packet = bundle.packet;
+  if (!packet) return null;
+  const latest = packet.latest;
+  return (
+    <Block title="Filing packet" meta={latest ? `Packet ${latest.version}, ${fmt(latest.createdAt)}` : 'Not frozen yet'}>
+      {latest ? (
+        <div className="space-y-1 text-[13px]">
+          <p className="flex flex-wrap items-center gap-2">
+            <a href={filingPacketUrl(bundle.engagementId, latest.version)} className="font-medium text-brand-text hover:underline" download>
+              Download packet {latest.version}
+            </a>
+            <span className="text-ink-muted">
+              Frozen by {latest.createdBy ?? 'a person no longer on the team'}
+              {latest.note ? `. Note: ${latest.note}` : ''}
+            </span>
+          </p>
+          {packet.changed.length ? (
+            <p className="text-warning">Changed since packet {latest.version}: {packet.changed.map((p) => PART_LABEL[p]).join(', ')}.</p>
+          ) : (
+            <p className="text-ink-muted">The data in Suite is the same as packet {latest.version}.</p>
+          )}
+        </div>
+      ) : (
+        <p className="text-[13px] text-ink-muted">Freeze the packet before anyone fills the portal, so a later edit shows up here.</p>
+      )}
+      <div className="mt-2.5 flex flex-wrap gap-2">
+        <Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder="Note (optional)" aria-label="Packet note" className="h-control-sm min-w-[200px] flex-1 text-[13px]" />
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={actions.freezePacket.isPending || (Boolean(latest) && packet.changed.length === 0)}
+          onClick={() =>
+            actions.freezePacket.mutate(
+              { ...(note.trim() ? { note: note.trim() } : {}) },
+              {
+                onSuccess: (out) => {
+                  setNote('');
+                  toast.success(out.created ? `Packet ${out.packet.version} frozen` : `No change since packet ${out.packet.version}`);
+                },
+                onError: (e) => toast.error(message(e)),
+              },
+            )
+          }
+        >
+          {latest ? 'Freeze a new packet' : 'Freeze the packet'}
+        </Button>
+      </div>
     </Block>
   );
 }
@@ -157,6 +266,7 @@ function Signers({ bundle, filing, signed }: { bundle: FilingBundle; filing: Fil
   const today = istDate(new Date());
   const signedIds = new Set((signed?.signers ?? []).map((m) => m.matchedSignerId).filter(Boolean));
   const lastAsk = (id: string) => [...filing.signatureRequests].reverse().find((r) => r.signerId === id);
+  const checks = new Map((bundle.signerChecks ?? []).map((c) => [c.signerId, c]));
   const columns: EFilingColumn<KnownSigner>[] = [
     { key: 'name', header: 'Signer', render: (s) => <span className="text-ink">{s.name}</span> },
     {
@@ -168,7 +278,23 @@ function Signers({ bundle, filing, signed }: { bundle: FilingBundle; filing: Fil
         return d.tone === 'bad' ? <Chip tone="bad" raw>{d.text}</Chip> : <span className="text-ink-muted">{d.text}</span>;
       },
     },
-    { key: 'portal', header: 'Business User and DSC link', width: '20%', render: () => <span className="text-ink-muted">Check by hand</span> },
+    {
+      key: 'ready',
+      header: 'Ready to sign',
+      width: '24%',
+      render: (s) => {
+        const c = checks.get(s.id);
+        if (!c) return <span className="text-ink-muted">Not checked</span>;
+        const gaps = c.items.filter((i) => !i.ok);
+        return gaps.length === 0 ? (
+          <Chip tone="ok" raw fixed>
+            Ready
+          </Chip>
+        ) : (
+          <span className="text-[12.5px] text-ink-muted">{gaps.map((g) => g.text).join(' ')}</span>
+        );
+      },
+    },
     {
       key: 'asked',
       header: 'Asked',
@@ -202,6 +328,7 @@ function Signers({ bundle, filing, signed }: { bundle: FilingBundle; filing: Fil
           <EFilingGrid caption="Signers" columns={columns} rows={bundle.signers} rowKey={(s) => s.id} pageSize={10} empty="No signers." />
         </div>
       )}
+      {bundle.signers.length ? <SignerFacts engagementId={bundle.engagementId} checks={bundle.signerChecks ?? []} /> : null}
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <Button
           size="sm"
@@ -225,6 +352,54 @@ function Signers({ bundle, filing, signed }: { bundle: FilingBundle; filing: Fil
         <span className="text-[12.5px] text-ink-muted">{filing.reviewedAt ? 'Each signer gets a separate email. Nothing goes out until you press this.' : 'Available after the professional approves the PDF.'}</span>
       </div>
     </Block>
+  );
+}
+
+/**
+ * Business User registration and DSC association happen on the portal, each with the signer's
+ * own OTP or PIN. Suite cannot read them, so a person records the date they confirmed each one.
+ */
+function SignerFacts({ engagementId, checks }: { engagementId: string; checks: SignerReadiness[] }) {
+  const actions = useMcaFilingActions(engagementId);
+  const id = useId();
+  const [signerId, setSignerId] = useState('');
+  const [businessUserOn, setBusinessUserOn] = useState('');
+  const [dscAssociatedOn, setDscAssociatedOn] = useState('');
+  const pick = (next: string) => {
+    setSignerId(next);
+    const c = checks.find((x) => x.signerId === next);
+    setBusinessUserOn(c?.portal.businessUserOn ?? '');
+    setDscAssociatedOn(c?.portal.dscAssociatedOn ?? '');
+  };
+  const today = istDate(new Date());
+  return (
+    <div className="mt-3 flex flex-wrap items-end gap-2">
+      <div className="grid gap-1 text-[12.5px] text-ink-muted">
+        <label htmlFor={`${id}-signer`}>Confirm MCA set-up for</label>
+        <FilterSelect id={`${id}-signer`} value={signerId} onChange={(e) => pick(e.target.value)} options={[{ value: '', label: 'Pick a signer' }, ...checks.map((c) => ({ value: c.signerId, label: c.name }))]} />
+      </div>
+      <div className="grid gap-1 text-[12.5px] text-ink-muted">
+        <label htmlFor={`${id}-bu`}>Business User since</label>
+        <Input id={`${id}-bu`} type="date" max={today} value={businessUserOn} disabled={!signerId} onChange={(e) => setBusinessUserOn(e.target.value)} className="h-control-sm w-40 text-[13px]" />
+      </div>
+      <div className="grid gap-1 text-[12.5px] text-ink-muted">
+        <label htmlFor={`${id}-dsc`}>DSC associated on</label>
+        <Input id={`${id}-dsc`} type="date" max={today} value={dscAssociatedOn} disabled={!signerId} onChange={(e) => setDscAssociatedOn(e.target.value)} className="h-control-sm w-40 text-[13px]" />
+      </div>
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={!signerId || actions.signerFacts.isPending}
+        onClick={() =>
+          actions.signerFacts.mutate(
+            { signerId, businessUserOn: businessUserOn || null, dscAssociatedOn: dscAssociatedOn || null },
+            { onSuccess: () => toast.success('Saved'), onError: (e) => toast.error(message(e)) },
+          )
+        }
+      >
+        Save
+      </Button>
+    </div>
   );
 }
 
@@ -437,6 +612,7 @@ function References({ engagementId, filing }: { engagementId: string; filing: Fi
 function Remarks({ engagementId, filing }: { engagementId: string; filing: FilingDto }) {
   const actions = useMcaFilingActions(engagementId);
   const [text, setText] = useState('');
+  const [cause, setCause] = useState('');
   const log = [...filing.remarks].reverse();
   return (
     <Block title="Remarks" meta={log.length ? `${log.length}` : undefined}>
@@ -444,6 +620,11 @@ function Remarks({ engagementId, filing }: { engagementId: string; filing: Filin
         <ul className="mb-3 space-y-1.5 text-[13px]">
           {log.slice(0, 8).map((r) => (
             <li key={`${r.at}-${r.byName}`}>
+              {r.cause && isRemarkCause(r.cause) ? (
+                <Chip tone="idle" raw>
+                  {REMARK_CAUSE_INFO[r.cause].label}
+                </Chip>
+              ) : null}{' '}
               <span className="text-ink">{r.text}</span>
               <span className="text-ink-muted">
                 {' '}
@@ -455,11 +636,22 @@ function Remarks({ engagementId, filing }: { engagementId: string; filing: Filin
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Input value={text} onChange={(e) => setText(e.target.value)} maxLength={2000} placeholder="ROC remark or a note for the team" aria-label="Remark" className="h-control-sm min-w-[240px] flex-1 text-[13px]" />
+        <FilterSelect
+          aria-label="MCA remark cause"
+          value={cause}
+          onChange={(e) => setCause(e.target.value)}
+          options={[{ value: '', label: 'Cause (MCA remarks)' }, ...REMARK_CAUSES.map((c) => ({ value: c, label: REMARK_CAUSE_INFO[c].label }))]}
+        />
         <Button
           size="sm"
           variant="outline"
           disabled={!text.trim() || actions.patch.isPending}
-          onClick={() => actions.patch.mutate({ form: filing.form, remark: text.trim() }, { onSuccess: () => setText(''), onError: (e) => toast.error(message(e)) })}
+          onClick={() =>
+            actions.patch.mutate(
+              { form: filing.form, remark: text.trim(), ...(cause ? { remarkCause: cause } : {}) },
+              { onSuccess: () => { setText(''); setCause(''); }, onError: (e) => toast.error(message(e)) },
+            )
+          }
         >
           Add remark
         </Button>
@@ -513,7 +705,9 @@ function FilingBody({ bundle, form }: { bundle: FilingBundle; form: FilingForm }
           </div>
         ) : null}
       </Block>
+      <Verdict bundle={bundle} form={form} />
       <Deadlines filing={filing} />
+      <Packet bundle={bundle} />
       <Readiness bundle={bundle} form={form} attachments={attachments.data} loading={attachments.isPending && form === 'spice-part-b'} />
       <Pdfs bundle={bundle} filing={filing} portal={portal} signed={signed} />
       <Approval engagementId={bundle.engagementId} filing={filing} portal={portal} />

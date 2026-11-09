@@ -61,6 +61,7 @@ Update of 6 November: the owner said the extension was not up to the mark, so it
 - `src/lib/mca-filing/`, `src/db/repositories/assist-filings.ts`, `assist-attachments.ts`, routes under `app/api/assist/engagements/[id]/` (`attachments/`, `filing/`), `src/components/incorporation/McaFilingCard.tsx`, `src/hooks/use-mca-filing.ts`, `src/jobs/assist-filing-deadlines.ts`, migration `0048_assist_filings`.
 - Edits to the schema, journal, `compliance-subject-scope.ts`, Inngest route, jobs registry, `next.config.mjs`, `package.json` and lock (`pdfjs-dist`), `.env.example`, `EngagementDetail.tsx`, `STATE.md`, the READMEs.
 - The run label changed from "Filed by Assist" to "Reference recorded".
+- 9 November, no-portal features (plan section 6A): `src/lib/mca-filing/readiness.ts` and `packet-hash.ts`, routes `filing/signers/` and `filing/packets/`, a cause on each remark, DSC expiry alerts in the deadline job, and the Ready to file, Filing packet and signer confirmation parts of the card. Migration `0049_assist_filing_readiness`. Contract in `docs/context/notes/assist-filing.md`.
 
 ## Test results
 
@@ -72,7 +73,7 @@ Update of 6 November: the owner said the extension was not up to the mark, so it
 
 ## Things to fix or watch
 
-1. **Check the migration number when merging.** The migration is now `0048_assist_filings`, numbered after `main` as it stood on 6 November. If `main` has moved past 0047 by then, delete `src/db/migrations/0048_assist_filings.sql` and `meta/0048_snapshot.json`, remove its journal entry, and run `npm run db:generate -- --name assist_filings` again. Apply it on RDS before any deploy, and set `VCFO_ASSIST_ENABLED`.
+1. **Check the migration numbers when merging.** The filing migration is now `0048_assist_filings`, numbered after `main` as it stood on 6 November. If `main` has moved past 0047 by then, delete `src/db/migrations/0048_assist_filings.sql` and `meta/0048_snapshot.json`, remove its journal entry, and run `npm run db:generate -- --name assist_filings` again. Do the same for `0049_assist_filing_readiness`, which must follow it. Apply both on RDS before any deploy, and set `VCFO_ASSIST_ENABLED`.
 2. **Nothing is pushed.** Both branches exist only on this laptop until the owner says to push them.
 3. **The extension's diff was reviewed before its first commit** on `feat/assist-v2`. `capture/drive*.sh` and the older document moves went in with it.
 4. **Disclosure.** The first three e2e runs, before the name-lookup block, may have loaded the public MCA site with no login, data or filling. This was not established either way.

@@ -55,7 +55,7 @@ be available and still carry a `note` (not a PDF, or over 6 MB).
 
 ## Filing record
 
-`GET /filing` returns `{ ok, engagementId, companyName, filings: [filing], documents: [document], missing: [{ key, label, stepId, ... }], signers: [signer] }`.
+`GET /filing` returns `{ ok, engagementId, companyName, filings: [filing], documents: [document], missing: [{ key, label, stepId, ... }], signers: [signer], signerChecks: [signerCheck], packet, causes: [cause], readiness: { 'spice-part-a': verdict, 'spice-part-b': verdict } }`.
 
 ```
 filing   = { form: 'spice-part-a'|'spice-part-b', state, srn, srnAt, nameApprovedAt, signedUploadedAt,
@@ -68,14 +68,22 @@ filing   = { form: 'spice-part-a'|'spice-part-b', state, srn, srnAt, nameApprove
 document = { id, form, kind: 'portal_pdf'|'signed_pdf', fileName, size, sha256, textHash, signers, check,
              stale, uploadedBy, createdAt }
 signer   = { id, name, email, role: 'director'|'subscriber'|'representative', hasDsc, dscExpiry }
+signerCheck = { signerId, name, ready, items: [{ key: 'email'|'dsc'|'dsc_expiry'|'business_user'|'dsc_associated', ok, text }],
+                portal: { businessUserOn, dscAssociatedOn } }
+packet   = { latest: { version, hash, note, createdBy, createdAt } | null,
+             changed: ['profile'|'attachments'|'signers'|'missing'], currentHash }
+cause    = { cause, label, check, count }
+verdict  = { ready, blockers: [{ group, text }], warnings: [{ group, text }], checks: [cause] }
 ```
+
+Remarks may carry `cause` (one of `REMARK_CAUSES` in `readiness.ts`).
 
 Both forms always come back; one with no row reads as `data_ready`. States: `data_ready`,
 `part_a_filling`, `part_a_submitted`, `name_approved`, `part_b_filling`, `pdf_review`,
 `awaiting_signatures`, `signed_ready`, `upload_pending`, `payment_pending`, `submitted`, `approved`,
 `resubmit`, `cancelled`. The Part A states fit only Part A; the moves are in `filing-state.ts`.
 
-`PATCH /filing` takes `{ form, state?, srn?, srnOn?, remark?, paidOn?, signedUploadedOn? }` (dates are
+`PATCH /filing` takes `{ form, state?, srn?, srnOn?, remark?, remarkCause?, paidOn?, signedUploadedOn? }` (dates are
 `YYYY-MM-DD`, India time) and returns `{ ok, filing }`. Moving to `name_approved` starts the name clock,
 moving to `payment_pending` stamps the upload date unless given, and recording `paidOn` while
 `payment_pending` moves to `submitted`. Refusals: `invalid_move`, `state_not_for_form`, `not_reviewed`,
@@ -109,6 +117,37 @@ unless a note is given.
 `{ ok, filing, requests: [...] }`. Only when staff press the button: each signer gets a separate email
 with a link to the latest portal PDF, and the PDF attached when it is 7 MB or less. `no_portal_pdf`,
 `not_reviewed`, `no_signers`.
+
+## Readiness, signers, packets and remark causes (migration 0049)
+
+These need no portal access. The pure rules are in `src/lib/mca-filing/readiness.ts`; the hash is in
+`packet-hash.ts`, which is server-only so that client components can import `readiness.ts`.
+
+- **Verdict.** `filingReadiness` gives each form `blockers` (stop the filing), `warnings` (read before the
+  portal) and `checks` (repeat MCA remark causes). Part B is blocked by blank values, attachments Suite
+  should supply but does not hold (MOA, AOA, DIR-2 and INC-9 are not counted), and a signer who is not
+  ready. Part A takes no DSC, so signer gaps only warn there. No frozen packet warns; a change after
+  the latest freeze blocks once a portal PDF is stored, because the PDF may not hold the change.
+- **Signer readiness.** A signer is ready with an email, a DSC that lapses more than 30 days from today
+  (`DSC_SAFE_DAYS`), and both MCA confirmations. Business User registration and DSC association
+  happen on the portal with the signer's own OTP or PIN, so Suite cannot read them: staff record the
+  date they confirmed each one. `PATCH /filing/signers` takes `{ signerId, businessUserOn?, dscAssociatedOn? }`
+  (dates or null) and returns `{ ok, signerId, facts }`. Refusals: `unknown_signer` (404),
+  `date_in_future` (422). Table `assist_filing_signers`, one row per engagement and signer id. Audit
+  `assist_filing.signer_confirmed` with the field names only.
+- **Filing packet.** One numbered, frozen copy of the data the forms are filled from: assist profile,
+  attachment list (no storage keys), signers and missing keys. `POST /filing/packets` takes `{ note? }`
+  and returns `{ ok, packet, created }`: 201 for a new version, 200 when the data has the same hash as
+  the latest packet. `attachments_unreadable` (503) when storage could not be checked.
+  `GET /filing/packets/[version]` downloads the packet as JSON. The hash is sha256 of canonical JSON
+  (sorted keys), so key order does not change it. Table `assist_filing_packets`, unique
+  (engagement, version). Audit `assist_filing.packet_frozen` with the version only.
+- **Remark causes.** A remark can carry a cause. The causes of the last 365 days across the firm are
+  counted; a cause seen twice or more (never `other`) becomes a check on every verdict. Only the cause
+  names leave `remarkCausesSince`, never a company, remark text or name, so all staff may see them.
+- **DSC alerts.** The daily deadline job also alerts the lead from 15 days before to 7 days after a
+  director's DSC expiry date, once a day per director (`alerted_on` key `dsc:<id>`), on one filing row
+  per engagement (Part B when it exists). A director with no DSC is skipped.
 
 ## What a signature check does and does not mean
 
