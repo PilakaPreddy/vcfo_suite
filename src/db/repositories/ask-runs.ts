@@ -124,6 +124,9 @@ export async function findActiveAskRun(ctx: AuthContext, conversationId: string,
       and(
         eq(askRuns.profileId, ctx.userId),
         eq(askRuns.conversationId, conversationId),
+        // Only a drop runs in the background; a chat run left 'running' by a dropped stream must not
+        // make the panel poll it. The literal matches DROP_WORKFLOW in src/lib/ask/drop/types.ts.
+        eq(askRuns.workflow, 'drop'),
         inArray(askRuns.status, ['queued', 'running']),
         gt(askRuns.createdAt, new Date(now.getTime() - ACTIVE_HOURS * 3_600_000)),
       ),

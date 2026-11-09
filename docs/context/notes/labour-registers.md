@@ -262,3 +262,25 @@ nothing. Only the links inside it take the pointer back (`pointer-events-auto`).
 The `<svg>` stays `aria-hidden` and its shapes are not focusable: a path is a poor focus target
 and announces nothing useful. The list of states the caller renders beside the map is the
 keyboard and screen-reader path, and both read the same rows.
+
+## Sheets that arrive through Ask VCFO (2026-11-09)
+
+A project lead can drop payroll and attendance sheets, a folder or a ZIP into Ask VCFO, and each sheet becomes a
+`labour.uploadSheet` row on that client's review card (`src/lib/actions/labour/upload-sheet.ts`). Nothing is stored
+until the row is accepted.
+
+- **One upload path.** The upload route and the chat action both call `ingestRegisterUpload` in
+  `src/lib/labour-registers/ingest-upload.ts` (parse, sha256, `putObject` under `labour-registers/{eng}/{batch}/`,
+  `recordUpload`). Change the upload rules there, not in the route.
+- **A closed month refuses the row.** The card's recheck and the action's execute both look at the batch's
+  `markedReadyAt`, the same lock the batch screen uses. Undo is refused once the month is closed.
+- **A full slot is replaced.** The card says "replaces X". Undo restores the previous upload (`restoreUpload`), or
+  removes the new one (`removeUpload`) when the slot was empty.
+- **The state may be a guess.** When neither a reply, the folder or file names, nor an earlier batch gives the state,
+  the registered office's state is used and flagged `stateAssumed`; the card shows "(assumed from the registered
+  office)". A state from the folder or file names that the client has never filed in is flagged "new for this client:
+  please check" (`stateNew`). Either way the lead can change the state on the card: "Edit" on a labour row offers the
+  list of states, and the row is checked again for the new state before it can be accepted.
+- **The month** comes from the attendance grid's dates when they settle it, then from names such as `Aug-2026` in the
+  file or folder names (`src/lib/labour-registers/period-hint.ts`). A paysheet has no dates of its own, so a lone
+  paysheet named only `pay.xlsx` waits for "Where should these go?".

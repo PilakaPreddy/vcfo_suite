@@ -15,6 +15,7 @@ import {
   type UploadSnapshot,
 } from '@/db/repositories/labour-registers';
 import type { JsonValue, RowCheck } from '@/lib/ask/changeset/types';
+import { labourStateNote } from '@/lib/ask/changeset/view-groups';
 import { gridIndices } from '@/lib/labour-registers/attendance-grid';
 import { formsFor, inputFields } from '@/lib/labour-registers/catalogue';
 import { CLOSED_PERIOD_MESSAGE, ingestRegisterUpload, readRegisterSheet, RegisterUploadRefused, type RegisterSheetSummary } from '@/lib/labour-registers/ingest-upload';
@@ -45,6 +46,8 @@ const input = z.object({
   attachmentId: z.string().uuid(),
   /** The state was not found in the file or an earlier batch; it is the registered office's. */
   stateAssumed: z.boolean().optional(),
+  /** The state came from the folder or file names, and the client has filed only in other states. */
+  stateNew: z.boolean().optional(),
   /** The file name, shown on the card. */
   value: z.string(),
 });
@@ -75,20 +78,23 @@ function registerHref(role: string, batchId: string): string {
 
 /*
  * Reading a sheet costs a download and a parse, and a card rechecks every row each time one is
- * edited. A chat attachment never changes, so its summary is kept for a while by id.
+ * edited. A chat attachment never changes, so its summary is kept for a while, keyed by the person
+ * and the id: `copyAskAttachment` only reads the caller's own uploads, so one person's cached sheet
+ * must never answer for another.
  */
 const SHEET_CACHE = new Map<string, RegisterSheetSummary>();
 const SHEET_CACHE_SIZE = 32;
 
 async function readSheet(actx: ActionContext, attachmentId: string): Promise<{ summary: RegisterSheetSummary } | { error: string }> {
-  const cached = SHEET_CACHE.get(attachmentId);
+  const key = `${actx.auth.userId}:${attachmentId}`;
+  const cached = SHEET_CACHE.get(key);
   if (cached) return { summary: cached };
   const file = await copyAskAttachment(actx, attachmentId);
   if (!file) return { error: 'The file is no longer available.' };
   try {
     const { summary } = await readRegisterSheet(file.bytes, file.fileName);
     if (SHEET_CACHE.size >= SHEET_CACHE_SIZE) SHEET_CACHE.delete(SHEET_CACHE.keys().next().value as string);
-    SHEET_CACHE.set(attachmentId, summary);
+    SHEET_CACHE.set(key, summary);
     return { summary };
   } catch (error) {
     if (error instanceof RegisterUploadRefused) return { error: error.message };
@@ -133,7 +139,7 @@ async function check(actx: ActionContext, i: Input): Promise<ActionRecheck> {
   const sheet = await readSheet(actx, i.attachmentId);
   const lines = [
     loaded.companyName,
-    `${state?.name ?? i.stateCode}${i.stateAssumed ? ' (assumed from the registered office)' : ''}`,
+    `${state?.name ?? i.stateCode}${labourStateNote(i)}`,
     periodLabel({ from: i.periodFrom, to: i.periodTo }),
     SLOT_LABEL[i.slot],
   ];

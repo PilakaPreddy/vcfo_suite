@@ -1,17 +1,19 @@
 /**
  * Masks identity numbers wherever text can reach chat, logs, stored prompts or a run trace. It runs
  * on text, so it also catches a number somebody pasted. GSTIN and CIN are public registry numbers
- * and stay readable; a PAN inside a GSTIN does not match, because it has no word boundary.
+ * and stay readable; a PAN inside a GSTIN does not match, because a digit sits on each side of it.
  */
 const lastFour = (value: string): string => {
   const compact = value.replace(/[\s-]/g, '');
   return `${'X'.repeat(compact.length - 4)}${compact.slice(-4)}`;
 };
 
+// The edges are "no letter or digit" rather than \b, so an underscore separates too: a file named
+// "ABCDE1234F_pan.pdf" is masked, and a PAN inside a GSTIN (digits on both sides) still is not.
 const PATTERNS: readonly RegExp[] = [
-  /\b[A-Z]{5}\d{4}[A-Z]\b/gi, // PAN
-  /\b[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}\b/g, // Aadhaar
-  /\b[A-Z][1-9]\d{6}\b/gi, // Passport
+  /(?<![A-Za-z0-9])[A-Z]{5}\d{4}[A-Z](?![A-Za-z0-9])/gi, // PAN
+  /(?<![A-Za-z0-9])[2-9]\d{3}[\s-]?\d{4}[\s-]?\d{4}(?![A-Za-z0-9])/g, // Aadhaar
+  /(?<![A-Za-z0-9])[A-Z][1-9]\d{6}(?![A-Za-z0-9])/gi, // Passport
 ];
 
 const DIN_IN_CONTEXT = /\b(DIN[\s:#-]*)(\d{8})\b/gi;

@@ -267,8 +267,45 @@ A sheet with no company takes the client of its folder siblings.
 
 **Docs** to update: `docs/context/notes/ask-do.md`, `docs/context/notes/labour-registers.md`, `docs/context/STATE.md`.
 
+## Status
+
+Built on `claude/dreamy-feynman-efzt1s` on 2026-11-09, not pushed and not deployed. Phases 1 to 4 are in d98e79a, phases
+5 and 6 in 36fbab2, and the verification pass (golden cases, the end-to-end test and the docs) after that.
+**Migration `0050_ask_drop` must be applied on RDS before deploy.**
+
+| Check | Result |
+|---|---|
+| Unit tests beside each new file | pass |
+| Drop golden set, whole job with a mock model (`tests/ask/evals/fill/drop-golden.test.ts`, the nine cases above) | pass |
+| Fill golden set and the other Ask VCFO evals (`npx vitest run tests/ask`) | pass |
+| Typecheck | 0 errors |
+| End-to-end (`e2e/ask-fill.spec.ts`, the folder for two clients) | written and typechecked, **not run** (needs a running app with MinIO) |
+| Live fill eval (`run-live.ts`) | not run, so its cost is not reported yet |
+
+Known gaps: when one reply makes new cards for two or more other clients, only the last appears under the reply
+until the chat is reopened; links to single cards appear only for two or three cards, as plain text; sheet names are not
+used for the month.
+
 ## Decisions taken while building
 
 - **Run and job (phase 2).** What a drop file read is stored in S3 beside the file (`ask/attachments/<person>/drops/<run>/reads/<attachment>.json`), never in `ask_runs.state` (which is masked, so it could not carry a PAN to the card) or in Inngest step results (which leave our infrastructure). Each read step adds its spend to the run row, so the 400k budget holds across steps. A run that went over budget is stored as `over_budget` even when it prepared a card; the card stays. The chat's card building moved into `prepareClientCard` in `src/lib/ask/do/entry.ts`, which the phase A `assembleDrop` reuses. The start route records the person's message in the chat. `activeRunId` covers drops queued or running in the last 6 hours. Inside a ZIP, an entry over 25 MB is skipped with a reason, but a pack ratio over 100 past the first megabyte refuses the whole ZIP.
 - **Integration after phase A.** Only a checklist answer can be edited on the card (`rowValueEditable` in `src/lib/ask/changeset/apply.ts`, used by the card view and the edit route alike); every file row is accepted or left. Editing the assumed labour state on the card is part of the phase 6 card work. Undoing a compliance evidence row marks the deliverable it replaced again (`markTaskDeliverable`). Loose prose pasted with a "fill this in" kind of instruction counts as data (`isDataMessage` in `entry.ts`), provided there are at least 60 characters beyond the instruction. `.env.example` now sets `ASK_ID_DOC_READING=true`.
 - **Sorting (phases 5 and 6).** `classify.ts` is plain code; `assemble.ts` settles the rest with repositories and builds every file row from the action's own `preview`, so the card shows what the action will do. A file with no hint of its own takes its folder siblings' client before the message, the page or the only project count. The labour state: a reply decides, then a state named in the folder or file names when the client has no batch yet or already files in that state, then the client's latest batch, then the registered office (`stateAssumed`). Sheet names are not used for the month, because the stored read does not keep them. A drop that still has unplaced files waits in `waiting_reply` even when it made cards. A reply ("file 3 is Acme, Karnataka, Aug 2026", "all of them are Routeware", "leave them") is read by `parseDropReply` and answered in `drop/reply.ts`; its rows go onto that client's open card through the new `appendAskChangesetRows`, which recomputes the content hash, or onto a new card when that one was decided. The appended card's title is recounted over all its rows. Row sources carry the dropped folder path (`RowSource.path`).
+- **Verification (phase 6).** The drop's golden cases run through the whole job (`runAskDrop`: unpack, read, sort,
+  cards, closing message), not through `assembleDrop` alone, so a break between the steps fails them. Only the
+  repositories, storage and the model are memory; the reader, sorting, data router and every file action's preview are
+  the real code. The fixtures are the `drop-*` files from `make-fixtures.mjs`, which now writes only missing files unless
+  given `--force`, so adding a fixture leaves the others byte for byte. The hidden instruction case checks that the file
+  text reaches the model inside `<document>` delimiters and that the drop does nothing beyond filing the file; it cannot
+  prove the real model obeys, which is the live eval's job. The end-to-end test names the state in the folder, because
+  the demo data has no labour batch to take it from.
+- **Final review.** A drop with files still waiting for "Where should these go?" stays in `waiting_reply` even when it
+  ran over budget, so the reply still reaches it (`dropStatus`). A labour sheet's state can be changed on the card:
+  "Edit" offers the list of states, and `editChangesetRow` moves the row's target to that state, drops the assumed
+  flags, checks every row again and recomputes the hash (`rowStateEditable` in `apply.ts`); every other file row is
+  still accepted or left. A state named in the folder or file names now always wins over the client's latest batch;
+  when the client has filed only in other states, the row is flagged "new for this client: please check"
+  (`stateNew`), because a folder called "HR" reads as Haryana. `findActiveAskRun` only returns drops. A retried sort
+  step keeps the cards an earlier try made (`listAskRunChangesets`) and sorts only the other files. The labour sheet
+  cache is keyed by person as well as file. File names on drop rows and on every recheck are masked, and
+  `maskIdentityNumbers` now treats an underscore as a separator, so `ABCDE1234F_pan.pdf` is masked.

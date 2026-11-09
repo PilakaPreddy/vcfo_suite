@@ -49,6 +49,8 @@ vi.mock('@/db/repositories/ask-messages', () => ({
     return { id: 'msg-1' };
   },
 }));
+let earlierCards: Array<{ id: string; engagementId: string; companyName: string; attachmentIds: string[] }> = [];
+vi.mock('@/db/repositories/ask-changesets', () => ({ listAskRunChangesets: async () => earlierCards }));
 vi.mock('@/db/repositories/ask-usage', () => ({ systemTodayTokenTotal: async () => 0, systemRecordAskUsage: async () => undefined }));
 vi.mock('@/lib/ask/rate-limit', () => ({ checkAskRateLimit: async () => ({ ok: true }) }));
 vi.mock('@/storage/s3', () => ({
@@ -91,7 +93,7 @@ const send = vi.fn(async () => {
 });
 vi.mock('@/jobs/client', () => ({ inngest: { send: (...a: unknown[]) => send(...(a as [])) } }));
 
-const { queueAskDrop, runAskDrop, dropUnpackStep } = await import('./run');
+const { queueAskDrop, runAskDrop, dropUnpackStep, dropStatus } = await import('./run');
 
 function file(id: string, fileName: string, data: Buffer | Uint8Array, extra: Partial<Row> = {}): Row {
   const key = `k/${id}/${fileName}`;
@@ -106,6 +108,7 @@ beforeEach(() => {
   messages.length = 0;
   modelUsage = 10;
   nextId = 0;
+  earlierCards = [];
   run = { id: 'run-1', workflow: 'drop', status: 'queued', conversationId: 'conv-1', budgetTokens: 400_000, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, state: { files: [], groups: [], unplaced: [], progress: { done: 0, total: 0, label: '' }, instruction: 'fill this in for Acme' } };
   rows = [file('a-1', 'notes.txt', Buffer.from('Name: Asha')), file('a-2', 'pan.pdf', Buffer.from('%PDF'), { relativePath: 'Acme/KYC/pan.pdf' })];
   actor = { ctx: owner, run };
@@ -155,6 +158,22 @@ describe('runAskDrop', () => {
     expect(state.groups).toHaveLength(1);
     expect(state.files.find((f) => f.path === 'third.txt')).toMatchObject({ status: 'skipped' });
     expect(messages[0]!.text).toMatch(/Not read: third\.txt/);
+  });
+
+  it('keeps the cards an earlier try made and sorts only the other files', async () => {
+    earlierCards = [{ id: 'e0000000-0000-4000-8000-00000000000e', engagementId: 'eng-1', companyName: 'Acme', attachmentIds: ['a-1'] }];
+    await runAskDrop('run-1');
+    const call = assemble.mock.calls[0]![0] as unknown as { reads: Array<{ attachment: { id: string } }>; groups?: unknown[] };
+    expect(call.reads.map((r) => r.attachment.id)).toEqual(['a-2']);
+    expect(call.groups).toEqual([{ engagementId: 'eng-1', companyName: 'Acme', changesetId: 'e0000000-0000-4000-8000-00000000000e' }]);
+    const state = run.state as { files: Array<{ attachmentId: string; status: string }> };
+    expect(state.files.find((f) => f.attachmentId === 'a-1')).toMatchObject({ status: 'placed' });
+  });
+
+  it('waits for the where reply even when the drop ran over budget', () => {
+    const base = { files: [], groups: [], progress: { done: 0, total: 0, label: '' }, instruction: '' };
+    expect(dropStatus({ ...base, overBudget: true, unplaced: [{ attachmentId: 'x', path: 'x.pdf', reason: 'r' }] } as never)).toBe('waiting_reply');
+    expect(dropStatus({ ...base, overBudget: true, unplaced: [] } as never)).toBe('over_budget');
   });
 
   it('unpacks a ZIP into child rows with their folder paths, once', async () => {

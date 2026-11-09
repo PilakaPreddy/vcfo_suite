@@ -178,6 +178,29 @@ describe('assembleDrop', () => {
     ]);
     expect(locked).toEqual([acme.id]);
   });
+
+  it('keeps a state the names give even when the client has filed only elsewhere, flagged as new', async () => {
+    batches[acme.id] = [{ stateCode: 'MH', periodFrom: '2026-07-01' }];
+    const { reads, files } = drop([
+      ['a-1', 'Acme/Karnataka/Aug-2026/pay.xlsx', sheet()],
+      ['a-2', 'Acme/Sep-2026/pay.xlsx', sheet()],
+    ]);
+    const out = await assembleDrop({ runCtx, conversationId: 'conv-1', instruction: '', reads, files, now: new Date() });
+    expect(cardCalls[0]!.fileRows.map((r) => [r.target.stateCode, r.target.stateNew ?? false])).toEqual([
+      ['KA', true],
+      ['MH', false],
+    ]);
+    expect(out.files.find((f) => f.attachmentId === 'a-1')!.destination).toBe('Labour register: Paysheet, Karnataka (new for this client), August 2026');
+  });
+
+  it('masks an identity number in a file name on the card', async () => {
+    const { reads, files } = drop([['v-1', 'Acme/ABCDE1234F_lease.pdf', { docType: 'rent_agreement' }]]);
+    await assembleDrop({ runCtx, conversationId: 'conv-1', instruction: '', reads, files, now: new Date() });
+    const row = cardCalls[0]!.fileRows[0]!;
+    expect(row.source).toMatchObject({ fileName: 'XXXXXX234F_lease.pdf', path: 'Acme/XXXXXX234F_lease.pdf' });
+    // Shown masked; the raw name stays only in the value the action files the document with.
+    expect(row as unknown as { displayNew: string; newValue: string }).toMatchObject({ displayNew: 'XXXXXX234F_lease.pdf', newValue: 'ABCDE1234F_lease.pdf' });
+  });
 });
 
 describe('answerDropReply', () => {

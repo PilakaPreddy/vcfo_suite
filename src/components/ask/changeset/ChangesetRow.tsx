@@ -26,8 +26,10 @@ function rowChip(row: ChangesetRowView): { word: string; tone: ChipTone } {
 
 function RowEditor({ row, pending, onSave, onCancel }: { row: ChangesetRowView; pending: boolean; onSave: (value: string) => void; onCancel: () => void }) {
   // A sensitive value is shown masked, so an edit starts empty and is typed in full.
-  const [value, setValue] = useState(row.sensitive ? '' : row.inputType === 'choice' ? (row.options?.find((o) => o.label === row.displayNew)?.value ?? '') : row.displayNew);
-  const label = `New value for ${row.label}`;
+  const [value, setValue] = useState(
+    row.editValue ?? (row.sensitive ? '' : row.inputType === 'choice' ? (row.options?.find((o) => o.label === row.displayNew)?.value ?? '') : row.displayNew),
+  );
+  const label = row.editLabel ?? `New value for ${row.label}`;
   return (
     <form
       className="mt-2 flex flex-wrap items-center gap-2"

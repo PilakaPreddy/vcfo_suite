@@ -10,7 +10,11 @@ const lead: AuthContext = { userId: 'lead-1', email: 'l@x.test', name: 'Lead', r
 let found: unknown = null;
 vi.mock('@/db/repositories/ask-changesets', () => ({ getAskChangesetSummary: vi.fn(async () => found) }));
 vi.mock('@/lib/actions/labour/upload-sheet', () => ({ SLOT_LABEL: { paysheet: 'Paysheet', attendance: 'Attendance' } }));
-vi.mock('./apply', () => ({ canDecideRow: () => true, rowValueEditable: (action: string) => action === 'checklist.setResponse' }));
+vi.mock('./apply', () => ({
+  canDecideRow: () => true,
+  rowEditable: (action: string) => action === 'checklist.setResponse' || action === 'labour.uploadSheet',
+  rowStateEditable: (action: string) => action === 'labour.uploadSheet',
+}));
 
 const { loadChangesetView } = await import('./view');
 
@@ -42,7 +46,9 @@ describe('loadChangesetView', () => {
     ]);
     const byId = new Map(view!.rows.map((r) => [r.id, r]));
     expect(byId.get('r1')).toMatchObject({ label: 'Director first name', editable: true, groupKind: 'values' });
-    expect(byId.get('r2')).toMatchObject({ label: 'att.xlsx', stepTitle: 'Attendance · Karnataka · Aug 2026', editable: false, groupKind: 'labour' });
+    expect(byId.get('r2')).toMatchObject({ label: 'att.xlsx', stepTitle: 'Attendance · Karnataka · Aug 2026', editable: true, inputType: 'choice', editValue: 'KA', groupKind: 'labour' });
+    // A labour sheet's state is the one thing on a file row the person may change, from the list of states.
+    expect(byId.get('r2')!.options).toContainEqual({ value: 'KA', label: 'Karnataka' });
     expect(byId.get('r3')).toMatchObject({ label: 'lease.pdf', stepTitle: 'Vault · Contracts', groupKind: 'vault' });
     expect(view!.canUndo).toBe(true);
   });

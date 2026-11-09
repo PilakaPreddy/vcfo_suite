@@ -59,6 +59,16 @@ export function stateName(code: string): string {
   return code ? (stateByCode(code.toUpperCase())?.name ?? code.toUpperCase()) : 'State not set';
 }
 
+/**
+ * Why a labour row's state needs a look: it was assumed from the registered office, or the names
+ * gave a state the client has not filed in before. Shared with `labour.uploadSheet`'s card text.
+ */
+export function labourStateNote(target: { stateAssumed?: unknown; stateNew?: unknown }): string {
+  if (target.stateAssumed === true) return ' (assumed from the registered office)';
+  if (target.stateNew === true) return ' (new for this client: please check)';
+  return '';
+}
+
 export interface RowPlaceInput {
   action: string;
   target: { [key: string]: JsonValue };
@@ -91,13 +101,13 @@ export function rowPlace(row: RowPlaceInput, slotLabel: (slot: string) => string
     const code = text(row.target.stateCode).toUpperCase();
     const period = shortPeriod(text(row.target.periodFrom), text(row.target.periodTo));
     const state = stateName(code);
-    const assumed = row.target.stateAssumed === true;
+    const note = labourStateNote(row.target);
     return {
       kind,
       groupKey: `labour:${code}:${text(row.target.periodFrom)}:${text(row.target.periodTo)}`,
       groupTitle: `Labour register · ${state} · ${period}`,
       label: fileLabel,
-      stepTitle: `${slotLabel(text(row.target.slot))} · ${state}${assumed ? ' (assumed from the registered office)' : ''} · ${period}`,
+      stepTitle: `${slotLabel(text(row.target.slot))} · ${state}${note} · ${period}`,
       sourceFile,
     };
   }

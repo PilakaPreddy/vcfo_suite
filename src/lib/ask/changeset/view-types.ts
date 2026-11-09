@@ -21,6 +21,10 @@ export interface ChangesetRowView {
   needsLook: boolean;
   editable: boolean;
   options?: Array<{ value: string; label: string }>;
+  /** What the editor starts on when it is not the shown value, for example a labour sheet's state code. */
+  editValue?: string;
+  /** The editor's label when the row edits something other than its value, for example "State for pay.xlsx". */
+  editLabel?: string;
   inputType: 'text' | 'date' | 'choice';
   /** The section this row sits in on a big card; see `view-groups.ts`. */
   groupKey: string;

@@ -178,7 +178,7 @@ describe('editChangesetRow', () => {
     await expect(editChangesetRow(lead, 'cs-1', 'a', 'x')).rejects.toMatchObject({ status: 403 });
   });
 
-  it.each(['checklist.attachFile', 'labour.uploadSheet', 'compliance.attachEvidence', 'documents.fileToVault'])(
+  it.each(['checklist.attachFile', 'compliance.attachEvidence', 'documents.fileToVault'])(
     'refuses to edit a file row (%s), which carries a file rather than a typed value',
     async (action) => {
       setCard([makeRow('a', { action })]);
@@ -186,6 +186,30 @@ describe('editChangesetRow', () => {
       expect(updateRows).not.toHaveBeenCalled();
     },
   );
+
+  describe('a labour sheet\'s state', () => {
+    const labourTarget = { engagementId: 'eng-1', stateCode: 'MH', periodFrom: '2026-08-01', periodTo: '2026-08-31', slot: 'paysheet', attachmentId: 'att-1', stateAssumed: true };
+    beforeEach(() => {
+      actions['labour.uploadSheet'] = { ...action, name: 'labour.uploadSheet', input: z.object({ stateCode: z.string(), value: z.string() }).passthrough() };
+    });
+
+    it('moves the row to the chosen state, drops the assumed flag and recomputes the hash', async () => {
+      setCard([makeRow('a', { action: 'labour.uploadSheet', target: labourTarget, newValue: 'pay.xlsx' })]);
+      await editChangesetRow(lead, 'cs-1', 'a', 'ka');
+      const [, , updates, hash] = updateRows.mock.calls[0]!;
+      const { stateAssumed: _a, ...rest } = labourTarget;
+      expect(updates[0].patch.target).toEqual({ ...rest, stateCode: 'KA' });
+      expect(updates[0].patch.status).toBe('edited');
+      expect(hash).toBe(changesetHash([{ action: 'labour.uploadSheet', target: { ...rest, stateCode: 'KA' }, newValue: 'pay.xlsx' }]));
+      expect(recheck.mock.calls[0]![1]).toMatchObject({ stateCode: 'KA', value: 'pay.xlsx' });
+    });
+
+    it('refuses a state that is not on the list', async () => {
+      setCard([makeRow('a', { action: 'labour.uploadSheet', target: labourTarget, newValue: 'pay.xlsx' })]);
+      await expect(editChangesetRow(lead, 'cs-1', 'a', 'Atlantis')).rejects.toMatchObject({ status: 400 });
+      expect(updateRows).not.toHaveBeenCalled();
+    });
+  });
 
   it('releases a later row once the answer it waits for is given', async () => {
     setCard([makeRow('parent', { newValue: '' }), makeRow('child', { status: 'held' })]);

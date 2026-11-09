@@ -10,6 +10,7 @@ import {
   updateOwnAskAttachment,
   type AskAttachmentRow,
 } from '@/db/repositories/ask-attachments';
+import { listAskRunChangesets } from '@/db/repositories/ask-changesets';
 import { appendAskMessage } from '@/db/repositories/ask-messages';
 import { appendAskRunStep, askRunActor, updateAskRun, type AskRunRow } from '@/db/repositories/ask-runs';
 import type { JsonValue } from '@/lib/ask/changeset/types';
@@ -22,7 +23,7 @@ import { getObjectBuffer, putObject } from '@/storage/s3';
 import { assembleDrop, type DropRead } from './assemble';
 import { dropSummaryLine, NOT_READ_BUDGET } from './summary';
 import { dropContentType, dropFileRefusal, isZipName, safeFileName } from './extensions';
-import { ASK_DROP_EVENT, DROP_WORKFLOW, emptyDropState, type DropFile, type DropState } from './types';
+import { ASK_DROP_EVENT, DROP_WORKFLOW, emptyDropState, type DropFile, type DropGroup, type DropState } from './types';
 import { DEFAULT_UNZIP_LIMITS, unzipDrop, UnzipRefused } from './unzip';
 
 /**
@@ -247,11 +248,17 @@ export async function dropAssembleStep(runId: string): Promise<{ groups: number;
   if (state.groups.length > 0 || state.unplaced.length > 0) return { groups: state.groups.length, unplaced: state.unplaced.length };
   const runCtx = createRunContext({ ctx, run, now: new Date() });
 
-  const reads = await loadDropReads(ctx, runId, state.files);
+  // A retry after a part-way failure keeps the cards the earlier try made: their files count as
+  // placed, and only the other files are sorted, onto those cards where the client already has one.
+  const earlier = await listAskRunChangesets(ctx, runId);
+  const onCard = new Map(earlier.flatMap((card) => card.attachmentIds.map((id) => [id, card.engagementId] as const)));
+  const files = state.files.map((f) => (onCard.has(f.attachmentId) && f.status === 'read' ? { ...f, status: 'placed' as const, engagementId: onCard.get(f.attachmentId)! } : f));
+  const seeded: DropGroup[] = earlier.map((card) => ({ engagementId: card.engagementId, companyName: card.companyName, changesetId: card.id }));
+  const reads = (await loadDropReads(ctx, runId, files)).filter((read) => !onCard.has(read.attachment.id));
 
-  let next: DropState = { ...state, progress: { ...state.progress, label: 'Sorting…' } };
+  let next: DropState = { ...state, files, ...(seeded.length > 0 ? { groups: seeded } : {}), progress: { ...state.progress, label: 'Sorting…' } };
   try {
-    const result = await assembleDrop({ runCtx, conversationId: run.conversationId, instruction: state.instruction, page: state.page, reads, files: state.files, now: new Date() });
+    const result = await assembleDrop({ runCtx, conversationId: run.conversationId, instruction: state.instruction, page: state.page, reads, files, now: new Date(), ...(seeded.length > 0 ? { groups: seeded } : {}) });
     next = {
       ...next,
       files: result.files,
@@ -271,12 +278,13 @@ export async function dropAssembleStep(runId: string): Promise<{ groups: number;
 
 /**
  * The status a drop settles in. A drop with files still waiting for "Where should these go?" waits
- * for the reply even when it already made cards, because the reply is how those files are placed;
- * the cards are open either way.
+ * for the reply even when it already made cards or ran over budget, because the reply is how those
+ * files are placed (as `finalStatus` in run-context does for the chat); `state.overBudget` still
+ * makes the summary list what was not read. The cards are open either way.
  */
 export function dropStatus(state: DropState): string {
-  if (state.overBudget) return 'over_budget';
   if (state.unplaced.length > 0) return 'waiting_reply';
+  if (state.overBudget) return 'over_budget';
   if (state.groups.length > 0) return 'waiting_approval';
   return state.files.some((f) => f.status === 'placed' || f.status === 'read' || f.status === 'skipped') ? 'done' : 'failed';
 }

@@ -304,12 +304,16 @@ export async function assembleDrop(input: AssembleInput): Promise<AssembleResult
         const replied = input.overrides?.get(read.attachment.id)?.stateCode ?? null;
         let stateCode: string | null;
         let stateAssumed = false;
-        // A reply decides. Then the client's own batches come first; a state the names give wins when
-        // the client already files there, or has no batch yet, so a client with offices in two states
-        // files each right. Last, the registered office, flagged on the card as assumed.
+        let stateNew = false;
+        // A reply decides. Then a state the names give, so a client with offices in two states files
+        // each right; when the client has filed only in other states, the card flags it to be checked
+        // (a folder called "HR" reads as Haryana), and the state can be changed there. Then the
+        // client's latest batch. Last, the registered office, flagged on the card as assumed.
         if (replied) stateCode = replied;
-        else if (destination.stateCode && (batchStates.length === 0 || batchStates.includes(destination.stateCode))) stateCode = destination.stateCode;
-        else if (batchStates.length > 0) stateCode = batches[0]!.stateCode;
+        else if (destination.stateCode) {
+          stateCode = destination.stateCode;
+          stateNew = batchStates.length > 0 && !batchStates.includes(destination.stateCode);
+        } else if (batchStates.length > 0) stateCode = batches[0]!.stateCode;
         else {
           const office = resolveRegisteredOfficeResponses(state['pre-6']?.responses ?? {}, state['pre-8']?.responses ?? {}, state['pre-14']?.responses ?? {});
           stateCode = stateCodeOfName(office[REGISTERED_OFFICE_STATE_FIELD_ID]);
@@ -317,11 +321,20 @@ export async function assembleDrop(input: AssembleInput): Promise<AssembleResult
         }
         if (!stateCode) return { kind: 'unplaced', reason: UNPLACED_REASONS.state };
         const period = { from: destination.period.from, to: destination.period.to };
-        const words = `${SLOT_LABEL[destination.slot]}, ${stateByCode(stateCode)?.name ?? stateCode}${stateAssumed ? ' (assumed)' : ''}, ${periodLabel(period)}`;
+        const flag = stateAssumed ? ' (assumed)' : stateNew ? ' (new for this client)' : '';
+        const words = `${SLOT_LABEL[destination.slot]}, ${stateByCode(stateCode)?.name ?? stateCode}${flag}, ${periodLabel(period)}`;
         return {
           kind: 'row',
           action: 'labour.uploadSheet',
-          input: { ...base, stateCode, periodFrom: period.from, periodTo: period.to, slot: destination.slot, ...(stateAssumed ? { stateAssumed: true } : {}) },
+          input: {
+            ...base,
+            stateCode,
+            periodFrom: period.from,
+            periodTo: period.to,
+            slot: destination.slot,
+            ...(stateAssumed ? { stateAssumed: true } : {}),
+            ...(stateNew ? { stateNew: true } : {}),
+          },
           destination: `Labour register: ${words}`,
         };
       }
@@ -368,8 +381,10 @@ export async function assembleDrop(input: AssembleInput): Promise<AssembleResult
           leaveOut(read, UNPLACED_REASONS.prepare);
           continue;
         }
-        const source: RowSource = { kind: 'attachment', attachmentId: read.attachment.id, fileName: read.attachment.fileName, path: read.path };
-        fileRows.push({ ...fileRow, source });
+        // A file named with a PAN or Aadhaar number shows it masked on the card; the raw name stays
+        // only in the row's value and target, which the action needs.
+        const source: RowSource = { kind: 'attachment', attachmentId: read.attachment.id, fileName: maskIdentityNumbers(read.attachment.fileName), path: maskIdentityNumbers(read.path) };
+        fileRows.push({ ...fileRow, label: maskIdentityNumbers(fileRow.label), displayOld: maskIdentityNumbers(fileRow.displayOld), displayNew: maskIdentityNumbers(fileRow.displayNew), source });
       }
       if (plan.kind === 'copy') copies.add(read.attachment.id);
       placedHere.push({ read, destination: plan.destination });

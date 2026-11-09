@@ -129,6 +129,37 @@ export async function appendAskChangesetRows(
   });
 }
 
+/**
+ * The caller's own cards for one run, each with its client and the attachments its rows came from.
+ * A retried drop step uses it to keep the cards an earlier try already made, rather than make them
+ * twice.
+ */
+export async function listAskRunChangesets(
+  ctx: AuthContext,
+  runId: string,
+): Promise<Array<{ id: string; engagementId: string; companyName: string; attachmentIds: string[] }>> {
+  assertAskRole(ctx);
+  const cards = await db
+    .select({ id: askChangesets.id, engagementId: askChangesets.engagementId })
+    .from(askChangesets)
+    .where(and(eq(askChangesets.runId, runId), eq(askChangesets.profileId, ctx.userId)))
+    .orderBy(asc(askChangesets.createdAt));
+  if (cards.length === 0) return [];
+  const rows = await db
+    .select({ changesetId: askChangesetRows.changesetId, source: askChangesetRows.source })
+    .from(askChangesetRows)
+    .where(inArray(askChangesetRows.changesetId, cards.map((c) => c.id)));
+  const out: Array<{ id: string; engagementId: string; companyName: string; attachmentIds: string[] }> = [];
+  for (const card of cards) {
+    if (!card.engagementId) continue;
+    const access = await assertEngagementAccess(ctx, card.engagementId);
+    if (!access.ok) continue;
+    const attachmentIds = [...new Set(rows.filter((r) => r.changesetId === card.id).flatMap((r) => (r.source?.attachmentId ? [r.source.attachmentId] : [])))];
+    out.push({ id: card.id, engagementId: access.dbId, companyName: access.row.companyName, attachmentIds });
+  }
+  return out;
+}
+
 export async function getAskChangesetForDecision(ctx: AuthContext, id: string): Promise<ChangesetAccess | null> {
   assertAskRole(ctx);
   const [changeset] = await db.select().from(askChangesets).where(eq(askChangesets.id, id)).limit(1);
@@ -189,7 +220,7 @@ export async function setAskChangesetStatus(
 export async function updateAskChangesetRows(
   ctx: AuthContext,
   found: ChangesetAccess,
-  updates: ReadonlyArray<{ id: string; patch: Partial<Pick<AskChangesetRowRow, 'status' | 'checks' | 'heldReason' | 'error' | 'undoData' | 'appliedAt' | 'newValue' | 'oldValue' | 'displayOld' | 'displayNew'>> }>,
+  updates: ReadonlyArray<{ id: string; patch: Partial<Pick<AskChangesetRowRow, 'status' | 'checks' | 'heldReason' | 'error' | 'undoData' | 'appliedAt' | 'newValue' | 'oldValue' | 'displayOld' | 'displayNew' | 'target'>> }>,
   contentHash?: string,
 ): Promise<void> {
   assertDecider(ctx, found);
