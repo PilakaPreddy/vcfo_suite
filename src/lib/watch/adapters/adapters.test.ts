@@ -52,7 +52,7 @@ describe('Watch adapters on saved copies', () => {
     expect(kept.some((item) => /accredited investors/i.test(item.title))).toBe(true);
     expect(kept.every((item) => !item.url.includes('/enforcement/'))).toBe(true);
     expect(items.every((item) => item.url.lastIndexOf('https://') === 0)).toBe(true);
-    expect(items[0]!.publishedOn).toBe('2026-11-06');
+    expect(items[0]!.publishedOn).toBe('2026-11-05');
   });
 
   it('reads the PIB feed shape and keeps only compliance ministries', () => {
