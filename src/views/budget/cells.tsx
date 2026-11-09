@@ -48,19 +48,25 @@ export function pastedGrid(e: ClipboardEvent<HTMLElement>): number[][] | null {
   return text.split('\n').map((line) => line.split('\t').map((v) => parseFloat(v.replace(/[,₹\s]/g, '')) || 0));
 }
 
-export function NumberCell({ value, onChange, disabled, label, percent, onPasteGrid, placeholder, className }: { value: number | null; onChange: (v: number | null) => void; disabled?: boolean; label: string; percent?: boolean; onPasteGrid?: (grid: number[][]) => void; placeholder?: string; className?: string }) {
+/**
+ * `nullable` keeps "not entered" apart from 0: an empty cell is null and a typed 0 shows as 0.
+ * The Variance tab needs it, because 0 is a valid actual there and a blank is not.
+ */
+export function NumberCell({ value, onChange, disabled, label, percent, onPasteGrid, placeholder, className, nullable, invalid }: { value: number | null; onChange: (v: number | null) => void; disabled?: boolean; label: string; percent?: boolean; onPasteGrid?: (grid: number[][]) => void; placeholder?: string; className?: string; nullable?: boolean; invalid?: boolean }) {
   const [draft, setDraft] = useState<string | null>(null);
-  const shown = draft ?? (value == null || value === 0 ? '' : percent ? String(value) : inr(value));
+  const empty = value == null || (!nullable && value === 0);
+  const shown = draft ?? (empty ? '' : value === 0 ? '0' : percent ? String(value) : inr(value));
   return (
     <input
-      className={cn(INPUT, 'text-right font-mono text-[12px] tabular-nums', className)}
+      className={cn(INPUT, 'text-right font-mono text-[12px] tabular-nums', invalid && 'ring-2 ring-inset ring-danger', className)}
       inputMode="decimal"
       aria-label={label}
+      aria-invalid={invalid || undefined}
       disabled={disabled}
       placeholder={placeholder}
       value={shown}
       onFocus={(e) => {
-        setDraft(value == null || value === 0 ? '' : String(value));
+        setDraft(empty ? '' : String(value));
         requestAnimationFrame(() => e.target.select());
       }}
       onBlur={() => setDraft(null)}
@@ -68,7 +74,7 @@ export function NumberCell({ value, onChange, disabled, label, percent, onPasteG
         setDraft(e.target.value);
         const raw = e.target.value.trim();
         const n = parseFloat(raw.replace(/,/g, ''));
-        onChange(raw === '' ? (placeholder ? null : 0) : Number.isFinite(n) ? n : 0);
+        onChange(raw === '' ? (placeholder || nullable ? null : 0) : Number.isFinite(n) ? n : 0);
       }}
       onKeyDown={gridKeys}
       onPaste={(e) => {
@@ -79,8 +85,8 @@ export function NumberCell({ value, onChange, disabled, label, percent, onPasteG
   );
 }
 
-export function TextCell({ value, onChange, disabled, label, placeholder }: { value: string; onChange: (v: string) => void; disabled?: boolean; label: string; placeholder?: string }) {
-  return <input className={INPUT} aria-label={label} disabled={disabled} placeholder={placeholder} value={value ?? ''} title={value || undefined} onChange={(e) => onChange(e.target.value)} onKeyDown={gridKeys} />;
+export function TextCell({ value, onChange, disabled, label, placeholder, invalid }: { value: string; onChange: (v: string) => void; disabled?: boolean; label: string; placeholder?: string; invalid?: boolean }) {
+  return <input className={cn(INPUT, invalid && 'ring-2 ring-inset ring-danger')} aria-invalid={invalid || undefined} aria-label={label} disabled={disabled} placeholder={placeholder} value={value ?? ''} title={value || undefined} onChange={(e) => onChange(e.target.value)} onKeyDown={gridKeys} />;
 }
 
 export function SelectCell({ value, onChange, disabled, label, options, blank = true }: { value: string; onChange: (v: string) => void; disabled?: boolean; label: string; options: { value: string; label: string }[]; blank?: boolean }) {

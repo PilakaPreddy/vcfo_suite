@@ -211,6 +211,8 @@ export async function parseLinkedWorkbook(bytes: Uint8Array, current: BudgetSett
     const at = (label: string) => byLabel(finance, label);
     const include = at('Include income tax');
     settings.tax = {
+      ...current.tax,
+      preset: '',
       mode: include && /^y/i.test(text(finance, include, 3)) ? 'cost_plus' : 'none',
       markupPct: at('Cost-plus mark-up') ? percent(finance, at('Cost-plus mark-up'), 3) : current.tax.markupPct,
       ratePct: at('Corporate tax rate') ? percent(finance, at('Corporate tax rate'), 3) : current.tax.ratePct,

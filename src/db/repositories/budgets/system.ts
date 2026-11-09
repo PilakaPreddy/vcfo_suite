@@ -26,6 +26,8 @@ export interface BudgetParties {
   fyName: string;
   ownersBySection: Partial<Record<BudgetSection, BudgetParty[]>>;
   staff: BudgetParty[];
+  leads: BudgetParty[];
+  managers: BudgetParty[];
   clients: BudgetParty[];
 }
 
@@ -54,6 +56,8 @@ export async function systemBudgetParties(budgetId: string): Promise<BudgetParti
     fyName: fyName(row.settings as BudgetSettings),
     ownersBySection,
     staff: [...staff.values()],
+    leads: (r?.leads ?? []).map(party),
+    managers: (r?.managers ?? []).map(party),
     clients: (r?.clients ?? []).map(party),
   };
 }

@@ -10,6 +10,7 @@ import { FilterSelect } from '@/components/ui/native-select';
 import { Chip } from '@/components/ui/spectrum-chip';
 import { budgetVsActual } from '@/lib/budget/engine';
 import { fyIndexOfPeriod, periodOfFyIndex } from '@/lib/budget/model';
+import { LOCKED_STATUSES } from '@/lib/budget/variance';
 import type { ActualRow } from '@/lib/budget/wire';
 import { toastError, toastSuccess } from '@/lib/toast-errors';
 import { cn } from '@/lib/utils';
@@ -17,6 +18,7 @@ import { Block, NumberCell, SelectCell, TextCell } from '../cells';
 import { ApiError, api, crore, errorText, inr } from '../format';
 import { GRID, GridScroll, STICKY, TD, TD_NAME, TH } from '../grid-parts';
 import type { Ready } from '../types';
+import { useVarianceData } from '../variance/use-variance';
 
 const SAVE_DELAY_MS = 700;
 
@@ -31,6 +33,9 @@ export function ActualsTab({ ready }: { ready: Ready }) {
   const pending = useRef(new Map<string, { period: string; lineId: string; amount: number; reason: string | null }>());
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canEnter = view.access.canEnterActuals;
+  /* Months submitted or approved on the Variance tab change only there. */
+  const variance = useVarianceData(view.id, view.access.canSeeVariance).data;
+  const locked = new Set((variance?.months ?? []).filter((m) => LOCKED_STATUSES.includes(m.status)).map((m) => m.monthIndex));
 
   const actuals = useMemo(() => {
     const map = new Map<string, ActualRow>();
@@ -109,7 +114,7 @@ export function ActualsTab({ ready }: { ready: Ready }) {
                         <td className={TD}>{inr(r.forecast)}</td>
                         <td className={TD}>{inr(r.fullYearBudget)}</td>
                         <td className={cn(TD_NAME, 'p-0')}>
-                          <TextCell label={`Reason for ${r.name}`} placeholder={canEnter ? 'Why it moved' : ''} value={entry?.reason ?? ''} disabled={!canEnter} onChange={(v) => change(lastPeriod, r.lineId, entry?.amount ?? 0, v)} />
+                          <TextCell label={`Reason for ${r.name}`} placeholder={canEnter ? 'Why it moved' : ''} value={entry?.reason ?? ''} disabled={!canEnter || locked.has(compare.monthsClosed - 1)} onChange={(v) => change(lastPeriod, r.lineId, entry?.amount ?? 0, v)} />
                         </td>
                       </tr>
                     );
@@ -120,7 +125,7 @@ export function ActualsTab({ ready }: { ready: Ready }) {
           </Block>
         )
       ) : (
-        <Block title="Actual cost by month" hint="Type the actual cost of each line. Imported values show here too.">
+        <Block title="Actual cost by month" hint={`Type the actual cost of each line. Imported values show here too.${locked.size ? ' Months submitted or approved on the Variance tab are locked here.' : ''}`}>
           <GridScroll>
             <table className={GRID}>
               <thead>
@@ -141,7 +146,7 @@ export function ActualsTab({ ready }: { ready: Ready }) {
                       const period = periodOfFyIndex(settings, i);
                       return (
                         <td key={label} className={cn(TD, 'p-0')}>
-                          <NumberCell label={`${line.name} ${label}`} value={lookup.get(`${period}|${line.id}`)?.amount ?? 0} onChange={(v) => change(period, line.id, v ?? 0)} />
+                          <NumberCell label={`${line.name} ${label}`} value={lookup.get(`${period}|${line.id}`)?.amount ?? 0} disabled={locked.has(i)} onChange={(v) => change(period, line.id, v ?? 0)} />
                         </td>
                       );
                     })}

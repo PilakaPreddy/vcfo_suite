@@ -1,6 +1,8 @@
 import ExcelJS from 'exceljs';
 import { computeBudget, computeScenario, sumSeries, toReportCurrency, type BudgetResult } from './engine';
 import { BENEFIT_BASES, FREQUENCIES, MONTHS, ROW_SECTION, fyName, type BenefitData, type BudgetRow, type BudgetSection, type BudgetSettings, type BudgetState, type OnceData, type RecurringData, type RoleData, type RowKind } from './model';
+import { advanceTaxSchedule, computeTax, type TaxActuals } from './tax';
+import { VARIANCE_STATUS_LABEL, entriesOfMonth, monthBudget, taxActualsOf, type VarianceData } from './variance';
 
 /**
  * BUDGET EXCEL — the export of every tab and the import of the same layout. The fill-in sheets use
@@ -184,8 +186,7 @@ function writeMaster(wb: ExcelJS.Workbook, state: BudgetState, r: BudgetResult) 
   }
   writeSeriesRow(ws, 'Total operating cost', r.operating, true);
   if (s.tax.mode === 'cost_plus') {
-    writeSeriesRow(ws, 'Less: GST in the cost', r.gstInCost.map((x) => -x));
-    writeSeriesRow(ws, 'Cost base for income tax', r.taxBase);
+    writeSeriesRow(ws, 'Cost base for income tax (see the Advance tax sheet)', r.taxBase);
     writeSeriesRow(ws, 'Income tax (estimated)', r.tax);
   }
   writeSeriesRow(ws, 'Total cost', r.grandTotal, true);
@@ -224,14 +225,101 @@ function writeViews(wb: ExcelJS.Workbook, state: BudgetState, r: BudgetResult) {
   for (const key of ['high', 'low'] as const) writeSeriesRow(sc, key === 'high' ? 'High' : 'Low', computeScenario(state, key).grandTotal);
 }
 
+function plainRow(ws: ExcelJS.Worksheet, values: ExcelJS.CellValue[], bold = false) {
+  const row = ws.addRow(values);
+  row.eachCell((c, col) => {
+    if (col > 1 && typeof c.value === 'number') c.numFmt = NUMBER;
+  });
+  if (bold) {
+    row.font = { bold: true };
+    row.eachCell((c) => (c.fill = TOTAL));
+  }
+  return row;
+}
+
+/** Income tax and advance tax: the computation (budget and latest estimate), blocks and instalments. */
+function writeAdvanceTax(wb: ExcelJS.Workbook, state: BudgetState, r: BudgetResult, actuals: TaxActuals | null) {
+  const budget = r.taxDetail;
+  if (!budget.on) return;
+  const latest = actuals ? computeTax(state.settings, state.rows, r, actuals) : budget;
+  const ws = wb.addWorksheet('Advance tax');
+  ws.columns = [{ width: 48 }, { width: 16 }, { width: 18 }, { width: 14 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 16 }];
+  ws.addRow([`Income tax computation, ${fyName(state.settings)}`]).font = { bold: true, size: 13 };
+  ws.addRow([`Effective rate ${(latest.effectiveRate * 100).toFixed(3)}% (${latest.ratePct}% x ${(1 + latest.surchargePct / 100).toFixed(2)} surcharge x ${(1 + latest.cessPct / 100).toFixed(2)} cess). An estimate under the Income-tax Act 2025, not tax advice.`]);
+  ws.addRow([]);
+  header(ws, ['Line', 'Budget', actuals ? 'Latest estimate' : 'Latest estimate (no approved actuals)', 'Change']);
+  const b = budget.totals;
+  const l = latest.totals;
+  const line = (label: string, bv: number, lv: number, bold = false) => plainRow(ws, [label, bv, lv, lv - bv], bold);
+  line('Total operating cost (Master Budget lines)', b.opex, l.opex);
+  if (b.gst || l.gst) line('Less: GST inside the cost', -b.gst, -l.gst);
+  if (b.capitalised || l.capitalised) line('Less: lines capitalised into an asset block', -b.capitalised, -l.capitalised);
+  line('Less: depreciation line in the Master Budget', -b.masterDepreciation, -l.masterDepreciation);
+  if (latest.insuranceOn) {
+    line('Less: insurance as booked or paid', -b.insuranceBooked, -l.insuranceBooked);
+    line('Add: insurance on a prepaid basis', b.insurancePrepaid, l.insurancePrepaid);
+  }
+  line('Add: depreciation as per Companies Act 2013', b.cosDepreciation, l.cosDepreciation);
+  line('Cost base for the mark-up', b.base, l.base, true);
+  line('Revenue (cost base + mark-up)', b.revenue, l.revenue);
+  line('Profit before tax', b.profitBeforeTax, l.profitBeforeTax, true);
+  line('Add: gratuity', b.gratuity, l.gratuity);
+  line('Add: leave encashment', b.leave, l.leave);
+  line('Add: depreciation as per Companies Act 2013', b.cosDepreciation, l.cosDepreciation);
+  line('Less: depreciation as per Income-tax Act', -b.itDepreciation, -l.itDepreciation);
+  line('Taxable income', b.taxable, l.taxable, true);
+  line('Income tax for the year', b.tax, l.tax, true);
+
+  ws.addRow([]);
+  header(ws, ['Block of assets', 'IT Act rate %', 'Opening WDV, IT Act', 'Additions', 'Depreciation, IT Act', 'Closing WDV, IT Act', 'Useful life', 'Opening WDV, Cos. Act', 'Depreciation, Cos. Act', 'Closing WDV, Cos. Act']);
+  for (const blk of latest.blocks) plainRow(ws, [blk.name, blk.itRatePct, blk.openingIt, blk.additionsTotal, blk.itDepreciation, blk.closingIt, blk.lifeYears, blk.openingCos, blk.cosDepreciationTotal, blk.closingCos]);
+
+  ws.addRow([]);
+  header(ws, ['Due date', 'Quarter', 'Basis', 'Months on actuals', 'Tax for the year', 'Cumulative %', 'Cumulative due', 'Paid earlier', 'Instalment payable', 'Actual paid']);
+  for (const i of advanceTaxSchedule(state.settings, state.rows, r, actuals)) plainRow(ws, [i.dueLabel, i.quarter, i.basis, i.monthsOnActuals, i.taxForYear, `${i.cumulativePct}%`, i.cumulativeDue, i.paidBefore, i.payable, i.actualPaid ?? '']);
+  ws.views = [];
+}
+
+/** One block per month that has a status: budget, actual, variance and reason by line. */
+function writeVariance(wb: ExcelJS.Workbook, state: BudgetState, r: BudgetResult, data: VarianceData) {
+  const s = state.settings;
+  const used = data.months.filter((m) => m.status !== 'open');
+  if (!used.length) return;
+  const ws = wb.addWorksheet('Variance');
+  ws.columns = [{ width: 40 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 10 }, { width: 50 }];
+  ws.addRow(['Variance = Budget - Actual. A negative figure means more was spent than budgeted.']);
+  for (const m of used) {
+    ws.addRow([]);
+    ws.addRow([`${r.labels[m.monthIndex]}: ${VARIANCE_STATUS_LABEL[m.status]}`]).font = { bold: true, size: 12 };
+    header(ws, ['Line', 'Budget', 'Actual', 'Variance', '%', 'Reason']);
+    const budget = monthBudget(state, r, m.monthIndex, m.status === 'approved' ? m.budgetSnapshot : null);
+    const entries = new Map(entriesOfMonth(s, data.actuals, m.monthIndex).map((e) => [e.lineId, e]));
+    for (const g of r.groups) {
+      for (const id of g.lineIds) {
+        const b = budget.lines[id] ?? 0;
+        const e = entries.get(id);
+        const a = e?.amount ?? null;
+        plainRow(ws, [s.lines.find((x) => x.id === id)?.name ?? id, b, a ?? '', a == null ? '' : b - a, a == null || !b ? '' : `${(((b - a) / b) * 100).toFixed(1)}%`, e?.reason ?? '']);
+      }
+    }
+    const a = m.advanceTaxPaid;
+    plainRow(ws, ['Advance tax', budget.advanceTax, a ?? '', a == null ? '' : budget.advanceTax - a, '', m.advanceTaxReason ?? '']);
+    plainRow(ws, ['Closing headcount', budget.headcount, m.headcount ?? '', '', '', '']);
+  }
+  ws.views = [];
+}
+
 /** The whole budget this viewer may see. `sections` limits the fill-in sheets. */
-export async function budgetWorkbook(state: BudgetState, options: { sections: BudgetSection[]; master: boolean }): Promise<Uint8Array> {
+export async function budgetWorkbook(state: BudgetState, options: { sections: BudgetSection[]; master: boolean; variance?: VarianceData | null }): Promise<Uint8Array> {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'VCFO Suite';
   if (options.master) {
     const result = computeBudget(state);
     writeMaster(wb, state, result);
     writeViews(wb, state, result);
+    const actuals = options.variance ? taxActualsOf(state.settings, options.variance.months, options.variance.actuals) : null;
+    writeAdvanceTax(wb, state, result, actuals?.approved.some(Boolean) ? actuals : null);
+    if (options.variance) writeVariance(wb, state, result, options.variance);
   }
   writeFillSheets(wb, state, options.sections);
   return new Uint8Array((await wb.xlsx.writeBuffer()) as ArrayBuffer);

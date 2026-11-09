@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { BENEFIT_BASES, BUDGET_SECTIONS, FREQUENCIES, type BudgetSection, type BudgetState, type BudgetStatus, type MaskedPayroll, type RowKind, type SectionStatus } from './model';
+import { BENEFIT_BASES, BUDGET_SECTIONS, DEFAULT_INSURANCE_LINES, FREQUENCIES, defaultAssetBlocks, type BudgetSection, type BudgetState, type BudgetStatus, type MaskedPayroll, type RowKind, type SectionStatus } from './model';
 
 /**
  * BUDGET WIRE — what travels between the screens and the API: the zod schemas that clean every
@@ -120,10 +120,30 @@ export const settingsSchema = z.object({
   }),
   tax: z.object({
     mode: z.enum(['none', 'cost_plus']).catch('none'),
+    preset: z.string().max(40).catch(''),
     markupPct: pct,
     ratePct: pct,
     surchargePct: pct,
+    surchargeBySlab: z.boolean().catch(false),
     cessPct: pct,
+    insuranceGroupPerYear: money,
+    insuranceWcPerYear: money,
+    insuranceLineIds: z.array(z.string().max(60)).max(20).catch([...DEFAULT_INSURANCE_LINES]),
+    assetBlocks: z
+      .array(
+        z.object({
+          id: z.string().max(60),
+          name: label,
+          itRatePct: pct,
+          lifeYears: z.coerce.number().min(0).max(100).catch(0),
+          openingIt: money,
+          openingCos: money,
+          linkLineId: z.string().max(60).catch(''),
+          additions: months12,
+        }),
+      )
+      .max(30)
+      .catch(defaultAssetBlocks()),
   }),
   openingCash: money,
   minimumCash: money,
@@ -161,6 +181,12 @@ export interface BudgetAccess {
   canSeeMaster: boolean;
   canEnterActuals: boolean;
   canSeeActuals: boolean;
+  /** The Variance tab: staff, once the budget was approved. */
+  canSeeVariance: boolean;
+  /** Enter and submit a month: the project lead, or a manager when the client has no lead. */
+  canEnterVariance: boolean;
+  /** Approve, send back or reopen a month: managers and firm admins. */
+  canApproveVariance: boolean;
 }
 
 export interface BudgetSummary {
