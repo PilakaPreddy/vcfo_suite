@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VCFO Budget Prototype</title>
+<!--
+  VCFO Suite: Budget module prototype. Demo data only: the companies, people and figures are fictional.
+  Captured __CAPTURED_AT__ from the running application.
+
+  HOW THIS FILE IS BUILT
+  scripts/budget-prototype/capture.cjs signs in as each of the nine dashboards and saves every Budget
+  screen, dialog and row panel at a 1440 x 900 window, so the markup and the classes are the real ones.
+  scripts/budget-prototype/build.cjs turns that capture into this one file. Nothing here talks to a
+  server, buttons do not save, and totals do not recalculate.
+
+  HOW TO CHANGE A SCREEN
+  1. Open the screen in a browser with the filters at the top.
+  2. Read the IDs at the right of the filter bar, for example body-012.
+  3. Search this file for id="body-012" and edit the HTML inside that <template>.
+  4. Save and reload. A template can be shared by several dashboards. The comment above it lists them.
+
+  Styles are in the templates css-staff and css-client. Images and fonts sit once in the "assets" list
+  at the end and are referenced from the templates as __A0__, __A1__ and so on.
+
+  WHAT TO SEND BACK
+  Send this edited file, and list the template IDs that changed.
+-->
+<style>
+  :root {
+    --bar-bg: #ffffff; --bar-line: #e2e6ee; --bar-ink: #16233f; --bar-muted: #5c6b84; --bar-focus: #4f46e5;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: #f4f6fa; }
+  body { display: flex; flex-direction: column; font: 13px/1.35 Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--bar-ink); }
+  #bar { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-height: 56px; padding: 8px 16px; background: var(--bar-bg); border-bottom: 1px solid var(--bar-line); }
+  #bar .name { font-size: 14px; font-weight: 600; margin-right: 4px; }
+  #bar label { display: inline-flex; align-items: center; gap: 6px; color: var(--bar-muted); font-weight: 500; }
+  #bar select { height: 32px; max-width: 240px; padding: 0 8px; border: 1px solid #c9d0dc; border-radius: 6px; background: #fff; color: var(--bar-ink); font: inherit; font-weight: 500; }
+  #bar select:focus-visible { outline: 2px solid var(--bar-focus); outline-offset: 1px; }
+  #access { flex: 1 1 0; min-width: 240px; color: var(--bar-muted); font-size: 12px; }
+  #ids { color: var(--bar-muted); font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+  #stage { flex: 1 1 auto; min-height: 0; width: 100%; border: 0; background: #f4f6fa; }
+  #toast { position: fixed; left: 50%; bottom: 24px; z-index: 10; max-width: min(520px, calc(100vw - 32px)); padding: 9px 14px; border-radius: 6px; background: #16233f; color: #fff; font-weight: 500; transform: translateX(-50%); opacity: 0; pointer-events: none; transition: opacity .15s; }
+  #toast.on { opacity: 1; }
+  @media (max-width: 760px) { #bar { padding: 8px 16px; } #bar label { width: 100%; justify-content: space-between; } #bar select { flex: 1; max-width: none; } #ids { display: none; } }
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <span class="name">Budget prototype</span>
+  <label>Dashboard
+    <select id="f-persona">
+__PERSONA_OPTIONS__
+    </select>
+  </label>
+  <label>Budget
+    <select id="f-budget">
+__BUDGET_OPTIONS__
+    </select>
+  </label>
+  <label>Screen <select id="f-tab"></select></label>
+  <span id="access"></span>
+  <span id="ids" title="Search this file for these IDs to edit the current screen"></span>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+__TEMPLATES__
+
+<script id="manifest" type="application/json">__MANIFEST__</script>
+<script id="assets" type="application/json">__ASSETS__</script>
+<script>
+(function () {
+  var M = JSON.parse(document.getElementById('manifest').textContent);
+  var A = JSON.parse(document.getElementById('assets').textContent);
+  var fPersona = document.getElementById('f-persona');
+  var fBudget = document.getElementById('f-budget');
+  var fTab = document.getElementById('f-tab');
+  var state = { persona: '', budget: '', tab: '', sub: '' };
+  var loadedCss = null;
+  var toastTimer;
+  var stage = document.createElement('iframe');
+
+  var ACCESS = {
+    super: 'Sees all clients. Creates, edits, publishes and revises budgets, records the client approval, and approves, sends back or reopens a Variance month.',
+    admin: 'Sees all clients. Creates, edits, publishes and revises budgets, records the client approval, and approves, sends back or reopens a Variance month.',
+    manager: 'Sees assigned clients only. Creates, edits and publishes. Cannot record the client approval. Approves, sends back or reopens a Variance month.',
+    lead: 'Sees assigned clients only. Creates, edits and assigns owners. Cannot publish or approve. Enters each Variance month and submits it.',
+    client: 'Sees its own company. Sees the budget after publish, and approves or returns it. CTC stays hidden. No Variance tab.',
+    'owner-ta': 'Owns CTC & hiring in draft, and can see CTC. Does not see the Master Budget until publish.',
+    'owner-hr': 'Owns Benefits in draft. Sees the payroll total but not CTC.',
+    'owner-admin': 'Owns Admin costs in draft. Does not see CTC.',
+    'owner-finance': 'Owns Finance costs and Settings in draft. Does not see CTC.'
+  };
+  var BUDGET_IDS = {};
+  Object.keys(M.budgets).forEach(function (k) { BUDGET_IDS[M.budgets[k].id] = k; });
+  var CLOSE_WORDS = /^(cancel|close|keep|×)/i;
+  var SAVE_WORDS = /^(publish|approve|return|save|create|remove|send back|start revision|import|confirm|reopen month|submit|mark done|open again|add |post|copy|upload|keep the row|remove the row)/i;
+
+  function fill(html) { return html.replace(/__A(\d+)__/g, function (m, n) { return A[n] || ''; }); }
+  function tpl(id) { var t = id && document.getElementById(id); return t ? fill(t.innerHTML) : ''; }
+  function key() { return [state.persona, state.budget, state.tab, state.sub].join('|'); }
+  function has(persona, budget) { return !!M.tabs[persona + '|' + budget]; }
+  function tabsOf(persona, budget) { return budget === 'list' ? ['list'] : (M.tabs[persona + '|' + budget] || []); }
+
+  function toast(text) {
+    var t = document.getElementById('toast');
+    t.textContent = text;
+    t.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('on'); }, 2400);
+  }
+
+  function setAttrs(el, attrs) {
+    while (el.attributes.length) el.removeAttribute(el.attributes[0].name);
+    (attrs || []).forEach(function (a) { el.setAttribute(a[0], a[1]); });
+  }
+
+  function syncFilters(s) {
+    Array.prototype.forEach.call(fPersona.options, function (o) { o.disabled = !M.personas[o.value]; });
+    fPersona.value = state.persona;
+    Array.prototype.forEach.call(fBudget.options, function (o) { o.disabled = !has(state.persona, o.value); });
+    fBudget.value = state.budget;
+    fTab.innerHTML = '';
+    var subs = M.subs[state.persona + '|' + state.budget] || {};
+    tabsOf(state.persona, state.budget).forEach(function (t) {
+      var name = t === 'list' ? 'Budget list' : t;
+      var sub = subs[t];
+      if (!sub) { fTab.add(new Option(name, t + '||')); return; }
+      sub.opts.forEach(function (o) {
+        fTab.add(new Option(name + ': ' + o[1], t + '||' + (o[0] === sub.first ? '' : o[0])));
+      });
+    });
+    fTab.value = state.tab + '||' + state.sub;
+    var p = M.personas[state.persona];
+    document.getElementById('access').textContent = p.code + '. ' + ACCESS[state.persona] + (s && s.who ? ' Signed in as ' + s.who + '.' : '');
+  }
+
+  function showIds(s) {
+    document.getElementById('ids').textContent = [s.head, s.body].filter(Boolean).join(' ');
+  }
+
+  function render() {
+    var s = M.screens[key()];
+    if (!s) return;
+    var doc = stage.contentDocument;
+    if (loadedCss !== s.css) {
+      doc.head.innerHTML = '<meta charset="utf-8">' + tpl('css-' + s.css);
+      loadedCss = s.css;
+    }
+    var attrs = M.attrs[s.shell] || {};
+    setAttrs(doc.documentElement, attrs.html);
+    setAttrs(doc.body, attrs.body);
+    var top = (doc.scrollingElement || doc.documentElement).scrollTop;
+    doc.body.innerHTML = tpl(s.shell).replace('<!--ROOT-->', tpl(s.head) + tpl(s.body));
+    (doc.scrollingElement || doc.documentElement).scrollTop = top;
+    showIds(s);
+    syncFilters(s);
+    try { history.replaceState(null, '', '#' + [state.persona, state.budget, encodeURIComponent(state.tab), encodeURIComponent(state.sub)].join('/')); } catch (e) { /* a file page may refuse this */ }
+  }
+
+  function go(next) {
+    var prev = { persona: state.persona, budget: state.budget };
+    Object.assign(state, next);
+    if (!M.personas[state.persona]) state.persona = Object.keys(M.personas)[0];
+    if (!has(state.persona, state.budget)) {
+      var order = ['list'].concat(Object.keys(M.budgets));
+      state.budget = order.filter(function (b) { return has(state.persona, b); })[0];
+    }
+    var tabs = tabsOf(state.persona, state.budget);
+    if (tabs.indexOf(state.tab) < 0) { state.tab = tabs[0]; state.sub = ''; }
+    if (!M.screens[key()]) state.sub = '';
+    if (prev.persona !== state.persona || prev.budget !== state.budget) {
+      var doc = stage.contentDocument;
+      if (doc && doc.scrollingElement) doc.scrollingElement.scrollTop = 0;
+    }
+    render();
+  }
+
+  function closeLayer() {
+    var l = stage.contentDocument.getElementById('proto-layer');
+    if (l) l.remove();
+    var s = M.screens[key()];
+    if (s) showIds(s);
+  }
+  function openLayer(id) {
+    closeLayer();
+    var doc = stage.contentDocument;
+    var l = doc.createElement('div');
+    l.id = 'proto-layer';
+    l.style.display = 'contents';
+    l.innerHTML = tpl(id);
+    doc.body.appendChild(l);
+    document.getElementById('ids').textContent = id;
+  }
+
+  function findDialog(trigger, inHead) {
+    var pk = state.persona + '|' + state.budget + '|';
+    if (inHead) return M.dialogs[pk + '*||' + trigger] || null;
+    return M.dialogs[pk + state.tab + '|' + state.sub + '|' + trigger] || M.dialogs[pk + state.tab + '||' + trigger] || null;
+  }
+  function findPanel(index) {
+    var list = M.panels[state.persona + '|' + state.budget + '|' + state.tab];
+    return list && list[index] ? list[index] : null;
+  }
+
+  function onClick(e) {
+    var doc = stage.contentDocument;
+    var target = e.target;
+    if (!target.closest) return;
+    var layer = target.closest('#proto-layer');
+
+    if (layer) {
+      var inDialog = target.closest('[role="dialog"]');
+      if (!inDialog) { e.preventDefault(); closeLayer(); return; }
+      var b = target.closest('button');
+      if (!b) { if (target.closest('a[href]')) { e.preventDefault(); toast('This prototype covers the Budget module only.'); } return; }
+      e.preventDefault();
+      var word = (b.textContent || '').trim();
+      var aria = b.getAttribute('aria-label') || '';
+      if (/^close/i.test(aria) || CLOSE_WORDS.test(word)) { closeLayer(); return; }
+      if (SAVE_WORDS.test(word)) {
+        toast('Prototype only. Nothing is saved.');
+        if (b.closest('footer') && !/^remove this row$/i.test(word)) closeLayer();
+        return;
+      }
+      toast('Prototype only. This control does nothing here.');
+      return;
+    }
+
+    var root = target.closest('[data-proto-root]');
+    var a = target.closest('a[href]');
+    if (a) {
+      e.preventDefault();
+      var href = a.getAttribute('href');
+      var m = href.match(/\/budgets\/([0-9a-f-]{36})/);
+      if (m && BUDGET_IDS[m[1]]) {
+        if (has(state.persona, BUDGET_IDS[m[1]])) go({ budget: BUDGET_IDS[m[1]], tab: '', sub: '' });
+        else toast('This budget is not open to this dashboard.');
+        return;
+      }
+      if (/\/budgets\/?$/.test(href)) {
+        if (has(state.persona, 'list')) go({ budget: 'list', tab: 'list', sub: '' });
+        else toast('This dashboard opens its budget directly.');
+        return;
+      }
+      toast('This prototype covers the Budget module only.');
+      return;
+    }
+
+    var b2 = target.closest('button, [role="button"], [role="tab"]');
+    if (!b2) return;
+    e.preventDefault();
+
+    if (b2.getAttribute('role') === 'tab' && b2.closest('[aria-label="Budget tabs"]')) {
+      go({ tab: b2.textContent.trim(), sub: '' });
+      return;
+    }
+    if (!root) { toast('This prototype covers the Budget module only.'); return; }
+
+    if ((b2.getAttribute('aria-label') || '') === 'More for this row') {
+      var all = Array.prototype.slice.call(doc.querySelectorAll('[data-proto-root] button[aria-label="More for this row"]'));
+      var panel = findPanel(all.indexOf(b2));
+      if (panel) openLayer(panel); else toast('This row has no captured panel in this view.');
+      return;
+    }
+
+    var word2 = (b2.textContent || '').trim();
+    var headEnd = root.querySelector(':scope > [aria-label="Budget tabs"]');
+    var inHead = !headEnd || !!(b2.compareDocumentPosition(headEnd) & Node.DOCUMENT_POSITION_FOLLOWING);
+    var dialog = findDialog(word2, inHead);
+    if (dialog) { openLayer(dialog); return; }
+    if (SAVE_WORDS.test(word2)) { toast('Prototype only. Nothing is saved.'); return; }
+    toast('Prototype only. This control does nothing here.');
+  }
+
+  function onChange(e) {
+    var t = e.target;
+    if (!t.matches || !t.matches('select')) return;
+    var label = t.getAttribute('aria-label');
+    var sub = (M.subs[state.persona + '|' + state.budget] || {})[state.tab];
+    if (sub && sub.aria === label && t.closest('[data-proto-root]')) {
+      var next = t.value === sub.first ? '' : t.value;
+      if (M.screens[[state.persona, state.budget, state.tab, next].join('|')]) { go({ sub: next }); return; }
+      t.value = state.sub || sub.first;
+      toast('This choice was not captured. The captured ones are in the Screen filter.');
+      return;
+    }
+    if (label === 'Download') { toast('Prototype only. Downloads work in the application.'); t.value = ''; return; }
+    if (label === 'Client' || label === 'Status') { toast('Prototype only. This filter does not change the list.'); return; }
+  }
+
+  function onKey(e) {
+    if (e.key === 'Escape') closeLayer();
+  }
+
+  fPersona.addEventListener('change', function () { go({ persona: fPersona.value }); });
+  fBudget.addEventListener('change', function () { go({ budget: fBudget.value, tab: '', sub: '' }); });
+  fTab.addEventListener('change', function () { var p = fTab.value.split('||'); go({ tab: p[0], sub: p[1] }); });
+  document.addEventListener('keydown', onKey);
+
+  function start() {
+    var doc = stage.contentDocument;
+    doc.addEventListener('click', onClick);
+    doc.addEventListener('change', onChange);
+    doc.addEventListener('keydown', onKey);
+    doc.addEventListener('submit', function (e) { e.preventDefault(); toast('Prototype only. Nothing is saved.'); });
+    var h = (location.hash || '').slice(1).split('/');
+    if (h[0] && M.personas[h[0]]) {
+      go({ persona: h[0], budget: h[1] || 'list', tab: decodeURIComponent(h[2] || ''), sub: decodeURIComponent(h[3] || '') });
+    } else {
+      go({ persona: Object.keys(M.personas)[0], budget: 'list' });
+    }
+  }
+  // The script builds the frame itself and waits for its load event, so the templates above are
+  // already parsed and the first screen never renders into a frame that is about to be replaced.
+  stage.id = 'stage';
+  stage.title = 'Budget screen';
+  stage.addEventListener('load', start, { once: true });
+  stage.srcdoc = '<!doctype html><html><head></head><body></body></html>';
+  document.body.insertBefore(stage, document.getElementById('toast'));
+})();
+</script>
+
+</body>
+</html>
