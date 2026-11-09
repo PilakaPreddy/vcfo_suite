@@ -8,8 +8,8 @@ import { gridIndices, type GridDetection } from '@/lib/labour-registers/attendan
 import { matchColumns, matchSummary, type FieldMatch } from '@/lib/labour-registers/match';
 import { normaliseHeader } from '@/lib/labour-registers/normalise';
 import { describeShapeDiff, diffShape } from '@/lib/labour-registers/shape-diff';
-import { formatForFileName, parseWorkbook, type UploadSlot } from '@/lib/labour-registers/parse';
-import { matchValues, unresolvedValues, type ValueMatch } from '@/lib/labour-registers/value-map';
+import { formatForFileName, gridValues, parseWorkbook, type UploadSlot } from '@/lib/labour-registers/parse';
+import { matchValues, unresolvedCodeCount, type ValueMatch } from '@/lib/labour-registers/value-map';
 import { getObjectBuffer } from '@/storage/s3';
 import type { MappingView, MappingRow, ValueRow } from './MappingPage';
 
@@ -118,17 +118,16 @@ export async function loadMappingView(
         format: formatForFileName(upload.fileName),
         preferSheet: upload.sheetName || undefined,
       });
-      const seen = new Set<string>();
-      for (const row of parsed.rows) {
-        for (const day of detection.days) {
-          const heading = parsed.headers[day.index];
-          const raw = (heading !== undefined ? row[heading] : undefined)?.trim();
-          if (raw) seen.add(raw);
-        }
-      }
-      const matched = matchValues('attendanceGrid', seen);
-      values = matched.map(toValueRow);
-      unresolved = unresolvedValues(matched).length;
+      const seen = new Set(gridValues(parsed));
+      values = matchValues('attendanceGrid', seen).map(toValueRow);
+      /* Counted by the shared helper rather than from `matched`, so this screen and the batch
+         screen's close agree on what "unresolved" means. They did not: this one ignored the
+         value map the firm had already confirmed, and the batch screen passed a constant zero
+         and so never blocked at all. */
+      unresolved = unresolvedCodeCount(
+        seen,
+        (stored?.valueMaps as Record<string, Record<string, string>> | undefined)?.attendanceGrid,
+      );
     }
   }
 

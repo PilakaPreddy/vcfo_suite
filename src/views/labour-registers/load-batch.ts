@@ -3,7 +3,12 @@ import 'server-only';
 import type { AuthContext } from '@/auth/guards';
 import { batchProvenance, getBatch, getColumnMap, listDocuments, listUploads } from '@/db/repositories/labour-registers';
 import { formsFor, formsNeedingAttendance, optionalFields, requiredFields } from '@/lib/labour-registers/catalogue';
+import { employeesShort, undecidedCoverage } from '@/lib/labour-registers/dataset';
+import { formatForFileName, gridValues, parseWorkbook } from '@/lib/labour-registers/parse';
 import { assessReadiness, closeSentence } from '@/lib/labour-registers/readiness';
+import { unresolvedCodeCount } from '@/lib/labour-registers/value-map';
+import { getObjectBuffer } from '@/storage/s3';
+import { loadBatchDataset } from '@/lib/labour-registers/load-dataset';
 import type { BatchView } from './BatchPage';
 
 /**
@@ -21,11 +26,12 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
   const assumptions = (batch.assumptions ?? {}) as { fullAttendanceAssumed?: boolean; sphere?: 'state' | 'central' };
   const forms = formsFor(batch.stateCode, period, assumptions.sphere ?? 'state');
 
-  const [provenance, uploads, documents, map] = await Promise.all([
+  const [provenance, uploads, documents, map, attendanceMap] = await Promise.all([
     batchProvenance(ctx, batch.id),
     listUploads(ctx, batch.id),
     listDocuments(ctx, batch.id),
     getColumnMap(ctx, batch.engagementId, 'paysheet'),
+    getColumnMap(ctx, batch.engagementId, 'attendance'),
   ]);
 
   const bySlot: BatchView['uploads'] = {};
@@ -46,25 +52,60 @@ export async function loadBatchView(ctx: AuthContext, batchId: string): Promise<
 
   const mapping = (map?.mapping ?? {}) as Record<string, string>;
   const mapped = new Set(Object.keys(mapping));
+
+  /*
+   * Three of readiness's inputs need the rows themselves, not just the row counts.
+   *
+   * They used to be passed as constant zeros with a comment saying they were not wired yet,
+   * and one of them — the count of attendance codes nobody has a target for — is a `blocked`
+   * line with a fix link. Fed a zero it could never fire, so a preparer could close a month
+   * whose muster rolls carried codes this product does not understand, and the dialog said
+   * nothing. A gate that cannot fire is worse than no gate: the screen looks like it checked.
+   *
+   * So the dataset is read here, which costs the four uploads out of storage and a parse. It
+   * is done only when a paysheet exists, because readiness already blocks without one and
+   * these three counts are moot until it does.
+   */
+  let unresolvedValues = 0;
+  let employeesMissingAField = 0;
+  let coverageUndecided = 0;
+
+  if (bySlot.paysheet) {
+    const loaded = await loadBatchDataset(ctx, batch.id);
+    if (loaded) {
+      employeesMissingAField = employeesShort(loaded.dataset);
+      coverageUndecided = undecidedCoverage(loaded.dataset);
+    }
+
+    const attendance = uploads.find((u) => u.slot === 'attendance');
+    if (attendance) {
+      const bytes = await getObjectBuffer(attendance.objectKey);
+      if (bytes) {
+        const parsed = await parseWorkbook(bytes, {
+          format: formatForFileName(attendance.fileName),
+          preferSheet: attendance.sheetName || undefined,
+        });
+        unresolvedValues = unresolvedCodeCount(
+          gridValues(parsed),
+          (attendanceMap?.valueMaps as Record<string, Record<string, string>> | undefined)?.attendanceGrid,
+        );
+      }
+    }
+  }
+
   const summary = assessReadiness({
     forms,
     uploads: bySlot,
     attendanceAssumed: Boolean(assumptions.fullAttendanceAssumed),
     requiredFields: requiredFields(forms),
     mappedFields: [...mapped],
-    /* Value mapping is not stored per batch yet, so nothing is reported as unresolved here.
-       When it is, read it from the column map's `valueMaps` and count what has no target. */
-    unresolvedValues: 0,
+    unresolvedValues,
     employees: bySlot.paysheet?.rowCount ?? 0,
-    /* The employee record is not wired to this screen yet, so no shortfall is claimed rather
-       than a zero being presented as a verified count. */
-    employeesShort: 0,
+    employeesShort: employeesMissingAField,
     /* An optional column with nothing mapped to it prints nil. It is reported, not blocked —
        not every payroll runs a night shift allowance. */
     optionalUnmapped: optionalFields(forms).filter((key) => !mapped.has(key)),
-    /* Minimum wage coverage is not wired to this screen yet, so nothing is claimed rather
-       than a zero being presented as a verified count. */
-    overtimeCoverageUnresolved: 0,
+    overtimeCoverageUnresolved: coverageUndecided,
   });
 
   return {

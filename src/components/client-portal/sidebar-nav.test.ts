@@ -16,8 +16,8 @@ describe('client portal sidebar (R-51)', () => {
     expect(items.slice(0, 5).map((n) => n.t)).toEqual(['Home', 'Incorporation', 'Compliances', 'Registrations', 'Updates']);
     expect(items.slice(1, 4).map((n) => n.i)).toEqual(['landmark', 'calendar-check', 'badge-check']);
     expect(items[1].badge).toBe('6/25');
-    expect(items[2].kids?.map((k) => k.t)).toEqual(['Obligations', 'Calendar', 'Filings', 'Labour registers']);
-    expect(items[2].kids?.map((k) => k.k)).toEqual(['obligations', 'compliances', 'filings', 'labour-registers']);
+    expect(items[2].kids?.map((k) => k.t)).toEqual(['Obligations', 'Calendar', 'Filings', 'Labour registers', 'Budgets']);
+    expect(items[2].kids?.map((k) => k.k)).toEqual(['obligations', 'compliances', 'filings', 'labour-registers', 'budgets']);
     expect(items[3].k).toBe('registrations');
   });
 
