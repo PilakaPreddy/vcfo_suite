@@ -15,13 +15,16 @@ mismatch; the first sub-agent is SPICe+ Part A. The legal limits come from the f
 (`docs/specs/mca-connect/reports/`): no captcha, OTP or login filling; never click final submit;
 never pay; a written CS opinion before live use; mock testing is allowed.
 
+Related files in this folder: `SAFETY.md` (guards), `CS-QUESTIONS.md` (CS bundle), `ROADMAP.md`
+(phases, metrics, backlog), `RESEARCH.md` (references) and `API.md` (the extension-to-Suite contract).
+
 ## What the research says (and what we take from each)
 | Reference | Lesson | Our use |
 |---|---|---|
 | Stagehand (Browserbase): action caching | The AI finds a target once; code replays it with 0 tokens; on a miss, it falls back to AI | **Recipes** = cached, versioned actions. AI only on a miss. |
 | UiPath Healing Agent and semantic selectors | Semantic match is a fallback only; an unfixable failure goes to a human review queue; every heal is logged | **Heal ladder** + **recipe patch review** in VCFO Suite |
 | browser-use (DOM/accessibility tree) vs Skyvern (vision) | An accessibility tree costs about 10× fewer tokens than screenshots | Mismatch prompts use a **compact field list**, never screenshots |
-| Adobe AEM Forms `guideBridge` (MCA V3 is built on AEM Adaptive Forms) | `guideBridge.resolveNode(som).value` and `setProperty` set the form's own model, so its rules and validation run | Fill through **guideBridge in the page's main world**; fall back to native-setter input events |
+| Adobe AEM Forms `guideBridge` (MCA V3 is inferred to be AEM Adaptive Forms from the `.guideFieldNode` selectors; confirm with the recorder, see `RESEARCH.md`) | `guideBridge.resolveNode(som).value` and `setProperty` set the form's own model, so its rules and validation run | Fill through **guideBridge in the page's main world**; fall back to native-setter input events |
 | Claude in Chrome safety | Permissions first; confirm sensitive actions; bind each approval to one specific action; treat page text as untrusted | **Deny list**, **action-bound confirmations**, page text is data only |
 | Chrome built-in AI (Gemini Nano Prompt API) | Free on-device model for small tasks | An optional free tier in the heal ladder for label matching |
 | WXT framework | The current standard for MV3 + TypeScript + React side panels | The extension's build tool |
