@@ -172,3 +172,5 @@ client reads without reviewer, review note, confirm point, escalations, ticks or
 `compliance-reminder-schedule` (the six reminders per item; admin, super admin and manager edit;
 the `system*` readers serve the reminder job only) and `compliance-counts` (category totals in
 the same scope). Cross-tenant tests: `compliance-tasks.test.ts`.
+
+`budgets/` holds the budget module. A client reaches a budget through `assertEngagementAccess`; tabs, CTC and the Master Budget are further limited by `computeAccess` and `maskForViewer` in `shared.ts`. Its `system*` functions are for the alert job and message delivery only.

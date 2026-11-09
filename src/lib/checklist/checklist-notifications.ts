@@ -30,6 +30,8 @@ const NOTIFICATION_KINDS = [
   'compliance.task',
   /** A board meeting notice, reply, MoM or resolution needs someone (board-meetings). */
   'board.meeting',
+  /** A budget tab, publish, approval or overspend needs someone (budgets). */
+  'budget.update',
   /** A reviewed official update, or the day's summary of them (Watch). */
   'watch.update',
   /** An official source stopped working, for the reviewers (Watch). */
