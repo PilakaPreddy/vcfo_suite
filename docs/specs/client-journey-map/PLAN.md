@@ -48,8 +48,8 @@ The HTML prototype the owner reviews lives outside the repository, as a publishe
 ## Open decisions for the owner
 
 1. Approve the prototype look, or list the changes.
-2. Tree view engine: a small hand-written SVG canvas (no new dependency) or React Flow
-   (`@xyflow/react`, more features, about 180 kB).
+2. Tree view engine: the draft uses a small hand-written SVG canvas (no new dependency). React Flow
+   (`@xyflow/react`) stays an option if the owner wants more diagram features.
 3. Whether staff (lead, manager) see the same map on the client record page.
 
 ## Related: the agents idea
