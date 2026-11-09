@@ -156,7 +156,7 @@ describe('Ask VCFO golden set (mock mode)', () => {
     if (e.origin) expect(answer.origin).toBe(e.origin);
     if (e.lineIncludes) expect(answer.line).toContain(e.lineIncludes);
     if (e.lineExcludes) expect(answer.line).not.toMatch(e.lineExcludes);
-    if (e.uncertain) expect(answer.line).toBe(REFUSAL_COPY.uncertain);
+    if (e.uncertain) expect(answer.line).toBe(c.shell === 'client' ? REFUSAL_COPY.uncertain : REFUSAL_COPY.uncertainStaff);
     for (const a of e.actionsInclude ?? []) expect(answer.actions).toContain(a);
     for (const a of e.actionsExclude ?? []) expect(answer.actions).not.toContain(a);
     if (e.visualType === null) expect(answer.visual).toBeUndefined();

@@ -270,7 +270,13 @@ const destinationSchema = z.discriminatedUnion('to', [
   z.object({ to: z.literal('projectStep'), engagementId: z.string().min(1), stepId: z.string().min(1) }),
   z.object({ to: z.literal('approvals') }),
   z.object({ to: z.literal('compliance'), filter: z.enum(['overdue', 'dueSoon']).optional() }),
-  z.object({ to: z.literal('composeReminder'), engagementId: z.string().min(1) }),
+  // A drafted email carries its own text; without it the standard reminder text is used.
+  z.object({
+    to: z.literal('composeReminder'),
+    engagementId: z.string().min(1),
+    subject: z.string().trim().max(200).optional(),
+    body: z.string().trim().max(4000).optional(),
+  }),
   // every shell, narrowed by `checkDestination`
   z.object({
     to: z.literal('list'),

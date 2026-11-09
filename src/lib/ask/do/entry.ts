@@ -311,8 +311,12 @@ export async function handleDoWork(
   const count = plan.draft.rows.length;
   const held = plan.draft.rows.filter((r) => r.heldReason).length;
   const heldNote = held > 0 ? ` ${held} ${held === 1 ? 'is' : 'are'} held, with the reason on the row.` : '';
+  const waitsForManager = managerRows.length > 0 && ctx.role !== 'manager' && ctx.role !== 'admin' && ctx.role !== 'super_admin';
+  const managerNote = waitsForManager
+    ? ` ${managerRows.length} ${managerRows.length === 1 ? 'value needs' : 'values need'} your manager's approval as well; I have told them.`
+    : '';
   return finish(
-    line(`I prepared ${count} value${count === 1 ? '' : 's'} for ${row.companyName}. Nothing is saved until you accept.${heldNote}${askMore}`, { changesetId }),
+    line(`I prepared ${count} value${count === 1 ? '' : 's'} for ${row.companyName}. Nothing is saved until you accept.${heldNote}${managerNote}${askMore}`, { changesetId }),
     'waiting_approval',
   );
 }

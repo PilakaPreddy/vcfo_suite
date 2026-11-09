@@ -43,6 +43,8 @@ export async function loadChangesetView(ctx: AuthContext, id: string): Promise<C
   return {
     id: changeset.id,
     title: changeset.title,
+    tier: changeset.tier === 'T3' ? 'T3' : 'T2',
+    recipients: (changeset.recipients ?? []).map((r) => ({ name: r.name, ...(r.email ? { email: r.email } : {}) })),
     companyName: found.companyName,
     engagementId: changeset.engagementId,
     status: changeset.status as ChangesetStatus,

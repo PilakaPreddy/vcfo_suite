@@ -50,7 +50,7 @@ function Header({ onClose, size, setSize }: { onClose: () => void; size?: AskPan
         <h2 className="text-[15px] font-medium text-ink">Ask VCFO</h2>
         {/* The Small card has no room for the scope beside the robot and the buttons. */}
         <span className="min-w-0 flex-1 truncate text-[13px] text-ink-muted">
-          {size === 'small' ? null : client ? 'Verified sources' : scoped ? 'Your clients · read only' : 'Firm-wide · read only'}
+          {size === 'small' ? null : client ? 'Verified sources' : scoped ? 'Your clients' : 'Firm-wide'}
         </span>
         {size && setSize ? (
           <div role="group" aria-label="Chat size" className="flex items-center">

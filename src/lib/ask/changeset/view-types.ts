@@ -27,6 +27,9 @@ export interface ChangesetRowView {
 export interface ChangesetView {
   id: string;
   title: string;
+  /** T3 cards go outside the firm; the card names exactly who will see the result. */
+  tier: 'T2' | 'T3';
+  recipients: Array<{ name: string; email?: string }>;
   companyName: string;
   engagementId: string | null;
   status: ChangesetStatus;

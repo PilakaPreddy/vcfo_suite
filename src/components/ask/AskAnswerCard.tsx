@@ -75,7 +75,7 @@ export function AskAnswerCard({
   return (
     <article className="grid gap-3 rounded-md border-1.5 border-line bg-surface-raised px-3 py-3 text-[13px]">
       <div className="flex flex-wrap items-center gap-1.5">
-        <TrustBadge answer={answer} firmName={ask.firmName} />
+        <TrustBadge answer={answer} firmName={ask.firmName} staff={!client} />
         {answer.depth !== 'normal' && <Tag>{answer.depth === 'simple' ? 'Simpler' : 'More detail'}</Tag>}
       </div>
 

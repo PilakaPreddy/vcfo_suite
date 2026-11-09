@@ -104,6 +104,13 @@ export function AskChangesetCard({ changesetId }: { changesetId: string }) {
     <section aria-label={card.title} className="rounded-md border border-line bg-surface-raised">
       <header className="border-b border-line px-3 py-2">
         <p className="text-[13px] font-semibold text-ink">{card.title}</p>
+        {card.tier === 'T3' ? (
+          <p className="mt-0.5 text-[12px] text-ink-muted" data-testid="changeset-recipients">
+            {card.recipients.length > 0
+              ? `Goes to ${card.recipients.map((r) => (r.email ? `${r.name} <${r.email}>` : r.name)).join(', ')} once you accept.`
+              : 'Nobody is set up to receive this yet.'}
+          </p>
+        ) : null}
       </header>
       <ul className="divide-y divide-line">
         {card.rows.map((row) => {

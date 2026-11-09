@@ -17,6 +17,25 @@ Gotchas already paid for once. Append when something costs more than a minute to
   answers. The waiting state is an `ask_runs` row with status `waiting_reply`.
 - A company name only identifies the client, except on a certificate of incorporation.
 
+## How a plain request becomes a card (actions)
+
+- A `do_work` request with no file goes to `src/lib/ask/do/pick-action.ts` first. One small structured-output call reads
+  it into plain fields (action, company, step, title, status, date, note, subject, body). Code then finds the client
+  with `lockEngagement` inside the person's scope, the step with `resolveStep`, and parses the action's own zod input.
+  The model never sees an id and can only name an action `pickableActions` offered for that role. `none` falls through
+  to the data router, which still owns filling checklist answers.
+- Actions live in `src/lib/actions/<area>/index.ts` with a `capability` line; "What can you do?" is built from those
+  lines (`src/lib/ask/capabilities.ts`), so the list and the chat never disagree. An action without `capability` works
+  but is not listed.
+- T2 (`tasks.create`, `statuses.setStep`) and T3 (`requests.create`, `reminders.client`) go on the same card as a fill.
+  T3 cards carry `recipients`, shown as "Goes to … once you accept". T1 (`reminders.draftEmail`) runs at once and only
+  returns a compose link; it sends nothing. T4 is never registered.
+- Each action calls the code its screen calls: `createTask`, `applyChecklistPatch`, `createDocumentRequest` plus
+  `notifyEngagementEventSoon`, `sendClientReminder`. Outward actions have no undo because the email has gone; a task's
+  undo marks it not applicable, and a status undo only runs if nobody changed the status since.
+- A reminder with no step named goes to the step waiting on the client now. The 24-hour limit is checked again at the
+  click, so a card prepared twice cannot send twice.
+
 ## Rows and approval
 
 - `gate`, `owner` and `condition` hold a row. `format`, `answer` and `validator` wait for an edit. `conflict`,

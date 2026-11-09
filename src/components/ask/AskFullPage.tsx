@@ -271,7 +271,7 @@ export function AskFullPage() {
               </span>
             ) : null}
             <span className="hidden rounded-full border border-line px-2.5 py-0.5 text-[12px] text-ink-muted lg:inline">
-              {client ? 'Verified sources' : scoped ? 'Your clients · read only' : 'Firm-wide · read only'}
+              {client ? 'Verified sources' : scoped ? 'Your clients' : 'Firm-wide'}
             </span>
             {!empty ? (
               <button type="button" onClick={ask.reset} className={ghost}>

@@ -13,6 +13,7 @@ export const REFUSAL_COPY = {
   unavailable: 'Ask VCFO is unavailable right now. Your project lead can help in the meantime.',
   unavailableStaff: 'Ask VCFO is unavailable right now.',
   uncertain: "I'm not certain about this one. Your project lead can answer it.",
+  uncertainStaff: "I'm not certain about this one, because my sources don't cover it. Open the project or the source to check.",
   greetingClient: 'Hello. Ask me anything about your company setup, or pick a question below.',
   greetingStaff: 'Hello. Ask about firm projects, deadlines or compliance rules, or pick a question below.',
   rateLimited: "You've asked a lot of questions in a short time. Please try again a little later.",
@@ -20,6 +21,7 @@ export const REFUSAL_COPY = {
   pathStopped: 'This kind of answer is switched off for now. Suggested questions still work.',
   runTooLong: 'That question needed more work than one answer allows. Try asking about one project or one form at a time.',
   doWork: "I can't do that from chat yet. I can explain it or show you where to do it.",
+  doWorkStaff: "I can't do that one from chat yet. Here is what I can do:",
 } as const;
 
 function envelope(line: string, shell: AskShell, extra: Partial<AnswerEnvelope> = {}): AnswerEnvelope {
@@ -57,12 +59,13 @@ export function greetingAnswer(shell: AskShell): AnswerEnvelope {
   };
 }
 
-/** Safe fallback after validation fails twice (§6.6). */
-export function uncertainAnswer(): AnswerEnvelope {
+/** Safe fallback after validation fails twice (§6.6). Staff are the lead, so they get no "ask your lead". */
+export function uncertainAnswer(shell: AskShell): AnswerEnvelope {
+  const client = shell === 'client';
   return {
-    line: REFUSAL_COPY.uncertain,
+    line: client ? REFUSAL_COPY.uncertain : REFUSAL_COPY.uncertainStaff,
     citations: [],
-    actions: ['askLead'],
+    actions: client ? ['askLead'] : [],
     origin: 'generated',
     depth: 'normal',
   };
