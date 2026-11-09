@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { BarChart3, ScrollText, TriangleAlert } from 'lucide-react';
+import { BarChart3, FolderOpen, ScrollText, TriangleAlert } from 'lucide-react';
 
 import { IndiaMap, type MapState } from '@/components/labour-registers/IndiaMap';
 import { LabourRegistersTheme } from '@/components/labour-registers/LabourRegistersTheme';
@@ -39,6 +39,15 @@ export interface ClientRegistersPageProps {
   ready?: boolean;
   /** The batch to download from, where one exists for the selected state and period. */
   batchId?: string;
+  /**
+   * The document produced for each form, by form id.
+   *
+   * Readiness is per form rather than per period: a row offers a download when a file exists
+   * for that form and says it is being prepared when one does not. A single flag over the
+   * month would offer twenty-nine links where twenty-eight files exist, and a link that 404s
+   * is worse than a row that says it is not ready.
+   */
+  documentsByForm?: Record<string, string>;
   /** What is still awaited from the client, if anything. */
   awaiting?: { what: string; by: string };
 }
@@ -80,6 +89,7 @@ export function ClientRegistersPage({
   establishments,
   ready = false,
   batchId,
+  documentsByForm,
   awaiting,
 }: ClientRegistersPageProps) {
   const all = statesForPicker();
@@ -119,6 +129,17 @@ export function ClientRegistersPage({
           { label: `Registers for ${periodLabel}`, value: forms.length },
           { label: 'Status', value: status, tone: ready ? 'ok' : 'info' },
         ]}
+        action={
+          /* Everything for the month in one place: the act-wise folders, what was produced
+             from what, and a download of the lot. Offered only once a batch exists, because
+             a link to a period nobody has opened goes to a 404. */
+          batchId ? (
+            <Link href={`${shellBase}/labour-registers?batch=${batchId}`} className={lr.secondary}>
+              <FolderOpen className="size-4" strokeWidth={1.8} aria-hidden="true" />
+              Open {selected.name} · {periodLabel}
+            </Link>
+          ) : undefined
+        }
       />
 
       {/* Where they employ people, as a map and as a list of the same rows. */}
@@ -172,15 +193,19 @@ export function ClientRegistersPage({
       {/* The registers for the selected establishment, act by act. */}
       <div className="grid auto-rows-min items-start gap-3 lg:grid-cols-2">
         {byAct.map(({ act, forms: actForms }, i) => {
-          const registers: RegisterRow[] = actForms.map((form) => ({
-            id: form.id,
-            name: `Form ${form.formNumber} — ${form.title}`,
-            note: ready ? `${form.period} · ${form.rule}` : `${form.period} · SBC is preparing it`,
-            /* A download is offered only once the period's registers exist, and it points at
-               the batch rather than at a query the route cannot answer. */
-            href: ready && batchId ? `${shellBase}/labour-registers?batch=${batchId}` : undefined,
-            status,
-          }));
+          const registers: RegisterRow[] = actForms.map((form) => {
+            /* The file for this form, where one was produced. A row with a document gets the
+               file itself; a row without says it is being prepared, whatever the rest of the
+               month managed. */
+            const documentId = documentsByForm?.[form.id];
+            return {
+              id: form.id,
+              name: `Form ${form.formNumber} — ${form.title}`,
+              note: documentId ? `${form.period} · ${form.rule}` : `${form.period} · SBC is preparing it`,
+              href: documentId ? `/api/labour-registers/download?document=${documentId}` : undefined,
+              status: documentId ? 'Done' : status,
+            };
+          });
           return (
             <RegisterList
               key={act}

@@ -4,6 +4,7 @@ import { requireAuth } from '@/auth/guards';
 import { BatchPage } from '@/views/labour-registers/BatchPage';
 import { ClientRegistersPage } from '@/views/labour-registers/ClientRegistersPage';
 import { loadBatchView } from '@/views/labour-registers/load-batch';
+import { loadClientRegistersView } from '@/views/labour-registers/load-client-registers';
 import { pageMetadata } from '@/lib/shell/page-metadata';
 
 export const metadata = pageMetadata('Labour registers', 'Statutory labour registers, state by state');
@@ -37,5 +38,12 @@ export default async function Page({
     return <BatchPage view={view} shellBase="/app/client" canPrepare={false} />;
   }
 
-  return <ClientRegistersPage shellBase="/app/client" stateCode={one('state')} period={one('period')} />;
+  /* The screen's four answers — where they employ people, which registers exist, what is
+     pending — come from their own batches. Until this read was wired the component ran on its
+     defaults, so no download link could ever appear. */
+  const guard = await requireAuth();
+  if (!guard.ok) notFound();
+  const view = await loadClientRegistersView(guard.ctx, { stateCode: one('state'), period: one('period') });
+
+  return <ClientRegistersPage shellBase="/app/client" {...view} />;
 }
