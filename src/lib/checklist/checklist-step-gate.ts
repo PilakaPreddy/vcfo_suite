@@ -10,6 +10,8 @@ import { isLeadRequestPending, isReviewRejected } from '@/lib/checklist/checklis
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
 import {
   isDirectFlowStep,
+  isParallelStep,
+  PARALLEL_STEPS_OPEN_AFTER,
   isDirectFlowStepComplete,
   isWaitingOnLead,
 } from '@/lib/incorporation/pre-inc-direct-flow';
@@ -145,6 +147,8 @@ export function gateChecklistSteps(params: {
   const currentIndex = complete.findIndex((done) => !done);
   const blockerTitle =
     currentIndex >= 0 ? items[currentIndex]?.title : undefined;
+  const opensAfterIndex = items.findIndex((item) => item.id === PARALLEL_STEPS_OPEN_AFTER);
+  const parallelOpen = opensAfterIndex >= 0 && complete[opensAfterIndex] === true;
 
   const out: Record<string, ChecklistStepGate> = {};
   items.forEach((item, index) => {
@@ -152,6 +156,15 @@ export function gateChecklistSteps(params: {
     // company's board-resolution steps, say) — never "opens after".
     const notApplicable = state[item.id]?.status === 'not-applicable';
     const directFlow = isDirectFlowStep(item.id);
+    // A parallel step (GST registration) opens to both parties once the company
+    // is incorporated, whatever the steps between say; it still counts as a
+    // blocker for the steps after it.
+    if (isParallelStep(item.id) && (parallelOpen || index <= currentIndex || currentIndex < 0)) {
+      out[item.id] = complete[index]
+        ? { kind: 'done', canOpen: true, canEdit: false, message: null }
+        : directFlowCurrentGate(viewer, isWaitingOnLead(item.id, state[item.id]));
+      return;
+    }
     if (complete[index] && (notApplicable || currentIndex < 0 || index < currentIndex)) {
       out[item.id] = {
         kind: 'done',

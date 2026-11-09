@@ -135,9 +135,10 @@ describe('listRegistrationFacts', () => {
   });
 
   it('a client does not see answers on a step the manager has not released', async () => {
-    results = [[{ id: OWN, reg: { 'reg-4': { status: 'in-progress', responses: { gstinNumber: 'DRAFT' } } } }], [], []];
+    // ESI is a lead-delivered step; GST (reg-4) is filled with the client, so it is always released.
+    results = [[{ id: OWN, reg: { 'reg-3': { status: 'in-progress', responses: { esiRegistrationNumber: 'DRAFT' } } } }], [], []];
     const out = await repo.listRegistrationFacts(ctx('client'));
-    expect(out[OWN]!['reg-4']!.number).toBeNull();
+    expect(out[OWN]!['reg-3']!.number).toBeNull();
   });
 
   it('a developer gets nothing before any query', async () => {
