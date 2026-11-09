@@ -6,6 +6,7 @@ import {
   Bell,
   ListChecks,
   BookMarked,
+  Bot,
   BookOpen,
   Briefcase,
   Building2,
@@ -126,6 +127,21 @@ export function withOfficialUpdates(items: NavEntry[]): NavEntry[] {
       ? { ...entry, items: [...entry.items, { to: `${entry.id.slice('updates:'.length)}/watch`, label: 'Official updates', icon: Landmark, iconTone: TONE.news }] }
       : entry,
   );
+}
+
+/**
+ * VCFO Assist agents (docs/specs/vcfo-assist-agents/PLAN.md): every staff role gets "Assist runs"
+ * at the top of the tools cluster. Clients, partners and the developer console never do. Applied
+ * by `RoleSidebar` on top of `sidebarItemsFor`, so the base lists (and their tests) stay as they are.
+ */
+export function withAssistRuns(items: NavEntry[], role: Role, staffBase: string, inDevConsole = false): NavEntry[] {
+  if (inDevConsole) return items;
+  const base =
+    role === 'super_admin' ? '/app/super' : role === 'admin' ? '/app/admin' : role === 'intern' ? '/app/intern' : role === 'manager' ? staffBase : null;
+  if (!base) return items;
+  const at = items.findIndex((entry) => isNavSectionBreak(entry) && entry.id === NAV_TOOLS_BREAK.id);
+  const item: NavItem = { to: `${base}/assist-runs`, label: 'Assist runs', icon: Bot, iconTone: TONE.work };
+  return at < 0 ? [...items, item] : [...items.slice(0, at + 1), item, ...items.slice(at + 1)];
 }
 
 /** The practice block's three labels, in order (R-51). */

@@ -29,6 +29,7 @@ const PATH_LABELS: Record<string, string> = {
   fixed_workflow: 'Fixed workflow',
   agent_run: 'Agent run',
   watch: 'Watch',
+  assist_resolve: 'VCFO Assist field match',
   unrecorded: 'Before tracking',
 };
 

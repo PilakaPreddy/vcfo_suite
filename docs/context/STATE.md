@@ -163,3 +163,18 @@ instalments; the Master Budget tax row now uses that yearly figure. Needs migrat
 `0049_budget_variance` on RDS before deploy. Demo data: `scripts/seed-budget-variance-demo.ts`
 (Solstice: April to September approved, October submitted). Typecheck clean, lint 0 errors; no tests.
 
+
+## VCFO Assist agents, Suite side (9 Nov 2026, on `claude/laughing-albattani-03nyom`, not deployed)
+
+Phase 2 of `docs/specs/vcfo-assist-agents/PLAN.md`; the routes are described for the extension
+builder in `docs/specs/vcfo-assist-agents/API.md`. Migration `0050_assist_agents` adds
+`assist_agent_runs` (a new table, because `assist_runs` from 0029 already serves "Start filing" and
+the client portal) and `assist_recipe_patches`; apply it on RDS before deploy. Recipes are code
+(`src/lib/assist-agents/recipes/spice-a.json`, v1.0.0, checked against the mock only), signed with
+`ASSIST_RECIPE_SECRET` (falls back to a key derived from `AUTH_SECRET`). The T3 resolver uses the
+Ask provider, the extract (Haiku) model, the daily Ask budget and the new Ask path
+`assist_resolve`; with no key it answers with a fuzzy label match. Live portal hosts are refused
+until `ASSIST_LIVE_PORTALS=true`. A finished run's SRN is appended to the step's filing note for
+spice-a (pre-4), spice-b (pre-10) and inc-20a (post-6) through `applyChecklistPatch`; every other
+sub-agent keeps the SRN on the run. Staff page "Assist runs" at `/app/{super,admin,manager,intern}/assist-runs`.
+Typecheck clean outside `extensions/`, lint 0 errors, tests pass, migrated locally.

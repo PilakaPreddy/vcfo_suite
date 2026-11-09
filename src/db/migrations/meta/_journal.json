@@ -351,6 +351,13 @@
       "when": 1794212653824,
       "tag": "0049_budget_variance",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1794261493200,
+      "tag": "0050_assist_agents",
+      "breakpoints": true
     }
   ]
 }

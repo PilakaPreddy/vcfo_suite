@@ -17,7 +17,7 @@ import { useShellNav } from '@/components/shell/shell-nav-context';
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useStaffBasePath } from '@/hooks/use-staff-base-path';
 import { SidebarComplianceMini } from '@/components/shell/SidebarComplianceMini';
-import { isNavGroup, isNavSectionBreak, sidebarItemsFor, withOfficialUpdates } from '@/components/shell/sidebar-items';
+import { isNavGroup, isNavSectionBreak, sidebarItemsFor, withAssistRuns, withOfficialUpdates } from '@/components/shell/sidebar-items';
 import { useWatchEnabled } from '@/hooks/use-watch';
 import { isWatchStaff } from '@/lib/watch/recipients';
 import {
@@ -195,7 +195,7 @@ function SidebarNavBody({
 
   /* P-255: inside the developer console the super admin sees the console's own items. */
   const inDevConsole = user.role === 'super_admin' && pathname.startsWith('/app/dev');
-  const baseItems = sidebarItemsFor(user.role, staffBase, inDevConsole);
+  const baseItems = withAssistRuns(sidebarItemsFor(user.role, staffBase, inDevConsole), user.role, staffBase, inDevConsole);
   const items = watchEnabled && !inDevConsole ? withOfficialUpdates(baseItems) : baseItems;
 
   return (

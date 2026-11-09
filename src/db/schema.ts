@@ -1277,3 +1277,4 @@ export * from './schema-receivables';
 export * from './schema-budget';
 export * from './schema-ask';
 export * from './schema-watch';
+export * from './schema-assist';

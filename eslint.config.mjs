@@ -9,7 +9,8 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   // supabase/functions are Deno (own runtime + type-checking); don't lint them
   // with the browser/Next config.
-  { ignores: ["dist", ".next", "supabase/functions"] },
+  // extensions/* are separate packages (own package.json, tsconfig and tests); don't lint them here.
+  { ignores: ["dist", ".next", "supabase/functions", "extensions"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
