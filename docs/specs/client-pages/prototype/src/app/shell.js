@@ -91,7 +91,7 @@
   var NAV = [
     { k: 'home', t: 'Home', i: 'layout-dashboard' },
     { g: 'updates', t: 'Updates', i: 'megaphone', badge: '3', hot: true, kids: [{ k: 'announcements', t: 'Announcements' }, { k: 'notifications', t: 'Notifications', badge: '3', hot: true }] },
-    { k: 'incorporation', t: 'Incorporation', i: 'building-2', badge: 'inc' },
+    { g: 'incorporation', t: 'Incorporation', i: 'building-2', badge: 'inc', kids: [{ k: 'incorporation', t: 'Overview', badge: 'inc' }, { k: 'registrations', t: 'Registrations' }] },
     { g: 'compliances', t: 'Compliances', i: 'calendar-check', kids: [{ k: 'compliances', t: 'Calendar' }, { k: 'filings', t: 'Filings' }] },
     { k: 'documents', t: 'Documents', i: 'folder-open', badge: '6' },
     { k: 'knowledge-bank', t: 'Library', i: 'library' },
@@ -99,8 +99,8 @@
     { k: 'team', t: 'Team', i: 'users' },
     { k: 'audit', t: 'Audit', i: 'history' }
   ];
-  var ALIAS = { 'inc-phase-a': 'incorporation', 'inc-phase-3': 'incorporation', 'inc-phase-4': 'incorporation', 'credentials': 'credentials', 'home-after': 'home', 'home-chat': 'home', 'ids-password': 'home', 'inc-phase': 'incorporation', 'inc-step7': 'incorporation', 'inc-step10': 'incorporation', 'board-resolution': 'incorporation', 'doc-viewer': 'documents', 'kb-reader': 'knowledge-bank' };
-  function active() { var h = window.vcfoHere ? window.vcfoHere() : null; if (/^inc-step/.test(h || '')) return 'incorporation'; return ALIAS[h] || h; }
+  var ALIAS = { 'inc-phase-a': 'incorporation', 'inc-phase-3': 'incorporation', 'inc-phase-4': 'registrations', 'credentials': 'credentials', 'home-after': 'home', 'home-chat': 'home', 'ids-password': 'home', 'inc-phase': 'incorporation', 'inc-step7': 'incorporation', 'inc-step10': 'incorporation', 'board-resolution': 'incorporation', 'doc-viewer': 'documents', 'kb-reader': 'knowledge-bank' };
+  function active() { var h = window.vcfoHere ? window.vcfoHere() : null; var sn = /^inc-step-?(\d+)/.exec(h || ''); if (sn) return +sn[1] >= 26 ? 'registrations' : 'incorporation'; return ALIAS[h] || h; }
   var TEAM = [
     { n: 'Priya Raman', r: 'Project Manager', ini: 'PR', c: ['wa', 'call', 'mail', 'teams'] },
     { n: 'Arjun Mehta', r: 'Project Lead', ini: 'AM', c: ['wa', 'call', 'mail', 'teams'] },
@@ -275,9 +275,9 @@
       if (n.kids) {
         var has = n.kids.some(function (c) { return c.k === act; });
         var open = og[n.g] === undefined ? has : og[n.g];
-        h += '<button type="button" class="vps-i vps-g" data-group="' + n.g + '" aria-expanded="' + open + '"' + (has && !open ? ' data-holds="1"' : '') + '><span class="vps-ic">' + lu(n.i) + '</span><span class="vps-t">' + n.t + '</span>' + badge(n.badge, n.hot) + '<span class="vps-cv">' + svg(I.chev, 14) + '</span></button>';
+        h += '<button type="button" class="vps-i vps-g" data-group="' + n.g + '" aria-expanded="' + open + '"' + (has && !open ? ' data-holds="1"' : '') + '><span class="vps-ic">' + lu(n.i) + '</span><span class="vps-t">' + n.t + '</span>' + badge(n.badge === 'inc' ? incBadge() : n.badge, n.hot) + '<span class="vps-cv">' + svg(I.chev, 14) + '</span></button>';
         h += '<div class="vps-sub' + (open ? ' open' : '') + '" data-sub="' + n.g + '"><div' + (open ? '' : ' inert') + '>';
-        n.kids.forEach(function (c) { h += '<a href="#" class="vps-i" data-go="' + c.k + '"' + (c.k === act ? ' aria-current="page"' : '') + (open ? '' : ' tabindex="-1"') + '><span class="vps-t">' + c.t + '</span>' + badge(c.badge, c.hot) + '</a>'; });
+        n.kids.forEach(function (c) { h += '<a href="#" class="vps-i" data-go="' + c.k + '"' + (c.k === act ? ' aria-current="page"' : '') + (open ? '' : ' tabindex="-1"') + '><span class="vps-t">' + c.t + '</span>' + badge(c.badge === 'inc' ? incBadge() : c.badge, c.hot) + '</a>'; });
         h += '</div></div>';
       } else {
         h += '<a href="#" class="vps-i" data-go="' + n.k + '"' + (n.k === act ? ' aria-current="page"' : '') + '><span class="vps-ic">' + lu(n.i) + '</span><span class="vps-t">' + n.t + '</span>' + badge(n.badge === 'inc' ? incBadge() : n.badge) + '</a>';
@@ -302,7 +302,7 @@
     NAV.forEach(function (n) {
       if (n.kids) {
         var has = n.kids.some(function (c) { return c.k === act; });
-        h += '<button type="button" class="vps-i vps-g" data-fly="g:' + n.g + '" aria-haspopup="true" aria-expanded="false"' + (has ? ' data-cur="1"' : '') + ' data-tip="' + n.t + (n.badge ? ' · ' + n.badge + ' new' : '') + '"><span class="vps-ic">' + lu(n.i, 20) + '</span><span class="vps-t">' + n.t + '</span>' + badge(n.badge, n.hot) + '</button>';
+        h += '<button type="button" class="vps-i vps-g" data-fly="g:' + n.g + '" aria-haspopup="true" aria-expanded="false"' + (has ? ' data-cur="1"' : '') + ' data-tip="' + n.t + (n.badge === 'inc' ? ' · ' + incBadge() + ' steps' : n.badge ? ' · ' + n.badge + ' new' : '') + '"><span class="vps-ic">' + lu(n.i, 20) + '</span><span class="vps-t">' + n.t + '</span>' + (n.badge === 'inc' ? '' : badge(n.badge, n.hot)) + '</button>';
       } else {
         h += '<a href="#" class="vps-i" data-go="' + n.k + '"' + (n.k === act ? ' aria-current="page"' : '') + ' data-tip="' + n.t + (n.badge === 'inc' ? ' · ' + incBadge() + ' steps' : n.badge ? ' · ' + n.badge : '') + '"><span class="vps-ic">' + lu(n.i, 20) + '</span><span class="vps-t">' + n.t + (n.badge === 'inc' ? ' · ' + incBadge() + ' steps' : '') + '</span>' + (n.badge && n.badge !== 'inc' ? badge(n.badge) : '') + '</a>';
       }
@@ -321,7 +321,7 @@
     if (key.indexOf('g:') === 0) {
       var n = NAV.filter(function (x) { return x.g === key.slice(2); })[0];
       h = '<div class="vps-fh">' + n.t + '</div>';
-      n.kids.forEach(function (c) { h += '<a href="#" class="vps-fi" role="menuitem" data-go="' + c.k + '"' + (c.k === act ? ' aria-current="page"' : '') + '><span class="vps-ft">' + c.t + '</span>' + badge(c.badge, c.hot) + '</a>'; });
+      n.kids.forEach(function (c) { h += '<a href="#" class="vps-fi" role="menuitem" data-go="' + c.k + '"' + (c.k === act ? ' aria-current="page"' : '') + '><span class="vps-ft">' + c.t + '</span>' + badge(c.badge === 'inc' ? incBadge() : c.badge, c.hot) + '</a>'; });
     } else if (key.indexOf('p:') === 0) {
       p = TEAM[+key.slice(2)];
       h = '<div class="vps-fh who">' + p.n + '<small>' + p.r + '</small></div>';
@@ -532,8 +532,8 @@
   }
   function syncBA() {
     var on = ls('after') === true;
-    [].forEach.call(document.querySelectorAll('.vps [data-go="incorporation"] .vps-b'), function (b) { b.textContent = incBadge(); });
-    [].forEach.call(document.querySelectorAll('.vps-icons [data-go="incorporation"]'), function (a) { a.setAttribute('data-tip', 'Incorporation · ' + incBadge() + ' steps'); var t = a.querySelector('.vps-t'); if (t) t.textContent = 'Incorporation · ' + incBadge() + ' steps'; });
+    [].forEach.call(document.querySelectorAll('.vps [data-group="incorporation"] .vps-b, .vps [data-go="incorporation"] .vps-b, .vps-fly [data-go="incorporation"] .vps-b'), function (b) { b.textContent = incBadge(); });
+    [].forEach.call(document.querySelectorAll('.vps-icons [data-fly="g:incorporation"]'), function (a) { a.setAttribute('data-tip', 'Incorporation · ' + incBadge() + ' steps'); var t = a.querySelector('.vps-t'); if (t) t.textContent = 'Incorporation · ' + incBadge() + ' steps'; });
     [].forEach.call(document.querySelectorAll('.vp-ba'), function (g) {
       g.setAttribute('data-on', on ? '1' : '0');
       [].forEach.call(g.querySelectorAll('button'), function (b, i) { b.setAttribute('aria-pressed', String((i === 1) === on)); });

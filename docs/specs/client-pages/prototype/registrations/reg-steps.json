@@ -1,0 +1,418 @@
+[
+{
+"id": "reg-4",
+"slug": "gst-registration",
+"title": "GST Registration",
+"forms": [
+"GST REG-01",
+"GST RFD-11"
+],
+"infoRequired": [
+"Self-attested COI",
+"PAN",
+"Board Resolution",
+"Authorisation Letter",
+"MOA",
+"AOA",
+"Rental Deed",
+"Bank Details",
+"Directors' KYC",
+"List of services / goods traded",
+"Rental agreement",
+"KYC of 2 witnesses (for LUT)"
+],
+"timeline": "Within 2 weeks of incorporation",
+"urgent": true,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-1",
+"slug": "pf-dsc-esign-registration",
+"title": "PF Registration",
+"forms": [
+"PF registration"
+],
+"infoRequired": [
+"Self-attested COI",
+"PAN",
+"Board Resolution",
+"Authorisation Letter",
+"MOA",
+"AOA",
+"Rental Deed",
+"Bank Details",
+"Directors' KYC",
+"List of employees",
+"Active DSC / e-sign credentials"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-3",
+"slug": "esi-registration",
+"title": "ESI Registration",
+"forms": [
+"ESI registration"
+],
+"infoRequired": [
+"Self-attested COI",
+"PAN",
+"Board Resolution",
+"Authorisation Letter",
+"MOA",
+"AOA",
+"Rental Deed",
+"Bank Details",
+"Directors' KYC",
+"List of employees"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-7",
+"slug": "pt-registration",
+"title": "PT Registration",
+"forms": [
+"Form 1 \u2014 PT"
+],
+"infoRequired": [
+"Self-attested COI",
+"PAN",
+"Board Resolution",
+"Authorisation Letter",
+"MOA",
+"AOA",
+"Rental Deed",
+"Bank Details",
+"Directors' KYC",
+"TAN",
+"List of employees"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-6",
+"slug": "legal-entity-identifier",
+"title": "LEI Registration",
+"forms": [
+"Form 1 \u2014 LEI"
+],
+"infoRequired": [
+"Certificate of Incorporation",
+"PAN of company",
+"GST certificate",
+"Authorised representative details",
+"Details of all directors (name, father, DIN, address)"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-15",
+"slug": "msme-registration",
+"title": "MSME Registration",
+"forms": [
+"Udyam Registration"
+],
+"infoRequired": [
+"Aadhaar of authorised signatory",
+"PAN of company",
+"GSTIN (if registered)",
+"Bank account details",
+"NIC / activity codes"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-16",
+"slug": "icegate-registrations",
+"title": "ICEGATE Registrations",
+"forms": [],
+"infoRequired": [
+"Self-attested COI",
+"PAN",
+"Board Resolution",
+"Authorisation Letter",
+"MOA",
+"AOA",
+"Rental Deed",
+"Bank Details",
+"Directors' KYC",
+"IEC code",
+"Authorised signatory DSC"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-8",
+"slug": "iec-import-export-code",
+"title": "IEC Registration",
+"forms": [
+"Form 1 \u2014 IEC"
+],
+"infoRequired": [
+"Self-attested COI",
+"PAN",
+"Board Resolution",
+"Authorisation Letter",
+"MOA",
+"AOA",
+"Rental Deed",
+"Bank Details",
+"Directors' KYC",
+"Goods & services exported / imported"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-5",
+"slug": "letter-of-undertaking",
+"title": "LUT Filing",
+"forms": [
+"GST RFD-11"
+],
+"infoRequired": [
+"KYC of 2 witnesses"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-11",
+"slug": "non-stpi-unit",
+"title": "Non-STPI Compliance",
+"forms": [],
+"infoRequired": [
+"MOA & AOA",
+"Board Resolution authorising signatory",
+"PAN of company",
+"PAN / Passport of all directors",
+"IEC code",
+"DIR-12, INC-22",
+"GST registration",
+"Banker's certificate",
+"Sale deed / lease agreement",
+"Project report (next 5 years)",
+"Master service agreement with parent entity"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-9",
+"slug": "shops-establishments-registration",
+"title": "Shops & Establishment",
+"forms": [
+"Form 1 \u2014 S&E",
+"Form No-I"
+],
+"infoRequired": [
+"Name board in Telugu & English",
+"List of employees",
+"Rental deed of office space",
+"Employer (MD) ID proof + 2 passport photos",
+"COI, MOA, AOA"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-13",
+"slug": "clra-registration",
+"title": "CLRA Registration",
+"forms": [
+"CLRA registration"
+],
+"infoRequired": [
+"Self-attested COI",
+"PAN",
+"Board Resolution",
+"Authorisation Letter",
+"MOA",
+"AOA",
+"Rental Deed",
+"Bank Details",
+"Directors' KYC",
+"Details of contract labour / contractors (if applicable)",
+"Nature of work and establishment particulars"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-14",
+"slug": "posh-she-box-registration",
+"title": "POSH / SHE Box",
+"forms": [],
+"infoRequired": [
+"Internal Complaints Committee (ICC) constitution details",
+"SHE Box / POSH portal registration acknowledgement",
+"Workplace POSH policy (if available)"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-10",
+"slug": "trade-license",
+"title": "Trade Licence",
+"forms": [],
+"infoRequired": [
+"Address proof of business",
+"ID proof of applicant + Aadhaar of authorised person",
+"PAN, MOA, AOA, COI",
+"Latest municipal property-tax receipt",
+"Certified layout plan of office"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-12",
+"slug": "trademark-registration",
+"title": "Trademark Registration",
+"forms": [],
+"infoRequired": [
+"Power of Attorney",
+"Affidavit",
+"MSME certificate & applications"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-17",
+"slug": "trademark-renewal",
+"title": "Trademark Renewal",
+"forms": [],
+"infoRequired": [
+"Trademark registration certificate",
+"Renewal application particulars"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-18",
+"slug": "patent-registration",
+"title": "Patent Registration",
+"forms": [],
+"infoRequired": [
+"Invention / specification details",
+"Applicant and inventor particulars",
+"Power of Attorney (if filed through agent)"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-19",
+"slug": "icdr-registration",
+"title": "ICDR Registration",
+"forms": [],
+"infoRequired": [
+"Issuer / applicant particulars",
+"Offer or listing path details (if applicable)"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-20",
+"slug": "fcgpr-filing",
+"title": "FCGPR Filing",
+"forms": [
+"FCGPR"
+],
+"infoRequired": [
+"Foreign inward remittance details",
+"FIRC copies",
+"FIRMS portal registration",
+"Foreign investor particulars"
+],
+"timeline": "Within 30 days of incorporation",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-21",
+"slug": "fdi-reporting",
+"title": "FDI Reporting",
+"forms": [],
+"infoRequired": [
+"FDI transaction particulars",
+"Investor and investee details",
+"FIRMS acknowledgements"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-22",
+"slug": "odi-reporting",
+"title": "ODI Reporting",
+"forms": [],
+"infoRequired": [
+"Overseas investment particulars",
+"Indian party and foreign entity details"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-23",
+"slug": "fla-return",
+"title": "FLA Return",
+"forms": [
+"FLA"
+],
+"infoRequired": [
+"Audited / unaudited financials as applicable",
+"Foreign liabilities and assets particulars"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+},
+{
+"id": "reg-24",
+"slug": "fctrs-filing",
+"title": "FCTRS Filing",
+"forms": [
+"FC-TRS"
+],
+"infoRequired": [
+"Transfer of shares particulars",
+"Buyer and seller details",
+"Consideration and FIRC if applicable"
+],
+"timeline": "No statutory time limit",
+"urgent": false,
+"responsibleRole": "intern"
+}
+]

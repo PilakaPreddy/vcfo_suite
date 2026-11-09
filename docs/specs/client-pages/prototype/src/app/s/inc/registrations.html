@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Registrations</title>
+<style>
+:root{
+--bg:oklch(97.4% 0.006 255);--panel:#fff;--raised:oklch(96.6% 0.007 255);--border:oklch(92.2% 0.011 255);--hair:oklch(94.8% 0.007 255);
+--fg:oklch(21% 0.042 264);--muted:oklch(46% 0.028 258);--subtle:oklch(55% 0.022 255);
+--primary:oklch(54.6% 0.215 263);--primary-dark:oklch(48.8% 0.217 264);--primary-light:oklch(96.6% 0.02 260);
+--navy:#0f2a4a;--navy-2:#17396b;--navy-3:#1b4f94;--gold:#c9a24b;--gold-soft:#fbf3df;--gold-text:#6e500f;
+--ok:oklch(56% 0.13 168);--ok-light:oklch(96% 0.028 170);--ok-text:oklch(39% 0.09 172);
+--due:oklch(66% 0.17 48);--due-light:oklch(96.8% 0.04 55);--due-text:oklch(48% 0.14 42);
+--over:oklch(57% 0.2 22);--over-light:oklch(96.4% 0.026 18);--over-text:oklch(46% 0.17 20);
+--prog:oklch(55% 0.16 252);--prog-light:oklch(96% 0.026 250);--prog-text:oklch(43% 0.13 254);
+--up:oklch(82% 0.018 255);--up-light:oklch(96.6% 0.007 255);--up-text:oklch(46% 0.028 258);
+--c-general:oklch(52% 0.15 148);--c-customs:oklch(58% 0.12 228);--c-foreign:oklch(55% 0.1 195);--c-labour:oklch(50% 0.12 200);
+--c-local:oklch(58% 0.14 70);--c-ip:oklch(54% 0.17 292);--c-fema:oklch(55% 0.19 12);
+--shadow:0 1px 2px oklch(25% 0.04 264 / .04),0 6px 18px -10px oklch(28% 0.06 264 / .18);
+--r:14px}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Manrope,system-ui,sans-serif;font-size:13px;color:var(--fg);background:var(--bg);-webkit-font-smoothing:antialiased;min-height:100vh}
+button{font:inherit;color:inherit;cursor:pointer}
+input,textarea,select{font:inherit;color:inherit}
+a{color:var(--primary);text-decoration:none;font-weight:700}
+.num{font-family:"Space Grotesk",Manrope,sans-serif;font-variant-numeric:tabular-nums}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+
+.wrap{max-width:1240px;margin:0 auto}
+.crumb{display:flex;align-items:center;gap:6px;color:var(--muted);font-weight:600;font-size:12px;margin-bottom:10px;flex-wrap:wrap}
+.crumb a{font-weight:700}
+.crumb svg.i{width:13px;height:13px;color:var(--subtle)}
+h1{font-size:24px;line-height:1.2;margin:0;font-weight:800;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:6px 0 0;font-size:13.5px;line-height:1.5;max-width:720px}
+
+/* summary */
+.sum{display:flex;align-items:center;gap:18px;margin:18px 0 22px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;box-shadow:var(--shadow);flex-wrap:wrap}
+.sum .big{font-size:26px;font-weight:700}
+.sum .bar{flex:1;min-width:180px}
+.bar .t{height:8px;background:var(--hair);border-radius:99px;overflow:hidden;display:flex}
+.bar .t i{display:block;height:100%}
+.legend{display:flex;gap:14px;margin-top:8px;color:var(--muted);font-size:12px;font-weight:600;flex-wrap:wrap}
+.legend b{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+
+/* category buttons */
+.cats{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.cat{all:unset;box-sizing:border-box;cursor:pointer;background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px;transition:transform .15s,border-color .15s,box-shadow .15s;animation:up .35s both}
+.cat:hover{transform:translateY(-2px);border-color:color-mix(in oklch,var(--c) 45%,var(--border));box-shadow:0 10px 26px -14px color-mix(in oklch,var(--c) 60%,transparent)}
+.cat:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.cat .hd{display:flex;align-items:center;gap:12px}
+.tile{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:color-mix(in oklch,var(--c) 13%,#fff);color:var(--c);flex:none}
+.tile svg.i{width:17px;height:17px}
+.cat .nm{font-weight:800;font-size:15px}
+.cat .ct{color:var(--muted);font-weight:600;font-size:12px}
+.cat .go{margin-left:auto;color:var(--subtle)}
+.cat .t{height:6px;background:var(--hair);border-radius:99px;overflow:hidden;display:flex}
+.cat .t i{height:100%;display:block}
+.cat .ft{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;font-weight:600}
+.cat .ft .att{color:var(--due-text)}
+@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* category strip */
+.strip{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 10px;margin:16px -2px 6px;scrollbar-width:thin}
+.pill{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:8px;padding:7px 12px 7px 8px;border-radius:999px;border:1px solid var(--border);background:var(--panel);font-weight:700;font-size:12.5px;white-space:nowrap;color:var(--fg)}
+.pill .dot{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;background:color-mix(in oklch,var(--c) 13%,#fff);color:var(--c)}
+.pill .dot svg.i{width:13px;height:13px}
+.pill .n{color:var(--muted);font-weight:600}
+.pill.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.pill.on .n{color:#ffffffb0}
+.pill.on .dot{background:#ffffff1f;color:#fff}
+.pill:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+
+/* registration list */
+.list{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;margin-top:6px}
+.list .lh{display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--hair)}
+.list .lh h2{font-size:16px;margin:0;font-weight:800}
+.list .lh .ct{color:var(--muted);font-weight:600;font-size:12px}
+.row{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:28px 1fr auto auto 18px;gap:14px;align-items:center;padding:14px 18px;border-bottom:1px solid var(--hair);width:100%}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--raised)}
+.row:focus-visible{outline:3px solid var(--primary);outline-offset:-3px}
+.row .tt{font-weight:700;font-size:14px}
+.row .ff{color:var(--muted);font-size:12px;margin-top:3px;font-weight:600}
+.row .when{color:var(--muted);font-size:12px;font-weight:600;text-align:right;white-space:nowrap}
+.row .ch{color:var(--subtle)}
+.st{width:28px;height:28px;border-radius:50%;display:grid;place-items:center}
+.st svg.i{width:15px;height:15px}
+.st.done{background:var(--ok-light);color:var(--ok)}
+.st.prog{background:var(--prog-light);color:var(--prog)}
+.st.wait{background:var(--due-light);color:var(--due)}
+.st.up{background:var(--up-light);color:var(--up-text)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+.chip.done{background:var(--ok-light);color:var(--ok-text)}
+.chip.prog{background:var(--prog-light);color:var(--prog-text)}
+.chip.wait{background:var(--due-light);color:var(--due-text)}
+.chip.up{background:var(--up-light);color:var(--up-text)}
+.chip.cat2{background:color-mix(in oklch,var(--c) 12%,#fff);color:color-mix(in oklch,var(--c) 80%,#000)}
+.chip.form{background:var(--raised);color:var(--muted);border:1px solid var(--border);font-family:"Space Grotesk",Manrope,sans-serif;font-weight:700}
+
+/* detail */
+.dh{display:flex;gap:14px;align-items:flex-start;margin-top:4px}
+.dh .tile{width:44px;height:44px;border-radius:12px}
+.dh .tile svg.i{width:22px;height:22px}
+.dh .meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.dh .meta .tm{color:var(--muted);font-weight:600;font-size:12px;display:inline-flex;align-items:center;gap:5px}
+.dh .meta .tm svg.i{width:14px;height:14px}
+.back{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-weight:700;font-size:12.5px;margin-bottom:12px}
+.back:hover{color:var(--fg)}
+.grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(320px,1fr);gap:18px;margin-top:20px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow)}
+.card + .card{margin-top:18px}
+.ch2{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--hair)}
+.ch2 h3{margin:0;font-size:14.5px;font-weight:800}
+.ch2 .who{margin-left:auto;font-size:11.5px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center;gap:6px;background:var(--raised);border:1px solid var(--border);padding:3px 9px;border-radius:999px;white-space:nowrap}
+.ch2 .who svg.i{width:13px;height:13px}
+.cb{padding:16px 18px}
+.sec{font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--subtle);margin:4px 0 10px}
+.sec + .fields{margin-bottom:18px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld.w{grid-column:1/-1}
+.fld label{font-weight:700;font-size:12px;color:var(--muted)}
+.fld input,.fld textarea{border:1px solid var(--border);border-radius:10px;padding:9px 11px;background:var(--panel);font-size:13px;outline:0;min-height:38px}
+.fld textarea{resize:vertical;min-height:70px;line-height:1.45}
+.fld input:focus,.fld textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.fld input[readonly],.fld textarea[readonly]{background:var(--raised);color:var(--fg)}
+.fld .val{border:1px dashed var(--border);border-radius:10px;padding:9px 11px;min-height:38px;display:flex;align-items:center;gap:8px;background:var(--raised);font-weight:600}
+.fld .val.empty{color:var(--subtle);font-weight:600}
+.docs{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.doc{display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--hair)}
+.doc:last-child{border-bottom:0}
+.doc .ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--raised);color:var(--muted)}
+.doc .ic svg.i{width:15px;height:15px}
+.doc.ok .ic{background:var(--ok-light);color:var(--ok)}
+.doc.file .ic{background:var(--prog-light);color:var(--prog)}
+.doc .dn{font-weight:700;font-size:13px}
+.doc .ds{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc.need .ds{color:var(--due-text)}
+.btn{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:700;font-size:12.5px;padding:7px 12px;border-radius:9px;border:1px solid var(--border);background:var(--panel);white-space:nowrap}
+.btn:hover{background:var(--raised)}
+.btn svg.i{width:14px;height:14px}
+.btn.pri{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn.pri:hover{background:var(--navy-2)}
+.btn.ghost{border-color:transparent;color:var(--muted)}
+.btn:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.btn[disabled]{opacity:.5;pointer-events:none}
+.drop{margin-top:12px;border:1.5px dashed color-mix(in oklch,var(--primary) 35%,var(--border));border-radius:12px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;background:var(--primary-light);color:var(--muted);cursor:pointer;transition:background .15s}
+.drop:hover,.drop.over{background:color-mix(in oklch,var(--primary) 10%,#fff)}
+.drop .up{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--primary);box-shadow:var(--shadow)}
+.drop b{color:var(--fg);font-size:13px}
+.drop small{font-size:11.5px;font-weight:600}
+.foot{display:flex;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid var(--hair);background:var(--raised);border-radius:0 0 var(--r) var(--r);flex-wrap:wrap}
+.foot .note{color:var(--muted);font-size:12px;font-weight:600;flex:1;min-width:160px}
+.lock{display:flex;gap:10px;align-items:flex-start;background:var(--raised);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--muted);font-size:12px;font-weight:600;margin-bottom:14px;line-height:1.45}
+.lock svg.i{width:15px;height:15px;margin-top:1px}
+
+/* flow */
+.flow{position:sticky;top:72px}
+.fl{list-style:none;margin:0;padding:6px 18px 8px}
+.node{position:relative;display:grid;grid-template-columns:34px 1fr;gap:12px;padding-bottom:26px}
+.node:last-child{padding-bottom:6px}
+.node::before{content:"";position:absolute;left:16px;top:34px;bottom:4px;width:2px;background:var(--border)}
+.node:last-child::before{display:none}
+.node.done::before{background:var(--ok)}
+.node::after{content:"";position:absolute;left:12px;bottom:6px;width:6px;height:6px;border-right:2px solid var(--border);border-bottom:2px solid var(--border);transform:rotate(45deg)}
+.node.done::after{border-color:var(--ok)}
+.node:last-child::after{display:none}
+.dotn{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12.5px;background:var(--panel);border:2px solid var(--border);color:var(--muted);z-index:1}
+.node.done .dotn{background:var(--ok);border-color:var(--ok);color:#fff}
+.node.cur .dotn{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 0 0 5px var(--primary-light)}
+.node.cur.wait .dotn{background:var(--due);border-color:var(--due);box-shadow:0 0 0 5px var(--due-light)}
+.dotn svg.i{width:15px;height:15px}
+.nb{padding-top:6px;min-width:0}
+.nb .nt{font-weight:800;font-size:13.5px;line-height:1.3}
+.node.up .nt{color:var(--muted);font-weight:700}
+.nb .nm{display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap;color:var(--muted);font-size:11.5px;font-weight:600}
+.by{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:6px;font-weight:700;font-size:11px}
+.by.client{background:var(--gold-soft);color:var(--gold-text)}
+.by.lead{background:var(--prog-light);color:var(--prog-text)}
+.by.govt{background:var(--raised);color:var(--muted);border:1px solid var(--border)}
+.nb .nd{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.45}
+.node.cur .nb .box{margin-top:9px;background:var(--primary-light);border:1px solid color-mix(in oklch,var(--primary) 22%,transparent);border-radius:10px;padding:9px 11px;font-size:12px;font-weight:600;color:var(--prog-text);line-height:1.45}
+.node.cur.wait .nb .box{background:var(--due-light);border-color:color-mix(in oklch,var(--due) 25%,transparent);color:var(--due-text)}
+.node.cur .nb .box .btn{margin-top:8px}
+.fprog{padding:12px 18px 2px;display:flex;align-items:center;gap:12px}
+.fprog .t{flex:1;height:6px;background:var(--hair);border-radius:99px;overflow:hidden}
+.fprog .t i{display:block;height:100%;background:var(--ok);border-radius:99px;transition:width .4s}
+.fprog span{font-weight:700;font-size:12px;color:var(--muted);white-space:nowrap}
+
+.empty{padding:40px 18px;text-align:center;color:var(--muted);font-weight:600}
+.rtoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;padding:11px 16px;border-radius:12px;font-weight:700;font-size:13px;box-shadow:0 12px 30px -12px #0008;opacity:0;pointer-events:none;transition:.25s;z-index:50;display:flex;gap:8px;align-items:center;max-width:calc(100vw - 32px)}
+.rtoast.on{opacity:1;transform:translateX(-50%)}
+.rtoast svg.i{width:16px;height:16px;color:#7ee2b8}
+.view{animation:up .3s both}
+
+@media (max-width:980px){
+ .grid{grid-template-columns:1fr}
+ .flow{position:static;order:-1}
+}
+@media (max-width:640px){
+ h1{font-size:20px}
+ .fields{grid-template-columns:1fr}
+ .row{grid-template-columns:28px 1fr 18px;gap:12px}
+ .row .when,.row .chipcell{display:none}
+ .row .mob{display:flex!important}
+ .cats{grid-template-columns:1fr 1fr;gap:10px}
+ .cat{padding:13px;gap:10px}
+ .cat .nm{font-size:13.5px}
+ .cat .go{display:none}
+ .dh .tile{width:38px;height:38px}
+}
+@media (max-width:380px){.cats{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* portal shell (same as phase.html) */
+@media (max-width:1279px){:root{--sw:var(--vp-side-w,72px)}}
+@media (max-width:767px){:root{--sw:var(--vp-side-w,0px)}}
+.side{position:fixed;left:0;top:0;bottom:0;width:var(--sw);flex:none;background:#0f2a4a}
+/* ---------- top bar ---------- */
+.top{position:sticky;top:0;z-index:40;margin-left:var(--sw);height:52px;display:flex;align-items:center;gap:12px;padding:0 16px 0 14px;background:#fff;border-bottom:1px solid var(--border)}
+.top .sbc{height:28px;width:auto;display:block;flex:none}
+.crumb{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);min-width:0}
+.crumb a{color:var(--muted);font-weight:500;white-space:nowrap}.crumb a:hover{color:var(--fg)}
+.crumb .sl{color:var(--subtle)}
+.crumb b{color:var(--fg);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp{flex:1}
+.search{display:flex;align-items:center;gap:8px;width:240px;height:36px;padding:0 8px 0 12px;border-radius:8px;border:1px solid var(--border);background:var(--raised);color:var(--subtle);cursor:text;flex:none}
+.search .k{margin-left:auto;display:flex;gap:4px}.search .k span{min-width:18px;height:18px;border-radius:4px;background:#fff;box-shadow:inset 0 0 0 1px var(--border);display:grid;place-items:center;font:500 11px var(--mono)}
+.tb{position:relative;width:36px;height:36px;border-radius:8px;border:0;background:none;color:var(--muted);display:grid;place-items:center;cursor:pointer;flex:none}
+.tb:hover{background:var(--primary-light);color:var(--fg)}
+.tb .n{position:absolute;right:3px;top:2px;min-width:16px;height:16px;border-radius:99px;background:var(--primary);color:#fff;font:700 11px/16px Manrope,sans-serif;text-align:center;box-shadow:0 0 0 2px #fff}
+.tb.b{box-shadow:inset 0 0 0 1px var(--border)}
+.tb.srch{display:none}
+.menu{display:none}
+/* ---------- page ---------- */
+main{margin-left:var(--sw);padding:24px clamp(14px,2.2vw,24px) 120px}
+@media (max-width:1279px){
+  .search{width:40px;padding:0;justify-content:center;gap:0}.search .k,.search .st{display:none}.search svg{width:16px;height:16px}
+}
+/* ---------- phone ---------- */
+@media (max-width:767px){
+  .top{height:56px;padding:0 6px;gap:4px}
+  .search,.tb.hide-m,.crumb a,.crumb .sl{display:none}
+  .tb.srch{display:grid}
+  .menu{display:grid;width:40px;height:40px}
+  .tb{width:40px;height:40px}
+  .top .sbc{height:24px}
+  .crumb b{font-size:14.5px;font-weight:700;color:var(--navy)}
+  main{padding:14px 12px 120px}
+}
+
+
+#crMid{display:contents}
+.top .crumb{flex-wrap:nowrap;overflow:hidden;white-space:nowrap}
+:root{--sw:var(--vp-side-w,248px);--mono:"IBM Plex Mono",ui-monospace,monospace}
+.phead{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.phead .grow{flex:1;min-width:240px}
+.seg{display:flex;background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:3px;box-shadow:var(--shadow)}
+.seg button{border:0;background:none;color:var(--muted);font-weight:700;font-size:12px;padding:6px 12px;border-radius:999px;white-space:nowrap;cursor:pointer}
+.seg button.on{background:var(--navy);color:#fff}
+.seg .lbl{font-size:11px;color:var(--subtle);align-self:center;padding:0 6px;font-weight:700}
+
+</style>
+</head>
+<body>
+<div class="side" data-vp="side" aria-hidden="true"></div>
+<header class="top">
+  <button class="tb menu" type="button" aria-label="Open menu" data-vp-menu><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <img class="sbc" src="../../b/6e69009086da4b463a19d1d632abaa20.png" alt="SBC">
+  <nav class="crumb" aria-label="Breadcrumb"><a href="#" data-go="home">Home</a><span class="sl">/</span><a href="#" data-go="incorporation">Incorporation</a><span class="sl">/</span><span id="crMid"></span><b id="crB">Registrations</b></nav>
+  <span class="sp"></span>
+  <div class="search" role="button" tabindex="0" aria-label="Search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13Z M16 16l4 4"/></svg><span class="st">Search</span><span class="k"><span>⌘</span><span>K</span></span></div>
+  <button class="tb srch" type="button" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 4.5a6.5 6.5 0 1 0 0 13a6.5 6.5 0 1 0 0-13Z M16 16l4 4"/></svg></button>
+  <button class="tb hide-m" type="button" aria-label="Announcements" data-go="announcements"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h3l8-4.5v13L7 14H4Z M7 14l1.5 5.5H11L10 14 M18 9.5a3.5 3.5 0 0 1 0 5"/></svg></button>
+  <button class="tb" type="button" aria-label="Notifications, 3 new" data-go="notifications" style="background:var(--primary-light);color:var(--primary)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 10a5.5 5.5 0 0 1 11 0c0 5 2 6.5 2 6.5h-15s2-1.5 2-6.5 M10 19.5a2 2 0 0 0 4 0"/></svg><span class="n">3</span></button>
+  <button class="tb b hide-m" type="button" aria-label="Switch theme"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg></button>
+</header>
+<main id="main"><div class="wrap" id="app"></div></main>
+<div class="rtoast" id="rtoast" role="status" aria-live="polite"></div>
+<script src="../../routes.js"></script>
+<script src="../../proto.js"></script>
+<script>
+const REG = [{"id": "reg-4", "slug": "gst-registration", "title": "GST Registration", "forms": ["GST REG-01", "GST RFD-11"], "infoRequired": ["Self-attested COI", "PAN", "Board Resolution", "Authorisation Letter", "MOA", "AOA", "Rental Deed", "Bank Details", "Directors' KYC", "List of services / goods traded", "Rental agreement", "KYC of 2 witnesses (for LUT)"], "timeline": "Within 2 weeks of incorporation", "urgent": true, "responsibleRole": "intern"}, {"id": "reg-1", "slug": "pf-dsc-esign-registration", "title": "PF Registration", "forms": ["PF registration"], "infoRequired": ["Self-attested COI", "PAN", "Board Resolution", "Authorisation Letter", "MOA", "AOA", "Rental Deed", "Bank Details", "Directors' KYC", "List of employees", "Active DSC / e-sign credentials"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-3", "slug": "esi-registration", "title": "ESI Registration", "forms": ["ESI registration"], "infoRequired": ["Self-attested COI", "PAN", "Board Resolution", "Authorisation Letter", "MOA", "AOA", "Rental Deed", "Bank Details", "Directors' KYC", "List of employees"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-7", "slug": "pt-registration", "title": "PT Registration", "forms": ["Form 1 \u2014 PT"], "infoRequired": ["Self-attested COI", "PAN", "Board Resolution", "Authorisation Letter", "MOA", "AOA", "Rental Deed", "Bank Details", "Directors' KYC", "TAN", "List of employees"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-6", "slug": "legal-entity-identifier", "title": "LEI Registration", "forms": ["Form 1 \u2014 LEI"], "infoRequired": ["Certificate of Incorporation", "PAN of company", "GST certificate", "Authorised representative details", "Details of all directors (name, father, DIN, address)"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-15", "slug": "msme-registration", "title": "MSME Registration", "forms": ["Udyam Registration"], "infoRequired": ["Aadhaar of authorised signatory", "PAN of company", "GSTIN (if registered)", "Bank account details", "NIC / activity codes"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-16", "slug": "icegate-registrations", "title": "ICEGATE Registrations", "forms": [], "infoRequired": ["Self-attested COI", "PAN", "Board Resolution", "Authorisation Letter", "MOA", "AOA", "Rental Deed", "Bank Details", "Directors' KYC", "IEC code", "Authorised signatory DSC"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-8", "slug": "iec-import-export-code", "title": "IEC Registration", "forms": ["Form 1 \u2014 IEC"], "infoRequired": ["Self-attested COI", "PAN", "Board Resolution", "Authorisation Letter", "MOA", "AOA", "Rental Deed", "Bank Details", "Directors' KYC", "Goods & services exported / imported"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-5", "slug": "letter-of-undertaking", "title": "LUT Filing", "forms": ["GST RFD-11"], "infoRequired": ["KYC of 2 witnesses"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-11", "slug": "non-stpi-unit", "title": "Non-STPI Compliance", "forms": [], "infoRequired": ["MOA & AOA", "Board Resolution authorising signatory", "PAN of company", "PAN / Passport of all directors", "IEC code", "DIR-12, INC-22", "GST registration", "Banker's certificate", "Sale deed / lease agreement", "Project report (next 5 years)", "Master service agreement with parent entity"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-9", "slug": "shops-establishments-registration", "title": "Shops & Establishment", "forms": ["Form 1 \u2014 S&E", "Form No-I"], "infoRequired": ["Name board in Telugu & English", "List of employees", "Rental deed of office space", "Employer (MD) ID proof + 2 passport photos", "COI, MOA, AOA"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-13", "slug": "clra-registration", "title": "CLRA Registration", "forms": ["CLRA registration"], "infoRequired": ["Self-attested COI", "PAN", "Board Resolution", "Authorisation Letter", "MOA", "AOA", "Rental Deed", "Bank Details", "Directors' KYC", "Details of contract labour / contractors (if applicable)", "Nature of work and establishment particulars"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-14", "slug": "posh-she-box-registration", "title": "POSH / SHE Box", "forms": [], "infoRequired": ["Internal Complaints Committee (ICC) constitution details", "SHE Box / POSH portal registration acknowledgement", "Workplace POSH policy (if available)"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-10", "slug": "trade-license", "title": "Trade Licence", "forms": [], "infoRequired": ["Address proof of business", "ID proof of applicant + Aadhaar of authorised person", "PAN, MOA, AOA, COI", "Latest municipal property-tax receipt", "Certified layout plan of office"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-12", "slug": "trademark-registration", "title": "Trademark Registration", "forms": [], "infoRequired": ["Power of Attorney", "Affidavit", "MSME certificate & applications"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-17", "slug": "trademark-renewal", "title": "Trademark Renewal", "forms": [], "infoRequired": ["Trademark registration certificate", "Renewal application particulars"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-18", "slug": "patent-registration", "title": "Patent Registration", "forms": [], "infoRequired": ["Invention / specification details", "Applicant and inventor particulars", "Power of Attorney (if filed through agent)"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-19", "slug": "icdr-registration", "title": "ICDR Registration", "forms": [], "infoRequired": ["Issuer / applicant particulars", "Offer or listing path details (if applicable)"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-20", "slug": "fcgpr-filing", "title": "FCGPR Filing", "forms": ["FCGPR"], "infoRequired": ["Foreign inward remittance details", "FIRC copies", "FIRMS portal registration", "Foreign investor particulars"], "timeline": "Within 30 days of incorporation", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-21", "slug": "fdi-reporting", "title": "FDI Reporting", "forms": [], "infoRequired": ["FDI transaction particulars", "Investor and investee details", "FIRMS acknowledgements"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-22", "slug": "odi-reporting", "title": "ODI Reporting", "forms": [], "infoRequired": ["Overseas investment particulars", "Indian party and foreign entity details"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-23", "slug": "fla-return", "title": "FLA Return", "forms": ["FLA"], "infoRequired": ["Audited / unaudited financials as applicable", "Foreign liabilities and assets particulars"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}, {"id": "reg-24", "slug": "fctrs-filing", "title": "FCTRS Filing", "forms": ["FC-TRS"], "infoRequired": ["Transfer of shares particulars", "Buyer and seller details", "Consideration and FIRC if applicable"], "timeline": "No statutory time limit", "urgent": false, "responsibleRole": "intern"}];
+
+const ICON = {
+  general:'<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/><path d="M9 10h.01M15 10h.01"/>',
+  customs:'<path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1 .6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M19.4 19 21 13l-9-4-9 4 1.6 6"/><path d="M12 9V3"/><path d="M8 5h8"/>',
+  foreign:'<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>',
+  labour:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  local:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
+  ip:'<circle cx="12" cy="8" r="6"/><path d="M15.48 12.89 17 22l-5-3-5 3 1.52-9.11"/>',
+  fema:'<path d="M3 22h18"/><path d="M6 18v-7"/><path d="M10 18v-7"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M12 2 20 7H4z"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  hourglass:'<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22"/><path d="M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>',
+  circle:'<circle cx="12" cy="12" r="9"/>',
+  right:'<path d="m9 18 6-6-6-6"/>',
+  left:'<path d="m15 18-6-6 6-6"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+  file:'<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="M14 2v6h6"/>',
+  lock:'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+  user:'<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  briefcase:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  landmark:'<path d="M3 22h18"/><path d="M6 18v-7M10 18v-7M14 18v-7M18 18v-7"/><path d="M12 2 20 7H4z"/>',
+  home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  send:'<path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/>',
+  flow:'<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M6 9v3a3 3 0 0 0 3 3h6"/>'
+};
+const ic = (n, cls='i') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICON[n]||''}</svg>`;
+
+const CATS = [
+  {key:'general', name:'General', color:'var(--c-general)', blurb:'Tax and business identity numbers every company needs.'},
+  {key:'customs', name:'Customs', color:'var(--c-customs)', blurb:'Import and export codes and customs portal access.'},
+  {key:'foreign', name:'Foreign Trade', color:'var(--c-foreign)', blurb:'Software export and STPI-related compliance.'},
+  {key:'labour', name:'Labour', color:'var(--c-labour)', blurb:'Workplace registrations under labour laws.'},
+  {key:'local', name:'Local Compliance', color:'var(--c-local)', blurb:'Municipal and state licences for your premises.'},
+  {key:'ip', name:'IP/Brand', color:'var(--c-ip)', blurb:'Protect your brand name, logo and inventions.'},
+  {key:'fema', name:'FEMA', color:'var(--c-fema)', blurb:'RBI reporting for foreign investment and transfers.'}
+];
+// Same grouping as VCFO Suite (src/lib/intern-overview-progress.ts)
+const GROUP = {
+  'gst-registration':'general','pf-dsc-esign-registration':'general','esi-registration':'general','pt-registration':'general','legal-entity-identifier':'general','msme-registration':'general'
+};
+function groupFor(r){
+  const t=r.title.toLowerCase();
+  if(/fc ?gpr|fdi|odi|fla |fla$|fctrs|fema/.test(t)) return 'fema';
+  if(/gst|\bpf\b|esi|\bpt\b|lei|msme/.test(t)) return 'general';
+  if(/icegate|\biec\b|\blut\b/.test(t)) return 'customs';
+  if(/stpi/.test(t)) return 'foreign';
+  if(/shops|establishment|clra|posh|she box/.test(t)) return 'labour';
+  if(/trade licen/.test(t)) return 'local';
+  if(/trademark|patent|icdr/.test(t)) return 'ip';
+  return 'general';
+}
+
+// Process workflow per registration: [title, who, note]
+const FLOWS = {
+ 'gst-registration':[['Share documents and details','client','Upload the items on the left. Company papers are already on file.'],['Application filed on GST portal (REG-01)','lead','Part A and Part B filled by your SBC lead.'],['Aadhaar authentication','client','OTP sent to the authorised signatory\'s mobile.'],['ARN generated','govt','Acknowledgement of the application.'],['Officer verification','govt','Officer may raise a query (REG-03). We reply for you.'],['GSTIN certificate issued (REG-06)','govt','Certificate shared in Documents.'],['LUT filed (RFD-11)','lead','Lets you export services without paying IGST.']],
+ 'pf-dsc-esign-registration':[['Share documents and details','client','Employee list and director KYC.'],['Establishment registered on EPFO / Shram Suvidha','lead','Filed by your SBC lead.'],['DSC / e-sign by director','client','Approve with DSC or Aadhaar e-sign.'],['Application submitted','lead',''],['Establishment code allotted','govt','PF code issued by EPFO.'],['Registration certificate downloaded','lead','Shared in Documents.']],
+ 'esi-registration':[['Share documents and details','client','Employee list with wages.'],['Employer registration on ESIC portal','lead',''],['Form 1 submitted','lead',''],['17-digit employer code allotted','govt',''],['Registration certificate (C-11) issued','govt','Shared in Documents.']],
+ 'pt-registration':[['Share documents and details','client','Office address proof and employee count.'],['Application on state PT portal','lead',''],['Fee paid and verification','govt',''],['PTRC and PTEC numbers issued','govt','Certificates shared in Documents.']],
+ 'legal-entity-identifier':[['Share documents and details','client',''],['Application with LEI issuer','lead','Filed with an accredited LOU.'],['Fee paid','lead','Billed to you at cost.'],['Data validation','govt','Issuer checks MCA records.'],['LEI code issued','govt','20-character LEI, valid for 1 year.']],
+ 'msme-registration':[['Share documents and details','client','Director Aadhaar for OTP.'],['Udyam application filed','lead',''],['Aadhaar OTP','client','OTP sent to the director\'s mobile.'],['PAN and GST auto-validated','govt',''],['Udyam certificate issued','govt','Shared in Documents.']],
+ 'icegate-registrations':[['Share documents and details','client','IEC and class 3 DSC required.'],['ICEGATE registration','lead',''],['DSC linked','client','Approve with your DSC.'],['AD code registered at port','lead','Bank AD code registered for each port.'],['Approval by customs','govt','']],
+ 'iec-import-export-code':[['Share documents and details','client','Bank certificate or cancelled cheque.'],['Application on DGFT portal (ANF-2A)','lead',''],['Fee paid (₹500)','lead',''],['IEC issued','govt','10-digit code, same as company PAN.']],
+ 'letter-of-undertaking':[['Share witness KYC','client','KYC of 2 witnesses.'],['LUT filed (GST RFD-11)','lead',''],['ARN generated','govt',''],['LUT acknowledged','govt','Valid for the financial year.']],
+ 'non-stpi-unit':[['Share export invoices','client','Monthly software export invoices.'],['Softex form prepared','lead',''],['Submitted for certification','lead',''],['Softex certified','govt','']],
+ 'shops-establishments-registration':[['Share documents and details','client','Premises proof and employee count.'],['Application on state labour portal','lead',''],['Fee paid','lead',''],['Registration certificate issued','govt','Display it at your office.']],
+ 'clra-registration':[['Share contractor details','client','Contractors and contract labour count.'],['Form I application','lead',''],['Fee paid','lead',''],['Registration certificate issued','govt','']],
+ 'posh-she-box-registration':[['Name Internal Committee members','client','Presiding officer and members.'],['POSH policy drafted','lead','Shared for your review.'],['Policy approved','client',''],['Registered on SHe-Box','lead',''],['Notice displayed at office','client','We send you a print-ready notice.']],
+ 'trade-license':[['Share documents and details','client','Premises proof and NOC from owner.'],['Application on municipal portal','lead',''],['Site inspection','govt','An officer may visit the premises.'],['Trade licence issued','govt','Renew every year.']],
+ 'trademark-registration':[['Share brand details','client','Name, logo and classes.'],['Trademark search','lead','We check for similar marks.'],['TM-A application filed','lead',''],['Examination report','govt','Registry may raise objections.'],['Reply to objections','lead',''],['Published in TM Journal','govt','4-month opposition window.'],['Registration certificate','govt','Valid for 10 years.']],
+ 'trademark-renewal':[['Confirm marks to renew','client',''],['TM-R filed','lead','Within 6 months before expiry.'],['Renewal recorded','govt','']],
+ 'patent-registration':[['Share invention details','client','Description, drawings and inventors.'],['Prior art search','lead',''],['Specification drafted','lead','Provisional or complete.'],['Forms 1, 2, 3, 5 filed','lead',''],['Published (after 18 months)','govt',''],['Request for examination (Form 18)','lead',''],['Reply to examination report','lead',''],['Patent granted','govt','']],
+ 'icdr-registration':[['Share documents and details','client',''],['Application filed','lead',''],['Review by authority','govt',''],['Registration issued','govt','']],
+ 'fcgpr-filing':[['Share FIRC and investor KYC','client','Bank FIRC and KYC of each foreign investor.'],['Shares allotted','lead','Board resolution for allotment.'],['FC-GPR filed on FIRMS portal','lead','Within 30 days of allotment.'],['AD bank review','govt','Bank may ask questions.'],['RBI acknowledgement','govt','']],
+ 'fdi-reporting':[['Share investment details','client',''],['Entity master updated on FIRMS','lead',''],['Report filed','lead',''],['RBI acknowledgement','govt','']],
+ 'odi-reporting':[['Share overseas investment details','client',''],['Form ODI Part I filed via AD bank','lead',''],['UIN allotted','govt','']],
+ 'fla-return':[['Share audited financials','client','Foreign liabilities and assets.'],['Registered on FLAIR portal','lead',''],['FLA return filed','lead','Due 15 July every year.'],['Acknowledgement','govt','']],
+ 'fctrs-filing':[['Share transfer documents','client','Share transfer deed and valuation report.'],['FC-TRS filed on FIRMS','lead','Within 60 days of transfer.'],['AD bank review','govt',''],['RBI acknowledgement','govt','']]
+};
+function slugOf(r){return r.slug}
+function flowFor(r){
+  return FLOWS[r.slug] || [['Share documents and details','client',''],['Application filed','lead',''],['Review by authority','govt',''],['Registration issued','govt','']];
+}
+
+// Fake progress: index of current step (n = done)
+const AT = {
+ 'gst-registration':'done','pf-dsc-esign-registration':2,'esi-registration':0,'pt-registration':'not','legal-entity-identifier':'done','msme-registration':'done',
+ 'icegate-registrations':'not','iec-import-export-code':'done','letter-of-undertaking':1,
+ 'non-stpi-unit':'not',
+ 'shops-establishments-registration':'done','clra-registration':'not','posh-she-box-registration':2,
+ 'trade-license':2,
+ 'trademark-registration':4,'trademark-renewal':'not','patent-registration':'not','icdr-registration':'not',
+ 'fcgpr-filing':3,'fdi-reporting':'done','odi-reporting':'not','fla-return':'not','fctrs-filing':'not'
+};
+const NUMBER_LABEL = {
+ 'gst-registration':'GSTIN','pf-dsc-esign-registration':'PF establishment code','esi-registration':'ESIC employer code','pt-registration':'PTRC / PTEC number','legal-entity-identifier':'LEI code','msme-registration':'Udyam number',
+ 'icegate-registrations':'ICEGATE ID','iec-import-export-code':'IEC','letter-of-undertaking':'LUT ARN','non-stpi-unit':'Softex number','shops-establishments-registration':'Registration number','clra-registration':'Registration number','posh-she-box-registration':'SHe-Box ID','trade-license':'Licence number','trademark-registration':'Application number','trademark-renewal':'Registration number','patent-registration':'Application number','icdr-registration':'Registration number','fcgpr-filing':'SRN','fdi-reporting':'Entity master ID','odi-reporting':'UIN','fla-return':'FLAIR ID','fctrs-filing':'SRN'
+};
+const PORTAL = {
+ 'gst-registration':'GST portal','pf-dsc-esign-registration':'EPFO / Shram Suvidha','esi-registration':'ESIC portal','pt-registration':'Karnataka PT portal','legal-entity-identifier':'LEI India (LEIL)','msme-registration':'Udyam portal','icegate-registrations':'ICEGATE','iec-import-export-code':'DGFT portal','letter-of-undertaking':'GST portal','non-stpi-unit':'STPI / Softex','shops-establishments-registration':'Karnataka labour portal','clra-registration':'Shram Suvidha','posh-she-box-registration':'SHe-Box','trade-license':'BBMP trade licence portal','trademark-registration':'IP India','trademark-renewal':'IP India','patent-registration':'IP India','icdr-registration':'—','fcgpr-filing':'RBI FIRMS','fdi-reporting':'RBI FIRMS','odi-reporting':'AD bank','fla-return':'RBI FLAIR','fctrs-filing':'RBI FIRMS'
+};
+const FAKE_NO = {'gst-registration':'29AAKCB4821Q1Z6','legal-entity-identifier':'984500B7E2D1C3A4F512','msme-registration':'UDYAM-KR-03-0123456','iec-import-export-code':'AAKCB4821Q','shops-establishments-registration':'KA/BLR/SE/2026/045812','fdi-reporting':'FIRMS-EM-0098214','pf-dsc-esign-registration':'','trademark-registration':'6812345','fcgpr-filing':'FCGPR2026091854'};
+
+// Documents already on file from incorporation
+const ON_FILE = /^(self-attested coi|pan|moa|aoa|board resolution|authorisation letter|directors' kyc)$/i;
+const DETAIL_FIELDS = {
+ 'Bank Details':[['Bank account number','text','50200078214533'],['IFSC','text','HDFC0001234']],
+ 'List of services / goods traded':[['Services / goods you sell','area','SaaS subscriptions (SAC 998314), implementation services (SAC 998313)']],
+ 'List of employees':[['Number of employees','text','14']]
+};
+
+const state = { role:'client', uploads:{}, details:{}, lead:{}, at:{} };
+REG.forEach(r=>{ r.group = groupFor(r); r.flow = flowFor(r); const a=AT[r.slug]; state.at[r.slug] = a==='done'? r.flow.length : a==='not' ? -1 : a; });
+
+function statusOf(r){
+  const a = state.at[r.slug];
+  if(a >= r.flow.length) return {k:'done',label:'Registered',icon:'check'};
+  if(a < 0) return {k:'up',label:'Not started',icon:'circle'};
+  const who = r.flow[a][1];
+  if(who==='client') return {k:'wait',label:'Waiting on you',icon:'hourglass'};
+  return {k:'prog',label:'In progress',icon:'clock'};
+}
+const leadName = 'Priya Raman';
+const DONE_DATES = ['12 Aug','14 Aug','18 Aug','21 Aug','26 Aug','2 Sep','5 Sep','9 Sep'];
+
+function catByKey(k){return CATS.find(c=>c.key===k)}
+function regsIn(k){return REG.filter(r=>r.group===k)}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+/* ---------- views ---------- */
+function viewHome(){
+  const total=REG.length, done=REG.filter(r=>statusOf(r).k==='done').length,
+        prog=REG.filter(r=>['prog','wait'].includes(statusOf(r).k)).length,
+        wait=REG.filter(r=>statusOf(r).k==='wait').length;
+  return `<div class="view">
+    <div class="phead"><div class="grow"><h1>Registrations</h1>
+  <p class="sub">The registrations your company needs to operate. Pick a group to see each registration, what we need from you, and where it stands.</p></div><div class="seg" role="group" aria-label="Preview as"><span class="lbl">Preview as</span><button type="button" data-role="client" class="${state.role==='client'?'on':''}">Client</button><button type="button" data-role="lead" class="${state.role==='lead'?'on':''}">Lead</button></div></div>
+  <section class="sum" aria-label="Progress">
+    <div><div class="big num">${done}<span style="color:var(--subtle);font-size:16px"> / ${total}</span></div><div style="color:var(--muted);font-weight:600;font-size:12px">registered</div></div>
+    <div class="bar"><div class="t"><i style="width:${done/total*100}%;background:var(--ok)"></i><i style="width:${(prog)/total*100}%;background:var(--prog)"></i></div>
+      <div class="legend"><span><b style="background:var(--ok)"></b>${done} registered</span><span><b style="background:var(--prog)"></b>${prog} in progress</span><span><b style="background:var(--due)"></b>${wait} waiting on you</span><span><b style="background:var(--up)"></b>${total-done-prog} not started</span></div></div>
+  </section>
+  <div class="cats" role="list">
+  ${CATS.map((c,i)=>{const rs=regsIn(c.key), d=rs.filter(r=>statusOf(r).k==='done').length, p=rs.filter(r=>['prog','wait'].includes(statusOf(r).k)).length, w=rs.filter(r=>statusOf(r).k==='wait').length;
+    return `<button class="cat" role="listitem" style="--c:${c.color};animation-delay:${i*35}ms" data-nav="#/g/${c.key}">
+      <div class="hd"><span class="tile">${ic(c.key)}</span><div><div class="nm">${c.name}</div><div class="ct">${rs.length} registration${rs.length>1?'s':''}</div></div><span class="go">${ic('right')}</span></div>
+      <div class="t"><i style="width:${d/rs.length*100}%;background:var(--ok)"></i><i style="width:${p/rs.length*100}%;background:var(--prog)"></i></div>
+      <div class="ft"><span class="num">${d} of ${rs.length} done</span>${w?`<span class="att">${w} need${w>1?'':'s'} you</span>`:''}</div>
+    </button>`}).join('')}
+  </div></div>`;
+}
+
+function strip(active){
+  return `<div class="strip" role="tablist" aria-label="Registration groups">${CATS.map(c=>`<button class="pill ${c.key===active?'on':''}" role="tab" aria-selected="${c.key===active}" style="--c:${c.color}" data-nav="#/g/${c.key}"><span class="dot">${ic(c.key)}</span>${c.name}<span class="n num">${regsIn(c.key).length}</span></button>`).join('')}</div>`;
+}
+
+function viewGroup(k){
+  const c=catByKey(k); if(!c) return viewHome();
+  const rs=regsIn(k);
+  return `<div class="view">
+    <div class="phead"><div class="grow"><h1>${c.name}</h1><p class="sub">${c.blurb}</p></div><div class="seg" role="group" aria-label="Preview as"><span class="lbl">Preview as</span><button type="button" data-role="client" class="${state.role==='client'?'on':''}">Client</button><button type="button" data-role="lead" class="${state.role==='lead'?'on':''}">Lead</button></div></div>
+  ${strip(k)}
+  <section class="list" style="--c:${c.color}">
+    <div class="lh"><span class="tile">${ic(k)}</span><h2>${c.name} registrations</h2><span class="ct">${rs.filter(r=>statusOf(r).k==='done').length} of ${rs.length} done</span></div>
+    ${rs.map(r=>{const s=statusOf(r); const a=state.at[r.slug]; const stepTxt = s.k==='done'?'All steps done': s.k==='up'?`${r.flow.length} steps`:`Step ${a+1} of ${r.flow.length}: ${r.flow[a][0]}`;
+      return `<button class="row" data-nav="#/r/${r.slug}">
+        <span class="st ${s.k}">${ic(s.icon)}</span>
+        <span><div class="tt">${esc(r.title)}</div><div class="ff">${esc(stepTxt)}</div><div class="mob" style="display:none;margin-top:6px"><span class="chip ${s.k}">${s.label}</span></div></span>
+        <span class="when">${esc(r.timeline)}</span>
+        <span class="chipcell"><span class="chip ${s.k}">${s.label}</span></span>
+        <span class="ch">${ic('right')}</span>
+      </button>`}).join('')}
+  </section></div>`;
+}
+
+function docRows(r){
+  const lead = state.role==='lead';
+  const items = r.infoRequired.filter(x=>!DETAIL_FIELDS[x]);
+  const st = statusOf(r);
+  return items.map((name,i)=>{
+    const key=r.slug+'|'+name;
+    const up=state.uploads[key];
+    let cls='need', sub=lead?'Needed from client':'Needed from you', act='';
+    if(ON_FILE.test(name)){cls='ok';sub='On file from incorporation';}
+    else if(up){cls='file';sub=up;}
+    else if(st.k==='done' || (st.k==='prog' && i%3!==2)){cls='ok';sub='Received '+DONE_DATES[i%DONE_DATES.length];}
+    if(cls==='need'||cls==='file'){
+      act = lead ? (cls==='need'?`<button class="btn ghost" data-remind="${esc(name)}">${ic('send')}Remind</button>`:`<span class="chip prog">New upload</span>`)
+                 : `<label class="btn">${ic('upload')}${cls==='file'?'Replace':'Upload'}<input type="file" hidden data-up="${esc(key)}"></label>`;
+    } else act = `<span class="chip done">${ic('check').replace('class="i"','class="i" style="width:12px;height:12px"')}Ready</span>`;
+    return `<div class="doc ${cls}"><span class="ic">${ic(cls==='need'?'file':cls==='file'?'file':'check')}</span><div style="min-width:0"><div class="dn">${esc(name)}</div><div class="ds">${esc(sub)}</div></div>${act}</div>`;
+  }).join('');
+}
+
+function detailFields(r){
+  const lead=state.role==='lead';
+  const list=[];
+  r.infoRequired.forEach(x=>{ if(DETAIL_FIELDS[x]) list.push(...DETAIL_FIELDS[x]); });
+  if(!list.length) list.push(['Contact person for this registration','text','Arjun Mehta (Director)'],['Mobile for OTP','text','+91 98450 12345']);
+  const st=statusOf(r);
+  return list.map(([label,type,demo])=>{
+    const key=r.slug+'|'+label; const v = state.details[key] ?? (st.k==='up'?'':demo);
+    const ro = lead ? 'readonly' : '';
+    return `<div class="fld ${type==='area'?'w':''}"><label for="f-${esc(key)}">${esc(label)}</label>${type==='area'?`<textarea id="f-${esc(key)}" data-det="${esc(key)}" ${ro} placeholder="Type here">${esc(v)}</textarea>`:`<input id="f-${esc(key)}" data-det="${esc(key)}" value="${esc(v)}" ${ro} placeholder="Type here">`}</div>`;
+  }).join('');
+}
+
+function leadFields(r){
+  const lead=state.role==='lead'; const st=statusOf(r); const a=state.at[r.slug];
+  const filed = st.k==='done' || a>=2;
+  const no = st.k==='done' ? (FAKE_NO[r.slug] || 'REG/2026/'+(10000+r.title.length*731)) : '';
+  const vals = [
+    ['Portal', PORTAL[r.slug]||'—'],
+    ['Application / ARN', filed ? 'AA29092600'+(1000+r.title.length*37) : ''],
+    ['Filed on', filed ? DONE_DATES[(r.title.length)%DONE_DATES.length]+' 2026' : ''],
+    [NUMBER_LABEL[r.slug]||'Registration number', no],
+    ['Valid until', st.k==='done' ? (/legal-entity/.test(r.slug)?'14 Aug 2027':/trademark/.test(r.slug)?'Aug 2036':'No expiry') : ''],
+    ['Handled by', leadName]
+  ];
+  return vals.map(([l,v])=>{const key=r.slug+'|L|'+l; const val=state.lead[key]??v;
+    if(lead && l!=='Handled by') return `<div class="fld"><label for="l-${esc(key)}">${esc(l)}</label><input id="l-${esc(key)}" data-lead="${esc(key)}" value="${esc(val)}" placeholder="Fill in"></div>`;
+    return `<div class="fld"><label>${esc(l)}</label><div class="val ${val?'':'empty'}">${val?esc(val):'Filled by your lead'}</div></div>`;}).join('')
+   + (st.k==='done' ? `<div class="fld w"><label>Certificate</label><div class="doc ok" style="border:1px solid var(--border);border-radius:10px"><span class="ic">${ic('check')}</span><div><div class="dn">${esc(r.title)} certificate.pdf</div><div class="ds">Added to Documents</div></div><button class="btn" data-toast="Opening the certificate (prototype)">View</button></div></div>`
+      : lead ? `<div class="fld w"><label>Certificate</label><label class="btn" style="justify-content:flex-start">${ic('upload')}Upload certificate<input type="file" hidden data-cert="${r.slug}"></label></div>` : '');
+}
+
+function flowCard(r){
+  const a=state.at[r.slug], n=r.flow.length, lead=state.role==='lead';
+  const doneN = Math.max(0,Math.min(a,n));
+  const nodes = r.flow.map(([t,who,note],i)=>{
+    const k = a<0 ? 'up' : i<a ? 'done' : i===a ? 'cur' : 'up';
+    const wait = k==='cur' && who==='client' ? ' wait':'';
+    const whoLbl = who==='client'?(lead?'Client':'You'):who==='lead'?'SBC lead':'Government';
+    const date = k==='done' ? DONE_DATES[i%DONE_DATES.length] : k==='cur' ? (who==='client'?'Now':'Expected in 3–5 days') : '';
+    let box='';
+    if(k==='cur'){
+      if(who==='client' && !lead) box=`<div class="box">This step is with you. ${esc(note||'Complete the items on the left.')}<br><button class="btn pri" data-adv="${r.slug}">${ic('send')}Mark as done</button></div>`;
+      else if(who==='client' && lead) box=`<div class="box">Waiting on the client. ${esc(note)}<br><button class="btn" data-toast="Reminder sent to the client">${ic('send')}Send reminder</button></div>`;
+      else if(lead) box=`<div class="box">${esc(note||'In progress.')}<br><button class="btn pri" data-adv="${r.slug}">${ic('check')}Mark step done</button></div>`;
+      else box=`<div class="box">${who==='govt'?'With the authority. We follow up for you.':'Your SBC lead is working on this.'}${note?' '+esc(note):''}</div>`;
+    }
+    return `<li class="node ${k}${wait}"><span class="dotn">${k==='done'?ic('check'):i+1}</span><div class="nb"><div class="nt">${esc(t)}</div><div class="nm"><span class="by ${who}">${whoLbl}</span>${date?`<span>${date}</span>`:''}</div>${k!=='cur'&&note&&k!=='done'?`<div class="nd">${esc(note)}</div>`:''}${box}</div></li>`;
+  }).join('');
+  return `<aside class="card flow" aria-label="Process">
+    <div class="ch2">${ic('flow')}<h3>Process</h3><span class="who">${a>=n?'Complete':a<0?'Not started':`Step ${a+1} of ${n}`}</span></div>
+    <div class="fprog"><div class="t"><i style="width:${doneN/n*100}%"></i></div><span class="num">${doneN}/${n}</span></div>
+    <ol class="fl">${nodes}</ol>
+    ${a<0 && lead?`<div class="foot"><span class="note">Not started yet.</span><button class="btn pri" data-start="${r.slug}">Start registration</button></div>`:''}
+    ${a<0 && !lead?`<div class="foot"><span class="note">Your lead starts this when it is due. You can share documents early.</span></div>`:''}
+  </aside>`;
+}
+
+function viewReg(slug){
+  const r=REG.find(x=>x.slug===slug); if(!r) return viewHome();
+  const c=catByKey(r.group); const s=statusOf(r); const lead=state.role==='lead';
+  const pending = r.infoRequired.filter(x=>!DETAIL_FIELDS[x] && !ON_FILE.test(x)).length;
+  return `<div class="view" style="--c:${c.color}">
+    <button class="back" data-nav="#/g/${c.key}">${ic('left')}${c.name}</button><div class="phead"><div class="dh grow"><span class="tile">${ic(c.key)}</span><div style="min-width:0">
+    <h1>${esc(r.title)}</h1>
+    <div class="meta"><span class="chip ${s.k}">${s.label}</span><span class="chip cat2">${c.name}</span>${r.forms.map(f=>`<span class="chip form">${esc(f)}</span>`).join('')}<span class="tm">${ic('clock')}${esc(r.timeline)}</span></div>
+  </div></div><div class="seg" role="group" aria-label="Preview as"><span class="lbl">Preview as</span><button type="button" data-role="client" class="${state.role==='client'?'on':''}">Client</button><button type="button" data-role="lead" class="${state.role==='lead'?'on':''}">Lead</button></div></div>
+  <div class="grid">
+    <div>
+      <section class="card" aria-label="Required from client">
+        <div class="ch2">${ic('user')}<h3>Required documents and details</h3><span class="who">${ic('user')}From ${lead?'client':'you'}</span></div>
+        <div class="cb">
+          ${lead?`<div class="lock">${ic('lock')}<span>The client fills this part. You can see what is missing and send a reminder.</span></div>`:''}
+          <div class="sec">Details</div>
+          <div class="fields">${detailFields(r)}</div>
+          <div class="sec" style="margin-top:18px">Documents</div>
+          <div class="docs">${docRows(r)}</div>
+          ${lead?'':`<label class="drop" id="drop"><span class="up">${ic('upload')}</span><b>Drop files here or click to upload</b><small>PDF, JPG or PNG · up to 25 MB each</small><input type="file" hidden multiple data-bulk="${r.slug}"></label>`}
+        </div>
+        ${lead?'':`<div class="foot"><span class="note">Your lead is told as soon as you save.</span><button class="btn pri" data-toast="Saved. ${leadName} has been told.">${ic('send')}Save and send to lead</button></div>`}
+      </section>
+      <section class="card" aria-label="Filled by lead">
+        <div class="ch2">${ic('briefcase')}<h3>Registration details</h3><span class="who">${ic('briefcase')}Filled by SBC lead</span></div>
+        <div class="cb">
+          ${lead?'':`<div class="lock">${ic('lock')}<span>Your SBC lead fills these after filing. You can read them here at any time.</span></div>`}
+          <div class="fields">${leadFields(r)}</div>
+        </div>
+        ${lead?`<div class="foot"><span class="note">The client sees these values as read-only.</span><button class="btn pri" data-toast="Registration details saved">${ic('check')}Save details</button></div>`:''}
+      </section>
+    </div>
+    ${flowCard(r)}
+  </div></div>`;
+}
+
+/* ---------- router ---------- */
+const app=document.getElementById('app');
+let cur=(function(){const h=location.hash||'';let m;if((m=h.match(/r=([\w-]+)/)))return '#/r/'+m[1];if((m=h.match(/g=([\w-]+)/)))return '#/g/'+m[1];return h.startsWith('#/')?h:'#/';})();
+function nav(h){cur=h;render();window.scrollTo({top:0});}
+function setCrumb(h){const mid=document.getElementById('crMid'),b=document.getElementById('crB');let m,parts=[];
+  if((m=h.match(/^#\/g\/([\w-]+)/))){parts=[['Registrations','#/']];b.textContent=(catByKey(m[1])||{}).name||'Registrations'}
+  else if((m=h.match(/^#\/r\/([\w-]+)/))){const r=REG.find(x=>x.slug===m[1]);const c=r&&catByKey(r.group);parts=[['Registrations','#/']].concat(c?[[c.name,'#/g/'+c.key]]:[]);b.textContent=r?r.title:'Registrations'}
+  else b.textContent='Registrations';
+  mid.innerHTML=parts.map(([t,u])=>'<a href="#" data-nav="'+u+'">'+t+'</a><span class="sl">/</span>').join('');}
+function render(){
+  const h=cur;setCrumb(h);
+  let m;
+  if((m=h.match(/^#\/g\/([\w-]+)/))) app.innerHTML=viewGroup(m[1]);
+  else if((m=h.match(/^#\/r\/([\w-]+)/))) app.innerHTML=viewReg(m[1]);
+  else app.innerHTML=viewHome();
+  
+}
+window.addEventListener('hashchange',()=>{const h=location.hash||'';let m;if((m=h.match(/r=([\w-]+)/)))nav('#/r/'+m[1]);else if((m=h.match(/g=([\w-]+)/)))nav('#/g/'+m[1]);else nav('#/');});
+
+let tt; function toast(msg){const t=document.getElementById('rtoast');t.innerHTML=ic('check')+esc(msg);t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2400)}
+
+document.addEventListener('click',e=>{
+  const go=e.target.closest('[data-nav]'); if(go){e.preventDefault();nav(go.dataset.nav);return}
+  const rl=e.target.closest('[data-role]'); if(rl){state.role=rl.dataset.role;render();toast('Previewing as '+(state.role==='lead'?'Lead':'Client'));return}
+  const adv=e.target.closest('[data-adv]'); if(adv){state.at[adv.dataset.adv]++;render();toast('Step marked as done');return}
+  const st=e.target.closest('[data-start]'); if(st){state.at[st.dataset.start]=0;render();toast('Registration started. The client has been asked for documents.');return}
+  const rm=e.target.closest('[data-remind]'); if(rm){toast('Reminder sent for '+rm.dataset.remind);return}
+  const tq=e.target.closest('[data-toast]'); if(tq){toast(tq.dataset.toast);return}
+});
+document.addEventListener('change',e=>{
+  const u=e.target.closest('[data-up]'); if(u && u.files[0]){state.uploads[u.dataset.up]=u.files[0].name+' · uploaded just now';render();toast('Uploaded '+u.files[0].name);return}
+  const b=e.target.closest('[data-bulk]'); if(b && b.files.length){const r=REG.find(x=>x.slug===b.dataset.bulk);const need=r.infoRequired.filter(x=>!DETAIL_FIELDS[x]&&!ON_FILE.test(x)&&!state.uploads[r.slug+'|'+x]);[...b.files].forEach((f,i)=>{if(need[i])state.uploads[r.slug+'|'+need[i]]=f.name+' · uploaded just now'});render();toast(b.files.length+' file'+(b.files.length>1?'s':'')+' uploaded');return}
+  const c=e.target.closest('[data-cert]'); if(c && c.files[0]){toast('Certificate uploaded');return}
+});
+document.addEventListener('input',e=>{
+  const d=e.target.closest('[data-det]'); if(d){state.details[d.dataset.det]=d.value;return}
+  const l=e.target.closest('[data-lead]'); if(l){state.lead[l.dataset.lead]=l.value;return}
+});
+['dragover','dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{const z=e.target.closest('#drop');if(!z)return;e.preventDefault();z.classList.toggle('over',ev==='dragover');if(ev==='drop'){const inp=z.querySelector('input');const dt=new DataTransfer();[...e.dataTransfer.files].forEach(f=>dt.items.add(f));inp.files=dt.files;inp.dispatchEvent(new Event('change',{bubbles:true}))}}));
+render();
+</script>
+</body>
+</html>
