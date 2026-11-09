@@ -14,10 +14,21 @@ import { useApp } from '@/context/AppContext';
 import { findEngagementForClientUser } from '@/lib/checklist/checklist-state-key';
 import { canUseAsk, defaultShellForRole } from '@/lib/ask/access';
 import { maskIdentityNumbers } from '@/lib/ask/mask';
-import { fetchConversation, fetchConversationList, recordTopicAnswer, streamChat } from '@/hooks/ask/ask-api';
+import {
+  createAskDrop,
+  fetchConversation,
+  fetchConversationList,
+  recordTopicAnswer,
+  startAskDrop,
+  streamChat,
+  uploadDrop,
+  type StoredMessage,
+} from '@/hooks/ask/ask-api';
+import { isRunActive, useAskRun } from '@/hooks/ask/use-ask-run';
 import { useAskStatus } from '@/hooks/ask/use-ask-status';
 import {
   AskContext,
+  type AskDropInput,
   type AskInput,
   type AskContextValue,
   type AskHistoryEntry,
@@ -59,6 +70,15 @@ function writeSession(key: string, value: string | null) {
   }
 }
 
+/** Stored messages as thread items: a saved answer shows as an answer, anything else as a question. */
+function toThread(messages: StoredMessage[]): ThreadItem[] {
+  return messages.map((m) =>
+    m.sender === 'user' || !m.answer
+      ? { id: m.id, kind: 'user' as const, text: m.text }
+      : { id: m.id, kind: 'assistant' as const, messageId: m.id, answer: m.answer },
+  );
+}
+
 const HISTORY_MAX = 40;
 const ECHO_MAX = 1_000;
 
@@ -96,6 +116,8 @@ export function AskProvider({ children }: { children: ReactNode }) {
   const [handoffDraft, setHandoffDraft] = useState<string | null>(null);
   const [backPill, setBackPill] = useState(false);
   const [pageOpen, setPageOpen] = useState(false);
+  /** A drop the background job is working on in this conversation (null when none). */
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [allHistory, setAllHistory] = useState<AskHistoryEntry[]>([]);
   const hKey = historyKey(user?.id);
   useEffect(() => setAllHistory(readHistory(hKey)), [hKey]);
@@ -168,6 +190,7 @@ export function AskProvider({ children }: { children: ReactNode }) {
     setThread([]);
     setStatus(null);
     setBusy(false);
+    setActiveRunId(null);
     setConversationId(readSession(key));
   }, [key]);
 
@@ -188,14 +211,10 @@ export function AskProvider({ children }: { children: ReactNode }) {
     if (!(open || pageOpen) || !enabled || !conversationId || thread.length > 0 || hydrated.current === conversationId) return;
     hydrated.current = conversationId;
     fetchConversation(conversationId)
-      .then(({ messages }) => {
-        setThread(
-          messages.map((m) =>
-            m.sender === 'user' || !m.answer
-              ? { id: m.id, kind: 'user' as const, text: m.text }
-              : { id: m.id, kind: 'assistant' as const, messageId: m.id, answer: m.answer },
-          ),
-        );
+      .then(({ messages, activeRunId: running }) => {
+        setThread(toThread(messages));
+        // A drop still working in the background: pick its progress poll back up.
+        setActiveRunId(running ?? null);
       })
       .catch(() => {
         // Gone or not ours: start fresh, and drop it from the chat list.
@@ -217,6 +236,33 @@ export function AskProvider({ children }: { children: ReactNode }) {
     setThread((t) => (t.some((item) => item.kind === 'changeset' && item.changesetId === changesetId) ? t : [...t, { id: nextId(), kind: 'changeset', changesetId }]));
     setOpenState(true);
   }, [enabled]);
+
+  // The drop's progress. When the job stops working (cards ready, a question, done or failed), the
+  // thread is read again from the server so the closing answer and its cards appear. A chat
+  // message still streaming is left to finish first, so its bubble is not lost.
+  const runQuery = useAskRun(activeRunId);
+  const run = activeRunId ? (runQuery.data ?? null) : null;
+  const runSettled = Boolean(activeRunId) && ((runQuery.data && !isRunActive(runQuery.data)) || runQuery.isError);
+  const conversationRef = useRef(conversationId);
+  useEffect(() => {
+    conversationRef.current = conversationId;
+  }, [conversationId]);
+  useEffect(() => {
+    if (!runSettled || busy) return;
+    const cid = conversationId;
+    setActiveRunId(null);
+    if (!cid) return;
+    fetchConversation(cid)
+      .then(({ messages }) => {
+        // Only when the person is still on the same chat.
+        if (conversationRef.current === cid) setThread(toThread(messages));
+        refreshList();
+      })
+      .catch(() => {
+        if (conversationRef.current !== cid) return;
+        setThread((t) => [...t, { id: nextId(), kind: 'error', text: 'The files were worked through, but the answer could not be loaded. Open the chat again to see it.' }]);
+      });
+  }, [runSettled, busy, conversationId, refreshList]);
 
   const setOpen = useCallback((next: boolean) => {
     setOpenState(next);
@@ -294,6 +340,46 @@ export function AskProvider({ children }: { children: ReactNode }) {
     [shell, busy, engagementId, conversationId, key, remember, refreshList],
   );
 
+  const sendDrop = useCallback(
+    async (input: AskDropInput) => {
+      if (!shell || shell === 'client' || busy || input.files.length === 0) return null;
+      const count = input.files.length;
+      const text = input.message?.trim() || `Dropped ${count} file${count === 1 ? '' : 's'}`;
+      abortRef.current?.abort();
+      abortRef.current = null;
+      setThread((t) => [...t, { id: nextId(), kind: 'user', text: maskIdentityNumbers(text).slice(0, ECHO_MAX) }]);
+      setBusy(true);
+      setStatus(`Uploading ${count} file${count === 1 ? '' : 's'}…`);
+      try {
+        const drop = await createAskDrop(conversationId);
+        setConversationId(drop.conversationId);
+        writeSession(key, drop.conversationId);
+        hydrated.current = drop.conversationId;
+        remember(drop.conversationId, text);
+        const uploaded = await uploadDrop(drop.dropId, input.files, input.onProgress);
+        if (uploaded.uploaded.length === 0) {
+          setThread((t) => [...t, { id: nextId(), kind: 'error', text: 'None of these files could be uploaded, so nothing was started.' }]);
+          return uploaded.failed;
+        }
+        setStatus('Starting…');
+        const started = await startAskDrop(drop.dropId, {
+          message: input.message?.trim() || undefined,
+          page: { path: window.location.pathname },
+        });
+        setActiveRunId(started.runId);
+        refreshList();
+        return uploaded.failed;
+      } catch (error) {
+        setThread((t) => [...t, { id: nextId(), kind: 'error', text: (error as Error)?.message || 'Could not send these files.' }]);
+        return null;
+      } finally {
+        setBusy(false);
+        setStatus(null);
+      }
+    },
+    [shell, busy, conversationId, key, remember, refreshList],
+  );
+
   const showTopic = useCallback(
     async (slug: string, depth?: AnswerDepth, label?: string) => {
       if (label) setThread((t) => [...t, { id: nextId(), kind: 'user', text: label }]);
@@ -328,6 +414,7 @@ export function AskProvider({ children }: { children: ReactNode }) {
     setThread([]);
     setStatus(null);
     setBusy(false);
+    setActiveRunId(null);
     setConversationId(null);
     writeSession(key, null);
     refreshList();
@@ -341,6 +428,7 @@ export function AskProvider({ children }: { children: ReactNode }) {
       setStatus(null);
       setBusy(false);
       setHandoffDraft(null);
+      setActiveRunId(null);
       hydrated.current = null;
       setConversationId(id);
       writeSession(key, id);
@@ -365,6 +453,9 @@ export function AskProvider({ children }: { children: ReactNode }) {
       busy,
       conversationId,
       ask,
+      sendDrop,
+      activeRunId,
+      run,
       showTopic,
       reset,
       history,
@@ -376,7 +467,7 @@ export function AskProvider({ children }: { children: ReactNode }) {
       backPill,
       setBackPill,
     }),
-    [enabled, firmName, features, open, setOpen, toggle, shell, engagementId, preview, setPreview, thread, status, busy, conversationId, ask, showTopic, reset, history, openConversation, pageOpen, handoffDraft, backPill],
+    [enabled, firmName, features, open, setOpen, toggle, shell, engagementId, preview, setPreview, thread, status, busy, conversationId, ask, sendDrop, activeRunId, run, showTopic, reset, history, openConversation, pageOpen, handoffDraft, backPill],
   );
 
   return <AskContext.Provider value={value}>{children}</AskContext.Provider>;

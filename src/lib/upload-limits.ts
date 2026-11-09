@@ -31,6 +31,13 @@ export function maxUploadSizeError(): string {
   return `File must be ${maxUploadSizeLabel()} or smaller.`;
 }
 
+/**
+ * An Ask VCFO drop: at most this many files, counting the files unpacked from a ZIP, and at most this
+ * many bytes in all. The browser checks both before it uploads, and the server checks the running
+ * totals again on every file, so a script cannot get past them.
+ */
+export const DROP_MAX_FILES = 50;
+export const DROP_MAX_BYTES = 200 * 1024 * 1024;
 
 export function formatUploadFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

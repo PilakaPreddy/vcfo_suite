@@ -175,6 +175,14 @@ describe('isDataMessage', () => {
     expect(isDataMessage('x '.repeat(1100))).toBe(true);
     expect(isDataMessage('How many companies are incorporated this year?')).toBe(false);
   });
+
+  it('takes loose prose pasted with a fill instruction, but not the instruction alone or a question', () => {
+    const email = 'Please fill this in for Acme.\nHi team, our new director is Asha Rao, she lives in Indiranagar, Bengaluru and her father is Mohan Rao.';
+    expect(isDataMessage(email)).toBe(true);
+    expect(isDataMessage('Fill this in for Acme')).toBe(false);
+    expect(isDataMessage('Can you add these details for Acme from the email I sent you yesterday about the new director?')).toBe(false);
+    expect(isDataMessage('Hi team, our new director is Asha Rao, she lives in Indiranagar, Bengaluru and her father is Mohan Rao.')).toBe(false);
+  });
 });
 
 describe('pendingDoRun', () => {

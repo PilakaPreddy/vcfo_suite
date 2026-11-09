@@ -18,6 +18,6 @@ export {
   addTaskComment,
 } from './write';
 export type { CreateTaskInput, EditTaskInput, ChecklistItemDto, CommentDto } from './write';
-export { addTaskAttachment, getTaskAttachmentUrl, removeTaskAttachment } from './attachments';
+export { addTaskAttachment, getTaskAttachmentUrl, markTaskDeliverable, removeTaskAttachment, TASK_ATTACHMENT_MAX_BYTES } from './attachments';
 export type { AttachmentDto } from './attachments';
 export { systemCreateNextOccurrence, systemRepeatSweep } from './repeat';

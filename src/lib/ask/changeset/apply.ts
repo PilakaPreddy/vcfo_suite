@@ -95,12 +95,24 @@ function keyOf(row: AskChangesetRowRow): string | null {
  * A person's correction to one row. It is a server call of its own, so the value is checked and the
  * hash recomputed before the card can show it. A sensitive value is typed in full and shown masked.
  */
+/**
+ * The actions whose value a person may change on the card. Only a checklist answer is a value; every
+ * file row (a checklist upload, a labour sheet, compliance evidence, a vault file) carries a file
+ * that cannot be retyped, so it is accepted or left, never edited. The card and the edit route both
+ * use this, so a hand-made request cannot edit what the card does not offer.
+ */
+const VALUE_EDIT_ACTIONS: ReadonlySet<string> = new Set(['checklist.setResponse']);
+
+export function rowValueEditable(action: string): boolean {
+  return VALUE_EDIT_ACTIONS.has(action);
+}
+
 export async function editChangesetRow(ctx: AuthContext, id: string, rowId: string, value: string): Promise<void> {
   const now = new Date();
   const found = await loadOpen(ctx, id, now);
   const row = found.rows.find((r) => r.id === rowId);
   if (!row || !canDecideRow(found, row)) throw new ChangesetRefused('This row is not yours to change.', 403);
-  if (row.action === 'checklist.attachFile' || row.status === 'applied') throw new ChangesetRefused('This row cannot be edited.');
+  if (!rowValueEditable(row.action) || row.status === 'applied') throw new ChangesetRefused('This row cannot be edited.');
   const actx = actionContext(ctx, found, now);
   const action = await getAction(row.action);
   const parsed = action?.input.safeParse({ ...row.target, value });

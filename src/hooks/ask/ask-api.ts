@@ -1,5 +1,6 @@
 import type { AnswerDepth, AnswerEnvelope, AskShell, ProjectSnapshot } from '@/data/ask/schema';
 import type { ChangesetView } from '@/lib/ask/changeset/view-types';
+import type { DropRunView } from '@/lib/ask/drop/types';
 
 /** Browser client for /api/ask/*. Every call surfaces a friendly error message. */
 
@@ -116,7 +117,8 @@ export async function streamChat(body: ChatBody, onEvent: (event: ChatEvent) => 
 
 export type StoredMessage = { id: string; sender: 'user' | 'assistant'; text: string; answer: AnswerEnvelope | null };
 
-export async function fetchConversation(id: string): Promise<{ messages: StoredMessage[] }> {
+/** `activeRunId` is a drop still working in the background, so a reopened panel resumes its poll. */
+export async function fetchConversation(id: string): Promise<{ messages: StoredMessage[]; activeRunId?: string | null }> {
   const res = await fetch(`/api/ask/conversations/${encodeURIComponent(id)}`);
   return json(res, 'Could not load the conversation');
 }
@@ -212,11 +214,128 @@ export async function sendHandoff(body: {
   await json(res, 'Could not send your question. Please try again.');
 }
 
-/** POST /api/ask/attachments: stores one file for the next chat message. */
-export async function uploadAskAttachment(file: File): Promise<{ id: string; fileName: string }> {
-  const form = new FormData();
-  form.set('file', file);
-  return json(await fetch('/api/ask/attachments', { method: 'POST', body: form }), 'Could not attach this file.');
+/** One file being uploaded, as the composer shows it. */
+export type UploadProgress = {
+  path: string;
+  loaded: number;
+  total: number;
+  status: 'waiting' | 'uploading' | 'done' | 'failed';
+  error?: string;
+};
+
+export type UploadResult = {
+  uploaded: Array<{ id: string; fileName: string; path: string }>;
+  failed: Array<{ path: string; reason: string }>;
+};
+
+/** How many files go up at once. */
+const UPLOAD_PARALLEL = 4;
+
+/** One multipart POST through XMLHttpRequest, because fetch does not report upload progress. */
+function postWithProgress(form: FormData, onProgress: (loaded: number) => void): Promise<{ id: string; fileName: string }> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/ask/attachments');
+    xhr.responseType = 'text';
+    xhr.upload.onprogress = (event) => onProgress(event.loaded);
+    xhr.onerror = () => reject(new AskApiError('The upload stopped. Check the connection and try again.', 0));
+    xhr.onload = () => {
+      let body: { id?: unknown; fileName?: unknown; error?: unknown } | null = null;
+      try {
+        body = JSON.parse(xhr.responseText) as typeof body;
+      } catch {
+        // A non-JSON body falls through to the fallback message.
+      }
+      if (xhr.status >= 200 && xhr.status < 300 && body && typeof body.id === 'string') {
+        resolve({ id: body.id, fileName: typeof body.fileName === 'string' ? body.fileName : '' });
+        return;
+      }
+      reject(new AskApiError(body && typeof body.error === 'string' ? body.error : 'Could not attach this file.', xhr.status));
+    };
+    xhr.send(form);
+  });
+}
+
+/**
+ * Uploads files four at a time and reports each file's progress. With a `dropId` every file joins
+ * that drop with its folder path; without one the files are plain chat attachments for the next
+ * message. A refused file does not stop the others: it comes back in `failed` with the reason.
+ */
+export async function uploadAskFiles(
+  files: Array<{ file: File; path: string }>,
+  opts: { dropId?: string; onProgress?: (progress: UploadProgress[]) => void } = {},
+): Promise<UploadResult> {
+  const progress: UploadProgress[] = files.map((f) => ({ path: f.path, loaded: 0, total: f.file.size, status: 'waiting' }));
+  const report = () => opts.onProgress?.(progress.map((p) => ({ ...p })));
+  const result: UploadResult = { uploaded: [], failed: [] };
+  const done: Array<UploadResult['uploaded'][number] | null> = files.map(() => null);
+  let next = 0;
+  const worker = async () => {
+    while (next < files.length) {
+      const index = next;
+      next += 1;
+      const { file, path } = files[index]!;
+      const form = new FormData();
+      form.set('file', file);
+      if (opts.dropId) {
+        form.set('dropId', opts.dropId);
+        if (path !== file.name) form.set('relativePath', path);
+      }
+      progress[index] = { ...progress[index]!, status: 'uploading' };
+      report();
+      try {
+        const added = await postWithProgress(form, (loaded) => {
+          progress[index] = { ...progress[index]!, loaded: Math.min(loaded, file.size) };
+          report();
+        });
+        done[index] = { id: added.id, fileName: added.fileName || file.name, path };
+        progress[index] = { ...progress[index]!, loaded: file.size, status: 'done' };
+      } catch (error) {
+        const reason = (error as Error).message || 'Could not attach this file.';
+        result.failed.push({ path, reason });
+        progress[index] = { ...progress[index]!, status: 'failed', error: reason };
+      }
+      report();
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(UPLOAD_PARALLEL, files.length) }, worker));
+  // Keep the order the person chose, whatever order the uploads finished in.
+  result.uploaded = done.filter((d): d is UploadResult['uploaded'][number] => d !== null);
+  return result;
+}
+
+/** POST /api/ask/drops: opens a drop in the given conversation, or in a new one. */
+export async function createAskDrop(conversationId?: string | null): Promise<{ dropId: string; conversationId: string }> {
+  const res = await fetch('/api/ask/drops', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conversationId ? { conversationId } : {}),
+  });
+  return json(res, 'Could not start the drop.');
+}
+
+/** Uploads a drop's files into it, four at a time, with progress for each file. */
+export function uploadDrop(
+  dropId: string,
+  files: Array<{ file: File; path: string }>,
+  onProgress?: (progress: UploadProgress[]) => void,
+): Promise<UploadResult> {
+  return uploadAskFiles(files, { dropId, onProgress });
+}
+
+/** POST /api/ask/drops/:id/start: sends the drop to the background job with the person's message. */
+export async function startAskDrop(dropId: string, body: { message?: string; page?: { path: string } }): Promise<{ runId: string }> {
+  const res = await fetch(`/api/ask/drops/${encodeURIComponent(dropId)}/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return json(res, 'Could not start working on these files.');
+}
+
+/** GET /api/ask/runs/:id: a drop's progress, files and review cards. */
+export async function fetchAskRun(id: string): Promise<DropRunView> {
+  return json(await fetch(`/api/ask/runs/${encodeURIComponent(id)}`, { cache: 'no-store' }), 'Could not load the progress.');
 }
 
 const changesetUrl = (id: string) => `/api/ask/changesets/${encodeURIComponent(id)}`;

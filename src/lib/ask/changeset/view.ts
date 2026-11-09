@@ -4,7 +4,7 @@ import type { AuthContext } from '@/auth/guards';
 import { getItem } from '@/data/checklist';
 import { getAskChangesetSummary } from '@/db/repositories/ask-changesets';
 import { fieldOf, rowCanApply, type ResponseTarget } from '@/lib/actions/checklist/rules';
-import { canDecideRow } from './apply';
+import { canDecideRow, rowValueEditable } from './apply';
 import type { ChangesetRowStatus, ChangesetStatus } from './types';
 import type { ChangesetRowView, ChangesetView } from './view-types';
 
@@ -35,7 +35,7 @@ export async function loadChangesetView(ctx: AuthContext, id: string): Promise<C
       canDecide: canDecideRow(found, row),
       canAccept: open && rowCanApply(row.checks),
       needsLook: row.checks.some((check) => !check.ok),
-      editable: open && row.action === 'checklist.setResponse',
+      editable: open && rowValueEditable(row.action),
       ...(field?.options?.length ? { options: field.options.map((o) => ({ value: o.value, label: o.label })) } : {}),
       inputType: field?.options?.length ? 'choice' : field?.type === 'date' ? 'date' : 'text',
     };

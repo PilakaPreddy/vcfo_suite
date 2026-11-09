@@ -334,6 +334,85 @@ export async function recordUpload(
   return row ?? null;
 }
 
+/** A stored upload as plain JSON, so an undo can put it back exactly as it was. */
+export interface UploadSnapshot {
+  id: string;
+  slot: string;
+  fileName: string;
+  objectKey: string;
+  sha256: string;
+  sheetName: string;
+  headerRow: number;
+  headers: string[];
+  rowCount: number;
+  gridDetection: unknown;
+  uploadedBy: string | null;
+  uploadedAt: string;
+}
+
+export function uploadSnapshot(row: UploadRow): UploadSnapshot {
+  return {
+    id: row.id,
+    slot: row.slot,
+    fileName: row.fileName,
+    objectKey: row.objectKey,
+    sha256: row.sha256,
+    sheetName: row.sheetName,
+    headerRow: row.headerRow,
+    headers: (row.headers ?? []) as string[],
+    rowCount: row.rowCount,
+    gridDetection: row.gridDetection ?? null,
+    uploadedBy: row.uploadedBy ?? null,
+    uploadedAt: (row.uploadedAt instanceof Date ? row.uploadedAt : new Date(row.uploadedAt)).toISOString(),
+  };
+}
+
+/**
+ * Remove one uploaded input, for an undo of a chat upload. Staff only, and refused once the batch's
+ * inputs are marked ready: a closed period keeps its inputs, as `recordUpload` callers already
+ * enforce. Returns the removed row, or null when it is not there or not visible.
+ */
+export async function removeUpload(ctx: AuthContext, batchId: string, uploadId: string): Promise<UploadRow | null> {
+  assertStaff(ctx);
+  const batch = await getBatch(ctx, batchId);
+  if (!batch) return null;
+  if (batch.markedReadyAt) throw new Error('the period is closed');
+  const [row] = await db
+    .delete(labourRegisterUploads)
+    .where(and(eq(labourRegisterUploads.id, uploadId), eq(labourRegisterUploads.batchId, batch.id)))
+    .returning();
+  return row ?? null;
+}
+
+/**
+ * Put a replaced upload back in its slot, with its original uploader and time, for an undo of a
+ * chat upload that replaced it. The same lock rule as `removeUpload` applies.
+ */
+export async function restoreUpload(ctx: AuthContext, batchId: string, snapshot: UploadSnapshot): Promise<UploadRow | null> {
+  assertStaff(ctx);
+  const batch = await getBatch(ctx, batchId);
+  if (!batch) return null;
+  if (batch.markedReadyAt) throw new Error('the period is closed');
+  const values = {
+    fileName: snapshot.fileName,
+    objectKey: snapshot.objectKey,
+    sha256: snapshot.sha256,
+    sheetName: snapshot.sheetName,
+    headerRow: snapshot.headerRow,
+    headers: snapshot.headers,
+    rowCount: snapshot.rowCount,
+    gridDetection: snapshot.gridDetection ?? null,
+    uploadedBy: snapshot.uploadedBy,
+    uploadedAt: new Date(snapshot.uploadedAt),
+  };
+  const [row] = await db
+    .insert(labourRegisterUploads)
+    .values({ ...values, batchId: batch.id, slot: snapshot.slot })
+    .onConflictDoUpdate({ target: [labourRegisterUploads.batchId, labourRegisterUploads.slot], set: values })
+    .returning();
+  return row ?? null;
+}
+
 /* ── Remembered column maps ───────────────────────────────────────────────── */
 
 /** The mapping remembered for a client and slot, so next month is a confirmation. */

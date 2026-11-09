@@ -178,6 +178,15 @@ describe('editChangesetRow', () => {
     await expect(editChangesetRow(lead, 'cs-1', 'a', 'x')).rejects.toMatchObject({ status: 403 });
   });
 
+  it.each(['checklist.attachFile', 'labour.uploadSheet', 'compliance.attachEvidence', 'documents.fileToVault'])(
+    'refuses to edit a file row (%s), which carries a file rather than a typed value',
+    async (action) => {
+      setCard([makeRow('a', { action })]);
+      await expect(editChangesetRow(lead, 'cs-1', 'a', 'other.pdf')).rejects.toThrow('This row cannot be edited.');
+      expect(updateRows).not.toHaveBeenCalled();
+    },
+  );
+
   it('releases a later row once the answer it waits for is given', async () => {
     setCard([makeRow('parent', { newValue: '' }), makeRow('child', { status: 'held' })]);
     recheck.mockImplementation(async (_a, input, pending) => {

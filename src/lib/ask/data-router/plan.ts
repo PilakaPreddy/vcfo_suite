@@ -3,6 +3,7 @@ import { getItem } from '@/data/checklist';
 import { checkResponseRow, displayValue, fieldOf, needsManagerApproval, responseKey, type ResponseTarget, type RowEngagement } from '@/lib/actions/checklist/rules';
 import type { ChangesetDraft, ChangesetRowDraft, RowCheck, RowSource } from '@/lib/ask/changeset/types';
 import { catalogEntry, writableUses } from '@/lib/ask/field-catalog';
+import { COPY_FIELD_BY_DOC } from '@/lib/ask/field-catalog/upload-fields';
 import { normalizeLabel } from '@/lib/ask/field-catalog/rules';
 import type { CatalogEntry, FieldUse } from '@/lib/ask/field-catalog/types';
 import { maskIdentityValue } from '@/lib/ask/mask';
@@ -53,14 +54,6 @@ const PERSON_LISTS = {
   subscriber: { noun: 'Subscriber', step: 'pre-16', group: 'subscribers', pan: null },
 } as const;
 type PersonSubject = keyof typeof PERSON_LISTS;
-
-const COPY_FIELD_BY_DOC: Readonly<Record<string, string>> = {
-  pan_card: 'panCopyUrl',
-  aadhaar_card: 'aadhaarCopyUrl',
-  passport: 'passportCopyUrl',
-  driving_licence: 'drivingLicenceCopyUrl',
-  utility_bill: 'utilityBillCopyUrl',
-};
 
 const listOf = (subject: PersonSubject, state: PlanInput['state']): RepeatEntry[] => {
   const { step, group } = PERSON_LISTS[subject];

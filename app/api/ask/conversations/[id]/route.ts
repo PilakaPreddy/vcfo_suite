@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { deleteOwnAskConversation, getAskConversationWithMessages } from '@/db/repositories/ask-conversations';
+import { findActiveAskRun } from '@/db/repositories/ask-runs';
 import { requireAsk } from '@/lib/ask/route-guard';
 
 /** GET /api/ask/conversations/[id] — owner-only resume (U3). */
@@ -11,7 +12,10 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const found = await getAskConversationWithMessages(gate.ctx, id);
     if (!found) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    // A drop still working in the background, so a reopened panel picks its progress poll back up.
+    const active = await findActiveAskRun(gate.ctx, found.conversation.id, new Date());
     return NextResponse.json({
+      activeRunId: active?.id ?? null,
       conversation: {
         id: found.conversation.id,
         shell: found.conversation.shell,

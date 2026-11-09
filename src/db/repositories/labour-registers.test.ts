@@ -222,9 +222,40 @@ describe('attestation freezes a document', () => {
 });
 
 describe('there is no delete path', () => {
-  it('exports nothing that deletes a register', () => {
+  it('exports nothing that deletes a register; the only removal is the undo of an open-period upload', () => {
     const names = Object.keys(repo).filter((k) => /delete|remove|purge|destroy/i.test(k));
-    expect(names).toEqual([]);
+    expect(names).toEqual(['removeUpload']);
+  });
+
+  it('refuses to remove an upload once the period is closed, and writes nothing', async () => {
+    allow();
+    results = [[{ id: 'b1', engagementId: OURS, markedReadyAt: new Date() }]];
+    await expect(repo.removeUpload(ctx('manager'), 'b1', 'up-1')).rejects.toThrow('the period is closed');
+    expect(calls.filter((c) => c.op === 'delete')).toHaveLength(0);
+  });
+
+  it('refuses a client the removal entirely', async () => {
+    allow();
+    await expect(repo.removeUpload(ctx('client'), 'b1', 'up-1')).rejects.toThrow();
+    expect(calls).toHaveLength(0);
+  });
+
+  it('removes nothing from another firm\'s batch', async () => {
+    deny();
+    results = [[{ id: 'b1', engagementId: THEIRS, markedReadyAt: null }]];
+    expect(await repo.removeUpload(ctx('manager'), 'b1', 'up-1')).toBeNull();
+    expect(calls.filter((c) => c.op === 'delete')).toHaveLength(0);
+  });
+
+  it('refuses to restore an upload once the period is closed', async () => {
+    allow();
+    results = [[{ id: 'b1', engagementId: OURS, markedReadyAt: new Date() }]];
+    const snapshot = {
+      id: 'up-0', slot: 'paysheet', fileName: 'a.xlsx', objectKey: 'k', sha256: 's', sheetName: 'S',
+      headerRow: 1, headers: [], rowCount: 1, gridDetection: null, uploadedBy: null, uploadedAt: new Date().toISOString(),
+    };
+    await expect(repo.restoreUpload(ctx('manager'), 'b1', snapshot)).rejects.toThrow('the period is closed');
+    expect(calls.filter((c) => c.op === 'insert')).toHaveLength(0);
   });
 });
 
