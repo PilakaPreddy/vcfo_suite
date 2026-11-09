@@ -2,7 +2,7 @@ import 'server-only';
 
 import { and, eq, inArray, isNotNull, isNull, lte, ne, or } from 'drizzle-orm';
 import { db } from '@/db/client';
-import { budgetActuals, budgetSectionOwners, budgetSections, budgets, engagements, profiles } from '@/db/schema';
+import { budgetActuals, budgetSectionOwners, budgetSections, budgets, budgetVarianceMonths, engagements, profiles } from '@/db/schema';
 import { resolveEngagementRecipients } from '@/db/repositories/engagement-recipients';
 import { budgetVsActual, computeBudget } from '@/lib/budget/engine';
 import { fyIndexOfPeriod, fyName, type BudgetSection, type BudgetSettings } from '@/lib/budget/model';
@@ -90,18 +90,30 @@ export interface OverspendAlert {
   lines: { name: string; budget: number; actual: number; variancePct: number | null }[];
 }
 
-/** Budgets whose latest actual month has lines over their limit and no alert for that month yet. */
+/**
+ * Budgets whose latest actual month has lines over their limit and no alert for that month yet.
+ * A budget that uses the Variance tab is checked on its approved months only, so a draft month a
+ * lead is still typing never raises an alert. A budget with no Variance months uses every actual.
+ */
 export async function systemFindOverspends(): Promise<OverspendAlert[]> {
   const live = await db
     .select()
     .from(budgets)
     .where(and(isNull(budgets.deletedAt), inArray(budgets.status, ['published', 'approved'])));
   if (!live.length) return [];
-  const actuals = await db.select().from(budgetActuals).where(inArray(budgetActuals.budgetId, live.map((b) => b.id)));
+  const ids = live.map((b) => b.id);
+  const actuals = await db.select().from(budgetActuals).where(inArray(budgetActuals.budgetId, ids));
+  const varianceMonths = await db
+    .select({ budgetId: budgetVarianceMonths.budgetId, monthIndex: budgetVarianceMonths.monthIndex, status: budgetVarianceMonths.status })
+    .from(budgetVarianceMonths)
+    .where(inArray(budgetVarianceMonths.budgetId, ids));
   const out: OverspendAlert[] = [];
   for (const b of live) {
-    const own = actuals.filter((a) => a.budgetId === b.id);
     const settings = b.settings as BudgetSettings;
+    const months = varianceMonths.filter((m) => m.budgetId === b.id);
+    const approved = new Set(months.filter((m) => m.status === 'approved').map((m) => m.monthIndex));
+    const all = actuals.filter((a) => a.budgetId === b.id);
+    const own = months.length ? all.filter((a) => approved.has(fyIndexOfPeriod(settings, a.period))) : all;
     const periods = own.map((a) => a.period).filter((p) => fyIndexOfPeriod(settings, p) >= 0).sort();
     const period = periods[periods.length - 1];
     if (!period || period === b.lastAlertPeriod) continue;

@@ -47,3 +47,8 @@
 - Text names the Income-tax Act 2025 (in force from 1 April 2026). Presets: concessional 22% with a
   flat 10% surcharge; regular 25% or 30% with the slab surcharge (0, 7, 12%). No marginal relief,
   MAT, TDS or TCS credit, or interest is modelled.
+- The PDF pack adds an Advance tax page (computation and instalments) when income tax is on, and a
+  Variance page (one line for each month with a status) when the viewer may see the Variance tab.
+  Both read the same helpers as the Excel export, so the three outputs agree.
+- The overspend alert job (`systemFindOverspends`) checks only approved Variance months when a
+  budget has any Variance month. A budget that never used the Variance tab still uses every actual.

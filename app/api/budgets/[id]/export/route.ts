@@ -25,7 +25,8 @@ export async function GET(request: Request, { params }: IdContext) {
     if (format === 'pdf') {
       if (!access.canSeeMaster) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
       await recordBudgetExport(guard.ctx, id, 'pdf');
-      return file(await renderBudgetPdf({ state, status: view.status, version: view.currentVersion, approvedByName: view.approvedByName, approvedAt: view.approvedAt, companyName: view.companyName }), 'application/pdf', `${base}.pdf`);
+      const variance = access.canSeeVariance ? await getVariance(guard.ctx, id) : null;
+      return file(await renderBudgetPdf({ state, status: view.status, version: view.currentVersion, approvedByName: view.approvedByName, approvedAt: view.approvedAt, companyName: view.companyName, variance }), 'application/pdf', `${base}.pdf`);
     }
     await recordBudgetExport(guard.ctx, id, 'xlsx');
     const variance = access.canSeeVariance ? await getVariance(guard.ctx, id) : null;
