@@ -5,3 +5,4 @@ export { addRow, deleteRow, replaceRows, updateRow } from './rows';
 export { approveBudget, markSection, publishBudget, recordBudgetExport, rejectBudget, sendBackSection, setSectionOwners, startRevision } from './workflow';
 export { addAttachment, addComment, attachmentDownloadUrl, listActuals, listAttachments, listChanges, listComments, removeAttachment, resolveComment, saveActuals, saveLedgerMap } from './activity';
 export { systemBudgetParties, systemFindOverspends, systemListSectionsToRemind, systemMarkAlertRun, systemMarkSectionReminded, type BudgetParties, type BudgetParty, type OverspendAlert } from './system';
+export { actOnVarianceMonth, getVariance, lockedMonthIndexes, saveVarianceDraft, type VarianceActionResult, type VarianceData, type VarianceDraftInput } from './variance';

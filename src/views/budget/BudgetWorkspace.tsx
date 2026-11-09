@@ -21,6 +21,7 @@ import { CostTab } from './tabs/CostTab';
 import { HiringTab } from './tabs/HiringTab';
 import { MasterTab } from './tabs/MasterTab';
 import { SettingsTab } from './tabs/SettingsTab';
+import { VarianceTab } from './tabs/VarianceTab';
 import { VersionsTab } from './tabs/VersionsTab';
 import type { Ready } from './types';
 import { useBudget } from './use-budget';
@@ -52,6 +53,7 @@ export function BudgetWorkspace({ budgetId, shellBase }: { budgetId: string; she
     if (view.access.canSeeMaster) list.push({ key: 'master', label: 'Master Budget' });
     for (const s of FILL_TABS) if (view.access.visibleSections.includes(s)) list.push({ key: s, label: sectionLabel(s) });
     if (view.access.canSeeActuals) list.push({ key: 'actuals', label: 'Actuals' });
+    if (view.access.canSeeVariance) list.push({ key: 'variance', label: 'Variance' });
     if (view.access.canSeeMaster) list.push({ key: 'analysis', label: 'Analysis' });
     list.push({ key: 'versions', label: 'Versions' }, { key: 'activity', label: 'Activity' });
     return list;
@@ -136,6 +138,7 @@ export function BudgetWorkspace({ budgetId, shellBase }: { budgetId: string; she
       {active === 'finance' ? <CostTab ready={ready} section="finance" /> : null}
       {active === 'settings' ? <SettingsTab ready={ready} /> : null}
       {active === 'actuals' ? <ActualsTab ready={ready} /> : null}
+      {active === 'variance' ? <VarianceTab ready={ready} /> : null}
       {active === 'analysis' ? <AnalysisTab ready={ready} /> : null}
       {active === 'versions' ? <VersionsTab ready={ready} siblings={b.query.data?.siblings ?? []} /> : null}
       {active === 'activity' ? <ActivityTab ready={ready} /> : null}

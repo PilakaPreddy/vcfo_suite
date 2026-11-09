@@ -1,9 +1,9 @@
 import 'server-only';
 
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import type { AuthContext } from '@/auth/guards';
 import { db } from '@/db/client';
-import { budgetRows, budgetSectionOwners, budgets } from '@/db/schema';
+import { budgetRows, budgetSectionOwners, budgetVersions, budgets, engagementLeads, engagements } from '@/db/schema';
 import { assertEngagementAccess } from '@/db/repositories/engagements';
 import { computeBudget } from '@/lib/budget/engine';
 import { BUDGET_SECTIONS, ROW_SECTION, type BudgetRow, type BudgetSection, type BudgetSettings, type BudgetState, type BudgetStatus, type MaskedPayroll, type RoleData, type RowKind } from '@/lib/budget/model';
@@ -43,8 +43,14 @@ export function isStaffRole(role: string): boolean {
   return isAdminOrManager(role) || role === 'intern';
 }
 
-export function computeAccess(ctx: AuthContext, status: BudgetStatus, owned: BudgetSection[]): BudgetAccess {
+/**
+ * `approvedEver` opens the Variance tab: actuals compare with a budget that was approved at least
+ * once, and a later revision does not close it. The project lead enters each month; a manager
+ * enters only when the client has no lead. Managers and firm admins approve months.
+ */
+export function computeAccess(ctx: AuthContext, status: BudgetStatus, owned: BudgetSection[], opts: { approvedEver?: boolean; hasLead?: boolean } = {}): BudgetAccess {
   const isStaff = isStaffRole(ctx.role);
+  const variance = isStaff && Boolean(opts.approvedEver || status === 'approved');
   const open = status === 'draft';
   const allSections = [...BUDGET_SECTIONS];
   return {
@@ -58,6 +64,9 @@ export function computeAccess(ctx: AuthContext, status: BudgetStatus, owned: Bud
     canSeeMaster: isStaff || !open,
     canEnterActuals: isStaff,
     canSeeActuals: isStaff || !open,
+    canSeeVariance: variance,
+    canEnterVariance: variance && (ctx.role === 'intern' || (isAdminOrManager(ctx.role) && opts.hasLead === false)),
+    canApproveVariance: variance && isAdminOrManager(ctx.role),
   };
 }
 
@@ -70,7 +79,23 @@ export async function loadBudget(ctx: AuthContext, budgetId: string): Promise<Lo
   if (!scope.ok) throw new BudgetError('not_found', 404);
   const owners = await db.select({ section: budgetSectionOwners.section, userId: budgetSectionOwners.userId }).from(budgetSectionOwners).where(eq(budgetSectionOwners.budgetId, budgetId));
   const owned = owners.filter((o) => o.userId === ctx.userId).map((o) => o.section as BudgetSection);
-  return { row, companyName: scope.row.companyName ?? '', access: computeAccess(ctx, row.status as BudgetStatus, owned), owned };
+  const approvedEver = row.status === 'approved' || (isStaffRole(ctx.role) && (await hasApprovedVersion(budgetId)));
+  const hasLead = approvedEver && isAdminOrManager(ctx.role) ? await engagementHasLead(row.engagementId) : true;
+  return { row, companyName: scope.row.companyName ?? '', access: computeAccess(ctx, row.status as BudgetStatus, owned, { approvedEver, hasLead }), owned };
+}
+
+/** A revision clears the approval on the header, so the frozen versions say whether one was approved. */
+async function hasApprovedVersion(budgetId: string): Promise<boolean> {
+  const [v] = await db.select({ id: budgetVersions.id }).from(budgetVersions).where(and(eq(budgetVersions.budgetId, budgetId), isNotNull(budgetVersions.approvedAt))).limit(1);
+  return Boolean(v);
+}
+
+/** Whether the client has a project lead, who then enters the monthly actuals. */
+async function engagementHasLead(engagementId: string): Promise<boolean> {
+  const [e] = await db.select({ internId: engagements.internId }).from(engagements).where(eq(engagements.id, engagementId)).limit(1);
+  if (e?.internId?.trim()) return true;
+  const [l] = await db.select({ id: engagementLeads.id }).from(engagementLeads).where(eq(engagementLeads.engagementId, engagementId)).limit(1);
+  return Boolean(l);
 }
 
 export function assertEditable(loaded: LoadedBudget, section: BudgetSection): void {

@@ -67,6 +67,16 @@ export function errorText(code: string, detail?: unknown): string {
       return 'No budget data was found in that file. Use the template for the layout.';
     case 'file_too_large':
       return 'That file is too large.';
+    case 'month_locked':
+      return 'That month is submitted or approved on the Variance tab, so it cannot change here. A manager can reopen it.';
+    case 'variance_incomplete':
+      return (detail as { message?: string } | null)?.message || 'Some lines still need an actual or a reason.';
+    case 'not_submitted':
+      return 'This month is not waiting for approval.';
+    case 'not_approved':
+      return 'Only an approved month can be reopened.';
+    case 'note_required':
+      return 'Write the reason first.';
     default:
       return 'That did not save. Try again.';
   }

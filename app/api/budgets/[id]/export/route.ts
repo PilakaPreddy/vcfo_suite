@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getBudgetView, recordBudgetExport } from '@/db/repositories/budgets';
+import { getBudgetView, getVariance, recordBudgetExport } from '@/db/repositories/budgets';
 import { renderBudgetPdf } from '@/lib/budget/pdf';
 import { budgetTemplateWorkbook, budgetWorkbook } from '@/lib/budget/xlsx';
 import { fyName } from '@/lib/budget/model';
@@ -25,10 +25,12 @@ export async function GET(request: Request, { params }: IdContext) {
     if (format === 'pdf') {
       if (!access.canSeeMaster) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
       await recordBudgetExport(guard.ctx, id, 'pdf');
-      return file(await renderBudgetPdf({ state, status: view.status, version: view.currentVersion, approvedByName: view.approvedByName, approvedAt: view.approvedAt, companyName: view.companyName }), 'application/pdf', `${base}.pdf`);
+      const variance = access.canSeeVariance ? await getVariance(guard.ctx, id) : null;
+      return file(await renderBudgetPdf({ state, status: view.status, version: view.currentVersion, approvedByName: view.approvedByName, approvedAt: view.approvedAt, companyName: view.companyName, variance }), 'application/pdf', `${base}.pdf`);
     }
     await recordBudgetExport(guard.ctx, id, 'xlsx');
-    return file(await budgetWorkbook(state, { sections, master: access.canSeeMaster }), XLSX, `${base}.xlsx`);
+    const variance = access.canSeeVariance ? await getVariance(guard.ctx, id) : null;
+    return file(await budgetWorkbook(state, { sections, master: access.canSeeMaster, variance }), XLSX, `${base}.xlsx`);
   } catch (e) {
     return budgetError(e);
   }

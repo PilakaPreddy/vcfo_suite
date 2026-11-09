@@ -16,6 +16,10 @@
  *  - budget_comments       review comments on a tab or a row.
  *  - budget_actuals        actual cost by month and budget line.
  *  - budget_attachments    supporting documents on a row, in S3.
+ *  - budget_variance_months one row per budget and month of the Variance tab: status, closing
+ *                          headcount, advance tax paid and, once approved, the budget figures of
+ *                          that month as they were, so later setting changes do not move them.
+ *  - budget_variance_log   who submitted, approved, sent back or reopened a month, and why.
  */
 import { sql } from 'drizzle-orm';
 import { bigint, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
@@ -197,4 +201,49 @@ export const budgetAttachments = pgTable(
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (t) => [index('budget_attachments_row_idx').on(t.budgetId, t.rowId)],
+);
+
+export const budgetVarianceMonths = pgTable(
+  'budget_variance_months',
+  {
+    budgetId: uuid('budget_id')
+      .notNull()
+      .references(() => budgets.id, { onDelete: 'cascade' }),
+    /** Financial-year position, 0 to 11. */
+    monthIndex: integer('month_index').notNull(),
+    /** open, draft, submitted, approved or returned. */
+    status: text('status').notNull().default('draft'),
+    headcount: doublePrecision('headcount'),
+    advanceTaxPaid: doublePrecision('advance_tax_paid'),
+    advanceTaxReason: text('advance_tax_reason'),
+    /** The last send-back comment or reopen reason. */
+    note: text('note'),
+    /** Set on approval: `{ lines: { [lineId]: number }, advanceTax: number, headcount: number }`. */
+    budgetSnapshot: jsonb('budget_snapshot'),
+    submittedBy: uuid('submitted_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+    decidedBy: uuid('decided_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    updatedBy: uuid('updated_by').references(() => base.profiles.id, { onDelete: 'set null' }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.budgetId, t.monthIndex] })],
+);
+
+export const budgetVarianceLog = pgTable(
+  'budget_variance_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    budgetId: uuid('budget_id')
+      .notNull()
+      .references(() => budgets.id, { onDelete: 'cascade' }),
+    monthIndex: integer('month_index').notNull(),
+    /** submitted, approved, sent_back or reopened. */
+    action: text('action').notNull(),
+    note: text('note'),
+    actorId: uuid('actor_id').references(() => base.profiles.id, { onDelete: 'set null' }),
+    actorName: text('actor_name'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('budget_variance_log_budget_idx').on(t.budgetId, t.monthIndex, t.createdAt)],
 );

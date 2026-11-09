@@ -14,6 +14,7 @@ import {
   type RecurringData,
   type RoleData,
 } from './model';
+import { computeTax, type TaxCalc } from './tax';
 
 /**
  * BUDGET ENGINE — the one calculation. The screens, the exports, the frozen versions and the
@@ -23,9 +24,10 @@ import {
  * in whole rupees. Each row is rounded month by month and totals add the rounded values, which
  * is the one rounding rule and the reason a column always adds up to its total.
  *
- * The formulas follow the owner's workbook (Budget_Linked_Template_v3). Tax is its formula, which
- * the owner confirmed: ((total cost - GST in the cost) x mark-up + gratuity and leave provisions)
- * x effective rate. It runs only when the client's tax mode is cost-plus.
+ * The formulas follow the owner's workbook (Budget_Linked_Template_v3). Income tax comes from
+ * `tax.ts`: the yearly figure of the full computation (cost base, mark-up, add-backs, both
+ * depreciation methods), spread across the months by each month's cost base. It runs only when
+ * the client's tax mode is cost-plus.
  */
 
 export type Series = number[];
@@ -80,6 +82,8 @@ export interface BudgetResult {
   gstInCost: Series;
   taxBase: Series;
   tax: Series;
+  /** The full income-tax computation on the budget alone. */
+  taxDetail: TaxCalc;
   grandTotal: Series;
   effectiveTaxRate: number;
   costPerEmployeeMonth: number;
@@ -389,11 +393,11 @@ export function computeBudget(state: BudgetState): BudgetResult {
   for (const g of groups) addInto(operating, g.total);
   const gstInCost = zeros();
   for (const r of Object.values(rows)) addInto(gstInCost, r.gst);
-  const taxBase = operating.map((x, i) => x - gstInCost[i]);
-  const t = settings.tax;
-  const effectiveTaxRate = t.mode === 'cost_plus' ? (num(t.ratePct) / 100) * (1 + num(t.surchargePct) / 100) * (1 + num(t.cessPct) / 100) : 0;
-  const gratuityLine = lines[systemLine('gratuity') ?? ''] ?? zeros();
-  const tax = taxBase.map((x, i) => (t.mode === 'cost_plus' ? rupee((x * (num(t.markupPct) / 100) + gratuityLine[i]) * effectiveTaxRate) : 0));
+  const labels = fyLabels(settings);
+  const taxDetail = computeTax(settings, state.rows, { labels, calendar, lines, headcount: { closing }, gstInCost, rows });
+  const taxBase = taxDetail.base;
+  const effectiveTaxRate = taxDetail.effectiveRate;
+  const tax = taxDetail.monthlyTax;
   const grandTotal = operating.map((x, i) => x + tax[i]);
   const employeeMonths = sumSeries(closing);
 
@@ -453,7 +457,7 @@ export function computeBudget(state: BudgetState): BudgetResult {
   const firstMonthCalc = roleRows.reduce((a, r) => a + num((r.data as RoleData).opening) * (num((r.data as RoleData).ctc) / 12), 0);
 
   return {
-    labels: fyLabels(settings),
+    labels,
     calendar,
     roles,
     rows,
@@ -465,6 +469,7 @@ export function computeBudget(state: BudgetState): BudgetResult {
     gstInCost,
     taxBase,
     tax,
+    taxDetail,
     grandTotal,
     effectiveTaxRate,
     costPerEmployeeMonth: employeeMonths ? sumSeries(grandTotal) / employeeMonths : 0,

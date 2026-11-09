@@ -142,9 +142,20 @@ Demo logins:
 - `intern@vcfo.local` / `intern123` (Project Lead)
 - `client@vcfo.local` / `client123` (Client)
 
-## Budget module (branch `feat/budget`, 6 Nov 2026, not merged or deployed)
+## Budget module (PR #25 merged to `main` on 9 Nov 2026, not deployed)
 
 Built on the owner's instruction with no tests run and none written; the owner tests it personally.
-`tsc --noEmit` passes once `unpdf` from `main` is installed. Needs migration `0048_budgets` on RDS
-before deploy. Spec and decisions: `docs/specs/budget/PLAN.md`. Gotchas: `docs/context/notes/budget.md`.
+Needs migration `0048_budgets` on RDS before deploy. Spec and decisions: `docs/specs/budget/PLAN.md`.
+Gotchas: `docs/context/notes/budget.md`.
+
+### Variance tab and advance tax (branch `feat/budget-variance`, 9 Nov 2026, not merged or deployed)
+
+Built from the team's edited prototype (`budget-prototype_2.html`). A Variance tab (staff only, on a
+budget approved at least once): the project lead enters each month's actual cost, reasons, closing
+headcount and advance tax paid, and submits; a manager or firm admin approves, sends back or reopens
+with a reason. The Finance costs tab gets the full income-tax computation (prepaid insurance, both
+depreciation methods, gratuity and leave add-back, surcharge slabs) and the four advance tax
+instalments; the Master Budget tax row now uses that yearly figure. Needs migration
+`0049_budget_variance` on RDS before deploy. Demo data: `scripts/seed-budget-variance-demo.ts`
+(Solstice: April to September approved, October submitted). Typecheck clean, lint 0 errors; no tests.
 

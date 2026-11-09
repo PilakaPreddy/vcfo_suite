@@ -9,6 +9,7 @@ import { bucketKey, deleteObject, putObject, signedDownloadUrl } from '@/storage
 import { fyIndexOfPeriod, ROW_SECTION, type BudgetSection, type BudgetSettings, type RowKind } from '@/lib/budget/model';
 import type { ActualRow, AttachmentEntry, ChangeEntry, CommentEntry } from '@/lib/budget/wire';
 import { BudgetError, loadBudget } from './shared';
+import { assertActualsUnlocked } from './variance';
 
 /** The change log. A client sees only the tabs they can see, and no CTC history without HR access. */
 export async function listChanges(ctx: AuthContext, budgetId: string, input: { rowId?: string | null } = {}): Promise<ChangeEntry[]> {
@@ -70,6 +71,8 @@ export async function saveActuals(ctx: AuthContext, budgetId: string, entries: {
   const settings = row.settings as BudgetSettings;
   const known = new Set(settings.lines.map((l) => l.id));
   const valid = entries.filter((e) => known.has(e.lineId) && fyIndexOfPeriod(settings, e.period) >= 0);
+  /* A month submitted or approved on the Variance tab changes only through that tab. */
+  await assertActualsUnlocked(budgetId, settings, valid.map((e) => e.period));
   await db.transaction(async (tx) => {
     for (const e of valid) {
       const key = and(eq(budgetActuals.budgetId, budgetId), eq(budgetActuals.period, e.period), eq(budgetActuals.lineId, e.lineId));

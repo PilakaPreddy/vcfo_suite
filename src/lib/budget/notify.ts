@@ -131,3 +131,22 @@ export function notifyOverspend(budgetId: string, period: string, lines: { name:
     await deliver({ budgetId, engagementId: p.engagementId, companyName: p.companyName, people: [...p.staff, ...p.clients], title: 'Budget overspend', body: `With actual cost through ${period}, these lines of the ${p.fyName} budget are over their limit: ${list}.` });
   });
 }
+
+/**
+ * Variance months. Submit goes to the client's managers; approve, send back and reopen go to the
+ * project leads. The client is never told: the Variance tab is for staff only.
+ */
+export function notifyVarianceMonth(budgetId: string, action: 'submit' | 'approve' | 'send_back' | 'reopen', monthLabel: string, note: string | null, actor: Actor) {
+  return safely(`variance ${action}`, async () => {
+    const p = await systemBudgetParties(budgetId);
+    if (!p) return;
+    const people = action === 'submit' ? p.managers : p.leads.length ? p.leads : p.managers;
+    const words = {
+      submit: { title: `Variance waiting for approval: ${monthLabel}`, body: `${actor.name} submitted the actual cost for ${monthLabel} of the ${p.fyName} budget for ${p.companyName}. Please approve it or send it back.` },
+      approve: { title: `Variance approved: ${monthLabel}`, body: `${actor.name} approved the actual cost for ${monthLabel} of the ${p.fyName} budget for ${p.companyName}. The month is now locked.` },
+      send_back: { title: `Variance sent back: ${monthLabel}`, body: `${actor.name} sent back the actual cost for ${monthLabel} of the ${p.fyName} budget for ${p.companyName}. What to change: ${note ?? ''}` },
+      reopen: { title: `Variance month reopened: ${monthLabel}`, body: `${actor.name} reopened ${monthLabel} of the ${p.fyName} budget for ${p.companyName}. Reason: ${note ?? ''}` },
+    }[action];
+    await deliver({ budgetId, engagementId: p.engagementId, companyName: p.companyName, people, title: words.title, body: words.body, actor });
+  });
+}

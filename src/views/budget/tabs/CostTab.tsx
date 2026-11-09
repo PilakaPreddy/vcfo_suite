@@ -1,11 +1,12 @@
 'use client';
 
 import { sumSeries } from '@/lib/budget/engine';
-import { FREQUENCIES, MONTHS, TAX_PRESETS, type OnceData, type RecurringData } from '@/lib/budget/model';
+import { FREQUENCIES, MONTHS, type OnceData, type RecurringData } from '@/lib/budget/model';
 import { cn } from '@/lib/utils';
-import { Block, Field, NumberCell, SelectCell, TextCell } from '../cells';
+import { Block, NumberCell, SelectCell, TextCell } from '../cells';
 import { inr } from '../format';
 import { AddRow, CalcCells, GRID, GridScroll, IssueList, MonthHeads, MoreCell, NoRows, STICKY, TD, TD_NAME, TH } from '../grid-parts';
+import { AdvanceTax } from '../tax/AdvanceTax';
 import { lineOptions, rowsOf, type Ready } from '../types';
 
 const FREQS = Object.entries(FREQUENCIES).map(([value, f]) => ({ value, label: f.label }));
@@ -37,7 +38,7 @@ export function CostTab({ ready, section }: { ready: Ready; section: 'admin' | '
   return (
     <div className="flex flex-col gap-4">
       <IssueList ready={ready} section={section} />
-      {section === 'finance' ? <TaxBlock ready={ready} /> : null}
+      {section === 'finance' ? <AdvanceTax ready={ready} /> : null}
       <Block
         title="Recurring costs"
         hint={section === 'admin' ? 'Costs that do not follow headcount: rent, internet, compliance, software.' : 'Fees and charges: audit, valuation, bank charges.'}
@@ -169,46 +170,5 @@ export function CostTab({ ready, section }: { ready: Ready; section: 'admin' | '
         )}
       </Block>
     </div>
-  );
-}
-
-function TaxBlock({ ready }: { ready: Ready }) {
-  const { settings, result, b } = ready;
-  const canEdit = ready.canEdit('settings');
-  const t = settings.tax;
-  const set = (patch: Partial<typeof t>) => b.patchSettings({ tax: { ...t, ...patch } });
-  const on = t.mode === 'cost_plus';
-  return (
-    <Block title="Income tax assumptions" hint={on ? `Effective rate ${(result.effectiveTaxRate * 100).toFixed(3)}%. Tax = ((total cost − GST) × mark-up + gratuity and leave provisions) × effective rate. An estimate, not tax advice.` : 'Off for this client. Turn it on for a cost-plus company.'}>
-      <div className="grid gap-3 p-4 sm:grid-cols-3 lg:grid-cols-6">
-        <Field label="Include in budget">
-          <SelectCell label="Include income tax" blank={false} value={t.mode} disabled={!canEdit} options={[{ value: 'none', label: 'No' }, { value: 'cost_plus', label: 'Yes, cost plus' }]} onChange={(v) => set({ mode: v as typeof t.mode })} />
-        </Field>
-        <Field label="Preset">
-          <SelectCell
-            label="Tax preset"
-            value=""
-            disabled={!canEdit || !on}
-            options={TAX_PRESETS.map((p) => ({ value: p.key, label: p.label }))}
-            onChange={(key) => {
-              const p = TAX_PRESETS.find((x) => x.key === key);
-              if (p) set({ ratePct: p.ratePct, surchargePct: p.surchargePct, cessPct: p.cessPct });
-            }}
-          />
-        </Field>
-        <Field label="Mark-up %">
-          <NumberCell label="Mark-up percent" percent value={t.markupPct} disabled={!canEdit || !on} onChange={(v) => set({ markupPct: v ?? 0 })} />
-        </Field>
-        <Field label="Tax rate %">
-          <NumberCell label="Tax rate" percent value={t.ratePct} disabled={!canEdit || !on} onChange={(v) => set({ ratePct: v ?? 0 })} />
-        </Field>
-        <Field label="Surcharge %">
-          <NumberCell label="Surcharge" percent value={t.surchargePct} disabled={!canEdit || !on} onChange={(v) => set({ surchargePct: v ?? 0 })} />
-        </Field>
-        <Field label="Cess %">
-          <NumberCell label="Cess" percent value={t.cessPct} disabled={!canEdit || !on} onChange={(v) => set({ cessPct: v ?? 0 })} />
-        </Field>
-      </div>
-    </Block>
   );
 }

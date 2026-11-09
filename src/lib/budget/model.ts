@@ -80,13 +80,43 @@ export interface FxRate {
   monthly: Months12;
 }
 
+/**
+ * One block of assets for depreciation. The Income-tax Act depreciates a block on written-down
+ * value at its rate; the Companies Act 2013 uses a written-down-value rate worked out from the
+ * useful life in Schedule II with a 5% residual value.
+ */
+export interface AssetBlock {
+  id: string;
+  name: string;
+  itRatePct: number;
+  lifeYears: number;
+  /** Written-down value on the first day of the year, under each Act. */
+  openingIt: number;
+  openingCos: number;
+  /** A budget line whose cost is capitalised into this block (for example Laptops). Empty for none. */
+  linkLineId: string;
+  /** Further additions by calendar month, typed by hand. */
+  additions: Months12;
+}
+
 export interface TaxSettings {
   /** `none` hides the whole block: not every client is a cost-plus company. */
   mode: 'none' | 'cost_plus';
+  /** The preset last chosen; empty once a rate is typed by hand. */
+  preset?: string;
   markupPct: number;
   ratePct: number;
+  /** Used when `surchargeBySlab` is off. */
   surchargePct: number;
+  /** The regular regime: 0% up to 1 crore of taxable income, 7% up to 10 crore, 12% above. */
+  surchargeBySlab?: boolean;
   cessPct: number;
+  /** Premium per employee per year. When either is above 0, insurance is taken on a prepaid basis. */
+  insuranceGroupPerYear?: number;
+  insuranceWcPerYear?: number;
+  /** The budget lines that hold the insurance as booked or paid. */
+  insuranceLineIds?: string[];
+  assetBlocks?: AssetBlock[];
 }
 
 export interface StatutorySettings {
@@ -336,7 +366,7 @@ export function defaultSettings(fyStartYear: number, fyStartMonth = 4): BudgetSe
     currentMonthlyPayroll: 0,
     payrollSource: 'roles',
     statutory: { enabled: false, basicSharePct: 40, pfPct: 12, pfWageCap: 15000, esiPct: 3.25, esiWageLimit: 21000, gratuityPct: 4.81, leavePct: 0 },
-    tax: { mode: 'none', markupPct: 0, ratePct: 22, surchargePct: 10, cessPct: 4 },
+    tax: withTaxDefaults({ mode: 'none', preset: 'concessional_22', markupPct: 0, ratePct: 22, surchargePct: 10, cessPct: 4 }),
     openingCash: 0,
     minimumCash: 0,
     scenarios: { high: { hiresPct: 20, costPct: 10 }, low: { hiresPct: -20, costPct: -5 } },
@@ -345,13 +375,44 @@ export function defaultSettings(fyStartYear: number, fyStartMonth = 4): BudgetSe
   };
 }
 
-/** Starting values for the tax block. The firm must confirm these for each client. */
+/**
+ * Starting values for the tax block under the Income-tax Act 2025 (in force from 1 April 2026).
+ * The firm must confirm these for each client. The concessional regime has a flat 10% surcharge;
+ * the regular regime takes its surcharge from the slab of taxable income.
+ */
 export const TAX_PRESETS = [
-  { key: 'sec_115baa', label: 'Section 115BAA (22%)', ratePct: 22, surchargePct: 10, cessPct: 4 },
-  { key: 'sec_115bab', label: 'Section 115BAB (15%)', ratePct: 15, surchargePct: 10, cessPct: 4 },
-  { key: 'regular_25', label: 'Regular domestic (25%)', ratePct: 25, surchargePct: 7, cessPct: 4 },
-  { key: 'regular_30', label: 'Regular domestic (30%)', ratePct: 30, surchargePct: 7, cessPct: 4 },
+  { key: 'concessional_22', label: 'Concessional regime (22%)', ratePct: 22, surchargePct: 10, surchargeBySlab: false, cessPct: 4 },
+  { key: 'regular_25', label: 'Regular regime, smaller company (25%)', ratePct: 25, surchargePct: 0, surchargeBySlab: true, cessPct: 4 },
+  { key: 'regular_30', label: 'Regular regime (30%)', ratePct: 30, surchargePct: 0, surchargeBySlab: true, cessPct: 4 },
 ] as const;
+
+/** The blocks a budget starts with. Software sits in the computers block at 40%. */
+export function defaultAssetBlocks(): AssetBlock[] {
+  return [
+    { id: 'blk_computers', name: 'Computers and software', itRatePct: 40, lifeYears: 3, openingIt: 0, openingCos: 0, linkLineId: 'laptops', additions: zero12() },
+    { id: 'blk_furniture', name: 'Furniture and fittings', itRatePct: 10, lifeYears: 10, openingIt: 0, openingCos: 0, linkLineId: '', additions: zero12() },
+    { id: 'blk_office', name: 'Office equipment', itRatePct: 15, lifeYears: 5, openingIt: 0, openingCos: 0, linkLineId: '', additions: zero12() },
+  ];
+}
+
+export const DEFAULT_INSURANCE_LINES = ['group_insurance', 'workers_comp'];
+
+/** Tax settings with every newer field filled, for budgets saved before those fields existed. */
+export function withTaxDefaults(t: Partial<TaxSettings> | undefined): Required<TaxSettings> {
+  return {
+    mode: t?.mode ?? 'none',
+    preset: t?.preset ?? '',
+    markupPct: t?.markupPct ?? 0,
+    ratePct: t?.ratePct ?? 22,
+    surchargePct: t?.surchargePct ?? 10,
+    surchargeBySlab: t?.surchargeBySlab ?? false,
+    cessPct: t?.cessPct ?? 4,
+    insuranceGroupPerYear: t?.insuranceGroupPerYear ?? 0,
+    insuranceWcPerYear: t?.insuranceWcPerYear ?? 0,
+    insuranceLineIds: t?.insuranceLineIds ?? [...DEFAULT_INSURANCE_LINES],
+    assetBlocks: t?.assetBlocks?.length ? t.assetBlocks : defaultAssetBlocks(),
+  };
+}
 
 /** Calendar month number (1 to 12) of each financial-year position. */
 export function fyCalendarMonths(fyStartMonth: number): number[] {
