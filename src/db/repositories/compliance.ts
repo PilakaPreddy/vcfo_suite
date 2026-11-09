@@ -16,6 +16,8 @@ import {
 import type { AuthContext } from '@/auth/guards';
 import { isAdminOrManager } from '@/lib/auth';
 import { generateComplianceInstances } from '@/lib/compliance/generate-instances';
+import { extractTriggersFromChecklist } from '@/lib/compliance/extract-triggers';
+import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
 import { COMPLIANCE_OBLIGATIONS } from '@/lib/compliance/obligations-seed';
 import { OBLIGATION_ACTIVITY } from '@/data/compliance-activities';
 import {
@@ -70,6 +72,15 @@ function triggersFromRow(
     tdsLiabilityStartDate: row.tdsLiabilityStartDate,
     agmDate: row.agmDate,
   };
+}
+
+/** The stored trigger row, filled in from the checklist's registration answers. */
+export function complianceTriggersFor(
+  row: EngagementComplianceTriggersRow,
+  checklistState: unknown,
+): EngagementComplianceTriggers {
+  const state = (checklistState && typeof checklistState === 'object' ? checklistState : {}) as Record<string, ChecklistItemStateSlice>;
+  return extractTriggersFromChecklist(state, triggersFromRow(row));
 }
 
 interface UpsertComplianceInstanceInput {
@@ -257,7 +268,10 @@ export async function systemGenerateComplianceInstances(
       engagement.internId,
       engagement.adminId,
     );
-    const triggers = triggersFromRow(trigger);
+    // Nothing writes engagement_compliance_triggers yet, so the registration dates come from the
+    // registration steps themselves (GST reg-4, PF reg-1, ESI reg-3, TAN reg-2), the same way the
+    // client-side calendar reads them (UAT D-T13-01).
+    const triggers = complianceTriggersFor(trigger, engagement.checklistState);
     if (!triggers.incorporationDate && engagement.incorporationDate) {
       triggers.incorporationDate = engagement.incorporationDate;
     }

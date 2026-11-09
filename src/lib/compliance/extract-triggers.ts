@@ -18,7 +18,12 @@ export function extractTriggersFromChecklist(
   const gstRegistrationDate = pickDate(state, 'reg-4', 'gstRegistrationDate');
   const pfRegistrationDate = pickDate(state, 'reg-1', 'pfRegistrationDate');
   const esiRegistrationDate = pickDate(state, 'reg-3', 'esiRegistrationDate');
-  const tanRegistrationDate = pickDate(state, 'reg-2', 'panTanAllotmentDate');
+  // SPICe+ allots the TAN with the certificate of incorporation, so a TAN on pre-12 dates from
+  // the incorporation day when reg-2 has no allotment date of its own (UAT D-T13-01).
+  const tanOnCertificate = pickDate(state, 'pre-12', 'tan');
+  const tanRegistrationDate =
+    pickDate(state, 'reg-2', 'panTanAllotmentDate') ?? (tanOnCertificate ? incorporationDate : null);
+  const ptRegistrationDate = pickDate(state, 'reg-7', 'ptRegistrationDate');
 
   return {
     incorporationDate: incorporationDate ?? existing?.incorporationDate ?? null,
@@ -28,7 +33,7 @@ export function extractTriggersFromChecklist(
     tanRegistrationDate: tanRegistrationDate ?? existing?.tanRegistrationDate ?? null,
     tdsLiabilityStartDate:
       tanRegistrationDate ?? existing?.tdsLiabilityStartDate ?? null,
-    ptRegistrationDate: existing?.ptRegistrationDate ?? null,
+    ptRegistrationDate: ptRegistrationDate ?? existing?.ptRegistrationDate ?? null,
     agmDate: existing?.agmDate ?? null,
   };
 }

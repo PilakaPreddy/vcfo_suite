@@ -102,5 +102,78 @@
       "src/views/engagement/EngagementStepDetail.tsx"
     ],
     "status": "fixed"
+  },
+  {
+    "id": "D-T11-01",
+    "test": "T-11",
+    "step": 2,
+    "severity": "S3",
+    "title": "Board meeting errors show raw codes such as \"bad_link\"",
+    "who": "project lead and manager, on the meeting notice",
+    "cause": "The board-meeting repository throws short codes (bad_link, no_director_email, venue_required and 21 more). The shared error helper had no sentence for them, so the toast showed the code itself.",
+    "fix": "The shared code-to-sentence table now has a plain sentence for all 24 board-meeting codes. A unit test covers it.",
+    "files": [
+      "src/lib/toast-errors.ts",
+      "src/lib/toast-errors.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T13-01",
+    "test": "T-13",
+    "step": 1,
+    "severity": "S1",
+    "title": "Monthly GST, PF and TDS filings were never generated after the registrations",
+    "who": "every client and every lead: the compliance calendar, filings list and reminders",
+    "cause": "The daily compliance job reads registration dates only from the table engagement_compliance_triggers, and nothing in the app ever writes that table. So after GST (20 Sep), PF (22 Sep) and ESI (25 Sep) were registered, the job still produced only 29 annual items: no GSTR-1, GSTR-3B, PF payment or TDS. The TAN date was also never set, because the TAN arrives with the certificate of incorporation.",
+    "fix": "The job now reads the dates from the registration steps themselves, with the helper the client-side calendar already uses. A TAN on the certificate of incorporation dates from the incorporation day. Kaveri Foods now gets 142 dated items: GSTR-1 on the 11th, GSTR-3B on the 20th, PF on the 15th, TDS on the 7th and the quarterly TDS returns. Unit tests cover it.",
+    "files": [
+      "src/db/repositories/compliance.ts",
+      "src/lib/compliance/extract-triggers.ts",
+      "src/db/repositories/compliance-triggers.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "O-T13-01",
+    "test": "T-13",
+    "step": 2,
+    "severity": "owner",
+    "title": "Compliance list: missing filings and two dates to confirm",
+    "who": "every client",
+    "cause": "Checked against the statutory calendar: (1) there is no Professional Tax filing (Karnataka: monthly by the 20th) and no monthly ESI contribution (by the 15th), only the half-yearly ESI return; (2) the company ITR is set for 31 July, but a company whose accounts are audited files by 31 October; (3) a company incorporated on 1 Aug 2026 gets a DIR-3 KYC due 30 Sep 2026, although new DIN holders file by 30 Sep of the next financial year.",
+    "fix": "Not changed: these are additions or changes to the obligations list (src/lib/compliance/obligations-seed.ts) that a compliance partner should confirm first.",
+    "files": [
+      "src/lib/compliance/obligations-seed.ts"
+    ],
+    "status": "owner-decision"
+  },
+  {
+    "id": "O-T14-01",
+    "test": "T-14",
+    "step": 5,
+    "severity": "owner",
+    "title": "Overdue filings do not change a project's health",
+    "who": "managers and admins reading the project list",
+    "cause": "Project health (Waiting, Overdue, Stuck\u2026) is worked out from the checklist steps only. Kaveri Foods had 10 overdue statutory filings and still showed as on track.",
+    "fix": "Not changed: decide whether overdue compliance filings should turn a project's health to Overdue in the project list.",
+    "files": [
+      "src/views/admin/clients/client-row.tsx"
+    ],
+    "status": "owner-decision"
+  },
+  {
+    "id": "O-T13-02",
+    "test": "T-13",
+    "step": 1,
+    "severity": "S3",
+    "title": "The Lead column on Filings is empty, and GSTIN is not carried into the GST filing",
+    "who": "staff on Compliances \u203a Filings",
+    "cause": "Each stored filing has its owner (the lead) set, but the Lead column shows a dash. The GSTR-1 filing asks for the GSTIN although GST Registration already holds 29AAKCK1234F1Z5.",
+    "fix": "Not changed in this run (cosmetic and convenience). Worth a small follow-up.",
+    "files": [
+      "src/views/compliances/FilingsView.tsx"
+    ],
+    "status": "open"
   }
 ]

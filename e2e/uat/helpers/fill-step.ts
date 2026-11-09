@@ -117,9 +117,11 @@ async function fillVisible(page: Page, plan: FillPlan): Promise<string[]> {
   for (let i = 0; i < (await combos.count()); i++) {
     const c = combos.nth(i);
     const text = (await c.innerText().catch(() => '')).trim();
-    if (text && !/select|choose|pick/i.test(text)) continue;
+    const cid = ((await c.getAttribute('id')) ?? '').slice(plan.itemId.length + 1);
+    const wanted = plan.values?.[cid];
+    if (text && !/select|choose|pick/i.test(text) && (!wanted || text.includes(wanted))) continue;
     await c.click().catch(() => {});
-    const opt = page.getByRole('option').first();
+    const opt = wanted ? page.getByRole('option', { name: wanted }).first() : page.getByRole('option').first();
     if (await opt.count()) {
       did.push(`${text || 'list'} → ${(await opt.innerText()).trim()}`);
       await opt.click();
@@ -128,7 +130,14 @@ async function fillVisible(page: Page, plan: FillPlan): Promise<string[]> {
   const selects = page.locator(`select[id^="${plan.itemId}-"]`).locator('visible=true');
   for (let i = 0; i < (await selects.count()); i++) {
     const s = selects.nth(i);
-    if (await s.inputValue()) continue;
+    const sid = ((await s.getAttribute('id')) ?? '').slice(plan.itemId.length + 1);
+    const wanted = plan.values?.[sid];
+    if ((await s.inputValue()) && !wanted) continue;
+    if (wanted) {
+      await s.selectOption({ label: wanted }).catch(async () => s.selectOption(wanted));
+      did.push(`select → ${wanted}`);
+      continue;
+    }
     const opts = await s.locator('option').evaluateAll((o) => o.map((x) => (x as HTMLOptionElement).value).filter(Boolean));
     if (opts[0]) {
       await s.selectOption(opts[0]);
@@ -154,11 +163,12 @@ async function fillVisible(page: Page, plan: FillPlan): Promise<string[]> {
 }
 
 /** Click the step's main action: Submit, or Request manager approval for an approval step. */
-export async function submitStep(page: Page): Promise<string> {
+export async function submitStep(page: Page, action: 'submit' | 'approval' = 'submit'): Promise<string> {
   // Let the autosave finish first, as a person would see "Saved" before submitting.
   await page.getByText(/^Saved/).locator('visible=true').first().waitFor({ timeout: 6000 }).catch(() => {});
   await page.waitForTimeout(1200);
-  for (const name of [/^Submit$/, /^Submit for review/, /^Request manager approval/, /^Mark complete/, /^Complete step/]) {
+  const order = action === 'approval' ? [/^Request manager approval/, /^Submit$/] : [/^Submit$/, /^Submit for review/, /^Request manager approval/, /^Mark complete/, /^Complete step/];
+  for (const name of order) {
     const b = page.getByRole('button', { name }).locator('visible=true').first();
     if ((await b.count()) && (await b.isEnabled())) {
       const text = (await b.innerText()).trim();
@@ -199,6 +209,7 @@ export async function runStep(
     title: string;
     plan?: Omit<FillPlan, 'itemId'>;
     expectStatus?: RegExp;
+    action?: 'submit' | 'approval';
   },
 ): Promise<string> {
   const base = o.role.startsWith('lead') ? `/app/intern/engagements/${o.engagement.slug}` : `/app/${o.role}/projects/${o.engagement.slug}`;
@@ -218,9 +229,10 @@ export async function runStep(
     detail: did.join('\n').slice(0, 1500),
     marks: [{ at: submit, kind: 'focus', n: 1 }],
   });
-  const clicked = await submitStep(page);
+  const clicked = await submitStep(page, o.action);
   await page.waitForTimeout(1500);
-  const after = (await stepState(o.engagement.id, o.itemId)).status ?? 'not-started';
+  const afterSlice = await stepState(o.engagement.id, o.itemId);
+  const after = o.action === 'approval' ? `${afterSlice.status ?? 'not-started'} · review ${afterSlice.reviewStatus ?? '—'}` : afterSlice.status ?? 'not-started';
   const ok = (o.expectStatus ?? /completed|awaiting|waiting|review|pending/).test(after);
   const errs = ok ? [] : await visibleErrors(page);
   await shot(page, {

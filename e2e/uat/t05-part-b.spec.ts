@@ -15,7 +15,7 @@ test('T-05 SPICe+ checklist (Part B)', async ({ browser }) => {
   const o = { test: T, role: 'lead' as const, engagement: trackA };
 
   await runStep(lead, { ...o, stepNo: 1, itemId: 'pre-13', slug: 'capital-structure', title: 'Capital Structure', plan: { choices: { 'Equity': 'Yes', 'Preference': 'No' } } });
-  await runStep(lead, { ...o, stepNo: 2, itemId: 'pre-14', slug: 'registered-office-address', title: 'Registered Office Address', plan: { values: { addressLine1: TRACK_A.office.line1, city: TRACK_A.office.city, pincode: TRACK_A.office.pin }, file: 'office-noc.pdf' } });
+  await runStep(lead, { ...o, stepNo: 2, itemId: 'pre-14', slug: 'registered-office-address', title: 'Registered Office Address', plan: { values: { registeredOfficeCompleteAddress: `${TRACK_A.office.line1}, ${TRACK_A.office.city}, ${TRACK_A.office.state} ${TRACK_A.office.pin}`, registeredOfficeState: 'Karnataka', registeredOfficeUtilityBillType: 'Electricity', registeredOfficeUtilityBillNumber: 'BESCOM-7730012345' }, file: 'office-noc.pdf' } });
   await runStep(lead, { ...o, stepNo: 3, itemId: 'pre-15', slug: 'proposed-directors', title: 'Proposed Directors', plan: { file: 'pan-kiran.pdf' } });
   await runStep(lead, { ...o, stepNo: 4, itemId: 'pre-16', slug: 'subscriber-details', title: 'Subscriber Details', plan: { file: 'address-proof-kiran.pdf' } });
 
