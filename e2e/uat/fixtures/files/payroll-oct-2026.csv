@@ -1,0 +1,13 @@
+Employee ID,Name,Designation,State,Paid days,Basic,HRA,Allowances,Variable pay,PF applicable,Professional tax,TDS
+E001,Arjun Kumar,Production Supervisor,Karnataka,31,16000,6400,9600,0,Yes,200,0
+E002,Divya Nair,Quality Analyst,Karnataka,31,14000,5600,8400,0,Yes,200,0
+E003,Ravi Teja,Machine Operator,Karnataka,31,9000,3600,5400,0,Yes,0,0
+E004,Sunita Devi,Packer,Karnataka,31,7500,3000,4500,0,Yes,0,0
+E005,Mohammed Irfan,Machine Operator,Karnataka,29,9000,3600,5400,0,Yes,0,0
+E006,Lakshmi Prasad,Store Keeper,Karnataka,31,10000,4000,6000,0,Yes,0,0
+E007,Vikram Singh,Driver,Karnataka,30,8500,3400,5100,0,Yes,0,0
+E008,Pooja Hegde,Accounts Assistant,Karnataka,31,11000,4400,6600,0,Yes,0,0
+E009,Naveen Gowda,Helper,Karnataka,27,7000,2800,4200,0,Yes,0,0
+E010,Shabana Begum,Packer,Karnataka,31,7500,3000,4500,0,Yes,0,0
+E011,Rahul Menon,Maintenance Technician,Karnataka,31,12000,4800,7200,0,Yes,0,0
+E012,Kavya Reddy,HR Executive,Karnataka,31,13000,5200,7800,0,Yes,200,0

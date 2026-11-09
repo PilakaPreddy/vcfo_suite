@@ -83,3 +83,15 @@ describe('suggestions follow the company type', () => {
     expect(listSuggestions('client', snap('company', 'foreign')).map((s) => s.id)).toContain('client-fc-gpr');
   });
 });
+
+describe('next step for a company that is already incorporated (UAT D-T18-01)', () => {
+  it('does not send a client who joined at Registration back to Part A', () => {
+    const s = buildSnapshot({
+      engagement: { companyName: 'Kaveri Foods Private Limited', entityLegalForm: 'company', companyType: 'domestic', ownershipType: 'independent', stage: 'Post-Incorporation', incorporationDate: '2026-08-01', schedule: null },
+      state: { 'pre-12': { status: 'completed' } } as never,
+      filings: [],
+      now: new Date('2026-11-10T09:00:00Z'),
+    });
+    expect(s.currentStep?.id ?? 'none').not.toMatch(/^pre-/);
+  });
+});

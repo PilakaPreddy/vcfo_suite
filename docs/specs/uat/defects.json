@@ -175,5 +175,79 @@
       "src/views/compliances/FilingsView.tsx"
     ],
     "status": "open"
+  },
+  {
+    "id": "D-T16-01",
+    "test": "T-16",
+    "step": 3,
+    "severity": "S1",
+    "title": "Payroll is saved only in the browser of the person who typed it",
+    "who": "managers and clients (they see an empty payroll); the lead loses the work on another computer",
+    "cause": "Payroll is a first version: the salary table and stage status live in the browser's local storage (src/views/payroll/use-payroll-cycle.ts says so). Nothing reaches the database, so the manager could not review and the client could not see the October payroll the lead imported.",
+    "fix": "Not fixed in this run: it needs a payroll table (a migration), a repository with an AuthContext and routes, and the hook pointed at them. The calculations themselves are correct: all five totals matched the hand-worked figures. Do not use Payroll with clients until this is built.",
+    "files": [
+      "src/views/payroll/use-payroll-cycle.ts"
+    ],
+    "status": "open"
+  },
+  {
+    "id": "D-T17-01",
+    "test": "T-17",
+    "step": 2,
+    "severity": "S1",
+    "title": "A budget cannot be published or approved unless a note is typed",
+    "who": "manager and firm admin (Publish), client and firm admin (Approve)",
+    "cause": "The workspace sends note: null when the note box is empty. The workflow route accepted a missing note but refused null, so Publish showed \"Not done \u2014 That did not save. Try again.\" and the budget stayed a draft. Approve had the same rule.",
+    "fix": "The route's rules move to src/lib/budget/workflow-schema.ts and accept an empty note for Publish and Approve. Return and Revise still need a reason. Unit tests cover both.",
+    "files": [
+      "src/lib/budget/workflow-schema.ts",
+      "src/lib/budget/workflow-schema.test.ts",
+      "app/api/budgets/[id]/workflow/route.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T03-01",
+    "test": "T-03",
+    "step": 1,
+    "severity": "S2",
+    "title": "Creating a project fires about 48 failing task saves with demo assignees",
+    "who": "admin and manager who create projects (server errors on every creation)",
+    "cause": "After a project is created, the browser seeded one task per checklist step from the old demo data, assigned to tm1, tm2 and tm3. Those are not people, so every save failed in the database (invalid uuid \"tm1\"), and the page briefly showed fake tasks until it reloaded.",
+    "fix": "The demo task seeding after project creation is removed. Nothing real is lost: none of those saves ever succeeded. The clean run's server log confirms no task errors on project creation.",
+    "files": [
+      "src/context/app-provider/use-record-actions.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T18-01",
+    "test": "T-18",
+    "step": 3,
+    "severity": "S2",
+    "title": "Ask VCFO tells an incorporated client their next step is the incorporation questionnaire",
+    "who": "clients whose project started at Registration or Compliance",
+    "cause": "\"What is my next step?\" took the first open step of the whole checklist. Kaveri Foods started at Registration and is incorporated, but Part A was never filled, so the answer was \"Your next step is Client Details\" with the foreign-entity fields.",
+    "fix": "Once the company is incorporated, incorporation steps are skipped when the assistant picks the next step. A unit test covers it.",
+    "files": [
+      "src/lib/ask/snapshot-build.ts",
+      "src/lib/ask/__tests__/snapshot.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "O-T18-02",
+    "test": "T-03",
+    "step": 6,
+    "severity": "S2",
+    "title": "Projects that start at Registration still show \"Step 1 \u00b7 Client Details\" and \"Incorporation 3/14\"",
+    "who": "staff on the project list; the client in the portal sidebar",
+    "cause": "The project list's \"Now at\" column and the client sidebar count the incorporation checklist even for a company that joined already incorporated. The steps are not marked not-applicable when a project starts at Registration or Compliance.",
+    "fix": "Not changed in this run: decide whether a project that starts at Registration should mark the incorporation steps not applicable when it is created (then the list, sidebar and progress all follow).",
+    "files": [
+      "src/db/repositories/engagements",
+      "src/components/client-portal"
+    ],
+    "status": "open"
   }
 ]
