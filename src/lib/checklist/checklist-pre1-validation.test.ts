@@ -76,6 +76,14 @@ describe('Part A fields (owner list 2026-11-02)', () => {
     ]);
   });
 
+  it('asks the client for the board resolution date with the person who signs it', () => {
+    expect(pre1Fields.find((f) => f.id === 'boardResolutionDate')).toMatchObject({
+      type: 'date',
+      section: 'Person Signing the Board Resolution',
+      required: true,
+    });
+  });
+
   it('asks only the sections on the owner list, in that order', () => {
     const sections = [...new Set(pre1Fields.map((f) => f.section).filter(Boolean))];
     expect(sections).toEqual([
@@ -101,7 +109,6 @@ describe('Part A fields (owner list 2026-11-02)', () => {
       'signatoryGender',
       'drivingLicenseUrl',
       'utilityBillUrl',
-      'boardResolutionDate',
     ]) {
       expect(ids).not.toContain(gone);
     }
@@ -158,9 +165,10 @@ describe('validatePre1Responses proposed directors', () => {
     expect(errors.director1IndiaResident).toMatch(/resident in India/i);
   });
 
-  it('never requires the board resolution date or the company mail', () => {
+  it('requires the board resolution date (the client gives it) but never the company mail', () => {
     const { errors } = validatePre1Responses({});
-    expect(errors.boardResolutionDate).toBeUndefined();
+    expect(errors.boardResolutionDate).toMatch(/required/i);
+    expect(validatePre1Responses({ boardResolutionDate: '26 May' }).errors.boardResolutionDate).toBe('Enter a valid date.');
     expect(errors.companyMailId).toBeUndefined();
     expect(errors.signatoryGender).toBeUndefined();
   });
@@ -373,5 +381,21 @@ describe('buildBoardResolutionMergeFields director gender', () => {
     });
     expect(fields.CERTIFICATION_PLACE).toBe('USA');
     expect(fields.CERTIFICATION_DATE).toBe('26th May, 2026');
+  });
+});
+
+describe('validatePre1Responses proposed names', () => {
+  it('accepts any name ending with "Private Limited", with or without "India"', () => {
+    const { errors } = validatePre1Responses({
+      proposedName1: 'Just Private Limited',
+      proposedName2: 'Just India Private Limited',
+    });
+    expect(errors.proposedName1).toBeUndefined();
+    expect(errors.proposedName2).toBeUndefined();
+  });
+
+  it('says "Private Limited" when the suffix is missing', () => {
+    const { errors } = validatePre1Responses({ proposedName1: 'Just India Limited' });
+    expect(errors.proposedName1).toBe('Name must end with "Private Limited".');
   });
 });

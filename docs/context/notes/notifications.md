@@ -141,3 +141,21 @@ a copy, and a person is vouching for it.
   for a direct-flow step and skip the deliver / review / accept rules there.
 - Autosave still sends nothing: direct-flow lead patches cannot carry review stamps
   (stripped in `POST …/checklist`), so `leadManagerRequestNotifyPlan` never fires.
+
+## The client's approval round reaches the bell (2026-11-03)
+
+- `approvalBellLines` (pure, `engagement-event-fanout.ts`) decides the bell rows for the client's
+  approval round. Before this, `phase_approved`, `client_change_requested` and
+  `step_awaiting_client_approval` only mailed; none of them wrote a bell row.
+- New event `client_approved_step`: the client approved one step that did not finish a phase.
+  Leads and managers get "{Step} approved" (bell only, no mail). The approve route sends it when
+  `clientApproveStep` returns neither `phaseCompleted` nor `alreadyApproved`; the phase case keeps
+  `phase_approved` (mail + now a bell row). A repeated approve sends nothing.
+- `client_change_requested` → leads and managers ("Change requested", with the client's note);
+  the timeline variant passes `requestLabel: 'the timeline'`.
+- `step_awaiting_client_approval` → the client ("Ready for your approval").
+- `POST /api/client/steps/:id/files` (a file the firm asked for, uploaded from the step page) now
+  fires `client_uploaded` like the Documents-page upload: bell + mail to leads and managers. Undo
+  sends nothing.
+- Direct-flow Submit by the client already reached the lead (`step_submitted` /
+  `step_waiting_on_lead`); unchanged.

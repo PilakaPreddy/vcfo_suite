@@ -2,6 +2,7 @@ import {
   computeMcaNameApprovalExpiryDate,
   validateInternDelivery,
 } from '@/lib/checklist/checklist-responses';
+import { showClientSubmittedNotice } from '@/lib/client-portal/submitted-notice';
 import { internLeadManagerRequestPatch } from '@/lib/checklist/checklist-item-review';
 import { toastError, toastSuccess, errorMessage } from '@/lib/toast-errors';
 import { getChangedPartial } from '@/views/incorporation/milestone-response-form-utils';
@@ -220,6 +221,10 @@ export function createSubmitActions(ctx: MilestoneFormCtx) {
       }
       if (submitDraft !== draft) setDraft(submitDraft);
       if (result.outcome === 'waiting_on_lead') {
+        if (isClient) {
+          showClientSubmittedNotice({ stepTitle: item.title, waitingOnLead: true });
+          return;
+        }
         toastSuccess(
           'Submitted',
           'Your project lead adds the NIC codes, then this step is complete.',
@@ -227,9 +232,12 @@ export function createSubmitActions(ctx: MilestoneFormCtx) {
         );
         return;
       }
-      toastSuccess('Step submitted', `${item.title} is complete.`, {
-        id: `direct-submit:${scopeId}:${item.id}`,
-      });
+      if (isClient) showClientSubmittedNotice({ stepTitle: item.title });
+      else {
+        toastSuccess('Step submitted', `${item.title} is complete.`, {
+          id: `direct-submit:${scopeId}:${item.id}`,
+        });
+      }
       navigateAfterDirectSubmit();
     } catch (err) {
       toastError('Could not submit', errorMessage(err, 'Try again. Your answers are saved.'));
@@ -322,10 +330,13 @@ export function createSubmitActions(ctx: MilestoneFormCtx) {
       }
       await submitChecklistItem(scopeId, item.id, submitDraft);
       setPeakEndMoment('submit');
-      toastSuccess(
-        clientResubmit ? 'Resubmitted for review' : 'Submitted for review',
-        'Your engagement team will review your answers shortly.',
-      );
+      if (isClient) showClientSubmittedNotice({ stepTitle: item.title, forReview: true });
+      else {
+        toastSuccess(
+          clientResubmit ? 'Resubmitted for review' : 'Submitted for review',
+          'Your engagement team will review your answers shortly.',
+        );
+      }
     } catch (err) {
       toastError('Could not submit', errorMessage(err, 'Try again or contact your project lead.'));
     } finally {

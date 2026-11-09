@@ -197,3 +197,16 @@ Spec `docs/specs/pre-inc-direct-flow/` (CONTEXT, AUDIT, REPORT).
   and client-owned steps outside the direct flow (edited as rows, since the shared form is
   read-only for the client there), keep a plain answers card titled with the step — the
   "What this step captures" status block, sub-steps and description are gone everywhere.
+
+## Owner fixes 2026-11-05
+
+- Proposed names must end with "Private Limited" ("India" is not required); the error reads
+  `Name must end with "Private Limited".`
+- `boardResolutionDate` is back on Part A, in "Person Signing the Board Resolution", required and
+  client-owned (the lead reads it). `collectBoardResolutionMissingFieldRefs` requires it again.
+- The client's Submit raises a "Details submitted" pop-up (`showClientSubmittedNotice`,
+  `ClientSubmittedNotice` mounted in `ClientPortalShell`) that survives the move to the next step.
+- The board resolution preview on the manager's review and the client's board page sits in
+  `FitToWidth`, which scales the ~800px Word page into its column so it never runs under the rail.
+- The staff sidebar now starts as the rail (opens on hover) when nothing is saved; the pin
+  button or "[" still pins it.

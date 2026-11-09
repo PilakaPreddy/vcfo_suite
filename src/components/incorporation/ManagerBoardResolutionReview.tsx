@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { CheckCircle2, Download, Undo2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { BoardResolutionDocPreview } from '@/components/board-resolution/BoardResolutionDocPreview';
+import { FitToWidth } from '@/components/board-resolution/FitToWidth';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -113,7 +114,10 @@ export function ManagerBoardResolutionReview({
 
   return (
     <div className="space-y-4">
-      <BoardResolutionDocPreview engagementId={engagement.id} downloadUrl={downloadUrl} />
+      {/* The Word page is ~800px; scale it into this column so it never runs under the rail. */}
+      <FitToWidth>
+        <BoardResolutionDocPreview engagementId={engagement.id} downloadUrl={downloadUrl} />
+      </FitToWidth>
       <a
         href={downloadUrl}
         className="inline-flex items-center gap-1.5 text-[13px] font-medium text-brand hover:underline"

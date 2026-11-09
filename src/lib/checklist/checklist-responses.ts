@@ -144,7 +144,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
       type: 'text',
       section: 'Proposed Company Names',
       placeholder: 'e.g. ABC India Private Limited',
-      validationHint: 'Must end with "India Private Limited"',
+      validationHint: 'Must end with "Private Limited"',
       required: true,
     },
     {
@@ -153,7 +153,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
       type: 'text',
       section: 'Proposed Company Names',
       placeholder: 'e.g. ABC India Private Limited',
-      validationHint: 'Must end with "India Private Limited"',
+      validationHint: 'Must end with "Private Limited"',
       required: true,
     },
     {
@@ -247,6 +247,16 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
       type: 'text',
       section: 'Person Signing the Board Resolution',
       placeholder: 'e.g. Director',
+      required: true,
+    },
+    {
+      // The client gives the date (owner, 2026-11-05); the project lead only reads it.
+      id: 'boardResolutionDate',
+      label: 'Date of Board Resolution',
+      type: 'date',
+      section: 'Person Signing the Board Resolution',
+      placeholder: 'YYYY-MM-DD',
+      helperText: "Date the parent entity's board passed the resolution to incorporate the Indian company.",
       required: true,
     },
     {

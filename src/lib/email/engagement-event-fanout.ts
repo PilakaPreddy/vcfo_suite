@@ -41,6 +41,8 @@ export type EngagementProcessEvent =
   | 'step_awaiting_client_approval'
   | 'phase_approved'
   | 'client_change_requested'
+  /* The client approved one step (no phase finished yet): the bell only. */
+  | 'client_approved_step'
   /* Pre-incorporation direct flow (see `src/lib/incorporation/pre-inc-direct-flow.ts`). */
   | 'step_submitted'
   | 'step_waiting_on_lead'
@@ -192,6 +194,49 @@ export function directFlowBellAudience(
       return itemId.trim() === 'pre-2' ? ['manager', 'admin'] : null;
     case 'review_rejected':
       return itemId.trim() === 'pre-2' ? ['lead'] : null;
+    default:
+      return null;
+  }
+}
+
+export type BellAudience = 'client' | 'lead' | 'manager' | 'admin';
+
+export interface BellLine {
+  audience: BellAudience;
+  title: string;
+  body: string;
+}
+
+/**
+ * Bell rows for the client's approval round: a step handed to the client to
+ * approve (the client hears it), and the client's answer — one step approved,
+ * a whole phase approved, or a change asked for (the project leads and the
+ * managers hear it). These events also mail (except a single-step approval),
+ * but before 2026-11-03 none of them reached the bell. Null for every other
+ * event. The actor is removed by the caller.
+ */
+export function approvalBellLines(
+  event: EngagementProcessEvent,
+  ctx: { company: string; title: string; note?: string | null },
+): BellLine[] | null {
+  const { company, title } = ctx;
+  const note = ctx.note?.trim();
+  const staff = (lineTitle: string, body: string): BellLine[] => [
+    { audience: 'lead', title: lineTitle, body },
+    { audience: 'manager', title: lineTitle, body },
+  ];
+  switch (event) {
+    case 'client_approved_step':
+      return staff(`${title} approved`, `${company} approved ${title}.`);
+    case 'phase_approved':
+      return staff('Phase approved', `${company} approved every step of ${title}.`);
+    case 'client_change_requested':
+      return staff(
+        'Change requested',
+        note ? `${company} asked for a change on ${title}: ${note}` : `${company} asked for a change on ${title}.`,
+      );
+    case 'step_awaiting_client_approval':
+      return [{ audience: 'client', title: 'Ready for your approval', body: `${title} is ready for you to check and approve.` }];
     default:
       return null;
   }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  approvalBellLines,
   approvalCcEmails,
   collectManagerParties,
   directFlowBellAudience,
@@ -220,5 +221,40 @@ describe('pre-incorporation direct flow notifications (section 3.13)', () => {
     expect(directFlowBellAudience('client_submitted', 'post-1')).toBeNull();
     expect(directFlowBellAudience('lead_requested_review', 'post-1')).toBeNull();
     expect(directFlowBellAudience('review_rejected', 'post-1')).toBeNull();
+  });
+});
+
+describe('approvalBellLines', () => {
+  const ctx = { company: 'Quarry Digital', title: 'Signed Board Resolution' };
+
+  it('tells the leads and the managers when the client approves a step', () => {
+    expect(approvalBellLines('client_approved_step', ctx)).toEqual([
+      { audience: 'lead', title: 'Signed Board Resolution approved', body: 'Quarry Digital approved Signed Board Resolution.' },
+      { audience: 'manager', title: 'Signed Board Resolution approved', body: 'Quarry Digital approved Signed Board Resolution.' },
+    ]);
+  });
+
+  it('tells the leads and the managers about a phase approval and a change request', () => {
+    expect(approvalBellLines('phase_approved', { ...ctx, title: 'Phase 1' })?.map((l) => l.audience)).toEqual([
+      'lead',
+      'manager',
+    ]);
+    const change = approvalBellLines('client_change_requested', { ...ctx, note: 'Wrong date' });
+    expect(change?.[0]).toEqual({
+      audience: 'lead',
+      title: 'Change requested',
+      body: 'Quarry Digital asked for a change on Signed Board Resolution: Wrong date',
+    });
+  });
+
+  it('tells the client when a step is ready for their approval', () => {
+    expect(approvalBellLines('step_awaiting_client_approval', ctx)).toEqual([
+      { audience: 'client', title: 'Ready for your approval', body: 'Signed Board Resolution is ready for you to check and approve.' },
+    ]);
+  });
+
+  it('leaves every other event to its own rules', () => {
+    expect(approvalBellLines('client_submitted', ctx)).toBeNull();
+    expect(approvalBellLines('step_submitted', ctx)).toBeNull();
   });
 });

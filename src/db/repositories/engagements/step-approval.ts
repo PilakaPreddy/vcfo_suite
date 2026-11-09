@@ -32,6 +32,8 @@ export type StepApprovalOutcome = {
   checklistState: EngagementChecklistState;
   /** Set only when THIS approval completed the phase and nothing has announced it yet. */
   phaseCompleted: ChecklistPhaseRef | null;
+  /** The step was already approved: nothing changed, so nobody is told again. */
+  alreadyApproved: boolean;
 };
 
 /**
@@ -61,7 +63,7 @@ export async function clientApproveStep(
   const state = approvalStateOf(persisted[itemId]);
   if (state === 'client_approved') {
     // Idempotent: a second click is a no-op, not an error and not a re-send.
-    return { checklistState: persisted, phaseCompleted: null };
+    return { checklistState: persisted, phaseCompleted: null, alreadyApproved: true };
   }
   if (state !== 'pending_client') {
     throw new Error('step_not_awaiting_client_approval');
@@ -86,7 +88,7 @@ export async function clientApproveStep(
     });
   }
 
-  return { checklistState, phaseCompleted };
+  return { checklistState, phaseCompleted, alreadyApproved: false };
 }
 
 /**

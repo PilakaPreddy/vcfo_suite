@@ -26,6 +26,7 @@ import { fetchBoardResolutionInDb } from '@/lib/projects/engagements-db';
 import type { NocState } from '@/lib/noc/state';
 import { useRealtimeBoardResolution } from '@/hooks/use-realtime-board-resolution';
 import { BoardResolutionDocPreview } from '@/components/board-resolution/BoardResolutionDocPreview';
+import { FitToWidth } from '@/components/board-resolution/FitToWidth';
 import {
   DocFiles,
   DocPaper,
@@ -352,7 +353,9 @@ export default function BoardPage() {
       <div className="paper live" data-paper="" style={{ transform: `scale(${zoom})` }}>
         <div className="cp-tw">
           {d.engagementId ? (
-            <BoardResolutionDocPreview engagementId={d.engagementId} downloadUrl={downloadHref} refreshKey={`${doc?.storagePath ?? ''}:${doc?.updatedAt ?? ''}`} mergeFields={mergeFields} />
+            <FitToWidth>
+              <BoardResolutionDocPreview engagementId={d.engagementId} downloadUrl={downloadHref} refreshKey={`${doc?.storagePath ?? ''}:${doc?.updatedAt ?? ''}`} mergeFields={mergeFields} />
+            </FitToWidth>
           ) : null}
         </div>
       </div>
