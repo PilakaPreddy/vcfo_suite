@@ -110,7 +110,7 @@ export function TrackerBar({
                 )}
               >
                 <StepMark state={mark.state} tone={mark.tone} />
-                <span className={cn('max-w-full break-words text-[11.5px] font-medium leading-tight sm:truncate sm:text-[13.5px]', i === current ? 'text-brand-text' : 'text-ink')}>{s.label}</span>
+                <span className={cn('max-w-full break-words text-[10.5px] font-medium leading-tight tracking-[-0.01em] sm:truncate sm:text-[13.5px] sm:tracking-normal', i === current ? 'text-brand-text' : 'text-ink')}>{s.label}</span>
                 <span className="text-[11.5px] tabular-nums text-ink-muted sm:text-[12px]">
                   {s.total ? (
                     <>

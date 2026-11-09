@@ -11,7 +11,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useReducedMotion } from 'framer-motion';
-import { ArrowUpFromLine, Footprints } from 'lucide-react';
+import { Footprints, PencilLine, RotateCcw, Signature, Upload, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,7 @@ import { STATUS_WORD } from './status';
 
 const JourneyTree = dynamic(() => import('./JourneyTree').then((mod) => mod.JourneyTree), {
   ssr: false,
-  loading: () => <span className="block h-[380px] animate-pulse rounded-md bg-surface-sunken" aria-hidden />,
+  loading: () => <span className="block h-[481px] rounded-md bg-surface-sunken motion-safe:animate-pulse" aria-hidden />,
 });
 
 type ViewKind = 'tree' | 'metro';
@@ -41,13 +41,31 @@ const EMPTY_STOP: Record<JStop['id'], string> = {
 };
 const NEED_ACT = { upload: 'Upload now', fill: 'Fill it in', correct: 'Correct it', sign: 'Sign it' } as const;
 const NEED_CTA = { upload: 'See what to upload', fill: 'See what to fill in', correct: 'See what to correct', sign: 'See what to sign' } as const;
+/** The banner icon for each kind of need; the firm's own next step uses Footprints. */
+const NEED_ICON: Record<NeedRow['kind'], LucideIcon> = { upload: Upload, fill: PencilLine, correct: RotateCcw, sign: Signature };
 
 /** The banner under the tracker: what the client owes first, else the step the firm is on. */
-function NextStep({ title, sub, cta, waiting, onOpen }: { title: string; sub: string; cta: string; waiting: boolean; onOpen: () => void }) {
-  const Icon = waiting ? ArrowUpFromLine : Footprints;
+function NextStep({
+  title,
+  sub,
+  cta,
+  waiting,
+  kind,
+  onOpen,
+}: {
+  title: string;
+  sub: string;
+  cta: string;
+  waiting: boolean;
+  /** The kind of need, which picks the icon; none for the firm's own next step. */
+  kind?: NeedRow['kind'];
+  onOpen: () => void;
+}) {
+  const Icon = kind ? NEED_ICON[kind] : Footprints;
   return (
     <div
       data-testid="journey-next"
+      data-kind={kind ?? 'firm'}
       className={cn(
         'flex flex-wrap items-center gap-3 rounded-[12px] border px-3 py-2.5',
         waiting ? 'border-waiting-mid/40 bg-waiting-soft' : 'border-brand-line bg-brand-soft/60',
@@ -127,6 +145,7 @@ export function JourneyMap({ h, onNeed }: { h: HomeData; /** Acts on a need (the
         sub: [need.sub !== need.title ? need.sub : '', need.due ? `Due ${dShort(need.due)}` : ''].filter(Boolean).join(' · '),
         cta: NEED_CTA[need.kind],
         waiting: true,
+        kind: need.kind,
         node: needNode ?? leaf,
         href: needNode ? undefined : need.href,
       }
@@ -136,6 +155,7 @@ export function JourneyMap({ h, onNeed }: { h: HomeData; /** Acts on a need (the
           sub: [leaf.note, 'nothing is needed from you right now'].filter(Boolean).join(' · '),
           cta: 'See details',
           waiting: false,
+          kind: undefined,
           node: leaf,
           href: undefined,
         }
@@ -186,7 +206,7 @@ export function JourneyMap({ h, onNeed }: { h: HomeData; /** Acts on a need (the
     >
       <Celebrate engagementId={h.engagementId} stops={journey.stops} reduce={reduce} />
       <TrackerBar stops={journey.stops} currentStopId={journey.currentStopId} selected={stop.id} onSelect={setStopId} reduce={reduce} />
-      {next ? <NextStep title={next.title} sub={next.sub} cta={next.cta} waiting={next.waiting} onOpen={openNext} /> : null}
+      {next ? <NextStep title={next.title} sub={next.sub} cta={next.cta} waiting={next.waiting} kind={next.kind} onOpen={openNext} /> : null}
       {stop.total === 0 ? (
         <EmptyState title={EMPTY_STOP[stop.id]} />
       ) : view === 'tree' && stopNode ? (

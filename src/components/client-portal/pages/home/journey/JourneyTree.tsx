@@ -46,10 +46,9 @@ type Drag =
 const MIN_K = 0.35;
 const MAX_K = 1.75;
 const PAD = 24;
-/** Room for the toolbar at the top of the canvas. */
-const TOP_PAD = 52;
-/** The smallest zoom the first fit uses, so card labels stay readable. */
-const READ_K = 0.8;
+/** The zoom range of the first view: never so small the labels are hard to read, never above 1. */
+const READ_MIN = 0.75;
+const READ_MAX = 1;
 const KEY_STEP = 60;
 const MODE_KEY = 'vcfo.journey.tree-mode';
 const clampK = (k: number) => Math.min(MAX_K, Math.max(MIN_K, k));
@@ -72,6 +71,13 @@ function loadMoved(key: string): Record<string, Pt> {
   } catch {
     return {};
   }
+}
+
+/** The bounding box of some laid-out nodes, in canvas units. */
+function boundsOf(nodes: Pt[]) {
+  const minX = Math.min(...nodes.map((n) => n.x));
+  const minY = Math.min(...nodes.map((n) => n.y));
+  return { minX, minY, w: Math.max(...nodes.map((n) => n.x)) + NODE_W - minX, h: Math.max(...nodes.map((n) => n.y)) + NODE_H - minY };
 }
 
 /** A smoothstep edge: out of the parent's right side, one vertical run, into the child's left side. */
@@ -150,7 +156,7 @@ function NodeCard({
     >
       <StepMark state={mark.state} tone={mark.tone} size={20} />
       <div className="grid min-w-0 flex-1 gap-1.5">
-        <span className="truncate text-[13px] font-medium leading-tight text-ink" title={node.label}>
+        <span className="line-clamp-2 text-[13px] font-medium leading-tight text-ink" title={node.label}>
           {node.label}
         </span>
         <span className="flex items-center gap-2">
@@ -255,33 +261,48 @@ export function JourneyTree({
     [],
   );
 
-  /**
-   * Fits the nodes in the canvas, below the toolbar. With `focus`, a fit that would shrink the
-   * cards below READ_K (too small to read) stays at READ_K and centres the focus card instead.
-   */
-  const fitTo = useCallback((nodes: Pt[], focus?: Pt) => {
+  /** "Fit": every node inside the canvas, centred, at any zoom up to 1. */
+  const fitTo = useCallback((nodes: Pt[]) => {
     const el = box.current;
     if (!el || !nodes.length) return;
     const { width, height } = el.getBoundingClientRect();
-    const minX = Math.min(...nodes.map((n) => n.x));
-    const minY = Math.min(...nodes.map((n) => n.y));
-    const w = Math.max(...nodes.map((n) => n.x)) + NODE_W - minX;
-    const h = Math.max(...nodes.map((n) => n.y)) + NODE_H - minY;
-    const availH = height - TOP_PAD - PAD;
-    const k = clampK(Math.min(1, (width - PAD * 2) / w, availH / h));
-    if (focus && k < READ_K) {
-      const fx = focus.x + NODE_W / 2;
-      const fy = focus.y + NODE_H / 2;
-      const x = w * READ_K <= width - PAD * 2 ? (width - w * READ_K) / 2 - minX * READ_K : width / 2 - fx * READ_K;
-      setView({ k: READ_K, x, y: TOP_PAD + availH / 2 - fy * READ_K });
-      return;
-    }
-    setView({ k, x: (width - w * k) / 2 - minX * k, y: TOP_PAD + (availH - h * k) / 2 - minY * k });
+    const { minX, minY, w, h } = boundsOf(nodes);
+    const k = clampK(Math.min(1, (width - PAD * 2) / w, (height - PAD * 2) / h));
+    setView({ k, x: (width - w * k) / 2 - minX * k, y: (height - h * k) / 2 - minY * k });
   }, []);
   const fit = () => fitTo(placed);
 
-  // Fit once the canvas is on screen (and again when the phone accordion gives way to it),
-  // keeping the current step readable.
+  /**
+   * The first view: the stage's open subtree at a readable zoom (READ_MIN to READ_MAX). Each axis
+   * that fits is centred. When the tree is taller than the canvas, the view centres the first of
+   * `keys` that fits (for example the stage root with its branches and the current step, then the
+   * root with the current step), else the last node of the last list (the current step). It never
+   * scrolls past the first or last row.
+   */
+  const frame = useCallback((nodes: Pt[], keys: Pt[][]) => {
+    const el = box.current;
+    if (!el || !nodes.length) return;
+    const { width, height } = el.getBoundingClientRect();
+    const { minX, minY, w, h } = boundsOf(nodes);
+    const availW = width - PAD * 2;
+    const availH = height - PAD * 2;
+    const k = Math.min(READ_MAX, Math.max(READ_MIN, Math.min(availW / w, availH / h)));
+    const x = w * k <= availW ? (width - w * k) / 2 - minX * k : PAD - minX * k;
+    let y: number;
+    if (h * k <= availH) y = (height - h * k) / 2 - minY * k;
+    else {
+      const top = PAD - minY * k;
+      const bottom = height - PAD - (minY + h) * k;
+      const fits = keys.map((ks) => (ks.length ? boundsOf(ks) : null)).find((b) => b && b.h * k <= availH);
+      const last = keys[keys.length - 1]?.at(-1);
+      const fy = fits ? fits.minY + fits.h / 2 : last ? last.y + NODE_H / 2 : minY + h / 2;
+      y = Math.min(top, Math.max(bottom, height / 2 - fy * k));
+    }
+    setView({ k, x, y });
+  }, []);
+
+  // Frame the stage once the canvas is on screen (and again when the phone accordion gives way
+  // to it), keeping the current step in view.
   const placedRef = useRef(placed);
   useEffect(() => {
     placedRef.current = placed;
@@ -290,9 +311,12 @@ export function JourneyTree({
     if (narrow) return;
     const nodes = placedRef.current;
     const focusId = [...currentPath].reverse().find((id) => nodes.some((n) => n.id === id));
-    fitTo(nodes, nodes.find((n) => n.id === focusId));
+    const focus = nodes.find((n) => n.id === focusId);
+    const root = nodes[0];
+    const branches = nodes.filter((n) => n.depth <= 1);
+    frame(nodes, focus ? [[...branches, focus], root ? [root, focus] : [], [focus]] : [branches]);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount and on the phone switch
-  }, [narrow, fitTo]);
+  }, [narrow, frame]);
 
   // The wheel zooms around the pointer; a non-passive listener so the page does not scroll.
   useEffect(() => {
@@ -447,90 +471,97 @@ export function JourneyTree({
   }
 
   return (
-    // The canvas is one keyboard-operable widget (role "application" so screen readers pass the
-    // arrow keys through): focus it, then the arrow keys pan and + / - zoom. jsx-a11y does not
-    // count "application" as interactive, hence the two disables.
-    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
-    <div
-      ref={box}
-      role="application"
-      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-      tabIndex={0}
-      aria-label="Journey map. Use the arrow keys to move the map and plus or minus to zoom."
-      aria-describedby={hintId}
-      onKeyDown={onKey}
-      className={cn(
-        'relative h-[380px] touch-none overflow-hidden rounded-md border border-line bg-surface-sunken outline-none focus-visible:ring-2 focus-visible:ring-brand',
-        panning ? 'cursor-grabbing' : 'cursor-grab',
-      )}
-      style={{ backgroundImage: 'radial-gradient(oklch(var(--line)) 1px, transparent 1px)', backgroundSize: '18px 18px' }}
-      onPointerDown={(e) => down(e)}
-      onPointerMove={move}
-      onPointerUp={up}
-      onPointerCancel={up}
-    >
-      <div className="absolute left-0 top-0" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`, transformOrigin: '0 0' }}>
-        <svg className="pointer-events-none absolute left-0 top-0" width={1} height={1} style={{ overflow: 'visible' }} aria-hidden>
-          {base.edges.map((e) => {
-            const a = at[e.from];
-            const b = at[e.to];
-            if (!a || !b) return null;
-            const live = onPath.has(e.from) && onPath.has(e.to);
-            return (
-              <path
-                key={`${e.from}>${e.to}`}
-                d={edgePath(a, b)}
-                fill="none"
-                className={live ? 'stroke-brand' : 'stroke-line-strong'}
-                strokeWidth={live ? 2 : 1.5}
-                strokeDasharray={live && !reduce ? '6 4' : undefined}
+    <div className="grid">
+      {/* The toolbar sits above the canvas, outside the pannable area, so it never covers a card. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 rounded-t-md border border-b-0 border-line bg-surface-raised px-2 py-1.5">
+        <span id={hintId} className="min-w-0 text-[11.5px] text-ink-muted">
+          {HINT[mode]}
+        </span>
+        <div className="flex flex-none items-center gap-1" role="toolbar" aria-label="Map controls">
+          <div role="group" aria-label="Canvas mode" className="mr-1 flex rounded-[4px] border border-line bg-surface-raised">
+            {(['move', 'arrange'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                aria-pressed={mode === m}
+                onClick={() => setMode(m)}
+                className={cn(SEG, mode === m ? 'bg-brand-soft text-brand-text' : 'text-ink hover:bg-surface-sunken')}
               >
-                {live && !reduce ? <animate attributeName="stroke-dashoffset" from="20" to="0" dur="1s" repeatCount="indefinite" /> : null}
-              </path>
-            );
-          })}
-        </svg>
-        {placed.map((n) => (
-          <div
-            key={n.id}
-            className="absolute"
-            style={{ left: n.x, top: n.y, width: NODE_W, height: NODE_H }}
-            onPointerDown={(e) => down(e, n.id)}
-          >
-            <NodeCard node={n.node} open={expanded.has(n.id)} onPath={onPath.has(n.id)} cursor={cardCursor} onToggle={() => toggle(n.id)} onSelect={() => onSelect(n.node)} />
+                {m === 'move' ? '✋ Move map' : 'Arrange cards'}
+              </button>
+            ))}
           </div>
-        ))}
+          <button type="button" className={CTRL} onClick={() => zoom(1.2)} aria-label="Zoom in">
+            +
+          </button>
+          <button type="button" className={CTRL} onClick={() => zoom(1 / 1.2)} aria-label="Zoom out">
+            −
+          </button>
+          <button type="button" className={CTRL} onClick={fit}>
+            Fit
+          </button>
+          <button type="button" className={CTRL} onClick={reset}>
+            Reset layout
+          </button>
+        </div>
       </div>
-      <div className="absolute right-2 top-2 flex cursor-default gap-1 rounded-md bg-surface-sunken/90 p-1 backdrop-blur-sm" onPointerDown={(e) => e.stopPropagation()}>
-        <div role="group" aria-label="Canvas mode" className="mr-1 flex rounded-[4px] border border-line bg-surface-raised">
-          {(['move', 'arrange'] as const).map((m) => (
-            <button
-              key={m}
-              type="button"
-              aria-pressed={mode === m}
-              onClick={() => setMode(m)}
-              className={cn(SEG, mode === m ? 'bg-brand-soft text-brand-text' : 'text-ink hover:bg-surface-sunken')}
-            >
-              {m === 'move' ? '✋ Move map' : 'Arrange cards'}
-            </button>
+      {/* The canvas is one keyboard-operable widget (role "application" so screen readers pass the
+          arrow keys through): focus it, then the arrow keys pan and + / - zoom. jsx-a11y does not
+          count "application" as interactive, hence the two disables. */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+      <div
+        ref={box}
+        role="application"
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+        tabIndex={0}
+        aria-label="Journey map. Use the arrow keys to move the map and plus or minus to zoom."
+        aria-describedby={hintId}
+        onKeyDown={onKey}
+        className={cn(
+          'relative h-[440px] touch-none overflow-hidden rounded-b-md border border-line bg-surface-sunken outline-none focus-visible:ring-2 focus-visible:ring-brand',
+          panning ? 'cursor-grabbing' : 'cursor-grab',
+        )}
+        style={{ backgroundImage: 'radial-gradient(oklch(var(--line)) 1px, transparent 1px)', backgroundSize: '18px 18px' }}
+        onPointerDown={(e) => down(e)}
+        onPointerMove={move}
+        onPointerUp={up}
+        onPointerCancel={up}
+      >
+        <div className="absolute left-0 top-0" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.k})`, transformOrigin: '0 0' }}>
+          <svg className="pointer-events-none absolute left-0 top-0" width={1} height={1} style={{ overflow: 'visible' }} aria-hidden>
+            {base.edges.map((e) => {
+              const a = at[e.from];
+              const b = at[e.to];
+              if (!a || !b) return null;
+              const live = onPath.has(e.from) && onPath.has(e.to);
+              return (
+                <path
+                  key={`${e.from}>${e.to}`}
+                  d={edgePath(a, b)}
+                  fill="none"
+                  className={live ? 'stroke-brand' : 'stroke-line-strong'}
+                  strokeWidth={live ? 2 : 1.5}
+                  strokeDasharray={live && !reduce ? '6 4' : undefined}
+                >
+                  {live && !reduce ? <animate attributeName="stroke-dashoffset" from="20" to="0" dur="1s" repeatCount="indefinite" /> : null}
+                </path>
+              );
+            })}
+          </svg>
+          {placed.map((n) => (
+            <div key={n.id} className="absolute" style={{ left: n.x, top: n.y, width: NODE_W, height: NODE_H }} onPointerDown={(e) => down(e, n.id)}>
+              <NodeCard
+                node={n.node}
+                open={expanded.has(n.id)}
+                onPath={onPath.has(n.id)}
+                cursor={cardCursor}
+                onToggle={() => toggle(n.id)}
+                onSelect={() => onSelect(n.node)}
+              />
+            </div>
           ))}
         </div>
-        <button type="button" className={CTRL} onClick={() => zoom(1.2)} aria-label="Zoom in">
-          +
-        </button>
-        <button type="button" className={CTRL} onClick={() => zoom(1 / 1.2)} aria-label="Zoom out">
-          −
-        </button>
-        <button type="button" className={CTRL} onClick={fit}>
-          Fit
-        </button>
-        <button type="button" className={CTRL} onClick={reset}>
-          Reset layout
-        </button>
       </div>
-      <span id={hintId} className="pointer-events-none absolute bottom-2 left-2 rounded-[4px] bg-surface-sunken/90 px-1.5 py-0.5 text-[11.5px] text-ink-muted">
-        {HINT[mode]}
-      </span>
     </div>
   );
 }

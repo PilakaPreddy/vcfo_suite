@@ -27,8 +27,9 @@ export interface TreeLayout {
   edges: { from: string; to: string }[];
 }
 
-export const NODE_W = 220;
-export const NODE_H = 64;
+/** Card size in px. The height holds a two-line title (line-clamp 2) above the progress bar. */
+export const NODE_W = 236;
+export const NODE_H = 76;
 
 export function layoutTree(root: JNode, expanded: Set<string>, opts: LayoutOpts = {}): TreeLayout {
   const nodeW = opts.nodeW ?? NODE_W;

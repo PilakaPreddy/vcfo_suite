@@ -39,14 +39,22 @@ test('client opens the journey map, a branch and the step panel', async ({ page 
   const canvas = page.getByRole('application');
   await expect(canvas).toBeVisible();
   const cards = canvas.locator('[role=button][aria-label*=" of "]');
-  // Fit puts every card inside the canvas (the first view centres on the current step).
-  await canvas.getByRole('button', { name: 'Fit' }).click();
+  // The toolbar sits above the canvas, outside the pannable area.
+  const fit = page.getByRole('toolbar', { name: 'Map controls' }).getByRole('button', { name: 'Fit' });
+  // The first view frames the stage: its root card is inside the canvas.
+  const box = (await canvas.boundingBox())!;
+  const rootCard = (await cards.first().boundingBox())!;
+  expect(rootCard.x).toBeGreaterThanOrEqual(box.x);
+  expect(rootCard.y).toBeGreaterThanOrEqual(box.y);
+  expect(rootCard.y + rootCard.height).toBeLessThanOrEqual(box.y + box.height);
+  // Fit puts every card inside the canvas.
+  await fit.click();
   const before = await cards.count();
   await canvas.getByRole('button', { name: /^Open SPICe\+ Part A/ }).click();
   await expect.poll(() => cards.count()).toBeGreaterThan(before);
 
   // A group's panel lists its steps as a checklist.
-  await canvas.getByRole('button', { name: 'Fit' }).click();
+  await fit.click();
   await canvas.getByRole('button', { name: /^SPICe\+ Part B/ }).click();
   const panel = page.getByRole('dialog');
   await expect(panel).toBeVisible();
@@ -72,4 +80,31 @@ test('the next-step banner opens the panel with what the client owes', async ({ 
   await expect(panel.getByTestId('journey-checklist').locator('li')).not.toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(panel).toBeHidden();
+});
+
+test('under reduced motion nothing loops and the map is still there', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await login(page, 'client');
+  await page.goto('/app/client/overview');
+
+  const stages = page.getByRole('group', { name: 'Journey stages' });
+  await expect(stages).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('journey-next')).toBeVisible();
+  const canvas = page.getByRole('application');
+  await expect(canvas.locator('[role=button][aria-label*=" of "]').first()).toBeVisible();
+  // No SVG edge animation and no CSS animation runs inside the journey card.
+  await expect(canvas.locator('animate')).toHaveCount(0);
+  // Nothing in the journey card moves: no infinite CSS or WAAPI animation, and the inline styles
+  // framer-motion writes (the runner's bob, the progress shimmer) do not change over time.
+  const card = page.locator('section, div').filter({ has: stages }).filter({ has: canvas }).last();
+  const looping = await page.evaluate(() => document.getAnimations().filter((a) => a.effect?.getTiming().iterations === Infinity).length);
+  expect(looping).toBe(0);
+  const styles = () => card.evaluate((el) => [...el.querySelectorAll('[style]')].map((n) => n.getAttribute('style')).join('|'));
+  await page.waitForTimeout(800);
+  const first = await styles();
+  await page.waitForTimeout(700);
+  expect(await styles()).toBe(first);
+  // The tracker's runner is on the current stage (no run from the first stop).
+  await expect(stages.getByRole('button', { name: /^Incorporation:/ })).toHaveAttribute('aria-pressed', 'true');
 });
