@@ -60,7 +60,7 @@ export function assistWord(run: Pick<AssistRunDto, 'state'> | null | undefined, 
     case 'paused':
       return { label: 'Needs you', tone: 'teal' };
     case 'done':
-      return { label: 'Filed by Assist', tone: 'ok' };
+      return { label: 'Reference recorded', tone: 'ok' };
     case 'failed':
       return { label: 'Stopped', tone: 'bad' };
     default:

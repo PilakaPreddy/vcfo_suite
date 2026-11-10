@@ -31,6 +31,7 @@ Domain logic and helpers. Nothing here imports `db`; data access goes through
 - `knowledge-bank/` — knowledge bank folders, search and storage keys.
 - `labour-registers/` — statutory labour registers: the form catalogue for a state and period, column and value matching against a client's payroll sheet, the per-day attendance block, content-addressed caching of generated documents, and the section 14 overtime scoping. Gotchas: `docs/context/notes/labour-registers.md`.
 - `my-day/` — the "My day" plan for staff: gathering due work through the person's own scoped repositories, the ranking shared by the Today card, Ask and the morning email, and that email (automation wave 2, F).
+- `mca-filing/` — the SPICe+ filing record: PDF signature reader, PDF text compare, filing states and clocks, attachment files. Never drives the MCA portal and never signs.
 - `noc/` — the parent company NOC (Pre-2 board resolution) templates and variants.
 - `notices/` — the tax and GST notice desk: authorities, stages, reading a notice into a case, the reply draft from the knowledge bank, and the T-7, T-2 and overdue escalations (automation wave 2, C).
 - `notifications/` — in-app bell, announcements, popup cadence and the dock animation.

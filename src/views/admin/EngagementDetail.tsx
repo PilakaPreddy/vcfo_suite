@@ -74,6 +74,7 @@ import { RecordDocumentsButton, RecordMetaLine, RecordNumbers, RecordStageChip, 
 import { RecordTimelineCard } from '@/components/timeline';
 import { ClientHealthChip } from '@/components/client-health/ClientHealthChip';
 import { SpiceAttachmentsCard } from '@/components/incorporation/SpiceAttachmentsCard';
+import { McaFilingCard } from '@/components/incorporation/McaFilingCard';
 
 const ALL_BUCKETS: Bucket[] = ['pre-inc', 'post-inc', 'fema', 'statutory'];
 const INTERN_BUCKETS: Bucket[] = ['pre-inc', 'post-inc', 'statutory'];
@@ -408,6 +409,7 @@ export default function EngagementDetail() {
 
               {/* Spec T6: the SPICe+ Part B attachments, under the SPICe+ steps. */}
               <SpiceAttachmentsCard engagementId={eng.id} shellBase="/app/intern" />
+              <McaFilingCard engagementId={eng.id} />
             </>
           )}
         </InternEngagementOverview>
@@ -543,6 +545,7 @@ export default function EngagementDetail() {
           {activeBucket === 'pre-inc' ? (
             <SpiceAttachmentsCard engagementId={eng.id} shellBase={shellRootOf(pathname)} className="mt-4" />
           ) : null}
+          {activeBucket === 'pre-inc' ? <McaFilingCard engagementId={eng.id} className="mt-4" /> : null}
         </>
       )}
     </PageTransition>

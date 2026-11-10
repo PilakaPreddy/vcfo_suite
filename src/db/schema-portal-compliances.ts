@@ -190,3 +190,131 @@ export const assistRuns = pgTable(
     idemIdx: uniqueIndex('assist_runs_idempotency_idx').on(t.engagementId, t.idempotencyKey),
   }),
 );
+
+/**
+ * VCFO Assist filing record (migration 0041, docs/context/notes/assist-filing.md): one row per
+ * engagement and SPICe+ form, the human filing state that runs do not hold. Suite never drives
+ * the MCA portal, and no MCA login, password, OTP, DSC PIN or token is ever stored here.
+ */
+export const assistFilings = pgTable(
+  'assist_filings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    engagementId: uuid('engagement_id')
+      .notNull()
+      .references(() => engagements.id, { onDelete: 'cascade' }),
+    /** 'spice-part-a' or 'spice-part-b'. */
+    form: text('form').notNull(),
+    /** One of FILING_STATES in src/lib/mca-filing/filing-state.ts. */
+    state: text('state').notNull().default('data_ready'),
+    /** The Service Request Number the portal gave. */
+    srn: text('srn'),
+    srnAt: timestamp('srn_at', { withTimezone: true }),
+    /** When Part A's name approval was recorded (secondary-source 20 day name validity). */
+    nameApprovedAt: timestamp('name_approved_at', { withTimezone: true }),
+    /** When the signed form went up to the portal; the 7 day payment clock starts here. */
+    signedUploadedAt: timestamp('signed_uploaded_at', { withTimezone: true }),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+    lastRemark: text('last_remark'),
+    /** Every remark, oldest first: [{ at, byName, text }]. Staff only, so not in audit events. */
+    remarks: jsonb('remarks').notNull().default([]),
+    /** The professional approval of the portal PDF. */
+    reviewedBy: uuid('reviewed_by').references(() => profiles.id, { onDelete: 'set null' }),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    /** Required when the approval was given with values still missing from the PDF. */
+    reviewNote: text('review_note'),
+    /** Emails staff sent to signers: [{ signerId, name, email, at, byName, documentId, sent }]. */
+    signatureRequests: jsonb('signature_requests').notNull().default([]),
+    /** The last IST date the deadline job alerted, per deadline key, so a retry cannot repeat it. */
+    alertedOn: jsonb('alerted_on').notNull().default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    formIdx: uniqueIndex('assist_filings_engagement_form_idx').on(t.engagementId, t.form),
+    stateIdx: index('assist_filings_state_idx').on(t.state),
+  }),
+);
+
+/**
+ * The PDFs of one filing: the unsigned PDF the portal produced and the DSC-signed copies. The
+ * bytes are in S3; `check` holds the text comparison or the signed-copy check, and `signers` what
+ * the signature parser found. Software never signs, it only reads signatures.
+ */
+export const assistFilingDocuments = pgTable(
+  'assist_filing_documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    engagementId: uuid('engagement_id')
+      .notNull()
+      .references(() => engagements.id, { onDelete: 'cascade' }),
+    form: text('form').notNull(),
+    /** 'portal_pdf' or 'signed_pdf'. */
+    kind: text('kind').notNull(),
+    fileName: text('file_name').notNull(),
+    /** The full S3 key (bucket prefix included). Never sent to a browser. */
+    storageKey: text('storage_key').notNull(),
+    sizeBytes: integer('size_bytes'),
+    sha256: text('sha256').notNull(),
+    /** SHA-256 of the normalised page text; null when the PDF has no readable text. */
+    textHash: text('text_hash'),
+    signers: jsonb('signers').notNull().default([]),
+    check: jsonb('check').notNull().default({}),
+    /** A signed copy whose portal PDF has since changed. */
+    stale: boolean('stale').notNull().default(false),
+    uploadedBy: uuid('uploaded_by').references(() => profiles.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    formIdx: index('assist_filing_documents_form_idx').on(t.engagementId, t.form, t.createdAt),
+  }),
+);
+
+/**
+ * What staff confirmed about a signer's MCA set-up: Business User registration and DSC
+ * association. Suite cannot read these from the portal, so a person records the date they checked.
+ * One row per engagement and signer; `signer_id` is the `KnownSigner` id (a `pre-15` entry id or a
+ * subscriber key). No MCA login, password, OTP or DSC PIN is ever stored here.
+ */
+export const assistFilingSigners = pgTable(
+  'assist_filing_signers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    engagementId: uuid('engagement_id')
+      .notNull()
+      .references(() => engagements.id, { onDelete: 'cascade' }),
+    signerId: text('signer_id').notNull(),
+    businessUserOn: date('business_user_on'),
+    dscAssociatedOn: date('dsc_associated_on'),
+    updatedBy: uuid('updated_by').references(() => profiles.id, { onDelete: 'set null' }),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    signerIdx: uniqueIndex('assist_filing_signers_engagement_signer_idx').on(t.engagementId, t.signerId),
+  }),
+);
+
+/**
+ * Frozen filing packets: the assist profile, attachment list, signer list and missing keys of an
+ * engagement at one moment, numbered per engagement. A later change in Suite shows against the
+ * latest packet. `content` holds no storage key and no file bytes.
+ */
+export const assistFilingPackets = pgTable(
+  'assist_filing_packets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    engagementId: uuid('engagement_id')
+      .notNull()
+      .references(() => engagements.id, { onDelete: 'cascade' }),
+    version: integer('version').notNull(),
+    /** SHA-256 of the canonical JSON of `content`. */
+    hash: text('hash').notNull(),
+    content: jsonb('content').notNull(),
+    note: text('note'),
+    createdBy: uuid('created_by').references(() => profiles.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    versionIdx: uniqueIndex('assist_filing_packets_engagement_version_idx').on(t.engagementId, t.version),
+  }),
+);

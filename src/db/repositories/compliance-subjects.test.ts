@@ -68,6 +68,19 @@ beforeEach(() => {
 });
 
 describe('assist runs', () => {
+  it('takes exactly the two SPICe+ run keys as registration subjects', async () => {
+    const { subjectInEngagement } = await import('@/db/repositories/compliance-subject-scope');
+    expect(await subjectInEngagement(OWN, 'registration', 'spice-part-a')).toBe(true);
+    expect(await subjectInEngagement(OWN, 'registration', 'spice-part-b')).toBe(true);
+    expect(await subjectInEngagement(OWN, 'registration', 'reg-4')).toBe(true);
+    for (const key of ['spice-part-c', 'SPICE-PART-A', 'spice-part-a ', 'spice', 'reg-', 'reg-1234']) {
+      expect(await subjectInEngagement(OWN, 'registration', key)).toBe(false);
+    }
+    // A SPICe+ key is no filing key: it does not get past the instance check.
+    expect(await subjectInEngagement(OWN, 'filing', 'spice-part-a')).toBe(false);
+    expect(calls).toHaveLength(0);
+  });
+
   it('gives a developer nothing before any query', async () => {
     expect(await runs.listAssistRuns(ctx('developer'), { engagementId: OWN })).toBeNull();
     expect(calls).toHaveLength(0);
