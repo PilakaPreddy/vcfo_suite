@@ -63,9 +63,18 @@ beforeEach(() => {
 });
 
 describe('pickableActions', () => {
-  it('offers a lead the four areas and leaves checklist filling to the data router', async () => {
+  it('offers a lead the pickable areas and leaves checklist filling to the data router', async () => {
     const names = (await pickableActions(lead)).map((a) => a.name).sort();
-    expect(names).toEqual(['reminders.client', 'reminders.draftEmail', 'requests.create', 'statuses.setStep', 'tasks.create']);
+    expect(names).toEqual([
+      'filing.recordEvent',
+      'reminders.client',
+      'reminders.draftEmail',
+      'requests.create',
+      'requests.createListFromTemplate',
+      'requests.sendList',
+      'statuses.setStep',
+      'tasks.create',
+    ]);
   });
 
   it('offers a client nothing', async () => {

@@ -2,6 +2,7 @@ import { statesForPicker } from '@/data/labour-registers/states';
 import { companiesNamed, type LockableEngagement } from '@/lib/ask/data-router/lock';
 import type { ReadResult } from '@/lib/ask/data-router/types';
 import { normalizeLabel } from '@/lib/ask/field-catalog/rules';
+import { authorityFromText, looksLikeNotice, NOTICE_DOC_TYPES, type NoticeAuthority } from '@/lib/notices/model';
 import { COPY_FIELD_BY_DOC, UPLOAD_FIELD_BY_DOC, UPLOAD_FIELDS, type UploadField } from '@/lib/ask/field-catalog/upload-fields';
 import type { UploadSlot } from '@/lib/labour-registers/parse';
 import { parsePeriodHint, type PeriodHint } from '@/lib/labour-registers/period-hint';
@@ -29,6 +30,8 @@ export type DropDestination =
   | { kind: 'checklist'; docType: string; fields: UploadField[]; copy: boolean }
   /** Pasted text: its values only, there is no file to keep. */
   | { kind: 'values' }
+  /** A tax, GST, TDS or MCA notice: it opens a case on the notice desk (`compliance.openNotice`). */
+  | { kind: 'notice'; authority: NoticeAuthority | null }
   /** Everything else, into the document vault. A compliance task may still claim it in `assemble`. */
   | { kind: 'vault'; category: string };
 
@@ -81,6 +84,7 @@ const VAULT_CATEGORY: Record<string, string> = {
   rent_agreement: 'Contracts',
   bank_document: 'Bank',
   company_letter: 'Letters',
+  tax_notice: 'Notices',
   din_letter: 'Director KYC',
   incorporation_certificate: 'Incorporation',
   pan_card: 'Identity',
@@ -253,6 +257,21 @@ function pickClient<E extends LockableEngagement>(levels: Array<{ source: Client
 
 // ---- The destination --------------------------------------------------------------------------
 
+/** Document types a notice may be read as, besides the notice types themselves. */
+const NOTICE_READ_AS = new Set(['other', 'form', 'company_letter']);
+
+/**
+ * A department's notice, by the reader's type or by notice wording in the file name, its folders
+ * or the values read from it. Returns null for anything else.
+ */
+export function noticeDestination(input: Pick<ClassifyInput, 'fileName' | 'path' | 'read'>): Extract<DropDestination, { kind: 'notice' }> | null {
+  const { read } = input;
+  if (!NOTICE_DOC_TYPES.has(read.docType) && !NOTICE_READ_AS.has(read.docType)) return null;
+  const texts = [stem(input.fileName), ...folderNames(input.path), ...read.values.slice(0, 40).map((v) => `${v.label} ${v.value}`)];
+  if (!looksLikeNotice({ docType: read.docType, texts })) return null;
+  return { kind: 'notice', authority: authorityFromText(texts.join(' ')) };
+}
+
 function destinationOf(input: ClassifyInput): DropDestination {
   const { read } = input;
   if (input.kind === 'paste') return { kind: 'values' };
@@ -265,6 +284,8 @@ function destinationOf(input: ClassifyInput): DropDestination {
       stateCode: stateFromNames(names),
     };
   }
+  const notice = noticeDestination(input);
+  if (notice) return notice;
   const byDoc = UPLOAD_FIELD_BY_DOC[read.docType] ?? [];
   if (byDoc.length > 0) return { kind: 'checklist', docType: read.docType, fields: [...byDoc], copy: Boolean(COPY_FIELD_BY_DOC[read.docType]) && byDoc.every((f) => f.group === 'directors') };
   const byLabel = read.docType === 'other' || read.docType === 'form' ? uploadFieldsByLabel(input.fileName) : [];

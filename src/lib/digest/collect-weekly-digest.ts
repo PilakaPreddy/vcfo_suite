@@ -8,6 +8,8 @@ import { listDocumentRequests } from '@/db/repositories/document-requests';
 import { listChecklistIndex, listEngagements } from '@/db/repositories/engagements';
 import { getSuperFirmInsights } from '@/db/repositories/super-overview';
 import { listTasks } from '@/db/repositories/tasks';
+import { listClientHealth } from '@/db/repositories/client-health';
+import { healthDigestSection } from '@/lib/client-health/digest';
 import { buildRisks } from '@/lib/super/super-insights-model';
 import { todayIso } from '@/lib/client-portal/compliances';
 import { appEngagementId } from '@/lib/projects/legacy-engagement-ids';
@@ -93,21 +95,24 @@ export async function collectWeeklyDigest(ctx: AuthContext, now: Date = new Date
       ...base,
       audience: role,
       settingsHref: staffPaths(role).settings,
-      sections: staffDigestSections(role, {
-        today,
-        filings: filings.map(toFilingInput),
-        steps,
-        tasks: tasks
-          .filter((t) => !t.checklistKey?.trim())
-          .map((t) => ({
-            id: t.id,
-            title: t.title?.trim() || 'Task',
-            companyName: companyOf(t.engagementId),
-            status: t.status,
-            dueAt: t.dueAt ?? null,
-          })),
-        requests: requests.map((r) => ({ id: r.id, label: r.label, companyName: companyOf(r.engagementId), status: r.status })),
-      }),
+      sections: [
+        ...staffDigestSections(role, {
+          today,
+          filings: filings.map(toFilingInput),
+          steps,
+          tasks: tasks
+            .filter((t) => !t.checklistKey?.trim())
+            .map((t) => ({
+              id: t.id,
+              title: t.title?.trim() || 'Task',
+              companyName: companyOf(t.engagementId),
+              status: t.status,
+              dueAt: t.dueAt ?? null,
+            })),
+          requests: requests.map((r) => ({ id: r.id, label: r.label, companyName: companyOf(r.engagementId), status: r.status })),
+        }),
+        healthDigestSection(role, await healthRows(ctx, (id) => byAppId.get(id)?.slug ?? null)),
+      ],
     };
   }
 
@@ -133,11 +138,20 @@ export async function collectWeeklyDigest(ctx: AuthContext, now: Date = new Date
       ...base,
       audience: role,
       settingsHref: adminPaths(role).settings,
-      sections: adminDigestSections(role, { today, risks }),
+      sections: [...adminDigestSections(role, { today, risks }), healthDigestSection(role, await healthRows(ctx, () => null))],
     };
   }
 
   return null;
+}
+
+/** The client health rows for the digest; a failed read (table not migrated yet) leaves the section empty. */
+async function healthRows(ctx: AuthContext, slugOf: (appId: string) => string | null) {
+  try {
+    return (await listClientHealth(ctx)).map((h) => ({ ...h, slug: slugOf(h.engagementId) }));
+  } catch {
+    return [];
+  }
 }
 
 function toFilingInput(f: {

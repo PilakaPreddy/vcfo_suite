@@ -60,9 +60,12 @@ describe('practice block (R-51)', () => {
         `${base}/compliances/obligations`,
         `${base}/compliances/calendar`,
         `${base}/compliances/filings`,
+        `${base}/compliances/expiries`,
+        `${base}/compliances/notices`,
+        `${base}/compliances/events`,
         `${base}/registrations`,
       ]);
-      expect(isNavGroup(b.three[1]) ? b.three[1].items.map((l) => l.label) : []).toEqual(['Obligations', 'Calendar', 'Filings']);
+      expect(isNavGroup(b.three[1]) ? b.three[1].items.map((l) => l.label) : []).toEqual(['Obligations', 'Calendar', 'Filings', 'Expiries', 'Notices', 'Company events']);
       // Each entry appears once: the old Registrations row after Compliances is gone.
       expect(b.items.filter((e) => label(e) === 'Registrations')).toHaveLength(1);
     });
@@ -82,9 +85,12 @@ describe('practice block (R-51)', () => {
       '/app/super/practice/incorporation',
       '/app/super/practice/compliances',
       '/app/super/practice/filings',
+      '/app/super/compliances/expiries',
+      '/app/super/compliances/notices',
+      '/app/super/compliances/events',
       '/app/super/practice/registrations',
     ]);
-    expect(isNavGroup(b.three[1]) ? b.three[1].items.map((l) => l.label) : []).toEqual(['Obligations', 'Filings']);
+    expect(isNavGroup(b.three[1]) ? b.three[1].items.map((l) => l.label) : []).toEqual(['Obligations', 'Filings', 'Expiries', 'Notices', 'Company events']);
   });
 
   it('client (staff-shell fallback): the same block after Home', () => {

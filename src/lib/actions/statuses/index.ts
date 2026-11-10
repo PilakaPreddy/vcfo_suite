@@ -7,6 +7,7 @@ import { checklistGateViewerFrom, gateActiveCatalog, getStepGate } from '@/lib/c
 import type { JsonValue } from '@/lib/ask/changeset/types';
 import { loadEngagement, oneRow, recheckOf, STAFF_ROLES, stepTitle, unavailable } from '../shared';
 import { defineAction, type ActionContext, type AnyAction } from '../types';
+import { setClientHealth } from './set-client-health';
 
 /**
  * A checklist step's status, set from chat after approval. The write is `applyChecklistPatch`, the
@@ -101,4 +102,4 @@ const setStep = defineAction({
   },
 });
 
-export const actions: AnyAction[] = [setStep];
+export const actions: AnyAction[] = [setStep, setClientHealth];

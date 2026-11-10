@@ -10,6 +10,7 @@ import { listBatches } from '@/db/repositories/labour-registers';
 import { checkResponseRow, needsManagerApproval } from '@/lib/actions/checklist/rules';
 import { SLOT_LABEL } from '@/lib/actions/labour/upload-sheet';
 import { getAction } from '@/lib/actions/registry';
+import { copyAskAttachment } from '@/lib/actions/shared';
 import type { ActionContext } from '@/lib/actions/types';
 import type { ChangesetRowDraft, RowSource } from '@/lib/ask/changeset/types';
 import { askConfig } from '@/lib/ask/config';
@@ -23,6 +24,7 @@ import type { LlmProvider } from '@/lib/ask/provider';
 import { REGISTERED_OFFICE_STATE_FIELD_ID, resolveRegisteredOfficeResponses } from '@/lib/checklist/registered-office-responses';
 import type { PeriodHint } from '@/lib/labour-registers/period-hint';
 import { periodLabel } from '@/lib/labour-registers/storage';
+import { EMPTY_NOTICE_FIELDS, readNotice, type NoticeFields } from '@/lib/notices/read-notice';
 import { classifyDrop, matchTask, stateCodeOfName, type ClassifyInput, type DropDestination, type FileClassification } from './classify';
 import { NOT_SORTED_BUDGET } from './summary';
 import type { DropFile, DropGroup, DropUnplaced } from './types';
@@ -351,6 +353,20 @@ export async function assembleDrop(input: AssembleInput): Promise<AssembleResult
           };
         }
       }
+      if (destination.kind === 'notice') {
+        // A notice opens a case: the notice reader fills its fields with the run's own provider,
+        // so the read counts toward the drop's budget. A failed read still proposes the case.
+        let fields: NoticeFields = { ...EMPTY_NOTICE_FIELDS, authority: destination.authority ?? 'other' };
+        try {
+          const file = await copyAskAttachment(actx(row.id), read.attachment.id);
+          if (file) fields = (await readNotice({ fileName: file.fileName, data: file.bytes, contentType: file.contentType }, { provider: await runCtx.provider() })).fields;
+        } catch (error) {
+          if (error instanceof RunOverBudget) overBudget = true;
+          else console.warn('[ask-vcfo] notice read failed', maskIdentityNumbers(error instanceof Error ? error.message : String(error)));
+        }
+        const filled = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== null && v !== ''));
+        return { kind: 'row', action: 'compliance.openNotice', input: { ...base, ...filled }, destination: 'Notice desk: new case' };
+      }
       // The vault, unless an open compliance task claims the file.
       tasks ??= (await listTasks(ctx, { engagementId: row.id, done: false })).tasks;
       const task = matchTask(tasks, { instruction, path: read.path, fileName: read.attachment.fileName });
@@ -388,8 +404,9 @@ export async function assembleDrop(input: AssembleInput): Promise<AssembleResult
       }
       if (plan.kind === 'copy') copies.add(read.attachment.id);
       placedHere.push({ read, destination: plan.destination });
-      // Every read's values go through the data router; a labour sheet has none.
-      if (read.result.values.length > 0 || plan.kind === 'copy') valueReads.push({ result: read.result, attachment: read.attachment });
+      // Every read's values go through the data router; a labour sheet has none, and a notice's
+      // values are the department's, which belong on its case, not on the client's checklist.
+      if ((read.result.values.length > 0 && found.destination.kind !== 'notice') || plan.kind === 'copy') valueReads.push({ result: read.result, attachment: read.attachment });
     }
     if (placedHere.length === 0) continue;
 

@@ -53,6 +53,7 @@ import { CLIENT_TOOLS, type ClientToolContext } from '@/lib/ask/tools/client';
 import { loadStaffData } from '@/lib/ask/tools/staff-data';
 import { STAFF_TOOLS, type StaffData } from '@/lib/ask/tools/staff';
 import { STAFF_AREA_TOOLS } from '@/lib/ask/tools/staff-areas';
+import { MY_DAY_TOOLS } from '@/lib/ask/tools/my-day';
 import {
   applicabilityFromSnapshot,
   getTopic,
@@ -510,7 +511,7 @@ export async function runAskChat(ctx: AuthContext, request: ChatRequest, emit: E
             return t.run(data, input);
           },
         })).concat(
-          Object.values(STAFF_AREA_TOOLS).map((t) => ({
+          [...Object.values(STAFF_AREA_TOOLS), ...Object.values(MY_DAY_TOOLS)].map((t) => ({
             definition: t.definition,
             run: async (input: Record<string, unknown>) => t.run({ ctx, data: await loadStaff() }, input),
           })),

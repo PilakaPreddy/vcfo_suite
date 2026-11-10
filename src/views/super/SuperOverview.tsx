@@ -25,6 +25,7 @@ import {
 import { SuperPracticeAreasPanel } from '@/components/super/overview/SuperPracticeAreasPanel';
 import { SuperTeamLoadPanel } from '@/components/super/overview/SuperTeamLoadPanel';
 import { EscalationsPanel } from '@/components/super/escalations/EscalationsPanel';
+import { MyDayCard } from '@/views/my-day/MyDayCard';
 import {
   changeText,
   filingOutcome,
@@ -196,6 +197,9 @@ export default function SuperOverview() {
         </DashHero>
 
         {insights ? <SuperPracticeCards insights={insights} /> : <InsightShapes count={3} />}
+
+        {/* IDEAS-PLAN F: the super admin's ranked plan for today; the My day email links here. */}
+        <MyDayCard />
 
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="flex min-w-0 flex-col gap-5">

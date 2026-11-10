@@ -46,6 +46,7 @@ import {
   type InternWorkItem,
 } from '@/lib/intern/intern-work';
 import type { Engagement } from '@/data/engagements';
+import { ClientHealthChip } from '@/components/client-health/ClientHealthChip';
 
 type Row = {
   e: Engagement;
@@ -304,13 +305,16 @@ function InternClientsInner() {
     {
       key: 'status',
       header: 'Status',
-      width: '172px',
+      width: '232px',
       render: (r) => {
         const st = rowStatus(r);
         return (
-          <Chip tone={st.tone} fixed>
-            {st.word}
-          </Chip>
+          <span className="flex items-center gap-1.5">
+            <Chip tone={st.tone} fixed>
+              {st.word}
+            </Chip>
+            <ClientHealthChip engagementId={r.e.id} />
+          </span>
         );
       },
     },

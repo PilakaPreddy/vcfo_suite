@@ -7,9 +7,10 @@ export type EmailOptional = (typeof EMAIL_OPTIONAL)[number];
 /**
  * Staff alerts by role (P-627): admin and super get "escalations", managers "approvalsWaiting".
  * The super admin also gets "partnerReport" (P-639): off holds their monthly scheduled partner
- * reports. They are stored as keys in the same `email` jsonb as the optional categories.
+ * reports. Every staff member may turn on "myDayEmail", the weekday "My day" plan email (IDEAS-PLAN F),
+ * which is off by default. They are stored as keys in the same `email` jsonb as the optional categories.
  */
-const STAFF_ALERTS = ['approvalsWaiting', 'escalations', 'partnerReport'] as const;
+const STAFF_ALERTS = ['approvalsWaiting', 'escalations', 'partnerReport', 'myDayEmail'] as const;
 export type StaffAlert = (typeof STAFF_ALERTS)[number];
 
 /** Days before a due date to send the reminder (C-831); null keeps the firm default. */
@@ -52,7 +53,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   quietHours: true,
   quietStart: '21:00',
   quietEnd: '08:00',
-  alerts: { approvalsWaiting: true, escalations: true, partnerReport: true },
+  alerts: { approvalsWaiting: true, escalations: true, partnerReport: true, myDayEmail: false },
   remindDays: null,
   digestTime: null,
 };
