@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alertCopy, daysUntil, dir3KycDueOn, dueAlertStage, expiryBand, filingsAfterDscExpiry, leiNextExpiry, nextExpiryAfterRenewal, stageForDays } from './model';
+import { alertCopy, daysUntil, dir3KycDueOn, dueAlertStage, isExpiryBacklog, expiryBand, filingsAfterDscExpiry, leiNextExpiry, nextExpiryAfterRenewal, stageForDays } from './model';
 
 describe('stages', () => {
   it('maps days left to the T-60, T-30, T-7 and expired stages', () => {
@@ -16,6 +16,15 @@ describe('stages', () => {
     expect(dueAlertStage({ expiresOn: '2026-11-01', lastAlertStage: 0, renewedAt: null }, today)).toBeNull();
     expect(dueAlertStage({ expiresOn: '2026-11-10', lastAlertStage: null, renewedAt: new Date() }, today)).toBeNull();
     expect(dueAlertStage({ expiresOn: '2027-06-01', lastAlertStage: null, renewedAt: null }, today)).toBeNull();
+  });
+
+  it('treats an item never alerted and expired more than 30 days ago as backlog', () => {
+    const today = '2026-11-09';
+    expect(isExpiryBacklog({ expiresOn: '2024-03-01', lastAlertStage: null, renewedAt: null }, today)).toBe(true);
+    expect(isExpiryBacklog({ expiresOn: '2026-10-09', lastAlertStage: null, renewedAt: null }, today)).toBe(true);
+    expect(isExpiryBacklog({ expiresOn: '2026-10-10', lastAlertStage: null, renewedAt: null }, today)).toBe(false);
+    expect(isExpiryBacklog({ expiresOn: '2024-03-01', lastAlertStage: 7, renewedAt: null }, today)).toBe(false);
+    expect(isExpiryBacklog({ expiresOn: '2024-03-01', lastAlertStage: null, renewedAt: new Date() }, today)).toBe(false);
   });
 
   it('bands red at 7 days or expired, amber within 30, green beyond or renewed', () => {

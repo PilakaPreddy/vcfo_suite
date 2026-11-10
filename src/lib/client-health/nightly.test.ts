@@ -109,6 +109,21 @@ describe('runSlaLadder', () => {
     expect(systemClaimSlaLevel).toHaveBeenCalledTimes(6);
   });
 
+  it('claims every level but tells only the people in send (first sighting: the highest level)', async () => {
+    const plans = await runSlaLadder(ROW.id, [{ ...due[0], send: ['partner'] }], '2026-11-10');
+    expect(plans.map((p) => p.to)).toEqual([admin.email]);
+    expect(systemClaimSlaLevel).toHaveBeenCalledTimes(3);
+    const bells = createNotificationsForUsers.mock.calls[0][0] as unknown as Array<{ userId: string }>;
+    expect(bells.map((b) => b.userId)).toEqual([admin.id]);
+  });
+
+  it('claims a backlog breach and tells nobody', async () => {
+    const plans = await runSlaLadder(ROW.id, [{ ...due[0], send: [] }], '2026-11-10');
+    expect(plans).toEqual([]);
+    expect(systemClaimSlaLevel).toHaveBeenCalledTimes(3);
+    expect(createNotificationsForUsers).not.toHaveBeenCalled();
+  });
+
   it('falls back to the manager when the client has no lead', () => {
     expect(ladderRecipient('lead', { lead: null, manager, admin })).toBe(manager);
     expect(ladderRecipient('manager', { lead, manager: null, admin })).toBe(admin);

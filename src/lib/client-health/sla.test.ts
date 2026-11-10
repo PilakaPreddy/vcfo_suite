@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { slaDaysFromTimeline } from '@/data/sla';
-import { complianceClock, dueLevels, slaMultiple, stageLabelOf, stepClocks, stepStage } from './sla';
+import { complianceClock, dueLevels, ladderPlan, slaMultiple, stageLabelOf, stepClocks, stepStage } from './sla';
 
 describe('slaDaysFromTimeline', () => {
   it('reads the upper figure and turns working days into calendar days', () => {
@@ -28,6 +28,24 @@ describe('the ladder', () => {
     expect(dueLevels(clock, '2026-11-11', new Set(['lead']))).toEqual(['manager']);
     expect(dueLevels(clock, '2026-11-11', new Set(['lead', 'manager']))).toEqual([]);
     expect(dueLevels(clock, '2026-11-20', new Set(['lead', 'manager', 'partner']))).toEqual([]);
+  });
+
+  it('on the first sighting of a clock records every level reached but sends only the highest', () => {
+    expect(ladderPlan(clock, '2026-11-16', undefined)).toEqual({ claim: ['lead', 'manager', 'partner'], send: ['partner'] });
+    expect(ladderPlan(clock, '2026-11-11', new Set())).toEqual({ claim: ['lead', 'manager'], send: ['manager'] });
+    expect(ladderPlan(clock, '2026-11-06', undefined)).toEqual({ claim: ['lead'], send: ['lead'] });
+    expect(ladderPlan(clock, '2026-11-05', undefined)).toEqual({ claim: [], send: [] });
+  });
+
+  it('sends every new level once the clock is already on record', () => {
+    expect(ladderPlan(clock, '2026-11-16', new Set(['lead']))).toEqual({ claim: ['manager', 'partner'], send: ['manager', 'partner'] });
+  });
+
+  it('records a backlog breach (first seen more than 30 days after it began) without telling anyone', () => {
+    // Breached on 2026-11-06; 31 days later it is backlog.
+    expect(ladderPlan(clock, '2026-12-06', undefined)).toEqual({ claim: ['lead', 'manager', 'partner'], send: ['partner'] });
+    expect(ladderPlan(clock, '2026-12-07', undefined)).toEqual({ claim: ['lead', 'manager', 'partner'], send: [] });
+    expect(ladderPlan({ startedOn: '2025-06-01', slaDays: 10 }, '2026-11-10', undefined).send).toEqual([]);
   });
 
   it('keys a new clock for a new stage start, so a step that comes back starts again', () => {

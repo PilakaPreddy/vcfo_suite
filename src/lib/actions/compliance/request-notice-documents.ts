@@ -2,7 +2,7 @@ import 'server-only';
 
 import { z } from 'zod';
 import { getNoticeCase, updateNoticeCase, type NoticeCaseDto } from '@/db/repositories/notice-cases';
-import { createRequestList } from '@/db/repositories/request-lists';
+import { createRequestList, getRequestList } from '@/db/repositories/request-lists';
 import type { ChangesetDraft, RowCheck } from '@/lib/ask/changeset/types';
 import { sendList } from '../requests/send-list';
 import { clientRecipients, dayInput, jsonTarget, oneRow, recheckOf, STAFF_ROLES, unavailable } from '../shared';
@@ -14,7 +14,9 @@ import { defineAction, type ActionContext, type ActionRecheck, type ActionResult
  * list with one document item per line and sends it through `requests.sendList` itself, so the
  * portal upload path, the email and the reminders are the request list's own. This approved first
  * send is what the reminder job's later reminders rest on. The case moves to "documents
- * requested" and keeps the list's id. No undo: the email has gone.
+ * requested" and keeps the list's id. No undo: the email has gone. A case whose request list is
+ * still live (anything but cancelled) is held, so a second approval never sends a second list and
+ * a second set of reminders.
  */
 
 const input = z.object({
@@ -44,10 +46,14 @@ async function check(actx: ActionContext, i: Input): Promise<{ checked: ActionRe
   const recipients = await clientRecipients(item.engagementId);
   const today = actx.now.toISOString().slice(0, 10);
   const due = requestDueOn(i, item, today);
+  const earlier = item.requestListId ? await getRequestList(actx.auth, item.requestListId) : null;
   const checks: RowCheck[] = [
     { rule: 'scope', ok: true },
     item.open ? { rule: 'status', ok: true } : { rule: 'status', ok: false, message: 'This case is no longer open.' },
     docs.length > 0 ? { rule: 'items', ok: true } : { rule: 'items', ok: false, message: 'Draft the reply first, or name the documents to ask for.' },
+    earlier && earlier.status !== 'cancelled'
+      ? { rule: 'duplicate', ok: false, message: `These documents were already requested (the list is ${earlier.status}). Add lines to that list instead.` }
+      : { rule: 'duplicate', ok: true },
     recipients.length > 0 ? { rule: 'recipients', ok: true } : { rule: 'recipients', ok: false, message: 'This client has no portal user to send the request to.' },
     i.dueAt && i.dueAt < today ? { rule: 'date', ok: false, message: 'The due date is in the past.' } : { rule: 'date', ok: true },
   ];

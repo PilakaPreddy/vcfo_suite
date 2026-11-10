@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { z } from 'zod';
-import { deleteExpiryItem, ExpiryError, findExpiryItem, upsertExpiryItem, type ExpiryItemDto } from '@/db/repositories/expiry-items';
+import { deleteExpiryItem, ExpiryError, findExpiryItem, upsertExpiryItem, type ExpiryMatch } from '@/db/repositories/expiry-items';
 import type { JsonValue, RowCheck } from '@/lib/ask/changeset/types';
 import { EXPIRY_KIND_LABEL, EXPIRY_KINDS, shortDate, type ExpirySource } from '@/lib/expiries/model';
 import { dayInput, jsonTarget, loadEngagement, oneRow, recheckOf, STAFF_ROLES, unavailable } from '../shared';
@@ -38,7 +38,7 @@ interface UndoData {
 
 const validDay = (iso: string) => !Number.isNaN(Date.parse(`${iso}T00:00:00Z`)) && new Date(`${iso}T00:00:00Z`).toISOString().slice(0, 10) === iso;
 
-async function current(actx: ActionContext, i: Input): Promise<ExpiryItemDto | null> {
+async function current(actx: ActionContext, i: Input): Promise<ExpiryMatch> {
   return findExpiryItem(actx.auth, { engagementId: i.engagementId, kind: i.kind, subjectName: i.subjectName });
 }
 
@@ -47,8 +47,14 @@ async function check(actx: ActionContext, i: Input): Promise<ActionRecheck> {
   if (!loaded) return unavailable();
   const checks: RowCheck[] = [{ rule: 'scope', ok: true }];
   checks.push(validDay(i.expiresOn) ? { rule: 'date', ok: true } : { rule: 'date', ok: false, message: 'Held: that is not a real date.' });
-  const existing = await current(actx, i);
-  const what = `${i.subjectName}'s ${i.kind === 'other' && i.referenceLabel ? i.referenceLabel : EXPIRY_KIND_LABEL[i.kind]}`;
+  const match = await current(actx, i);
+  const existing = match.item;
+  if (match.empty) checks.push({ rule: 'subject', ok: false, message: 'Held: the name has no letters or digits to match on. Give the name in English letters.' });
+  else if (match.ambiguous.length > 1) {
+    checks.push({ rule: 'subject', ok: false, message: `Held: more than one ${EXPIRY_KIND_LABEL[i.kind]} matches "${i.subjectName}" (${match.ambiguous.join(', ')}). Give the full name.` });
+  }
+  // The card names the stored person or company whose date changes, not the name typed.
+  const what = `${existing?.subjectName ?? i.subjectName}'s ${i.kind === 'other' && i.referenceLabel ? i.referenceLabel : EXPIRY_KIND_LABEL[i.kind]}`;
   const newText = validDay(i.expiresOn) ? shortDate(i.expiresOn) : i.value;
   return recheckOf(checks, {
     oldValue: existing?.expiresOn ?? '',
@@ -60,7 +66,10 @@ async function check(actx: ActionContext, i: Input): Promise<ActionRecheck> {
 
 async function execute(actx: ActionContext, i: Input): Promise<ActionResult> {
   if (!validDay(i.expiresOn)) return { ok: false, error: 'That is not a real date.' };
-  const existing = await current(actx, i);
+  const match = await current(actx, i);
+  if (match.empty) return { ok: false, error: 'The name has no letters or digits to match on.' };
+  if (match.ambiguous.length > 1) return { ok: false, error: `More than one item matches: ${match.ambiguous.join(', ')}. Give the full name.` };
+  const existing = match.item;
   try {
     const { item, previous } = await upsertExpiryItem(actx.auth, {
       id: existing?.id,

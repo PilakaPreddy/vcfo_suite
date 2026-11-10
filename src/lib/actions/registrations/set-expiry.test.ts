@@ -39,7 +39,7 @@ const EXISTING = { id: 'x-1', engagementId: ACME.id, kind: 'dsc', kindLabel: 'DS
 beforeEach(() => {
   vi.clearAllMocks();
   getEngagementById.mockResolvedValue(ACME);
-  findExpiryItem.mockResolvedValue(null);
+  findExpiryItem.mockResolvedValue({ item: null, ambiguous: [], empty: false });
 });
 
 describe('registrations.setExpiry', () => {
@@ -53,10 +53,22 @@ describe('registrations.setExpiry', () => {
     expect(row.displayNew).toBe("Ravi's DSC expires 12 Mar 2027 (Acme Private Limited)");
     expect(row.displayOld).toBe('');
     expect(row.heldReason).toBeUndefined();
-    findExpiryItem.mockResolvedValue(EXISTING);
+    findExpiryItem.mockResolvedValue({ item: EXISTING, ambiguous: [], empty: false });
     row = (await setExpiry.preview(actx, input))!.rows[0]!;
     expect(row.displayOld).toBe('Expires 14 Nov 2026');
     expect(row.oldValue).toBe('2026-11-14');
+    // The card names the stored item whose date changes, not the name typed.
+    expect(row.displayNew).toBe("Ravi Kumar's DSC expires 12 Mar 2027 (Acme Private Limited)");
+  });
+
+  it('holds the card when several items match the name, or the name has nothing to match on', async () => {
+    findExpiryItem.mockResolvedValue({ item: null, ambiguous: ['Ravi Kumar', 'Ravi Shankar'], empty: false });
+    expect((await setExpiry.recheck!(actx, input, {})).heldReason).toMatch(/more than one DSC matches "Ravi" \(Ravi Kumar, Ravi Shankar\)/);
+    expect(await setExpiry.execute(actx, input)).toMatchObject({ ok: false });
+    findExpiryItem.mockResolvedValue({ item: null, ambiguous: [], empty: true });
+    expect((await setExpiry.recheck!(actx, { ...input, subjectName: '.' }, {})).heldReason).toMatch(/no letters or digits/);
+    expect(await setExpiry.execute(actx, { ...input, subjectName: '.' })).toMatchObject({ ok: false });
+    expect(upsertExpiryItem).not.toHaveBeenCalled();
   });
 
   it('holds a client outside scope and a date that does not exist', async () => {
@@ -67,7 +79,7 @@ describe('registrations.setExpiry', () => {
   });
 
   it('updates the matching item with the source ask, and undo puts the old date back', async () => {
-    findExpiryItem.mockResolvedValue(EXISTING);
+    findExpiryItem.mockResolvedValue({ item: EXISTING, ambiguous: [], empty: false });
     upsertExpiryItem.mockResolvedValue({ item: { ...EXISTING, expiresOn: '2027-03-12', source: 'ask' }, previous: EXISTING });
     const res = await setExpiry.execute(actx, input);
     expect(res).toMatchObject({ ok: true, summary: "Ravi Kumar's DSC now expires 12 Mar 2027" });

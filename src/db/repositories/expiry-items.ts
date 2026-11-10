@@ -16,6 +16,7 @@ import {
   dueAlertStage,
   EXPIRY_KIND_LABEL,
   expiryBand,
+  isExpiryBacklog,
   itemTitle,
   nextExpiryAfterRenewal,
   RENEWAL_DOCUMENTS,
@@ -110,6 +111,14 @@ export function toExpiryDto(row: ExpiryItemRow, companyName: string, today: stri
   };
 }
 
+/**
+ * What a client may see of an item: staff notes and the id of the renewal draft request list are
+ * internal, so they are blanked for the client role.
+ */
+function forViewer(ctx: AuthContext, dto: ExpiryItemDto): ExpiryItemDto {
+  return ctx.role === 'client' ? { ...dto, notes: null, requestListId: null } : dto;
+}
+
 /** Engagement db ids the caller may read, honouring one named engagement. */
 async function readableIds(ctx: AuthContext, engagementId?: string | null): Promise<string[]> {
   if (!READERS.has(ctx.role)) return [];
@@ -149,7 +158,7 @@ export async function listExpiryItems(ctx: AuthContext, opts: ListExpiryOptions 
     .innerJoin(engagements, eq(engagements.id, expiryItems.engagementId))
     .where(and(...conds))
     .orderBy(asc(expiryItems.expiresOn));
-  return rows.map((r) => toExpiryDto(r.item, r.companyName, today));
+  return rows.map((r) => forViewer(ctx, toExpiryDto(r.item, r.companyName, today)));
 }
 
 /** One item, or null when it does not exist or is outside the caller's scope. */
@@ -164,28 +173,62 @@ export async function getExpiryItem(ctx: AuthContext, id: string, today: string 
   if (!row) return null;
   const ids = await readableIds(ctx, row.item.engagementId);
   if (!ids.includes(row.item.engagementId)) return null;
-  return toExpiryDto(row.item, row.companyName, today);
+  return forViewer(ctx, toExpiryDto(row.item, row.companyName, today));
+}
+
+/**
+ * Picks the item a name means among one engagement's items of one kind. An exact name match
+ * (case, spacing and punctuation ignored) wins; otherwise a name that is the start of exactly one
+ * stored name, or the other way round ("Ravi" for "Ravi Kumar"). When several items match, none is
+ * picked and they come back as candidates, so the caller can ask which one. A name with no letters
+ * or digits to match on (`empty`) matches nothing.
+ */
+export function pickExpirySubject<T extends { subjectName: string }>(rows: readonly T[], name: string): { hit: T | null; candidates: T[]; empty: boolean } {
+  const want = subjectSlug(name);
+  if (!want) return { hit: null, candidates: [], empty: true };
+  const exact = rows.filter((r) => subjectSlug(r.subjectName) === want);
+  const pool = exact.length > 0 ? exact : rows.filter((r) => {
+    const have = subjectSlug(r.subjectName);
+    return have.length > 0 && (have.startsWith(`${want}-`) || want.startsWith(`${have}-`));
+  });
+  if (pool.length === 1) return { hit: pool[0], candidates: pool, empty: false };
+  return { hit: null, candidates: pool, empty: false };
+}
+
+export interface ExpiryMatch {
+  item: ExpiryItemDto | null;
+  /** The stored names, when more than one item matches and none was picked. */
+  ambiguous: string[];
+  /** The name had nothing to match on (for example only punctuation or a non-Latin script). */
+  empty: boolean;
 }
 
 /**
  * The item the chat or a person most likely means: the same engagement, kind and subject name
- * (case and spacing ignored). Null when there is none or it is out of scope.
+ * (see `pickExpirySubject`). `item` is null when there is none, when several match, or when the
+ * engagement is out of scope.
  */
 export async function findExpiryItem(
   ctx: AuthContext,
   input: { engagementId: string; kind: ExpiryKind; subjectName: string },
   today: string = istToday(),
-): Promise<ExpiryItemDto | null> {
+): Promise<ExpiryMatch> {
   const ids = await readableIds(ctx, input.engagementId);
-  if (ids.length === 0) return null;
+  if (ids.length === 0) return { item: null, ambiguous: [], empty: !subjectSlug(input.subjectName) };
   const rows = await db
     .select({ item: expiryItems, companyName: engagements.companyName })
     .from(expiryItems)
     .innerJoin(engagements, eq(engagements.id, expiryItems.engagementId))
     .where(and(inArray(expiryItems.engagementId, ids), eq(expiryItems.kind, input.kind)));
-  const want = subjectSlug(input.subjectName);
-  const hit = rows.find((r) => subjectSlug(r.item.subjectName) === want) ?? rows.find((r) => subjectSlug(r.item.subjectName).startsWith(want) || want.startsWith(subjectSlug(r.item.subjectName)));
-  return hit ? toExpiryDto(hit.item, hit.companyName, today) : null;
+  const picked = pickExpirySubject(
+    rows.map((r) => ({ ...r, subjectName: r.item.subjectName })),
+    input.subjectName,
+  );
+  return {
+    item: picked.hit ? forViewer(ctx, toExpiryDto(picked.hit.item, picked.hit.companyName, today)) : null,
+    ambiguous: picked.hit ? [] : picked.candidates.map((c) => c.subjectName),
+    empty: picked.empty,
+  };
 }
 
 export interface UpsertExpiryInput {
@@ -240,7 +283,7 @@ export async function upsertExpiryItem(
         expiresOn: input.expiresOn,
         notes: input.notes === undefined ? existing.notes : input.notes,
         source,
-        ...(dateChanged ? { lastAlertStage: null, renewedAt: null, renewedBy: null } : {}),
+        ...(dateChanged ? { lastAlertStage: null, renewedAt: null, renewedBy: null, requestListId: null } : {}),
         updatedBy: ctx.userId,
         updatedAt: new Date(),
       })
@@ -354,6 +397,8 @@ async function upsertSeedRows(engagementId: string, rows: SeedRow[]): Promise<nu
               expiresOn: sql`excluded.expires_on`,
               lastAlertStage: sql`CASE WHEN ${expiryItems.expiresOn} <> excluded.expires_on THEN NULL ELSE ${expiryItems.lastAlertStage} END`,
               renewedAt: sql`CASE WHEN ${expiryItems.expiresOn} <> excluded.expires_on THEN NULL ELSE ${expiryItems.renewedAt} END`,
+              // A new date is a new renewal cycle: the next alert opens a fresh draft request list.
+              requestListId: sql`CASE WHEN ${expiryItems.expiresOn} <> excluded.expires_on THEN NULL ELSE ${expiryItems.requestListId} END`,
               updatedAt: new Date(),
             },
             // Only rows the backfill owns, and only when something changed: a date set by hand
@@ -411,7 +456,12 @@ export interface DueExpiryAlert {
   stage: AlertStage;
 }
 
-/** Items with an alert stage due today (not renewed, within 60 days or expired). */
+/**
+ * Items with an alert stage due today (not renewed, within 60 days or expired). An item first
+ * seen long after it expired (`isExpiryBacklog`, for example a DSC that lapsed years ago and was
+ * just backfilled) is closed quietly at the expired stage: no task, draft, bell or email. The
+ * Expiries page still shows it in red.
+ */
 export async function systemListDueExpiryAlerts(today: string): Promise<DueExpiryAlert[]> {
   const rows = await db
     .select({ id: expiryItems.id, expiresOn: expiryItems.expiresOn, lastAlertStage: expiryItems.lastAlertStage, renewedAt: expiryItems.renewedAt })
@@ -419,9 +469,20 @@ export async function systemListDueExpiryAlerts(today: string): Promise<DueExpir
     .innerJoin(engagements, eq(engagements.id, expiryItems.engagementId))
     .where(and(isNull(expiryItems.renewedAt), isNull(engagements.deletedAt), lte(expiryItems.expiresOn, addDays(today, 60))));
   const out: DueExpiryAlert[] = [];
+  const backlog: string[] = [];
   for (const r of rows) {
+    if (isExpiryBacklog(r, today)) {
+      backlog.push(r.id);
+      continue;
+    }
     const stage = dueAlertStage(r, today);
     if (stage !== null) out.push({ itemId: r.id, stage });
+  }
+  if (backlog.length > 0) {
+    await db
+      .update(expiryItems)
+      .set({ lastAlertStage: 0, updatedAt: new Date() })
+      .where(and(inArray(expiryItems.id, backlog), isNull(expiryItems.lastAlertStage)));
   }
   return out;
 }

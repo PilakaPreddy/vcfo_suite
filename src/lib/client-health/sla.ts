@@ -62,6 +62,34 @@ export function dueLevels(clock: Pick<SlaClock, 'startedOn' | 'slaDays'>, today:
   return SLA_LADDER.filter((rung) => m >= rung.multiple && !alreadySent.has(rung.level)).map((rung) => rung.level);
 }
 
+/**
+ * A breach first seen by the job more than this many days after it began (the lead rung was
+ * passed that long ago) is backlog: its levels are recorded but nobody is told, so the first night
+ * after deploy, or after a long pause, does not flood the lead, the manager and the partner.
+ * The client health board still shows those items.
+ */
+export const SLA_BACKLOG_DAYS = 30;
+
+/**
+ * What to record and what to send for one clock today.
+ * `claim` is every level reached and not recorded yet. `send` is the part of it that people hear:
+ * all of it while the clock is already on record (the ladder climbing night by night); on the
+ * first sighting of a clock only the highest level reached, and nothing at all when the breach
+ * is older than SLA_BACKLOG_DAYS.
+ */
+export function ladderPlan(
+  clock: Pick<SlaClock, 'startedOn' | 'slaDays'>,
+  today: string,
+  alreadySent: ReadonlySet<SlaLevel> | undefined,
+): { claim: SlaLevel[]; send: SlaLevel[] } {
+  const claim = dueLevels(clock, today, alreadySent ?? new Set());
+  if (claim.length === 0) return { claim, send: [] };
+  if (alreadySent && alreadySent.size > 0) return { claim, send: claim };
+  const breachedOn = addDays(clock.startedOn, Math.max(1, clock.slaDays));
+  if (daysBetween(breachedOn, today) > SLA_BACKLOG_DAYS) return { claim, send: [] };
+  return { claim, send: [claim[claim.length - 1]] };
+}
+
 /** The step's stage on the clock, or null when it is not started, done or not applicable. */
 export function stepStage(slice: ChecklistItemStateSlice | undefined): SlaStage | null {
   if (!slice) return null;

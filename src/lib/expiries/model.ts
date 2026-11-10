@@ -69,6 +69,18 @@ export function dueAlertStage(
   return stage;
 }
 
+/**
+ * Days past expiry after which an item never alerted before is backlog: the first run after a
+ * deploy or a backfill does not open tasks and drafts for items that lapsed long ago.
+ */
+export const EXPIRED_BACKLOG_DAYS = 30;
+
+/** True for an item that has never alerted and expired more than EXPIRED_BACKLOG_DAYS ago. */
+export function isExpiryBacklog(item: { expiresOn: string; lastAlertStage: number | null; renewedAt: Date | string | null }, today: string): boolean {
+  if (item.renewedAt || item.lastAlertStage !== null) return false;
+  return daysUntil(item.expiresOn, today) < -EXPIRED_BACKLOG_DAYS;
+}
+
 export type ExpiryBand = 'red' | 'amber' | 'green';
 
 /** Red when expired or 7 days or fewer away, amber within 30 days, green otherwise or once renewed. */

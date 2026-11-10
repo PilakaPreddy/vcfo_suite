@@ -110,9 +110,13 @@ describe('listExpiryItems', () => {
     expect(listScopedEngagementIds).not.toHaveBeenCalled();
   });
 
-  it('lets a client read its own engagement', async () => {
-    results = [[{ item: itemRow(), companyName: 'Acme' }]];
-    expect(await repo.listExpiryItems(ctx('client'), {}, TODAY)).toHaveLength(1);
+  it('lets a client read its own engagement, without staff notes or the draft request list', async () => {
+    results = [[{ item: itemRow({ notes: 'client slow to pay', requestListId: 'rl-1' }), companyName: 'Acme' }]];
+    const items = await repo.listExpiryItems(ctx('client'), {}, TODAY);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ notes: null, requestListId: null });
+    results = [[{ item: itemRow({ notes: 'client slow to pay', requestListId: 'rl-1' }), companyName: 'Acme' }]];
+    expect((await repo.listExpiryItems(ctx('intern'), {}, TODAY))[0]).toMatchObject({ notes: 'client slow to pay', requestListId: 'rl-1' });
   });
 });
 
@@ -141,7 +145,13 @@ describe('writes', () => {
     results = [[itemRow()], [itemRow({ expiresOn: '2027-03-12', source: 'ask' })]];
     const updated = await repo.upsertExpiryItem(ctx('manager'), { engagementId: ENG_A, kind: 'dsc', subjectName: 'ravi  kumar', expiresOn: '2027-03-12', source: 'ask' }, TODAY);
     expect(updated.previous?.expiresOn).toBe('2026-11-14');
-    expect(calls.find((c) => c.op === 'update')?.set).toMatchObject({ expiresOn: '2027-03-12', source: 'ask', lastAlertStage: null, renewedAt: null });
+    expect(calls.find((c) => c.op === 'update')?.set).toMatchObject({ expiresOn: '2027-03-12', source: 'ask', lastAlertStage: null, renewedAt: null, requestListId: null });
+  });
+
+  it('keeps the renewal request list when only the notes change', async () => {
+    results = [[itemRow({ requestListId: 'rl-1' })], [itemRow({ requestListId: 'rl-1', notes: 'n' })]];
+    await repo.upsertExpiryItem(ctx('intern'), { id: 'x-1', engagementId: ENG_A, kind: 'dsc', subjectName: 'Ravi Kumar', expiresOn: '2026-11-14', notes: 'n' }, TODAY);
+    expect(calls.find((c) => c.op === 'update')?.set).not.toHaveProperty('requestListId');
   });
 
   it('rolls DIR-3 KYC to next 30 September and closes a DSC without a new date', async () => {
@@ -154,5 +164,50 @@ describe('writes', () => {
     const dsc = await repo.markRenewed(ctx('intern'), 'x-1', {}, TODAY);
     expect((calls.find((c) => c.op === 'update')?.set as Record<string, unknown>).renewedAt).toBeInstanceOf(Date);
     expect(dsc.band).toBe('green');
+  });
+});
+
+describe('pickExpirySubject', () => {
+  const rows = [{ subjectName: 'Ravindra Singh' }, { subjectName: 'Ravi Kumar' }, { subjectName: 'Asha Rao' }, { subjectName: 'Asha Rao Menon' }];
+
+  it('prefers an exact name, then a unique whole-word prefix', () => {
+    expect(repo.pickExpirySubject(rows, 'ravi  KUMAR').hit?.subjectName).toBe('Ravi Kumar');
+    expect(repo.pickExpirySubject(rows, 'Ravi').hit?.subjectName).toBe('Ravi Kumar');
+    expect(repo.pickExpirySubject(rows, 'Ravindra').hit?.subjectName).toBe('Ravindra Singh');
+    expect(repo.pickExpirySubject(rows, 'Asha Rao').hit?.subjectName).toBe('Asha Rao');
+  });
+
+  it('picks nothing when several match, and returns them as candidates', () => {
+    const r = repo.pickExpirySubject(rows, 'Asha');
+    expect(r.hit).toBeNull();
+    expect(r.candidates.map((c) => c.subjectName)).toEqual(['Asha Rao', 'Asha Rao Menon']);
+  });
+
+  it('never matches a name with nothing to match on', () => {
+    expect(repo.pickExpirySubject(rows, '.')).toEqual({ hit: null, candidates: [], empty: true });
+    expect(repo.pickExpirySubject(rows, 'रवि')).toMatchObject({ hit: null, empty: true });
+  });
+
+  it('matches nothing for a new name', () => {
+    expect(repo.pickExpirySubject(rows, 'Meera')).toEqual({ hit: null, candidates: [], empty: false });
+  });
+});
+
+describe('systemListDueExpiryAlerts', () => {
+  it('closes long-expired items quietly and alerts the rest', async () => {
+    results = [
+      [
+        { id: 'old', expiresOn: '2024-03-01', lastAlertStage: null, renewedAt: null },
+        { id: 'soon', expiresOn: '2026-11-14', lastAlertStage: null, renewedAt: null },
+        { id: 'recent', expiresOn: '2026-11-01', lastAlertStage: null, renewedAt: null },
+      ],
+      [],
+    ];
+    const due = await repo.systemListDueExpiryAlerts(TODAY);
+    expect(due).toEqual([
+      { itemId: 'soon', stage: 7 },
+      { itemId: 'recent', stage: 0 },
+    ]);
+    expect(calls.find((c) => c.op === 'update')?.set).toMatchObject({ lastAlertStage: 0 });
   });
 });

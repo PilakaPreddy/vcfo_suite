@@ -23,7 +23,7 @@ import { appEngagementId } from '@/lib/projects/legacy-engagement-ids';
 import { siteUrl } from '@/lib/site-url';
 import { HEALTH_BAND_LABEL, computeHealth, needsPartnerCheckIn, type HealthBand } from './score';
 import { healthInputsFrom } from './signals';
-import { addDays, complianceClock, dueLevels, slaNoticeCopy, stageLabelOf, stepClocks, type SlaClock } from './sla';
+import { addDays, complianceClock, ladderPlan, slaNoticeCopy, stageLabelOf, stepClocks, type SlaClock } from './sla';
 import { healthBoardHref, nudgeClientHref, projectHref, roleBase, stepHref } from './links';
 
 /**
@@ -133,7 +133,10 @@ export interface SlaDue {
   engagementId: string;
   clock: SlaClock;
   stageLabel: string;
+  /** The levels to record in `sla_escalations`. */
   levels: SlaLevel[];
+  /** The levels people hear about (a subset of `levels`); every level when absent. */
+  send?: SlaLevel[];
 }
 
 /** One client's ladder levels due today and not sent yet. */
@@ -154,8 +157,8 @@ export async function planSlaForEngagement(row: EngagementDbRow, today: string):
   const out: SlaDue[] = [];
   for (const clock of clocks) {
     const stageLabel = stageLabelOf(clock);
-    const levels = dueLevels(clock, today, sent.get(`${clock.itemKey}|${stageLabel}`));
-    if (levels.length > 0) out.push({ engagementId: row.id, clock, stageLabel, levels });
+    const plan = ladderPlan(clock, today, sent.get(`${clock.itemKey}|${stageLabel}`));
+    if (plan.claim.length > 0) out.push({ engagementId: row.id, clock, stageLabel, levels: plan.claim, send: plan.send });
   }
   return out;
 }
@@ -193,11 +196,12 @@ export async function runSlaLadder(engagementId: string, due: SlaDue[], today: s
   for (const d of due) {
     // One person hears once per item per night, even when two levels land on them.
     const told = new Set<string>();
+    const send = new Set(d.send ?? d.levels);
     for (const level of d.levels) {
       const person = ladderRecipient(level, resolved);
       // Claim even when nobody holds the role, so the level is not retried every night.
       const claimed = await systemClaimSlaLevel({ engagementId, itemKey: d.clock.itemKey, stageLabel: d.stageLabel, level });
-      if (!claimed || !person || told.has(person.id)) continue;
+      if (!claimed || !send.has(level) || !person || told.has(person.id)) continue;
       told.add(person.id);
       const role = roleOf(person.id);
       const copy = slaNoticeCopy({ clock: d.clock, level, companyName: row.companyName, today });
