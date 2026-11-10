@@ -622,6 +622,7 @@ export const GST_REG_FIELDS: ChecklistField[] = [
   {
     id: 'lutNotes',
     label: 'LUT notes (optional)',
+    required: false,
     type: 'textarea',
     section: S.lut,
     filledBy: LEAD,
