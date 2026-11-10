@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { internLeadManagerRequestPatch, leadWritablePatch } from '@/lib/checklist/checklist-item-review';
+import { getSentBackNotice, internLeadManagerRequestPatch, leadWritablePatch } from '@/lib/checklist/checklist-item-review';
 
 describe('leadWritablePatch', () => {
   it('keeps a request for approval intact', () => {
@@ -42,5 +42,19 @@ describe('leadWritablePatch', () => {
     expect(rerequest.status).toBe('completed');
     expect(leadWritablePatch(rerequest).status).toBeUndefined();
     expect(leadWritablePatch(rerequest).reviewStatus).toBe('reviewing');
+  });
+});
+
+describe('getSentBackNotice (UAT D-T07-02)', () => {
+  it('shows the manager reason while a rejected step is open again', () => {
+    expect(getSentBackNotice({ status: 'in-progress', reviewStatus: 'rejected', rejectionNote: 'Wrong establishment.' })).toBe(
+      'Sent back by the manager: “Wrong establishment.”',
+    );
+  });
+  it('falls back to a plain line without a reason, and says nothing otherwise', () => {
+    expect(getSentBackNotice({ status: 'in-progress', reviewStatus: 'rejected' })).toMatch(/^Sent back by the manager\./);
+    expect(getSentBackNotice({ status: 'completed', reviewStatus: 'rejected', rejectionNote: 'x' })).toBeNull();
+    expect(getSentBackNotice({ status: 'in-progress', reviewStatus: 'accepted' })).toBeNull();
+    expect(getSentBackNotice(null)).toBeNull();
   });
 });

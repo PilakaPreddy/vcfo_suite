@@ -95,7 +95,7 @@ function pre1ProposedDirectorFields(): ChecklistField[] {
     const slot = (field: ChecklistField): ChecklistField => (showWhen ? { ...field, showWhen } : field);
     out.push(
       slot({ id: `director${n}FirstName`, label: `Director ${n} — first name`, type: 'text', section, required: true, layout: 'short' }),
-      slot({ id: `director${n}MiddleName`, label: `Director ${n} — middle name (optional)`, type: 'text', section, layout: 'short' }),
+      slot({ id: `director${n}MiddleName`, label: `Director ${n} — middle name (optional)`, type: 'text', section, required: false, layout: 'short' }),
       slot({ id: `director${n}LastName`, label: `Director ${n} — last name`, type: 'text', section, required: true, layout: 'short' }),
       slot({
         id: `director${n}Gender`,
@@ -337,6 +337,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
     {
       id: 'boardResolutionWorkflowNotes',
       label: 'Draft/review notes (optional)',
+      required: false,
       type: 'textarea',
       section: 'Board Resolution',
       filledBy: 'intern',
@@ -366,6 +367,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
     {
       id: 'nameApplicationFilingNotes',
       label: 'Filing notes (optional)',
+      required: false,
       type: 'textarea',
       section: 'Filing acknowledgement',
       filledBy: 'intern',
@@ -492,6 +494,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
     {
       id: 'subscriptionWitnessMembershipNumber',
       label: 'Witness — membership number (optional)',
+      required: false,
       type: 'text',
       section: 'Draft Incorporation Docs',
       filledBy: 'intern',
@@ -1357,6 +1360,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
     {
       id: 'fcgprNotes',
       label: 'Additional notes (optional)',
+      required: false,
       type: 'textarea',
       section: 'FC-GPR Filing',
       placeholder: 'Any remarks about the filing or follow-up required…',
@@ -1412,6 +1416,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
     {
       id: 'inc22Notes',
       label: 'Additional notes (optional)',
+      required: false,
       type: 'textarea',
       section: 'INC-22 Filing',
       placeholder: 'Proof of address / occupancy status, or remarks…',
@@ -1466,6 +1471,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
     {
       id: 'nomineeShareholderNotes',
       label: 'Additional notes (optional)',
+      required: false,
       type: 'textarea',
       section: 'Nominee Shareholder',
       placeholder: 'Beneficial owner details, declarations status, or remarks…',
@@ -1577,6 +1583,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
     {
       id: 'lutNotes',
       label: 'LUT notes (optional)',
+      required: false,
       type: 'textarea',
       section: 'LUT Filing',
       placeholder: 'Witness KYC status, portal remarks…',
@@ -1601,6 +1608,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
     {
       id: 'lutNotes',
       label: 'LUT notes (optional)',
+      required: false,
       type: 'textarea',
       section: 'LUT Filing',
       placeholder: 'Witness KYC status, portal remarks…',
@@ -1732,6 +1740,7 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
     {
       id: 'msmeNotes',
       label: 'Additional notes (optional)',
+      required: false,
       type: 'textarea',
       section: 'MSME Registration',
       placeholder: 'NIC codes, category (Micro/Small/Medium), or remarks…',

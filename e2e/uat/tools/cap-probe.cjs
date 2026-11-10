@@ -1,0 +1,21 @@
+const { chromium } = require('@playwright/test');
+(async () => {
+  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  const ctx = await b.newContext({ storageState: `e2e/uat/.auth/lead.state.json`, baseURL: 'http://localhost:3000', viewport: { width: 1440, height: 900 } });
+  const p = await ctx.newPage();
+  p.on('response', async r => { if (r.url().includes('/api/') && r.request().method() !== 'GET') console.log('API', r.status(), r.request().method(), r.url().replace('http://localhost:3000',''), (await r.text().catch(()=>'')).slice(0,400)); });
+  await p.goto('/app/intern/engagements/nilgiri-analytics-private-limited/step/capital-structure'); await p.waitForLoadState('networkidle'); await p.waitForTimeout(1000);
+  const g = p.locator('[role=radiogroup]').locator('visible=true');
+  await g.nth(0).getByRole('radio', { name: 'Yes' }).click();
+  await p.waitForTimeout(500);
+  await p.locator('#pre-13-equityQuantity').fill('10000');
+  await p.locator('#pre-13-equityNominalValue').fill('10');
+  await p.locator('[role=radiogroup]').locator('visible=true').nth(1).getByRole('radio', { name: 'No' }).click();
+  await p.waitForTimeout(2500);
+  console.log('IDS', JSON.stringify(await p.locator('input[id^="pre-13-"]').evaluateAll(e => e.map(x => x.id + '=' + x.value))));
+  await p.getByRole('button', { name: /^Submit$/ }).locator('visible=true').first().click();
+  await p.waitForTimeout(3000);
+  console.log('STATUS', JSON.stringify(await p.locator('[role=status],[role=alert]').allInnerTexts()));
+  await p.screenshot({ path: 'e2e/uat/results/debug.png' });
+  await b.close();
+})();

@@ -11,7 +11,8 @@ import { FileBadge } from '@/components/ui/file-badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Chip } from '@/components/ui/spectrum-chip';
-import { errorMessage, toastError, toastSuccess } from '@/lib/toast-errors';
+import { errorMessage, toastEmailDispatch, toastError, toastSuccess } from '@/lib/toast-errors';
+import type { EmailDispatchResult } from '@/lib/email/email-dispatch';
 import { formatUploadDate } from '@/views/vault/vault-tree';
 import { fileUrl, previewKind, type VaultRef } from '@/views/vault/vault-files';
 import type { ZipItem } from '@/views/vault/use-vault-actions';
@@ -52,7 +53,7 @@ function refOf(file: RequestFile): VaultRef {
   return file.kind === 'document' ? { documentId: file.id } : { requestFileId: file.id };
 }
 
-function RequestDialog({
+export function RequestDialog({
   open,
   onOpenChange,
   engagementId,
@@ -87,9 +88,11 @@ function RequestDialog({
           dueAt: due || undefined,
         }),
       });
-      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      const json = (await res.json().catch(() => ({}))) as { error?: string; email?: EmailDispatchResult };
       if (!res.ok) throw new Error(json.error);
       toastSuccess('File requested', `${label.trim()} · ${companyName}`);
+      // The client hears about the request through the compose window the route drafts (UAT D-T06-01).
+      toastEmailDispatch(json.email, { engagementId, href: '#' });
       setLabel('');
       setNote('');
       setDue('');

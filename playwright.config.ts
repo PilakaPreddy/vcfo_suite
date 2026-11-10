@@ -21,8 +21,26 @@ export default defineConfig({
   },
   projects: [
     // Tests tagged @mobile run only in the phone project.
-    { name: "chromium", use: { ...devices["Desktop Chrome"] }, grepInvert: /@mobile/ },
-    { name: "mobile", use: { ...devices["Pixel 7"] }, grep: /@mobile/ },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, grepInvert: /@mobile/, testIgnore: "**/uat/**" },
+    { name: "mobile", use: { ...devices["Pixel 7"] }, grep: /@mobile/, testIgnore: "**/uat/**" },
+    // The user acceptance run (docs/specs/uat/TEST-PLAN.md): one worker, in plan order, against a
+    // production build started with `next start`. Run with `--project=uat`.
+    {
+      name: "uat",
+      testDir: "./e2e/uat",
+      fullyParallel: false,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1440, height: 900 },
+        trace: "off",
+        actionTimeout: 20_000,
+        navigationTimeout: 45_000,
+        // A machine whose browser build differs from the pinned Playwright points UAT_CHROMIUM at its own.
+        launchOptions: process.env.UAT_CHROMIUM ? { executablePath: process.env.UAT_CHROMIUM } : {},
+      },
+      timeout: 15 * 60_000,
+      expect: { timeout: 15_000 },
+    },
   ],
   webServer: {
     command: `npm run dev -- -p ${new URL(baseURL).port}`,

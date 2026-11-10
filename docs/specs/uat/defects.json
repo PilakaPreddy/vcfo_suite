@@ -1,0 +1,282 @@
+[
+  {
+    "id": "D-T01-01",
+    "test": "T-01",
+    "step": 6,
+    "severity": "S2",
+    "title": "Super admin's \"Portal\" link crashes with \"Something went wrong\"",
+    "who": "super_admin (also any staff member who opens /app/client/overview or /app/client/messages)",
+    "cause": "The client Home and Messages pages read the client portal context, which exists only when a client is signed in. For staff the page threw \"usePortal must be used inside ClientPortalShell\".",
+    "fix": "The client portal gate now shows staff a short note with a link to Clients on those two pages, instead of rendering them. All other client pages were checked and work for staff.",
+    "files": [
+      "src/components/client-portal/ClientPortalGate.tsx",
+      "src/components/client-portal/ClientPortalGate.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T04-01",
+    "test": "T-04",
+    "step": 1,
+    "severity": "S3",
+    "title": "\"Proposed Directors\" tab never shows its tick, though every required answer is in",
+    "who": "client and project lead, on Part A (and nine other optional note fields on later steps)",
+    "cause": "The tab tick treats a field as required unless it is marked optional. The director middle names, and eight note fields, say \"(optional)\" in their label but were not marked optional in the field list, so an empty middle name kept the tab open.",
+    "fix": "The ten fields labelled \"(optional)\" are now marked optional. A unit test fails if any field labelled \"(optional)\" is ever required again.",
+    "files": [
+      "src/lib/checklist/checklist-responses.ts",
+      "src/lib/checklist/milestone-section-completion.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "O-T05-01",
+    "test": "T-05",
+    "step": 1,
+    "severity": "owner",
+    "title": "Part B capital is not checked against the authorised capital from Part A",
+    "who": "project lead, on Capital Structure (step 6)",
+    "cause": "Part A records authorised capital \u20b910,00,000. Part B accepted 6,000 equity shares at \u20b91,00,000 each (\u20b960 crore) with no warning. The validator checks only that each number is positive.",
+    "fix": "Not changed: this is a business rule. Decide whether Part B should warn, or refuse, when the equity and preference capital exceed the authorised capital.",
+    "files": [
+      "src/lib/checklist/checklist-part-b-validation.ts"
+    ],
+    "status": "owner-decision"
+  },
+  {
+    "id": "O-T06-01",
+    "test": "T-06",
+    "step": 3,
+    "severity": "owner",
+    "title": "KYC Review asks for \"review notes / correction requests\" even when everything is approved",
+    "who": "project lead, on KYC Review & DSC (step 10)",
+    "cause": "The notes field is required on every submit. A lead who finds nothing to correct must still type something.",
+    "fix": "Not changed: a process choice. Decide whether the notes should be optional when every document is approved.",
+    "files": [
+      "src/lib/checklist/checklist-responses.ts"
+    ],
+    "status": "owner-decision"
+  },
+  {
+    "id": "D-T06-01",
+    "test": "T-06",
+    "step": 1,
+    "severity": "S2",
+    "title": "Requesting a file from the Vault never tells the client",
+    "who": "client (never told); project lead and manager (they believe the client was asked)",
+    "cause": "POST /api/requests drafts the email to the client and returns it, for the lead to send from the compose window. The Vault's \"Request a file\" form ignored that reply, so the window never opened and no email went out. Four KYC requests in T-06 produced no email to the client.",
+    "fix": "The Vault form now hands the reply to the same helper the rest of the app uses, so the compose window opens with the drafted email. A component test checks it.",
+    "files": [
+      "src/views/vault/VaultRequestsSection.tsx",
+      "src/views/vault/VaultRequestsSection.test.tsx"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T07-01",
+    "test": "T-07",
+    "step": 4,
+    "severity": "S2",
+    "title": "Approvals page shows \"0 waiting\" while registration steps wait for the manager",
+    "who": "managers and firm admins",
+    "cause": "The Approvals inbox scanned only incorporation and post-incorporation steps. Registration steps (GST, PF, ESI, PT, LEI\u2026) also go lead \u2192 manager \u2192 client, and the manager is emailed \"approval needed\", but the inbox never listed them.",
+    "fix": "The inbox now lists registration steps at every stage, both lead requests and requests to send a step to the client. Two unit tests cover it.",
+    "files": [
+      "src/lib/projects/pending-approvals.ts",
+      "src/lib/projects/pending-approvals.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T07-02",
+    "test": "T-07",
+    "step": 2,
+    "severity": "S2",
+    "title": "The manager's reason for sending a step back is stored but never shown to the lead",
+    "who": "project lead",
+    "cause": "Reject saves the reason on the step. The lead's bell says only \"Corrections requested\", and the step page showed nothing, so the lead could not see what to fix.",
+    "fix": "The step page now shows \"Sent back by the manager: \u201creason\u201d\" to staff while the step is open again. Unit tests cover the wording.",
+    "files": [
+      "src/lib/checklist/checklist-item-review.ts",
+      "src/views/engagement/step-detail/create-step-view.ts",
+      "src/views/engagement/EngagementStepDetail.tsx"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T11-01",
+    "test": "T-11",
+    "step": 2,
+    "severity": "S3",
+    "title": "Board meeting errors show raw codes such as \"bad_link\"",
+    "who": "project lead and manager, on the meeting notice",
+    "cause": "The board-meeting repository throws short codes (bad_link, no_director_email, venue_required and 21 more). The shared error helper had no sentence for them, so the toast showed the code itself.",
+    "fix": "The shared code-to-sentence table now has a plain sentence for all 24 board-meeting codes. A unit test covers it.",
+    "files": [
+      "src/lib/toast-errors.ts",
+      "src/lib/toast-errors.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T13-01",
+    "test": "T-13",
+    "step": 1,
+    "severity": "S1",
+    "title": "Monthly GST, PF and TDS filings were never generated after the registrations",
+    "who": "every client and every lead: the compliance calendar, filings list and reminders",
+    "cause": "The daily compliance job reads registration dates only from the table engagement_compliance_triggers, and nothing in the app ever writes that table. So after GST (20 Sep), PF (22 Sep) and ESI (25 Sep) were registered, the job still produced only 29 annual items: no GSTR-1, GSTR-3B, PF payment or TDS. The TAN date was also never set, because the TAN arrives with the certificate of incorporation.",
+    "fix": "The job now reads the dates from the registration steps themselves, with the helper the client-side calendar already uses. A TAN on the certificate of incorporation dates from the incorporation day. Kaveri Foods now gets 142 dated items: GSTR-1 on the 11th, GSTR-3B on the 20th, PF on the 15th, TDS on the 7th and the quarterly TDS returns. Unit tests cover it.",
+    "files": [
+      "src/db/repositories/compliance.ts",
+      "src/lib/compliance/extract-triggers.ts",
+      "src/db/repositories/compliance-triggers.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "O-T13-01",
+    "test": "T-13",
+    "step": 2,
+    "severity": "owner",
+    "title": "Compliance list: missing filings and two dates to confirm",
+    "who": "every client",
+    "cause": "Checked against the statutory calendar: (1) there is no Professional Tax filing (Karnataka: monthly by the 20th) and no monthly ESI contribution (by the 15th), only the half-yearly ESI return; (2) the company ITR is set for 31 July, but a company whose accounts are audited files by 31 October; (3) a company incorporated on 1 Aug 2026 gets a DIR-3 KYC due 30 Sep 2026, although new DIN holders file by 30 Sep of the next financial year.",
+    "fix": "Not changed: these are additions or changes to the obligations list (src/lib/compliance/obligations-seed.ts) that a compliance partner should confirm first.",
+    "files": [
+      "src/lib/compliance/obligations-seed.ts"
+    ],
+    "status": "owner-decision"
+  },
+  {
+    "id": "O-T14-01",
+    "test": "T-14",
+    "step": 5,
+    "severity": "owner",
+    "title": "Overdue filings do not change a project's health",
+    "who": "managers and admins reading the project list",
+    "cause": "Project health (Waiting, Overdue, Stuck\u2026) is worked out from the checklist steps only. Kaveri Foods had 10 overdue statutory filings and still showed as on track.",
+    "fix": "Not changed: decide whether overdue compliance filings should turn a project's health to Overdue in the project list.",
+    "files": [
+      "src/views/admin/clients/client-row.tsx"
+    ],
+    "status": "owner-decision"
+  },
+  {
+    "id": "O-T13-02",
+    "test": "T-13",
+    "step": 1,
+    "severity": "S3",
+    "title": "The Lead column on Filings is empty, and GSTIN is not carried into the GST filing",
+    "who": "staff on Compliances \u203a Filings",
+    "cause": "Each stored filing has its owner (the lead) set, but the Lead column shows a dash. The GSTR-1 filing asks for the GSTIN although GST Registration already holds 29AAKCK1234F1Z5.",
+    "fix": "Not changed in this run (cosmetic and convenience). Worth a small follow-up.",
+    "files": [
+      "src/views/compliances/FilingsView.tsx"
+    ],
+    "status": "open"
+  },
+  {
+    "id": "D-T16-01",
+    "test": "T-16",
+    "step": 3,
+    "severity": "S1",
+    "title": "Payroll is saved only in the browser of the person who typed it",
+    "who": "managers and clients (they see an empty payroll); the lead loses the work on another computer",
+    "cause": "Payroll is a first version: the salary table and stage status live in the browser's local storage (src/views/payroll/use-payroll-cycle.ts says so). Nothing reaches the database, so the manager could not review and the client could not see the October payroll the lead imported.",
+    "fix": "Not fixed in this run: it needs a payroll table (a migration), a repository with an AuthContext and routes, and the hook pointed at them. The calculations themselves are correct: all five totals matched the hand-worked figures. Do not use Payroll with clients until this is built.",
+    "files": [
+      "src/views/payroll/use-payroll-cycle.ts"
+    ],
+    "status": "open"
+  },
+  {
+    "id": "D-T17-01",
+    "test": "T-17",
+    "step": 2,
+    "severity": "S1",
+    "title": "A budget cannot be published or approved unless a note is typed",
+    "who": "manager and firm admin (Publish), client and firm admin (Approve)",
+    "cause": "The workspace sends note: null when the note box is empty. The workflow route accepted a missing note but refused null, so Publish showed \"Not done \u2014 That did not save. Try again.\" and the budget stayed a draft. Approve had the same rule.",
+    "fix": "The route's rules move to src/lib/budget/workflow-schema.ts and accept an empty note for Publish and Approve. Return and Revise still need a reason. Unit tests cover both.",
+    "files": [
+      "src/lib/budget/workflow-schema.ts",
+      "src/lib/budget/workflow-schema.test.ts",
+      "app/api/budgets/[id]/workflow/route.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T03-01",
+    "test": "T-03",
+    "step": 1,
+    "severity": "S2",
+    "title": "Creating a project fires about 48 failing task saves with demo assignees",
+    "who": "admin and manager who create projects (server errors on every creation)",
+    "cause": "After a project is created, the browser seeded one task per checklist step from the old demo data, assigned to tm1, tm2 and tm3. Those are not people, so every save failed in the database (invalid uuid \"tm1\"), and the page briefly showed fake tasks until it reloaded.",
+    "fix": "The demo task seeding after project creation is removed. Nothing real is lost: none of those saves ever succeeded. The clean run's server log confirms no task errors on project creation.",
+    "files": [
+      "src/context/app-provider/use-record-actions.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "D-T18-01",
+    "test": "T-18",
+    "step": 3,
+    "severity": "S2",
+    "title": "Ask VCFO tells an incorporated client their next step is the incorporation questionnaire",
+    "who": "clients whose project started at Registration or Compliance",
+    "cause": "\"What is my next step?\" took the first open step of the whole checklist. Kaveri Foods started at Registration and is incorporated, but Part A was never filled, so the answer was \"Your next step is Client Details\" with the foreign-entity fields.",
+    "fix": "Once the company is incorporated, incorporation steps are skipped when the assistant picks the next step. A unit test covers it.",
+    "files": [
+      "src/lib/ask/snapshot-build.ts",
+      "src/lib/ask/__tests__/snapshot.test.ts"
+    ],
+    "status": "fixed"
+  },
+  {
+    "id": "O-T18-02",
+    "test": "T-03",
+    "step": 6,
+    "severity": "S2",
+    "title": "Projects that start at Registration still show \"Step 1 \u00b7 Client Details\" and \"Incorporation 3/14\"",
+    "who": "staff on the project list; the client in the portal sidebar",
+    "cause": "The project list's \"Now at\" column and the client sidebar count the incorporation checklist even for a company that joined already incorporated. The steps are not marked not-applicable when a project starts at Registration or Compliance.",
+    "fix": "Not changed in this run: decide whether a project that starts at Registration should mark the incorporation steps not applicable when it is created (then the list, sidebar and progress all follow).",
+    "files": [
+      "src/db/repositories/engagements",
+      "src/components/client-portal"
+    ],
+    "status": "open"
+  },
+  {
+    "id": "D-T13-02",
+    "test": "T-13",
+    "step": 0,
+    "severity": "S1",
+    "title": "Right after registrations are approved, the compliance job sometimes misses the monthly filings",
+    "who": "every client's compliance calendar and reminders",
+    "cause": "In three full runs, the compliance job run straight after T-12 (GST, PF and ESI registered and approved) stored 115, 115 and then only 65 filings: the third time even GSTR-1 and GSTR-3B were missing. The same job on the same data a few minutes later stored all 142, with the right dates. So for a short time the registration answers are not in the project's stored checklist when the job reads it. A plausible cause is a late or stale save of the whole checklist from another open page (for example the client's portal), which would be a data race worth fixing before go-live. The same pattern appeared in T-09: the client's Part A submit was not in the stored checklist straight after the click, but the lead could complete the step moments later.",
+    "fix": "Not fixed in this run. Reproduce with two browsers open on one project: approve a registration as the manager while the client has the portal open, then read engagements.checklist_state straight away. If answers vanish and return, the checklist save must merge per step instead of writing the whole state.",
+    "files": [
+      "src/db/repositories/compliance.ts"
+    ],
+    "status": "open"
+  },
+  {
+    "id": "O-T08-01",
+    "test": "T-08",
+    "step": 1,
+    "severity": "S3",
+    "title": "In one full run the document pack showed every document as \"waiting for release\"",
+    "who": "project lead and manager on the document pack",
+    "cause": "In the second clean run, T-08 saw all 14 documents waiting for the proposed directors to be accepted, although Proposed Directors was completed and accepted in T-05. The same test, run again 25 minutes later on the same data, found 12 ready and all checks passed. The cause is not found yet.",
+    "fix": "Not changed. If a lead sees \"Waiting for release\" after Proposed Directors is accepted, a page reload or reopening the step should be tried and the case reported.",
+    "files": [
+      "src/lib/doc-pack/evaluate.ts",
+      "src/lib/api/incorporation-docs-errors.ts"
+    ],
+    "status": "open"
+  }
+]

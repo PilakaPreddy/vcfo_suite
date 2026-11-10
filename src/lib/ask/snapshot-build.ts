@@ -46,7 +46,11 @@ export function buildSnapshot(input: {
 }): ProjectSnapshot {
   const { engagement, state, now } = input;
   const gates = gateActiveCatalog(state, 'client');
+  const incorporatedNow = isIncorporated({ incorporationDate: engagement.incorporationDate, stage: engagement.stage }, state);
+  // Once the company is incorporated, an unfinished incorporation step is not the client's next
+  // step (a project that started at Registration never fills Part A) (UAT D-T18-01).
   const current = getActiveCatalogItems().find((item) => {
+    if (incorporatedNow && item.bucket === 'pre-inc') return false;
     const kind = getStepGate(gates, item.id).kind;
     return kind === 'active' || kind === 'waiting';
   });
@@ -54,10 +58,7 @@ export function buildSnapshot(input: {
     ? getIncorporationPhases().find((group) => group.items.some((item) => item.id === current.id))
     : undefined;
   const progress = buildProgress(state);
-  const incorporated = isIncorporated(
-    { incorporationDate: engagement.incorporationDate, stage: engagement.stage },
-    state,
-  );
+  const incorporated = incorporatedNow;
   const schedule = normalizeEngagementSchedule(engagement.schedule);
 
   let currentStep: ProjectSnapshot['currentStep'] = null;

@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server';
-import { z } from 'zod';
 import { approveBudget, publishBudget, rejectBudget, startRevision } from '@/db/repositories/budgets';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { notifyDecision, notifyPublished } from '@/lib/budget/notify';
+import { budgetWorkflowSchema } from '@/lib/budget/workflow-schema';
 import { budgetError, denied, guardBudgets, type IdContext } from '../../_respond';
 
-const note = z.string().trim().max(2000);
-const schema = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('publish'), note: note.optional() }),
-  z.object({ action: z.literal('approve'), note: note.optional() }),
-  z.object({ action: z.literal('reject'), note: note.min(1) }),
-  z.object({ action: z.literal('revise'), note: note.min(1) }),
-]);
+const schema = budgetWorkflowSchema;
 
 /** POST /api/budgets/[id]/workflow — publish, approve, return or start a revision. */
 export async function POST(request: Request, { params }: IdContext) {

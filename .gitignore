@@ -38,3 +38,8 @@ graphify-out/
 # Client portal CSS is generated from css-src/ by scripts/cp-css.mjs
 # (npm run css:portal; runs automatically before dev and build)
 src/components/client-portal/css/
+
+# User acceptance run: sign-in state and raw evidence (the report is built from them)
+e2e/uat/.auth/
+e2e/uat/results/
+docs/specs/uat/report/

@@ -5,7 +5,6 @@ import type { AppContextValue } from '@/context/AppContext';
 import {
   type TaskInstance,
   type DocRequest,
-  seedTasksFor,
 } from '@/data/engagements';
 import { type AuthUser, initialsFromName, isAdminOrManager } from '@/lib/auth';
 import { createProjectWithClient, updateEngagementInDb } from '@/lib/projects/engagements-db';
@@ -52,22 +51,8 @@ export function useRecordActions({
     };
     setClients((p) => [...p, client]);
     setEngagements((p) => [engagement, ...p]);
-    const seeded = seedTasksFor(engagement.id, engagement.stage);
-    setTasks((p) => [...p, ...seeded]);
-    for (const t of seeded) {
-      void fetchJson('/api/tasks', {
-        method: 'POST',
-        body: JSON.stringify({
-          engagementId: t.engagementId,
-          checklistKey: t.checklistKey,
-          status: t.status,
-          assigneeId: t.assigneeId,
-          dueAt: t.dueAt,
-          notes: t.notes,
-          title: t.checklistKey,
-        }),
-      }).catch(() => {});
-    }
+    // No demo tasks are seeded here any more: they carried demo assignees (tm1, tm2, tm3) that are
+    // not profiles, so every insert failed on the server and the local copies were fake (UAT D-T03-01).
     void queryClient.invalidateQueries({ queryKey: ['tasks', user?.id] });
     pushActivity({
       actor: user?.name || 'Admin',
@@ -76,7 +61,7 @@ export function useRecordActions({
       engagementId: engagement.id,
     });
     return result;
-  }, [user, pushActivity, setClients, setEngagements, setTasks, queryClient]);
+  }, [user, pushActivity, setClients, setEngagements, queryClient]);
 
   const updateEngagementFn = useCallback<AppContextValue['updateEngagement']>(async (id, patch) => {
     const updated = await updateEngagementInDb(id, patch);

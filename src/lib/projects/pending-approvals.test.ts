@@ -36,4 +36,20 @@ describe('listPendingApprovals', () => {
     expect(out.map((r) => r.itemId)).toEqual(['post-1']);
     expect(pendingApprovalKind(out[0]!)).toBe('Lead request');
   });
+
+  it('lists registration steps: a lead request and a client-fill request (UAT D-T07-01)', () => {
+    const out = listPendingApprovals([{ ...eng, stage: 'Post-Incorporation' }], () => ({
+      'reg-7': pendingLead,
+      'reg-6': { status: 'not-started', clientFillRequest: { status: 'pending_manager', requestedBy: 'l', requestedAt: 'x', requestedByName: 'Leo Lead' } },
+    }));
+    expect(out.map((r) => [r.itemId, pendingApprovalKind(r)])).toEqual([
+      ['reg-6', 'Send to client · Leo Lead'],
+      ['reg-7', 'Lead request'],
+    ]);
+  });
+
+  it('still lists registration approvals once the project is in Compliance', () => {
+    const out = listPendingApprovals([{ ...eng, stage: 'Operational Readiness' }], () => ({ 'reg-7': pendingLead, 'post-1': pendingLead }));
+    expect(out.map((r) => r.itemId)).toEqual(['reg-7']);
+  });
 });

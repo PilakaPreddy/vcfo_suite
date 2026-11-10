@@ -149,3 +149,14 @@ export function getInternReviewLabel(slice: SliceLike): string | null {
   if (status === 'rejected') return 'Rejected — client can resubmit';
   return null;
 }
+
+/**
+ * The manager's reason, shown to staff on the step page while a rejected step is open again
+ * (UAT D-T07-02: the reason was stored but nobody could read it).
+ */
+export function getSentBackNotice(slice: SliceLike): string | null {
+  if (getReviewStatus(slice) !== 'rejected') return null;
+  if (slice?.status === 'completed' || slice?.status === 'not-applicable') return null;
+  const note = slice?.rejectionNote?.trim();
+  return note ? `Sent back by the manager: “${note}”` : 'Sent back by the manager. Check the answers and submit again.';
+}
