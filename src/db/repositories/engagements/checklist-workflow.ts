@@ -62,27 +62,36 @@ export async function patchChecklistItem(
     }
   }
 
-  const base = persisted;
-  const next: EngagementChecklistState = {
+  // The merge runs inside updateChecklistState's row lock, on the state as
+  // stored at that moment, so a save that finished meanwhile is kept.
+  let base: EngagementChecklistState = persisted;
+  let normalized: EngagementChecklistState = persisted;
+  await updateChecklistState(ctx, existing.id, (current) => {
+    base = current && !Array.isArray(current) ? normalizeEngagementChecklistState(current) : {};
+    normalized = normalizeEngagementChecklistState(mergeChecklistItemPatch(base, itemId, patch));
+    return normalized;
+  });
+  auditChecklistItemPatch(ctx, LEGACY_ENGAGEMENT_IDS[existing.id] ?? existing.id, itemId, patch, base);
+  return normalized;
+}
+
+/** One step's patch merged over the stored state; its answers merge field by field. */
+export function mergeChecklistItemPatch(
+  base: EngagementChecklistState,
+  itemId: string,
+  patch: Partial<ChecklistItemStateSlice>,
+): EngagementChecklistState {
+  return {
     ...base,
     [itemId]: {
       status: 'not-started',
       ...base[itemId],
       ...patch,
       ...(patch.responses
-        ? {
-            responses: {
-              ...(base[itemId]?.responses ?? {}),
-              ...patch.responses,
-            },
-          }
+        ? { responses: { ...(base[itemId]?.responses ?? {}), ...patch.responses } }
         : {}),
     },
   };
-  const normalized = normalizeEngagementChecklistState(next);
-  await updateChecklistState(ctx, existing.id, normalized);
-  auditChecklistItemPatch(ctx, LEGACY_ENGAGEMENT_IDS[existing.id] ?? existing.id, itemId, patch, base);
-  return normalized;
 }
 
 /** Client submit: lock responses and mark awaiting manager/lead review. */

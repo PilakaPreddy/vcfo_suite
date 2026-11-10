@@ -31,6 +31,8 @@ function chain(): unknown {
     where: () => chain(),
     limit: () => chain(),
     orderBy: () => chain(),
+    // The checklist save reads its row under a lock (`select … for update`).
+    for: () => chain(),
     set: (value: unknown) => {
       setCalls.push(value);
       return chain();

@@ -60,7 +60,19 @@ export function createSubmitActions(ctx: MilestoneFormCtx) {
     navigateInternAfterLastTab,
     setSubmitAttempted,
     setSelectedSectionIndex,
+    uploadingField,
   } = ctx;
+
+  /**
+   * A file is still uploading: Submit waits for it, or the server would check the
+   * step without that file and refuse it (UAT T-09, 10 Nov 2026). The button is
+   * disabled meanwhile too; this covers a click that lands as the upload starts.
+   */
+  const uploadStillRunning = () => {
+    if (!uploadingField) return false;
+    toastError('A file is still uploading', 'Submit again when the upload has finished.');
+    return true;
+  };
 
   const waitForSaveIdle = async () => {
     if (!saveInFlightRef.current) return;
@@ -165,6 +177,7 @@ export function createSubmitActions(ctx: MilestoneFormCtx) {
    * lead-only NIC codes still submits — the step then waits on the lead.
    */
   const handleDirectSubmit = async () => {
+    if (uploadStillRunning()) return;
     clearDebounce();
     pendingAfterFlightRef.current = null;
     await waitForSaveIdle();
@@ -251,6 +264,7 @@ export function createSubmitActions(ctx: MilestoneFormCtx) {
       await handleDirectSubmit();
       return;
     }
+    if (uploadStillRunning()) return;
     if (!internWorkspace) return;
     clearDebounce();
     pendingAfterFlightRef.current = null;
@@ -307,6 +321,7 @@ export function createSubmitActions(ctx: MilestoneFormCtx) {
   };
 
   const handleSubmit = async () => {
+    if (uploadStillRunning()) return;
     clearDebounce();
 
     const { ok, errors, warnings } = validateStep(isPre1 ? pre1Draft : draft);

@@ -245,6 +245,7 @@ export function useMilestoneResponseFormState(props: MilestoneResponseFormStateP
     submitting,
     summaryErrors,
     unlockedFields,
+    uploading: Boolean(ctx.uploadingField),
     visibleFields,
   };
 }
