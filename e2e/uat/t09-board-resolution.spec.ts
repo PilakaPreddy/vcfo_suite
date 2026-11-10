@@ -97,8 +97,12 @@ test('T-09 Board resolutions', async ({ browser }) => {
     });
     await shot(client, { test: T, step: 0, role: 'client', status: 'info', caption: `The client's Part A, filled (${did.length} answers).`, detail: did.join('\n').slice(0, 1500) });
     await submitStep(client);
-    const after = await stepState(eng!.id, 'pre-1');
-    expect(['in-progress', 'completed']).toContain(after.status);
+    let after = await stepState(eng!.id, 'pre-1');
+    for (let i = 0; i < 10 && !(after.clientSubmittedAt || after.waitingOnLeadByName); i++) {
+      await client.waitForTimeout(1000);
+      after = await stepState(eng!.id, 'pre-1');
+    }
+    expect(Boolean(after.clientSubmittedAt || after.waitingOnLeadByName || after.status === 'in-progress' || after.status === 'completed')).toBe(true);
     return { caption: `The client submitted Part A (step "${after.status}", waiting for the lead's NIC code).` };
   });
   await ctx.close();

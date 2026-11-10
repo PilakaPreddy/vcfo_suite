@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { join } from 'node:path';
-import { firstStart, resetRecords, as, closeAll, noteEmails, shot, sql, step, state, seen, settle, RESULTS } from './helpers/uat';
+import { note, firstStart, resetRecords, as, closeAll, noteEmails, shot, sql, step, state, seen, settle, RESULTS } from './helpers/uat';
 import { FILES, runStep } from './helpers/fill-step';
 import { TRACK_A, TRACK_B } from './fixtures/data';
 import { statSync } from 'node:fs';
@@ -41,7 +41,12 @@ test('T-06 KYC, DSC and document vault', async ({ browser }) => {
         await d.getByRole('textbox').nth(1).fill('Please upload a clear scan, all pages.').catch(() => {});
         if (label === KYC[0][0]) await shot(lead, { test: T, step: 1, role: 'lead', status: 'pass', caption: 'The lead fills "Request a file" for the first KYC document.', marks: [{ at: d.getByLabel('File needed'), kind: 'focus', n: 1 }, { at: d.getByRole('button', { name: 'Send request' }), kind: 'focus', n: 2 }] });
         await d.getByRole('button', { name: 'Send request' }).click();
-        await expect(d).toBeHidden({ timeout: 15_000 });
+        // Fix D-T06-01: the email to the client now opens for the lead to send from Outlook.
+        const compose = lead.getByRole('dialog').filter({ hasText: 'Email client' });
+        await compose.waitFor({ timeout: 15_000 });
+        if (label === KYC[0][0]) await shot(lead, { test: T, step: 1, role: 'lead', status: 'pass', caption: 'After "Send request" the email to the client opens, addressed and written. Here Send is disabled because no Outlook is connected on this private copy.', marks: [{ at: compose.getByText('kiran.rao@uat-client.test').first(), kind: 'ok', n: 1 }, { at: compose.getByRole('button', { name: 'Send' }), kind: 'focus', n: 2 }] });
+        await compose.getByRole('button', { name: 'Cancel' }).click();
+        await expect(lead.getByRole('dialog')).toHaveCount(0, { timeout: 10_000 });
       }
     }
     await settle(lead, KYC[3][0]);
@@ -66,11 +71,11 @@ test('T-06 KYC, DSC and document vault', async ({ browser }) => {
       if (await done.count()) await done.click();
       await client.keyboard.press('Escape').catch(() => {});
     }
-    const [{ n }] = await sql<{ n: number }>(`select count(*)::int n from documents where engagement_id = $1`, [trackA.id]).catch(() => [{ n: -1 }]);
+    const [{ n }] = await sql<{ n: number }>(`select count(*)::int n from document_requests where engagement_id = $1 and status = 'fulfilled'`, [trackA.id]);
     await client.reload();
     await settle(client);
     expect(n).toBeGreaterThanOrEqual(KYC.length);
-    return { caption: `The four files are uploaded (${n} documents stored for the company).`, marks: [{ at: seen(client, /pan-kiran|PAN — Kiran/), kind: 'ok', n: 1 }] };
+    return { caption: `The four files are uploaded: ${n} requests now show as fulfilled.`, marks: [{ at: seen(client, /pan-kiran|PAN — Kiran/), kind: 'ok', n: 1 }] };
   });
 
   await runStep(lead, { test: T, stepNo: 3, role: 'lead', engagement: trackA, itemId: 'pre-7', slug: 'kyc-review-and-dsc-creation', title: 'KYC Review & DSC', plan: { file: 'pan-kiran.pdf', choices: { 'DSC': 'Yes', 'KYC': 'Yes' }, values: { kycReviewNotes: 'All KYC documents checked against the originals. No corrections needed.' } } });
@@ -121,6 +126,7 @@ test('T-06 KYC, DSC and document vault', async ({ browser }) => {
     return { caption: `Kaveri's client sees only Kaveri's documents. ${apiNote}.`, detail: apiNote };
   });
 
-  await noteEmails(T, startedAt);
+  note({ test: T, step: 1, status: 'untestable', caption: 'The document-request email reaches the client.', detail: 'The lead sends it from the compose window through their own Outlook. On production each lead connects Outlook once (Settings › Email); then click Send in that window and check the client\'s inbox.' });
+  await noteEmails(T, startedAt, false);
   void TRACK_B;
 });

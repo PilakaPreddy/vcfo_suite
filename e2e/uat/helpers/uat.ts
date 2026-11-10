@@ -142,7 +142,14 @@ export async function as(browser: Browser, role: Role): Promise<Page> {
     await page.goto('/app');
     if (!/\/app\//.test(page.url())) {
       const secret = role === 'lead' ? state<{ leadTotpSecret?: string }>().leadTotpSecret : undefined;
-      await signIn(page, loginOf(role), secret ? totpNow(secret) : undefined);
+      try {
+        await signIn(page, loginOf(role), secret ? totpNow(secret) : undefined);
+      } catch (err) {
+        if (!secret) throw err;
+        // A code can be used once only: wait for the next 30-second window and sign in again.
+        await page.waitForTimeout(31_000 - (Date.now() % 30_000));
+        await signIn(page, loginOf(role), totpNow(secret));
+      }
       await ctx.storageState({ path: file });
     }
     return page;

@@ -42,3 +42,4 @@ src/components/client-portal/css/
 # User acceptance run: sign-in state and raw evidence (the report is built from them)
 e2e/uat/.auth/
 e2e/uat/results/
+docs/specs/uat/report/

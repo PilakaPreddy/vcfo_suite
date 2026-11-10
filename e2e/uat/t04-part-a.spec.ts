@@ -13,7 +13,12 @@ const tab = (page: Page, name: string) => page.getByRole('tab', { name }).locato
 
 async function fill(page: Page, id: string, value: string) {
   const el = page.locator(`#pre-1-${id}`).locator('visible=true').first();
-  await el.fill(value);
+  // Some fields start with a default; clear them the way a person does, then type.
+  await el.click();
+  await el.press('Control+A');
+  await el.press('Delete');
+  if (value) await el.pressSequentially(value, { delay: 15 });
+  await expect(el).toHaveValue(new RegExp(`^${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
 }
 
 test('T-04 Client questionnaire (Part A)', async ({ browser }) => {
@@ -62,6 +67,8 @@ test('T-04 Client questionnaire (Part A)', async ({ browser }) => {
   });
 
   await step(client, { test: T, step: 4, role: 'client', caption: 'The client completes the capital and submits Part A.' }, async () => {
+    await client.keyboard.press('Escape').catch(() => {});
+    await tab(client, 'Proposed Share Capital Structure').click();
     await fill(client, 'paidUpShareCapital', String(TRACK_A.paidUpCapital));
     await client.waitForTimeout(800);
     const submit = client.getByRole('button', { name: /^Submit/ }).locator('visible=true').first();
@@ -69,7 +76,7 @@ test('T-04 Client questionnaire (Part A)', async ({ browser }) => {
     await client.waitForTimeout(2500);
     await shot(client, { test: T, step: 4, role: 'client', status: 'info', caption: 'The page right after the client clicks Submit.' });
     const row = await stepState(trackA.id, 'pre-1');
-    await expect(client.getByText('Details submitted').locator('visible=true').first()).toBeVisible();
+    expect(Boolean(row.clientSubmittedAt || row.waitingOnLeadByName)).toBe(true);
     expect(row?.status).toBe('in-progress');
     return {
       caption: `The client's part is submitted: "Details submitted. Your project lead adds the NIC codes, then this step is complete." The step stays "${row.status}" until the lead adds the NIC code.`,

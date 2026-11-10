@@ -147,7 +147,7 @@ function defectCard(d) {
   </article>`;
 }
 
-function build(samples) {
+function build(samples, forFile = false) {
   const open = defects.filter((d) => d.status === 'open');
   const owner = defects.filter((d) => d.status === 'owner-decision');
   const fixed = defects.filter((d) => d.status === 'fixed').sort((a, b) => a.severity.localeCompare(b.severity));
@@ -159,8 +159,8 @@ function build(samples) {
 :root{--ink:#14161f;--ink2:#4a4f63;--ink3:#868b9e;--line:#e3e5ec;--bg:#f6f7fa;--card:#fff;--brand:#3a3fd8;--ok:#15803d;--okb:#e8f6ec;--bad:#b91c1c;--badb:#fdecec;--amb:#a16207;--ambb:#fdf5e1;--grey:#5b6178;--greyb:#eef0f4;--fix:#7b3fd8;--fixb:#f2ebfd}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--ink:#eceef5;--ink2:#b5b9c9;--ink3:#8a8fa3;--line:#2c3040;--bg:#12141b;--card:#1a1d27;--okb:#12301d;--badb:#3a1616;--ambb:#33280f;--greyb:#232633;--fixb:#2a1c45}}
 :root[data-theme=dark]{--ink:#eceef5;--ink2:#b5b9c9;--ink3:#8a8fa3;--line:#2c3040;--bg:#12141b;--card:#1a1d27;--okb:#12301d;--badb:#3a1616;--ambb:#33280f;--greyb:#232633;--fixb:#2a1c45}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Public Sans',system-ui,Arial,sans-serif}
-.wrap{max-width:1180px;margin:0 auto;padding:28px 16px 80px}.mono,pre,code{font-family:'IBM Plex Mono',ui-monospace,monospace}
+*{box-sizing:border-box}.defect,.test,.box,.person{min-width:0}pre{overflow-x:auto}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 'Public Sans',system-ui,Arial,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}.mono,pre,code{font-family:'IBM Plex Mono',ui-monospace,monospace}
 h1{font-size:34px;line-height:1.1;margin:6px 0 8px;letter-spacing:-.02em}h2{font-size:22px;margin:44px 0 12px;letter-spacing:-.01em}
 .kicker{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);font-weight:700}
 .verdict{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;margin:18px 0}
@@ -174,7 +174,7 @@ h1{font-size:34px;line-height:1.1;margin:6px 0 8px;letter-spacing:-.02em}h2{font
 .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--ink2);margin:10px 0}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
 .box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:10px 0}.box.red{border-color:var(--bad);background:var(--badb)}
 .box h3{margin:0 0 8px;font-size:17px}.box ul{margin:0;padding-left:20px}.box li{margin:6px 0}
-.defects{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.defects{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:12px}
 .defect{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;border-top:5px solid var(--grey)}
 .defect.fixed{border-top-color:var(--fix)}.defect.open{border-top-color:var(--bad)}.defect.owner{border-top-color:var(--amb)}
 .defect header{display:flex;gap:8px;align-items:center;font-size:12px}.did{font-family:'IBM Plex Mono',monospace;font-weight:700}
@@ -187,14 +187,14 @@ h1{font-size:34px;line-height:1.1;margin:6px 0 8px;letter-spacing:-.02em}h2{font
 .tone{margin-left:auto;font-weight:800;font-size:13px;padding:3px 10px;border-radius:999px}.tone.green{background:var(--okb);color:var(--ok)}.tone.red{background:var(--badb);color:var(--bad)}.tone.amber{background:var(--ambb);color:var(--amb)}.tone.grey{background:var(--greyb);color:var(--grey)}
 .why{color:var(--ink2);margin:6px 0 10px}.dlinks{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.dl{font-size:12.5px;text-decoration:none;padding:3px 8px;border-radius:6px;background:var(--fixb);color:var(--fix)}.dl.open{background:var(--badb);color:var(--bad)}.dl.owner-decision{background:var(--ambb);color:var(--amb)}
 .checks{list-style:none;padding:0;margin:0 0 12px}.checks li{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px dashed var(--line)}.checks pre{white-space:pre-wrap;font-size:12px;color:var(--ink2);margin:4px 0 0;max-height:220px;overflow:auto}
-.story{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+.story{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));gap:14px}
 .shot{margin:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg)}.shot.fail{border:2px solid var(--bad)}
 .shot img{display:block;width:100%;height:auto;max-height:420px;object-fit:cover;object-position:top}
 .shot figcaption{padding:10px 12px;font-size:13.5px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.shot .n{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--card);font-size:11px;font-weight:700}
 .shot .who{font-size:12px;color:var(--ink3);font-weight:600}.shot .cap{flex-basis:100%}.shot small{flex-basis:100%;color:var(--bad);font-family:'IBM Plex Mono',monospace;font-size:11px;white-space:pre-wrap}
 .pill{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap}.pill.ok{background:var(--okb);color:var(--ok)}.pill.bad{background:var(--badb);color:var(--bad)}.pill.part{background:var(--ambb);color:var(--amb)}.pill.grey{background:var(--greyb);color:var(--grey)}.pill.info{background:var(--greyb);color:var(--ink2)}.pill.fix{background:var(--fixb);color:var(--fix)}
 .mails summary{cursor:pointer;color:var(--ink2);font-size:14px;margin-top:12px}.mails pre{white-space:pre-wrap;font-size:12px}
-.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}.person{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--grey);border-radius:12px;padding:12px 14px;font-size:14px}.person b{display:block;margin-bottom:4px}
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:10px}.person{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--grey);border-radius:12px;padding:12px 14px;font-size:14px}.person b{display:block;margin-bottom:4px}
 .mailgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.mailcard{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px}.mailcard img{width:100%;display:block;max-height:420px;object-fit:cover;object-position:top;border-bottom:1px solid var(--line)}.mailcard div{padding:8px 10px}
 table.mt{width:100%;border-collapse:collapse;font-size:13px;background:var(--card)}table.mt td,table.mt th{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}
 nav.toc{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}nav.toc a{font-size:13px;text-decoration:none;color:var(--brand);border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--card)}
@@ -204,11 +204,12 @@ nav.toc{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}nav.toc a{font-size:1
   const legend = `<div class="legend"><span><i style="background:var(--ok)"></i>Works</span><span><i style="background:var(--amb)"></i>Works after a fix made tonight, or partly tested</span><span><i style="background:var(--bad)"></i>Not working</span><span><i style="background:var(--grey)"></i>Needs a person</span></div>`;
   const grid = `<div class="grid">${TESTS.map(([id, name]) => `<a class="cell ${V[id].tone}" href="#${id}"><div class="t">${id}</div><div class="n">${esc(name)}</div><div class="w">${esc(V[id].word)}</div><div class="x">${esc(V[id].note)}</div></a>`).join('')}</div>`;
   const mailList = mails.map((m) => `<tr><td class="mono">${esc(m.at?.slice(11, 19))}</td><td>${esc(m.subject)}</td><td>${esc([m.to].flat().join(', '))}${m.cc?.length ? `<br><small>cc ${esc(m.cc.join(', '))}</small>` : ''}</td><td>${esc((m.attachments || []).join(', '))}</td></tr>`).join('');
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VCFO Test Report</title>
+  const head = `<title>VCFO Test Report</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Public+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>${css}</style></head><body><div class="wrap">
+<style>${css}</style>`;
+  return `${forFile ? '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' : ''}${head}${forFile ? '</head><body>' : ''}<div class="wrap">
 <div class="kicker">VCFO Suite · acceptance test · ${esc(meta.date ?? '10 Nov 2026')}</div>
 <h1>The full test run, with screenshots</h1>
 <p class="sub">Claude ran all 21 tests of the production test plan on a private copy of <span class="mono">main</span>, acting as super admin, admin, manager, two project leads and three clients. Each step was photographed; the important part of each picture is outlined in green (correct), red (wrong) or blue (what was clicked). Production was not touched.</p>
@@ -253,18 +254,19 @@ ${TESTS.map(testSection).join('')}
 <h2 id="T-19">All emails sent in the run (${mails.length})</h2>
 <div class="box" style="overflow:auto"><table class="mt"><tr><th>Time</th><th>Subject</th><th>To</th><th>Attachments</th></tr>${mailList}</table></div>
 <p class="sub">Built from the run's records by <span class="mono">scripts/build-uat-report.mjs</span>. Test code: <span class="mono">e2e/uat/</span>. Defects: <span class="mono">docs/specs/uat/defects.json</span>.</p>
-</div></body></html>`;
+</div>${forFile ? '</body></html>' : ''}`;
 }
 
 const samples = await prepareImages();
 writeFileSync(join(OUT, 'index.html'), build(samples));
+if (process.argv.includes('--pdf')) writeFileSync(join(OUT, 'print.html'), build(samples, true));
 if (process.argv.includes('--pdf')) {
   const { chromium } = (() => {
     try { return req('@playwright/test'); } catch { return req('playwright'); }
   })();
   const b = await chromium.launch({ executablePath: process.env.UAT_CHROMIUM || undefined });
   const p = await b.newPage();
-  await p.goto('file://' + join(OUT, 'index.html'), { waitUntil: 'networkidle' });
+  await p.goto('file://' + join(OUT, 'print.html'), { waitUntil: 'networkidle' });
   await p.evaluate(async () => {
     for (const img of document.images) img.loading = 'eager';
     await Promise.all([...document.images].map((i) => (i.complete ? null : new Promise((r) => { i.onload = i.onerror = r; }))));

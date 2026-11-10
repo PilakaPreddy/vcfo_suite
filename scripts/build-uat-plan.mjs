@@ -4,7 +4,7 @@
 // Run: node scripts/build-uat-plan.mjs        (add --no-pdf to skip the PDF)
 // The text is written in ASD-STE100 Simplified Technical English.
 
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -375,7 +375,29 @@ const BUILD_NOTES = [
 // ---------------------------------------------------------------- html
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-const box = (cls = '') => `<span class="box ${cls}"></span>`;
+const box = (cls = '', mark = '') => `<span class="box ${cls} ${mark ? `m-${mark}` : ''}">${{ ok: '✓', bad: '✗', person: 'P', blocked: '!' }[mark] ?? ''}</span>`;
+
+// Results of the acceptance run, when there is one (--results): each step gets ✓, ✗, P (a person
+// must check) or ! (blocked); the Done box gets the test's overall mark.
+const RESULTS_FILE = join(root, 'e2e/uat/results/records.jsonl');
+const useResults = process.argv.includes('--results') && existsSync(RESULTS_FILE);
+const RECS = useResults ? readFileSync(RESULTS_FILE, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)) : [];
+function stepMark(id, n) {
+  const r = RECS.filter((x) => x.test === id && String(x.step) === String(n));
+  if (!r.length) return '';
+  if (r.some((x) => x.status === 'fail')) return 'bad';
+  if (r.some((x) => x.status === 'blocked')) return 'blocked';
+  if (r.every((x) => x.status === 'untestable')) return 'person';
+  return 'ok';
+}
+function testMark(id) {
+  const r = RECS.filter((x) => x.test === id);
+  if (!r.length) return '';
+  if (r.some((x) => x.status === 'fail')) return 'bad';
+  if (r.some((x) => x.status === 'blocked')) return 'blocked';
+  if (!r.some((x) => x.status === 'pass')) return 'person';
+  return 'ok';
+}
 const groupOf = (k) => GROUPS.find((g) => g.key === k);
 
 function sheetHead(n, total, title) {
@@ -480,10 +502,10 @@ function matrix(tests, n, total, title) {
     const roleCells = ROLES.map((r) => `<td class="rc">${t.roles.includes(r) ? box() : '<span class="na">—</span>'}</td>`).join('');
     const dayLabel = t.days.length > 2 ? `D${t.days[0]}–D${t.days[t.days.length - 1]}` : t.days.map((d) => `D${d}`).join(', ');
     return `${band}<tr class="tr">
-      <td class="done">${box('lg')}<div class="sig">Initials<br>Date</div></td>
+      <td class="done">${box('lg', testMark(t.id))}<div class="sig">Initials<br>Date</div></td>
       <td class="idc"><div class="tid mono">${t.id}</div><div class="day">${dayLabel}</div>${t.track === '—' ? '' : `<div class="trk">Track ${esc(t.track)}</div>`}</td>
       <td class="feat"><div class="fn">${esc(t.name)}</div><span class="badge ${b.cls}">${b.label}</span><div class="bf"><b>Before you start</b>${esc(t.before)}</div></td>
-      <td class="steps"><ol>${t.steps.map((s, i) => `<li>${box()}<span class="sn mono">${i + 1}</span><span>${esc(s)}</span></li>`).join('')}</ol></td>
+      <td class="steps"><ol>${t.steps.map((s, i) => `<li>${box('', stepMark(t.id, i + 1))}<span class="sn mono">${i + 1}</span><span>${esc(s)}</span></li>`).join('')}</ol></td>
       <td class="pass"><ul>${t.pass.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></td>
       <td class="msg">${t.msg === '—' ? '<span class="na">—</span>' : `${box()}<span>${esc(t.msg)}</span>`}</td>
       ${roleCells}
@@ -620,6 +642,9 @@ table { border-collapse: collapse; width: 100%; }
 .steps ol { list-style: none; }
 .steps li { display: flex; gap: 1.8mm; align-items: flex-start; padding: .45mm 0; }
 .steps .box { margin-top: .2mm; }
+.box { display: inline-grid; place-items: center; font-weight: 800; font-size: 8pt; line-height: 1; }
+.box.lg { font-size: 15pt; }
+.m-ok { color: #15803d; border-color: #15803d; } .m-bad { color: #b91c1c; border-color: #b91c1c; } .m-person { color: #5b6178; } .m-blocked { color: #a16207; border-color: #a16207; }
 .sn { flex: none; width: 3mm; font-size: 7pt; color: var(--ink-3); padding-top: .3mm; }
 .pass ul { padding-left: 3.5mm; } .pass li { margin-bottom: .6mm; }
 .msg { display: table-cell; } .msg .box { float: left; margin: .2mm 1.5mm 0 0; }
@@ -648,7 +673,8 @@ ${PARTS.map((p, i) => matrix(p, 3 + i, TOTAL, `Test matrix ${i + 1} of ${PARTS.l
 ${sheet4(TOTAL)}
 </body></html>`;
 
-writeFileSync(join(outDir, 'test-plan-a3.html'), html);
+const STEM = useResults ? 'test-plan-a3-results' : 'test-plan-a3';
+writeFileSync(join(outDir, `${STEM}.html`), html);
 
 // ---------------------------------------------------------------- markdown
 
@@ -663,7 +689,7 @@ for (const t of TESTS) {
   md.push(`| [ ] | ${t.id} | ${t.days.map((d) => `D${d}`).join(', ')} | ${t.track} | ${t.name} | ${BUILD[t.build].label} | ${t.roles.join(' ')} | ${t.steps.map((s, i) => `${i + 1}. ${s}`).join('<br>')} | ${t.pass.join('<br>')} | ${t.msg} |`);
 }
 md.push('', '## Report a defect to Claude with', '', ...REPORT.map((s) => `- ${s}`), '');
-writeFileSync(join(outDir, 'TEST-PLAN.md'), md.join('\n'));
+if (!useResults) writeFileSync(join(outDir, 'TEST-PLAN.md'), md.join('\n'));
 
 // ---------------------------------------------------------------- pdf
 
@@ -673,11 +699,11 @@ if (!process.argv.includes('--no-pdf')) {
   const req = createRequire(import.meta.url);
   let chromium;
   try { ({ chromium } = req('@playwright/test')); } catch { ({ chromium } = req('playwright')); }
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ executablePath: process.env.UAT_CHROMIUM || undefined });
   const page = await browser.newPage();
-  await page.goto('file://' + join(outDir, 'test-plan-a3.html'), { waitUntil: 'networkidle' });
+  await page.goto('file://' + join(outDir, `${STEM}.html`), { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
-  await page.pdf({ path: join(outDir, 'test-plan-a3.pdf'), format: 'A3', landscape: true, printBackground: true, preferCSSPageSize: true });
+  await page.pdf({ path: join(outDir, `${STEM}.pdf`), format: 'A3', landscape: true, printBackground: true, preferCSSPageSize: true });
   await browser.close();
 }
 console.log('Wrote docs/specs/uat/test-plan-a3.html, test-plan-a3.pdf and TEST-PLAN.md');

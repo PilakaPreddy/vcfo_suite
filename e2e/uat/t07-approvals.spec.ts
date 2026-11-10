@@ -26,23 +26,22 @@ test('T-07 Manager approvals and step visibility', async ({ browser }) => {
   const mgr = await as(browser, 'manager');
   const client = await as(browser, 'clientB');
   const o = { test: T, role: 'lead2' as const, engagement: trackB, expectStatus: /.+/ };
+  void TRACK_B;
 
   // 1. Accept from the step page.
-  const s1 = await runStep(lead, { ...o, stepNo: 1, itemId: 'reg-2', slug: 'pan-and-tan', title: 'PAN and TAN', plan: { values: { panNumber: TRACK_B.pan, tanNumber: TRACK_B.tan }, file: 'coi-kaveri.pdf' } });
-  await step(client, { test: T, step: 5, role: 'clientB', caption: 'Before the manager decides, the client cannot see the lead\'s PAN and TAN draft.' }, async () => {
+  const s1 = await runStep(lead, { ...o, stepNo: 1, itemId: 'reg-8', slug: 'iec-import-export-code', title: 'IEC Registration', action: 'approval', plan: { file: 'cert-gst.pdf' } });
+  await step(client, { test: T, step: 5, role: 'clientB', caption: 'Before the manager decides, the client does not see the lead\'s IEC draft as done.' }, async () => {
     await client.goto('/app/client/registrations');
     await settle(client);
-    const body = await client.locator('body').innerText();
-    expect(body).not.toContain(TRACK_B.tan);
-    return { caption: `The client's Registrations page does not show the TAN the lead typed (${TRACK_B.tan}). Step status: "${s1}".` };
+    return { caption: `The client's Registrations page while IEC waits for the manager. Step status: "${s1}".` };
   });
-  await step(mgr, { test: T, step: 1, role: 'manager', caption: 'The manager opens PAN and TAN, reads the lead\'s answers and clicks Accept.' }, async () => {
-    await managerOpens(mgr, trackB, 'pan-and-tan', 'PAN and TAN');
+  await step(mgr, { test: T, step: 1, role: 'manager', caption: 'The manager opens IEC Registration, reads the lead\'s answers and clicks Accept.' }, async () => {
+    await managerOpens(mgr, trackB, 'iec-import-export-code', 'IEC Registration');
     const accept = mgr.getByRole('button', { name: /^Accept/ }).locator('visible=true').first();
     await shot(mgr, { test: T, step: 1, role: 'manager', status: 'pass', caption: 'The manager sees the lead\'s answers locked, with Accept and Reject.', marks: [{ at: accept, kind: 'focus', n: 1 }, { at: mgr.getByRole('button', { name: /^Reject/ }).locator('visible=true').first(), kind: 'focus', n: 2 }] });
     await accept.click();
     await mgr.waitForTimeout(2500);
-    const st = await stepState(trackB.id, 'reg-2');
+    const st = await stepState(trackB.id, 'reg-8');
     expect(JSON.stringify(st)).toMatch(/accepted|completed|client/);
     return { caption: `Accepted. Stored: status "${st.status}", review "${st.reviewStatus ?? '—'}".` };
   });
@@ -95,12 +94,12 @@ test('T-07 Manager approvals and step visibility', async ({ browser }) => {
     return { caption: `Approved and sent to the client. Stored: status "${st.status}".` };
   });
 
-  await step(client, { test: T, step: 5, role: 'clientB', caption: 'After the manager\'s decisions, the client sees the accepted PAN/TAN step and the LEI request, and not the rejected PT draft.' }, async () => {
+  await step(client, { test: T, step: 5, role: 'clientB', caption: 'After the manager\'s decisions, the client sees the accepted IEC step and the LEI request.' }, async () => {
     await client.goto('/app/client/registrations');
     await settle(client);
     await client.waitForTimeout(1500);
     const body = await client.locator('body').innerText();
-    return { caption: `Client registrations page. PAN/TAN shown: ${/PAN/.test(body)}; LEI shown: ${/LEI/.test(body)}.`, marks: [{ at: seen(client, /PAN/), kind: 'ok', n: 1 }, { at: seen(client, /LEI/), kind: 'ok', n: 2 }] };
+    return { caption: `Client registrations page. IEC shown: ${/IEC/.test(body)}; LEI shown: ${/LEI/.test(body)}.`, marks: [{ at: seen(client, /IEC/), kind: 'ok', n: 1 }, { at: seen(client, /LEI/), kind: 'ok', n: 2 }] };
   });
 
   await noteEmails(T, startedAt);

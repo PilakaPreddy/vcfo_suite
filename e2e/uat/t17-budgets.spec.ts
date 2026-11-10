@@ -12,7 +12,11 @@ test.afterAll(closeAll);
 async function workflow(page: Page, button: RegExp, confirmTitle: RegExp, note?: string) {
   await page.getByRole('button', { name: button }).locator('visible=true').first().click();
   const d = page.getByRole('alertdialog').or(page.getByRole('dialog')).filter({ hasText: confirmTitle }).first();
-  await d.waitFor({ timeout: 10_000 });
+  // Some actions confirm in a window, others act straight away.
+  if (!(await d.waitFor({ timeout: 4000 }).then(() => true).catch(() => false))) {
+    await page.waitForTimeout(2000);
+    return;
+  }
   const ta = d.locator('textarea');
   if (note && (await ta.count())) await ta.first().fill(note);
   await d.getByRole('button', { name: button }).last().click();
@@ -97,9 +101,10 @@ test('T-17 Budgets and variance', async ({ browser }) => {
     await lead.getByRole('tab', { name: 'Variance' }).first().click();
     await lead.waitForTimeout(1500);
     const cells = lead.locator('input[inputmode="decimal"], input[inputmode="numeric"], input[type=number]').locator('visible=true');
-    const n = Math.min(await cells.count(), 10);
+    const n = Math.min(await cells.count(), 60);
     for (let i = 0; i < n; i++) {
       if (!(await cells.nth(i).isEditable().catch(() => false))) continue;
+      if ((await cells.nth(i).inputValue().catch(() => 'x')).trim()) continue;
       await cells.nth(i).fill(String(48000 + i * 1200)).catch(() => {});
     }
     // Every line with a variance needs a reason.

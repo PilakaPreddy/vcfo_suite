@@ -249,5 +249,34 @@
       "src/components/client-portal"
     ],
     "status": "open"
+  },
+  {
+    "id": "D-T13-02",
+    "test": "T-13",
+    "step": 0,
+    "severity": "S1",
+    "title": "Right after registrations are approved, the compliance job sometimes misses the monthly filings",
+    "who": "every client's compliance calendar and reminders",
+    "cause": "In three full runs, the compliance job run straight after T-12 (GST, PF and ESI registered and approved) stored 115, 115 and then only 65 filings: the third time even GSTR-1 and GSTR-3B were missing. The same job on the same data a few minutes later stored all 142, with the right dates. So for a short time the registration answers are not in the project's stored checklist when the job reads it. A plausible cause is a late or stale save of the whole checklist from another open page (for example the client's portal), which would be a data race worth fixing before go-live. The same pattern appeared in T-09: the client's Part A submit was not in the stored checklist straight after the click, but the lead could complete the step moments later.",
+    "fix": "Not fixed in this run. Reproduce with two browsers open on one project: approve a registration as the manager while the client has the portal open, then read engagements.checklist_state straight away. If answers vanish and return, the checklist save must merge per step instead of writing the whole state.",
+    "files": [
+      "src/db/repositories/compliance.ts"
+    ],
+    "status": "open"
+  },
+  {
+    "id": "O-T08-01",
+    "test": "T-08",
+    "step": 1,
+    "severity": "S3",
+    "title": "In one full run the document pack showed every document as \"waiting for release\"",
+    "who": "project lead and manager on the document pack",
+    "cause": "In the second clean run, T-08 saw all 14 documents waiting for the proposed directors to be accepted, although Proposed Directors was completed and accepted in T-05. The same test, run again 25 minutes later on the same data, found 12 ready and all checks passed. The cause is not found yet.",
+    "fix": "Not changed. If a lead sees \"Waiting for release\" after Proposed Directors is accepted, a page reload or reopening the step should be tried and the case reported.",
+    "files": [
+      "src/lib/doc-pack/evaluate.ts",
+      "src/lib/api/incorporation-docs-errors.ts"
+    ],
+    "status": "open"
   }
 ]
