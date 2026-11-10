@@ -27,6 +27,11 @@
  * Options: --remove (take the demo data out again), --db <identifier>,
  * --region <region>, --port <local port>, --nat <instance id>,
  * --service <App Runner service name>.
+ *
+ * `--reset-clients` runs scripts/reset-client-data.ts instead of the demo seed
+ * (npm run clients:reset:prod). It only counts unless `--yes` is also given; with
+ * `--yes` it first takes a manual RDS snapshot and waits for it, so the deleted
+ * test data can be restored from the snapshot if anything was wanted after all.
  */
 import { execFileSync, spawn } from 'node:child_process';
 import { connect } from 'node:net';
@@ -38,6 +43,8 @@ function arg(name, fallback) {
 }
 
 const remove = process.argv.includes('--remove');
+const resetClients = process.argv.includes('--reset-clients');
+const confirmed = process.argv.includes('--yes');
 const dbId = arg('db', 'vcfo-suite-db');
 const region = arg('region', process.env.AWS_REGION || 'ap-south-1');
 const localPort = Number(arg('port', '15432'));
@@ -107,6 +114,20 @@ if (!nat) {
 }
 if (!nat) {
   throw new Error('No running NAT instance found — pass --nat <instance id>');
+}
+
+/* ---- 1b. A snapshot before a reset that deletes ---- */
+
+if (resetClients && confirmed) {
+  const snapshotId = `${dbId}-before-client-reset-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}`;
+  console.log(`Taking RDS snapshot ${snapshotId} before deleting anything…`);
+  aws(['rds', 'create-db-snapshot', '--db-instance-identifier', dbId, '--db-snapshot-identifier', snapshotId]);
+  execFileSync(
+    'aws',
+    ['rds', 'wait', 'db-snapshot-available', '--db-snapshot-identifier', snapshotId, '--region', region],
+    { stdio: 'inherit' },
+  );
+  console.log(`Snapshot ${snapshotId} is available.\n`);
 }
 
 /* ---- 2. Storage, from the running service's own configuration ---- */
@@ -189,7 +210,7 @@ if (!(await waitForPort(localPort))) {
 }
 console.log('Tunnel is up.\n');
 
-/* ---- 4. The seed ---- */
+/* ---- 4. The seed (or the client reset) ---- */
 
 const seed = spawn(
   process.execPath,
@@ -197,8 +218,9 @@ const seed = spawn(
     '--conditions=react-server',
     '--import',
     'tsx',
-    'scripts/seed-demo-clients.ts',
-    ...(remove ? ['--remove'] : []),
+    ...(resetClients
+      ? ['scripts/reset-client-data.ts', ...(confirmed ? ['--yes'] : [])]
+      : ['scripts/seed-demo-clients.ts', ...(remove ? ['--remove'] : [])]),
   ],
   {
     stdio: 'inherit',

@@ -87,3 +87,26 @@ already finished, and could not set a `completed_on` date in the past.
   point at objects that are not there, and the Documents pages will say so.
 - Credentials vault rows are not seeded. `CREDENTIALS_ENCRYPTION_KEY` is not set on App
   Runner yet, so anything encrypted from a laptop could not be read back by the app.
+
+## Resetting to a fresh tool (before real clients)
+
+`scripts/reset-client-data.ts` removes everything typed in while testing: every project
+(company, parent and subsidiary details, directors, checklist answers, documents, board
+resolutions and meetings, compliance calendars, tasks, notes, messages, budgets, notices),
+every `client` login, the demo logins (`@demo.vcfo.local`, `@demo.sbctrack.in`, staff ones
+included), prospects, client invites, notifications, the reminder log, the failed-email
+outbox, exports and KPI snapshots, and the project files in S3 (keys naming a deleted project
+or login; the knowledge bank is never touched). It keeps staff logins, firm settings,
+templates, the obligation and activity libraries, announcements, the knowledge bank,
+receivables, website demo requests and the audit log of staff actions. It refuses to run if
+no admin or super admin would be left.
+
+```bash
+npm run clients:reset                     # local, counts only
+npm run clients:reset -- --yes            # local, deletes
+npm run clients:reset:prod                # production, counts only
+npm run clients:reset:prod -- --yes       # production, RDS snapshot first, then deletes
+```
+
+The `@vcfo.local` seed staff logins survive the reset; change their passwords or remove them
+once real staff accounts exist.
