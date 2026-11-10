@@ -1,7 +1,7 @@
 # Overnight report, 9 to 10 November 2026
 
 This note is for the owner. It says what was built overnight, how to try each part, and what still needs you.
-Nothing was committed after the last commit (`dee8950`), nothing was pushed, and nothing was deployed. AWS was not touched.
+Everything is committed and pushed to the branch `claude/laughing-albattani-03nyom`. Nothing was merged or deployed, and AWS and the RDS database were not touched.
 
 ## Previews
 
@@ -21,6 +21,8 @@ Nothing was committed after the last commit (`dee8950`), nothing was pushed, and
 | Staff "Assist runs" page | Recent agent runs and the recipe fixes waiting for review, for super admin, admin, manager and project lead. It has a sidebar entry for each of them. | `/app/{super,admin,manager,intern}/assist-runs`, `src/views/assist/AssistRunsPage.tsx` |
 | Step hint (new tonight) | A small card on the staff step page when an agent covers that step. It names the sub-agent and its status (Beta or Coming later), and says to open the side panel in Chrome. Clients never see it. | `src/components/assist-profile/AssistAgentHint.tsx` |
 | Chrome extension | The side panel, the run state machine, the heal ladder, guards, and a mock portal for testing. | `extensions/vcfo-assist/` |
+| Suite and extension joined | One recipe source in Suite (the extension's copy is generated, with drift tests), Ed25519 recipe signatures the extension verifies, a page URL check before filling, "Fix in Suite" opening the right step page per role, and a fix so run ids no longer trip the personal-data check. | `src/lib/assist-agents/`, `extensions/vcfo-assist/src/` |
+| SPICe+ Part B (beta) | The second sub-agent: capital, registered office, and repeating subscriber and director blocks, with its own mock page and end-to-end test. | `src/lib/assist-agents/recipes/spice-b.json`, `extensions/vcfo-assist/mock-portal/spice-b.html` |
 
 ## How to try it
 
@@ -71,11 +73,12 @@ Screenshots are in `docs/specs/vcfo-assist-agents/screens/` (`assist-runs.png`, 
 | Recipe signing key | Recipes are signed with Ed25519. The development key works on mock hosts only. For production, create the key pair with `node scripts/assist-recipe-keygen.mjs`, store the private key as a server secret, and paste the public key into the extension's `RECIPE_PUBLIC_KEYS` (`prod`). Until then the extension refuses every live host. See `extensions/vcfo-assist/README.md` and `.env.example`. |
 | SOM paths | The SPICe+ Part A recipe was checked against the mock only. Someone must record the real MCA form and confirm each SOM path before any live run. |
 | Name significance and trademark | Suite does not collect them, so the profile has no such fields. The agent highlights them and leaves them for the user to fill. |
-| Other sub-agents | Only SPICe+ Part A is in beta. Part B, INC-20A, the registrations and the compliance filings are "coming later" and have no recipe. |
+| Other sub-agents | SPICe+ Part A and Part B are in beta. INC-20A, the registrations and the compliance filings are "coming later" and have no recipe. |
+| Part B gaps | Adding a director or subscriber block on the live form is not built (the mock shows its blocks up front). Suite does not split the registered office address into lines and PIN yet, so those Part B fields show as "not in Suite". |
 
-## Bug found tonight, not fixed
+## Bug found tonight, now fixed
 
-**The SRN write-back fails when the engagement is given by its slug.** `src/lib/assist-agents/record-srn.ts` passes the URL's engagement id through `engagementDbId()` to `getEngagementById()`. That works for a uuid but not for a slug such as `demo-northwind-analytics`. Postgres then refuses the query, and the PATCH answers `srnWriteBack: { recorded: false, reason: "checklist_refused" }`. With the uuid the SRN lands correctly. The extension takes its ids from `/api/engagements`, so it probably avoids this. API.md promises that slugs work, though. The fix is to pass the engagement uuid the route already resolved. That file belonged to the other agent, so it was not edited.
+**The SRN write-back failed when the engagement was given by its slug.** The route now passes the engagement uuid it already resolved, and a test sends the PATCH under a slug URL. The single-run GET had the same problem and was fixed too.
 
 ## Checks
 
@@ -83,7 +86,8 @@ Screenshots are in `docs/specs/vcfo-assist-agents/screens/` (`assist-runs.png`, 
 |---|---|
 | `npm run typecheck` | Clean. It needs a larger heap here: `NODE_OPTIONS=--max-old-space-size=8192 npx tsc --noEmit`. |
 | `npm run lint` | 0 errors, 536 warnings. |
-| Vitest (assist-profile, engagement step, shell, assist-agents) | 152 of 152 pass. |
+| Vitest, whole suite | 5,218 tests pass (40 skipped). The assist-agents suites alone: 100 pass. |
+| Extension `npm test` and `npm run e2e` | 128 unit tests pass; the headless Chrome run passes Part A, the drift run and Part B. |
 | `npm run e2e:smoke` on a production build (`next build`, `next start`) | 142 of 148 pass. Four failures are vault and documents pages that need MinIO, which is not running here. Two are Ask VCFO admin pages, because Ask is off in `.env.local`. None of them come from tonight's work. The journey map, Assist runs pages and sidebars pass for every role. |
 
 The dev server could not run the whole smoke suite in this container. Turbopack grew past 13 GB while compiling page after page, and the kernel killed it. On a laptop, `npm run e2e:smoke` against `npm run dev` should be fine.
