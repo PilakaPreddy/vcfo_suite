@@ -1,0 +1,19 @@
+/* MOCK PORTAL styles: plain and generic on purpose. */
+body { font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; margin: 0 auto; max-width: 760px; padding: 16px; color: #1d2433; background: #fafafa; }
+.mock-banner { background: #fff3cd; border: 1px solid #e0c36a; padding: 8px 12px; border-radius: 6px; margin-bottom: 16px; }
+h2 { font-size: 16px; margin: 0 0 8px; }
+section { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
+.guideFieldNode, .field { display: grid; gap: 4px; margin-bottom: 10px; }
+.captcha { grid-template-columns: auto 1fr; align-items: center; }
+.captcha label, .captcha input { grid-column: 1 / -1; }
+input[type="text"], select, textarea { font: inherit; padding: 6px 8px; border: 1px solid #bbb; border-radius: 4px; max-width: 100%; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+button { font: inherit; padding: 6px 12px; border-radius: 4px; border: 1px solid #889; background: #fff; cursor: pointer; }
+button.danger { background: #8b1e1e; color: #fff; border-color: #8b1e1e; }
+.hint { color: #667; font-size: 12px; }
+.srn { font-weight: 700; font-size: 16px; color: #14532d; }
+#form-status { min-height: 1.4em; font-weight: 600; }
+h3 { font-size: 14px; margin: 12px 0 6px; }
+input[type="email"], input[type="tel"] { font: inherit; padding: 6px 8px; border: 1px solid #bbb; border-radius: 4px; max-width: 100%; }
+fieldset.instance { border: 1px dashed #c6c9d2; border-radius: 6px; padding: 8px 12px; margin: 0 0 10px; }
+fieldset.instance legend { font-weight: 600; padding: 0 4px; }

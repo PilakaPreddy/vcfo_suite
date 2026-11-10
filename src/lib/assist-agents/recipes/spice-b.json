@@ -1,0 +1,375 @@
+{
+  "id": "spice-b",
+  "version": "1.0.0",
+  "title": "SPICe+ Part B (incorporation)",
+  "subAgent": "spice-b",
+  "verifiedAgainst": "mock",
+  "pages": [
+    {
+      "id": "part-b",
+      "title": "SPICe+ Part B",
+      "urlPattern": "/content/mca/global/en/mca/e-filing/incorporation-change-services/spice-plus*",
+      "mockUrlPattern": "/spice-b*.html",
+      "ready": {
+        "som": "guide[0].guide1[0].guideRootPanel[0]"
+      }
+    }
+  ],
+  "fields": [
+    {
+      "key": "company.capital.authorized",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].authorisedCapital[0]",
+      "css": "[name=\"authorisedCapital\"]",
+      "label": "Authorised capital (in Rs.)",
+      "transform": "rupeeAmount",
+      "required": true
+    },
+    {
+      "key": "company.capital.subscribed",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].subscribedCapital[0]",
+      "css": "[name=\"subscribedCapital\"]",
+      "label": "Subscribed capital (in Rs.)",
+      "transform": "rupeeAmount",
+      "required": true
+    },
+    {
+      "key": "company.capital.equity.authorizedShares",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].equityShares[0]",
+      "css": "[name=\"equityShares\"]",
+      "label": "Number of equity shares",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "company.capital.equity.faceValue",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].faceValue[0]",
+      "css": "[name=\"faceValue\"]",
+      "label": "Nominal amount per equity share (in Rs.)",
+      "transform": "rupeeAmount",
+      "required": true
+    },
+    {
+      "key": "registeredOffice.line1",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].officeLine1[0]",
+      "css": "[name=\"officeLine1\"]",
+      "label": "Address line I",
+      "transform": "none",
+      "required": true,
+      "note": "Suite holds the registered office as one address, so the profile has no split lines yet; the user types them."
+    },
+    {
+      "key": "registeredOffice.line2",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].officeLine2[0]",
+      "css": "[name=\"officeLine2\"]",
+      "label": "Address line II",
+      "transform": "none",
+      "required": false,
+      "note": "Suite holds the registered office as one address, so the profile has no split lines yet; the user types them."
+    },
+    {
+      "key": "registeredOffice.pincode",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].officePincode[0]",
+      "css": "[name=\"officePincode\"]",
+      "label": "PIN code",
+      "transform": "none",
+      "required": true,
+      "note": "Suite holds the registered office as one address, so the profile has no split lines yet; the user types them."
+    },
+    {
+      "key": "registeredOffice.city",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].officeCity[0]",
+      "css": "[name=\"officeCity\"]",
+      "label": "City",
+      "transform": "none",
+      "required": false,
+      "note": "The portal fills it from the PIN code."
+    },
+    {
+      "key": "registeredOffice.district",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].officeDistrict[0]",
+      "css": "[name=\"officeDistrict\"]",
+      "label": "District",
+      "transform": "none",
+      "required": false,
+      "note": "The portal fills it from the PIN code."
+    },
+    {
+      "key": "registeredOffice.state",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].officeState[0]",
+      "css": "[name=\"officeState\"]",
+      "label": "State / Union territory",
+      "transform": "none",
+      "required": false,
+      "note": "The portal fills it from the PIN code."
+    },
+    {
+      "key": "registeredOffice.email",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].officeEmail[0]",
+      "css": "[name=\"officeEmail\"]",
+      "label": "Email ID of the company",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "registeredOffice.mobile",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].officeMobile[0]",
+      "css": "[name=\"officeMobile\"]",
+      "label": "Mobile number of the company",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "subscribers[{i}].firstName",
+      "each": "subscribers",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].subscribers[0].subscriber[{i}].firstName[0]",
+      "css": "[name=\"subscriber{n}FirstName\"]",
+      "label": "Subscriber {n}: first name",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "subscribers[{i}].surName",
+      "each": "subscribers",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].subscribers[0].subscriber[{i}].surName[0]",
+      "css": "[name=\"subscriber{n}SurName\"]",
+      "label": "Subscriber {n}: surname",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "subscribers[{i}].father.firstName",
+      "each": "subscribers",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].subscribers[0].subscriber[{i}].fatherFirstName[0]",
+      "css": "[name=\"subscriber{n}FatherFirstName\"]",
+      "label": "Subscriber {n}: father's first name",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "subscribers[{i}].dob",
+      "each": "subscribers",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].subscribers[0].subscriber[{i}].dob[0]",
+      "css": "[name=\"subscriber{n}Dob\"]",
+      "label": "Subscriber {n}: date of birth",
+      "transform": "toMcaDate",
+      "required": true
+    },
+    {
+      "key": "subscribers[{i}].pan",
+      "each": "subscribers",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].subscribers[0].subscriber[{i}].pan[0]",
+      "css": "[name=\"subscriber{n}Pan\"]",
+      "label": "Subscriber {n}: income-tax PAN",
+      "transform": "upper",
+      "required": true
+    },
+    {
+      "key": "subscribers[{i}].email",
+      "each": "subscribers",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].subscribers[0].subscriber[{i}].email[0]",
+      "css": "[name=\"subscriber{n}Email\"]",
+      "label": "Subscriber {n}: email ID",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "subscribers[{i}].mobile",
+      "each": "subscribers",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].subscribers[0].subscriber[{i}].mobile[0]",
+      "css": "[name=\"subscriber{n}Mobile\"]",
+      "label": "Subscriber {n}: mobile number",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "subscribers[{i}].shares.equity.number",
+      "each": "subscribers",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].subscribers[0].subscriber[{i}].shares[0]",
+      "css": "[name=\"subscriber{n}Shares\"]",
+      "label": "Subscriber {n}: number of equity shares subscribed",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "directors[{i}].firstName",
+      "each": "directors",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].directors[0].director[{i}].firstName[0]",
+      "css": "[name=\"director{n}FirstName\"]",
+      "label": "Director {n}: first name",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "directors[{i}].surName",
+      "each": "directors",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].directors[0].director[{i}].surName[0]",
+      "css": "[name=\"director{n}SurName\"]",
+      "label": "Director {n}: surname",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "directors[{i}].din",
+      "each": "directors",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].directors[0].director[{i}].din[0]",
+      "css": "[name=\"director{n}Din\"]",
+      "label": "Director {n}: DIN",
+      "transform": "none",
+      "required": false,
+      "note": "Only a director who already holds a DIN; the others get one with this form."
+    },
+    {
+      "key": "directors[{i}].pan",
+      "each": "directors",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].directors[0].director[{i}].pan[0]",
+      "css": "[name=\"director{n}Pan\"]",
+      "label": "Director {n}: income-tax PAN",
+      "transform": "upper",
+      "required": true
+    },
+    {
+      "key": "directors[{i}].dob",
+      "each": "directors",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].directors[0].director[{i}].dob[0]",
+      "css": "[name=\"director{n}Dob\"]",
+      "label": "Director {n}: date of birth",
+      "transform": "toMcaDate",
+      "required": true
+    },
+    {
+      "key": "directors[{i}].email",
+      "each": "directors",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].directors[0].director[{i}].email[0]",
+      "css": "[name=\"director{n}Email\"]",
+      "label": "Director {n}: email ID",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "directors[{i}].mobile",
+      "each": "directors",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].directors[0].director[{i}].mobile[0]",
+      "css": "[name=\"director{n}Mobile\"]",
+      "label": "Director {n}: mobile number",
+      "transform": "none",
+      "required": true
+    },
+    {
+      "key": "directors[{i}].designation",
+      "each": "directors",
+      "page": "part-b",
+      "som": "guide[0].guide1[0].guideRootPanel[0].directors[0].director[{i}].designation[0]",
+      "css": "[name=\"director{n}Designation\"]",
+      "label": "Director {n}: designation",
+      "transform": "none",
+      "required": true,
+      "askUser": true,
+      "note": "Suite does not hold each director's designation; the user chooses it on the portal."
+    }
+  ],
+  "actions": [
+    {
+      "id": "save-draft",
+      "label": "Save",
+      "kind": "safe",
+      "match": {
+        "text": "Save"
+      }
+    },
+    {
+      "id": "check-form",
+      "label": "Check form",
+      "kind": "safe",
+      "match": {
+        "text": "Check form"
+      }
+    },
+    {
+      "id": "download-pdf",
+      "label": "Download PDF",
+      "kind": "safe",
+      "match": {
+        "text": "Download PDF"
+      }
+    },
+    {
+      "id": "attach-pdf",
+      "label": "Attach PDF",
+      "kind": "safe",
+      "match": {
+        "css": "#signed-pdf"
+      }
+    },
+    {
+      "id": "submit",
+      "label": "Submit",
+      "kind": "human",
+      "match": {
+        "text": "Submit"
+      }
+    },
+    {
+      "id": "pay",
+      "label": "Pay",
+      "kind": "human",
+      "match": {
+        "text": "Pay"
+      }
+    }
+  ],
+  "gates": [
+    "LOGIN",
+    "DSC",
+    "SUBMIT",
+    "PAY"
+  ],
+  "expect": [
+    {
+      "id": "srn",
+      "kind": "srn",
+      "pattern": "\\b[A-Z]{1,2}\\d{7,8}\\b"
+    },
+    {
+      "id": "saved",
+      "kind": "text",
+      "pattern": "[Ss]aved successfully"
+    },
+    {
+      "id": "checked",
+      "kind": "text",
+      "pattern": "[Cc]heck passed"
+    },
+    {
+      "id": "pdf-ready",
+      "kind": "text",
+      "pattern": "PDF ready"
+    }
+  ]
+}

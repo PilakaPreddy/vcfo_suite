@@ -45,6 +45,7 @@ const PAGE_LABEL: Record<string, string> = {
   'knowledge-bank': 'Knowledge bank',
   announcements: 'Announcements',
   watch: 'Official updates',
+  'assist-runs': 'Assist runs',
   notifications: 'Notifications',
   mail: 'Email',
   compliances: 'Compliances',

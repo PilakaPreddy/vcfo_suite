@@ -194,6 +194,7 @@ const staffBoardResolution: RouteCheck = async (page) => {
 
 const STAFF_COMMON = [
   'announcements',
+  'assist-runs',
   'audit-log',
   'compliance',
   'compliance/tracker',
@@ -240,6 +241,7 @@ const ROUTES: Record<DemoRole, Route[]> = {
     '/app/super/growth',
     '/app/super/reports',
     '/app/super/announcements',
+    '/app/super/assist-runs',
     '/app/super/notifications',
     ['/app/super/settings?tab=profile', accountSettings],
     ['/app/super/settings', firmSettings],

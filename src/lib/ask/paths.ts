@@ -7,6 +7,7 @@
  * router_* answers spent only the router call. document_answer and tool_answer spent the router
  * and one answer call. fixed_workflow and agent_run belong to the Do engine, watch to Watch.
  * ingest is no chat message: it is what indexing a source spends, reported beside the rest.
+ * assist_resolve is no chat message either: the VCFO Assist T3 field resolver (`src/lib/assist-agents/resolve.ts`).
  */
 export const ASK_PATHS = [
   'suggestion',
@@ -24,6 +25,7 @@ export const ASK_PATHS = [
   'agent_run',
   'watch',
   'ingest',
+  'assist_resolve',
 ] as const;
 export type AskPath = (typeof ASK_PATHS)[number];
 

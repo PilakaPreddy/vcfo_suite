@@ -7,6 +7,7 @@ import {
   isNavGroup,
   isNavSectionBreak,
   sidebarItemsFor,
+  withAssistRuns,
   withOfficialUpdates,
   type NavEntry,
 } from './sidebar-items';
@@ -124,5 +125,30 @@ describe('withOfficialUpdates', () => {
     const updates = items.find((entry) => isNavGroup(entry) && entry.label === 'Updates');
     expect(isNavGroup(updates!) && updates.items.map((leaf) => leaf.to)).toContain('/app/intern/watch');
     expect(sidebarItemsFor('intern', '/app/intern').flatMap((entry) => (isNavGroup(entry) ? entry.items : [])).some((leaf) => leaf.to.endsWith('/watch'))).toBe(false);
+  });
+});
+
+describe('withAssistRuns', () => {
+  const hrefs = (items: NavEntry[]) => items.flatMap((e) => (isNavSectionBreak(e) || isNavGroup(e) ? [] : [e.to]));
+
+  it.each([
+    ['super_admin', '/app/super/assist-runs'],
+    ['admin', '/app/admin/assist-runs'],
+    ['manager', '/app/manager/assist-runs'],
+    ['intern', '/app/intern/assist-runs'],
+  ] as const)('%s gets Assist runs right after the tools break', (role, href) => {
+    const items = withAssistRuns(sidebarItemsFor(role, '/app/manager'), role, '/app/manager');
+    const at = items.findIndex((e) => isNavSectionBreak(e));
+    const next = items[at + 1]!;
+    expect(!isNavSectionBreak(next) && !isNavGroup(next) && next.to).toBe(href);
+  });
+
+  it.each(['client', 'developer', 'partner'] as const)('%s never gets it', (role: Role) => {
+    expect(hrefs(withAssistRuns(sidebarItemsFor(role, '/app/manager'), role, '/app/manager')).some((h) => h.endsWith('/assist-runs'))).toBe(false);
+  });
+
+  it('stays out of the developer console', () => {
+    const items = sidebarItemsFor('super_admin', '/app/super', true);
+    expect(withAssistRuns(items, 'super_admin', '/app/super', true)).toBe(items);
   });
 });

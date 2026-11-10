@@ -8,6 +8,7 @@ Domain logic and helpers. Nothing here imports `db`; data access goes through
 
 - `api/` — helpers shared by `app/api/**` route handlers (body parsing, schemas, generate and access checks).
 - `ask/` — Ask VCFO: retrieval, prompts, guards, PDF briefs and the tool calls it can make. `ask/data-router/` turns a file or a paste into proposed fields, `ask/changeset/` is the review card's approval and undo, and `ask/field-catalog/` is the generated list of fields.
+- `assist-agents/` — VCFO Assist agents: the recipe schema and recipe files, the agent catalog, recipe signing, the T3 field resolver (labels only) and the SRN write-back.
 - `assist-profile/` — builds the company profile that the vcfo_assist browser extension fills into MCA portals.
 - `audit/` — audit-log display formatting and the role rules for who sees which audit events.
 - `budget/` — annual cost budgets: the one calculation (`engine.ts`), Excel and PDF, the owner's workbook import, and messages.

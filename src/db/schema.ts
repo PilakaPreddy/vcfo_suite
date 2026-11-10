@@ -1282,3 +1282,4 @@ export * from './schema-expiries';
 export * from './schema-notices';
 export * from './schema-compliance-events';
 export * from './schema-client-health';
+export * from './schema-assist';
