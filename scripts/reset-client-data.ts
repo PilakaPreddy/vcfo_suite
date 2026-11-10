@@ -48,10 +48,17 @@ const DEMO_EMAIL_PATTERN_PROD = '%@demo.sbctrack.in';
  * every other login, staff included. Missing ones are created as admins with no password
  * (they sign in with Microsoft or use Forgot password).
  */
-const KEEP_ONLY = (process.env.KEEP_ONLY_ADMINS ?? '')
+// Each entry is `email` (made admin) or `email:role`, for example `a@x.in:super_admin`.
+const KEEP_ENTRIES = (process.env.KEEP_ONLY_ADMINS ?? '')
   .split(',')
   .map((e) => e.trim().toLowerCase())
-  .filter(Boolean);
+  .filter(Boolean)
+  .map((e) => {
+    const [email, role = 'admin'] = e.split(':');
+    if (role !== 'admin' && role !== 'super_admin') throw new Error(`Unknown role ${role} for ${email}`);
+    return { email, role };
+  });
+const KEEP_ONLY = KEEP_ENTRIES.map((e) => e.email);
 
 /** Profiles that go: every client login and every demo-tagged login, or all but KEEP_ONLY. */
 const DOOMED_PROFILES = KEEP_ONLY.length
@@ -126,11 +133,11 @@ async function main() {
   );
 
   if (KEEP_ONLY.length) {
-    console.log(`\nKEEP_ONLY_ADMINS: ${KEEP_ONLY.join(', ')} (made admin; missing ones created).`);
+    console.log(`\nKEEP_ONLY_ADMINS: ${KEEP_ENTRIES.map((e) => `${e.email} as ${e.role}`).join(', ')} (missing ones created).`);
     if (apply) {
-      for (const email of KEEP_ONLY) {
-        await db.execute(sql`insert into profiles (email, role, name) values (${email}, 'admin', ${email.split('@')[0]})
-          on conflict (email) do update set role = 'admin', status = 'active'`);
+      for (const { email, role } of KEEP_ENTRIES) {
+        await db.execute(sql`insert into profiles (email, role, name) values (${email}, ${role}::trak_role, ${email.split('@')[0]})
+          on conflict (email) do update set role = ${role}::trak_role, status = 'active'`);
       }
       keptProfiles.splice(0, keptProfiles.length, ...(await rows<{ id: string; email: string; role: string }>(
         sql`select id, email, role from profiles where id not in (${DOOMED_PROFILES})`,
