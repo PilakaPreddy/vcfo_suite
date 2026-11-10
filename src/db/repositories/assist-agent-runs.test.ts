@@ -215,6 +215,13 @@ describe('getAgentRun / updateAgentRun', () => {
     expect(writes()[0]!.set).toMatchObject({ status: 'done', srn: 'AA1234567', finishedAt: expect.any(Date) });
   });
 
+  it('returns the engagement uuid when the URL names the engagement by its slug', async () => {
+    results = [[runRow(OWN)], [runRow(OWN, { status: 'done', srn: 'AA1234567', finishedAt: new Date() })]];
+    const { engagementDbId } = await runs.updateAgentRun(ctx('intern'), 'acme-labs', RUN, { status: 'done', srn: 'AA1234567' });
+    expect(assertEngagementAccess).toHaveBeenCalledWith(expect.anything(), 'acme-labs');
+    expect(engagementDbId).toBe(OWN);
+  });
+
   it('meters AI use only on a reachable run', async () => {
     results = [[runRow(OTHER)]];
     await runs.addAgentRunAiUsage(ctx('intern'), RUN, { calls: 1, tokens: 900 });

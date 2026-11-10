@@ -12,7 +12,7 @@ import type { Catalog, PatchProposal, ProfileResult, ResolvePayload, ResolveResp
 
 const MOCK_DIR = path.resolve(__dirname, '../../mock-portal');
 
-export function loadMockPage(file: 'spice-a.html' | 'spice-a-drift.html'): void {
+export function loadMockPage(file: 'spice-a.html' | 'spice-a-drift.html' | 'spice-b.html'): void {
   const html = readFileSync(path.join(MOCK_DIR, file), 'utf8');
   const body = /<body>([\s\S]*)<\/body>/.exec(html)![1]!.replace(/<script[\s\S]*?<\/script>/g, '');
   document.body.innerHTML = body;
@@ -60,7 +60,61 @@ export const PROFILE_VALUES = [
   'Sentinelfirst',
 ];
 
+/** A Part B profile: capital, registered office, two subscribers and two directors (sentinel values). */
+export const PART_B_PROFILE: ProfileResult = {
+  ...SENTINEL_PROFILE,
+  profile: {
+    ...SENTINEL_PROFILE.profile,
+    company: {
+      ...(SENTINEL_PROFILE.profile.company as Record<string, unknown>),
+      capital: { authorized: 1000000, subscribed: 100000, equity: { authorizedShares: 100000, faceValue: 10 } },
+    },
+    registeredOffice: {
+      line1: 'Sentinel Tower 1',
+      line2: 'Sentinel Road',
+      pincode: '500081',
+      city: 'Hyderabad',
+      district: 'Hyderabad',
+      state: 'Telangana',
+      country: 'India',
+      email: 'office@sentinel.test',
+      mobile: '9000000001',
+    },
+    subscribers: [
+      { index: 1, kind: 'individual', isDirector: true, firstName: 'Subone', surName: 'Sentinelson', father: { firstName: 'Fatherone' }, dob: '01/02/1980', pan: 'sentb1234c', email: 'sub1@sentinel.test', mobile: '9000000011', shares: { equity: { class: 'Equity', number: 5000 } } },
+      { index: 2, kind: 'individual', isDirector: false, firstName: 'Subtwo', surName: 'Sentineldottir', father: { firstName: 'Fathertwo' }, dob: '03/04/1985', pan: 'SENTC5678D', email: 'sub2@sentinel.test', mobile: '9000000012', shares: { equity: { class: 'Equity', number: 5000 } } },
+    ],
+    directors: [
+      { id: 'e3', index: 1, firstName: 'Dirone', surName: 'Sentinelli', din: '09876543', pan: 'SENTD1111E', dob: '05/06/1975', email: 'dir1@sentinel.test', mobile: '9000000021' },
+      { id: 'e4', index: 2, firstName: 'Dirtwo', surName: 'Sentinelova', pan: 'SENTE2222F', dob: '07/08/1990', email: 'dir2@sentinel.test', mobile: '9000000022' },
+    ],
+  },
+  missing: [],
+};
+
+export const PART_B_VALUES = [
+  'Sentinel Tower 1',
+  'Sentinel Road',
+  'office@sentinel.test',
+  'Subone',
+  'Sentinelson',
+  'Fatherone',
+  'SENTB1234C',
+  'sub1@sentinel.test',
+  'Subtwo',
+  'SENTC5678D',
+  'Dirone',
+  'Sentinelli',
+  '09876543',
+  'SENTD1111E',
+  'dir1@sentinel.test',
+  'Dirtwo',
+  'SENTE2222F',
+  '9000000021',
+];
+
 export class FakeSuite implements SuitePort {
+  profileValue: ProfileResult = SENTINEL_PROFILE;
   catalogValue: Catalog = { liveAllowed: false, agents: [] };
   recipeValue: SignedRecipe | null = null;
   resolver: ((p: ResolvePayload) => ResolveResponse) | null = null;
@@ -81,7 +135,7 @@ export class FakeSuite implements SuitePort {
   }
   async profile(id: string): Promise<ProfileResult> {
     this.calls.push({ name: 'profile', body: id });
-    return structuredClone(SENTINEL_PROFILE);
+    return structuredClone(this.profileValue);
   }
   async createRun(_id: string, body: RunCreate): Promise<{ runId: string }> {
     this.calls.push({ name: 'createRun', body });

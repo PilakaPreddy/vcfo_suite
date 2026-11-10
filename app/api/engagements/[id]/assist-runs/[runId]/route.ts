@@ -1,4 +1,5 @@
 import { getAgentRun, updateAgentRun } from '@/db/repositories/assist-agent-runs';
+import { assertEngagementAccess } from '@/db/repositories/engagements';
 import { parseJsonBody } from '@/lib/api/parse-body';
 import { updateAgentRunSchema } from '@/lib/assist-agents/api-schemas';
 import { assistErrorResponse, assistStaffGuard, guardFailure, isRowId, json } from '@/lib/assist-agents/http';
@@ -15,7 +16,9 @@ export async function GET(_request: Request, context: RouteContext) {
   if (!isRowId(runId)) return json({ ok: false, error: 'not_found' }, 404);
   try {
     const run = await getAgentRun(guard.ctx, runId);
-    if (!run || engagementDbId(run.engagementId) !== engagementDbId(id)) return json({ ok: false, error: 'not_found' }, 404);
+    // Compare uuids: the URL may name the engagement by uuid, legacy id or slug.
+    const access = run ? await assertEngagementAccess(guard.ctx, id) : null;
+    if (!run || !access?.ok || engagementDbId(run.engagementId) !== access.dbId) return json({ ok: false, error: 'not_found' }, 404);
     return json({ ok: true, run });
   } catch (error) {
     return assistErrorResponse(error, 'get run');
@@ -35,8 +38,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   const { id, runId } = await context.params;
   if (!isRowId(runId)) return json({ ok: false, error: 'not_found' }, 404);
   try {
-    const { run, finished } = await updateAgentRun(guard.ctx, id, runId, body.data);
-    const srnWriteBack = finished && run.status === 'done' && run.srn ? await recordRunSrn(guard.ctx, id, run.subAgent, run.srn) : undefined;
+    const { run, finished, engagementDbId: dbId } = await updateAgentRun(guard.ctx, id, runId, body.data);
+    // The resolved uuid, not `id`: the URL may name the engagement by its slug.
+    const srnWriteBack = finished && run.status === 'done' && run.srn ? await recordRunSrn(guard.ctx, dbId, run.subAgent, run.srn) : undefined;
     return json({ ok: true, run, ...(srnWriteBack ? { srnWriteBack } : {}) });
   } catch (error) {
     return assistErrorResponse(error, 'update run');

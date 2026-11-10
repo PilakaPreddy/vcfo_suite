@@ -8,9 +8,14 @@ import { ASSIST_AGENT_RUN_STATUSES, ASSIST_HEAL_TIERS, ASSIST_PATCH_TIERS } from
  * a body that looks like it carries personal data is refused with `personal_data`.
  */
 
-/** The SRN itself is a filing reference (and can look like a passport number), so it is not checked. */
-const labelsOnly = <T extends z.ZodTypeAny>(schema: T) =>
-  schema.refine((value) => !containsPersonalData({ ...(value as Record<string, unknown>), srn: undefined }), { message: 'personal_data' });
+/**
+ * Refuses personal data in the body's free text only. `texts` picks the label-like strings (names,
+ * labels, refusal targets, errors, patch evidence); ids, versions, enums and the SRN are never
+ * checked, because a uuid whose first group is all digits looks like a DIN or an Aadhaar number,
+ * and the SRN is a filing reference that can look like a passport number.
+ */
+const labelsOnly = <T extends z.ZodTypeAny>(schema: T, texts: (value: z.infer<T>) => unknown) =>
+  schema.refine((value) => !containsPersonalData(texts(value)), { message: 'personal_data' });
 
 const SRN = /^[A-Z0-9]{6,20}$/;
 const STATE = /^[A-Z][A-Z0-9_]{0,39}$/;
@@ -43,6 +48,7 @@ export const updateAgentRunSchema = labelsOnly(
       error: z.string().max(500).nullable().optional(),
     })
     .strict(),
+  (body) => [body.error, body.heals?.map((h) => h.field), body.refusals?.map((r) => [r.kind, r.target])],
 );
 
 export const proposePatchSchema = labelsOnly(
@@ -69,6 +75,7 @@ export const proposePatchSchema = labelsOnly(
       runId: z.string().uuid().optional(),
     })
     .strict(),
+  (body) => [body.fieldKey, body.proposed, body.evidence],
 );
 
 export const reviewPatchSchema = z.object({ decision: z.enum(['approved', 'rejected']) }).strict();

@@ -3,7 +3,6 @@ import 'server-only';
 import type { AuthContext } from '@/auth/guards';
 import { checklistStateFromRow, getEngagementById } from '@/db/repositories/engagements';
 import { applyChecklistPatch } from '@/lib/incorporation/apply-checklist-patch';
-import { engagementDbId } from '@/lib/projects/legacy-engagement-ids';
 import { findSubAgent } from './catalog';
 
 /**
@@ -30,9 +29,13 @@ export function appendSrn(existing: string | undefined, srn: string, at: Date): 
 
 export type SrnWriteBack = { recorded: true; stepId: string; field: string } | { recorded: false; reason: string };
 
+/**
+ * `engagementDbId` is the engagement's uuid as the run repository resolved it, never the URL
+ * segment: a slug in the URL is not a uuid, and Postgres would refuse the lookup.
+ */
 export async function recordRunSrn(
   ctx: AuthContext,
-  engagementParam: string,
+  engagementDbId: string,
   subAgentId: string,
   srn: string,
   at: Date = new Date(),
@@ -40,12 +43,12 @@ export async function recordRunSrn(
   const sub = findSubAgent(subAgentId);
   if (!sub?.stepId || !sub.srnField) return { recorded: false, reason: 'no_step_field' };
   try {
-    const row = await getEngagementById(ctx, engagementDbId(engagementParam));
+    const row = await getEngagementById(ctx, engagementDbId);
     if (!row) return { recorded: false, reason: 'not_found' };
     const current = checklistStateFromRow(row)[sub.stepId]?.responses?.[sub.srnField];
     const next = appendSrn(typeof current === 'string' ? current : undefined, srn, at);
     if (next === null) return { recorded: true, stepId: sub.stepId, field: sub.srnField };
-    await applyChecklistPatch(ctx, engagementParam, sub.stepId, { responses: { [sub.srnField]: next } });
+    await applyChecklistPatch(ctx, engagementDbId, sub.stepId, { responses: { [sub.srnField]: next } });
     return { recorded: true, stepId: sub.stepId, field: sub.srnField };
   } catch (error) {
     // The run keeps the SRN either way; a refused save (a locked step) is reported, not thrown.

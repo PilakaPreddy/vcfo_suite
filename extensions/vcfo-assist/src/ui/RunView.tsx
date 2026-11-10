@@ -155,6 +155,18 @@ function YouDo({ run, send, event }: { run: Run; send: Send; event: (e: UserEven
           </button>
         </YouCard>
       );
+    case 'wrong_page':
+      return (
+        <YouCard title="Open the form page" tone="warn">
+          <p>
+            This step fills <strong>{w.page}</strong>, but the portal tab shows <span className="mono">{w.path || 'another page'}</span>. Open the form
+            page in that tab. Nothing is filled until it is there.
+          </p>
+          <button type="button" className="btn btn-primary" onClick={() => event({ type: 'RETRY' })}>
+            Check again
+          </button>
+        </YouCard>
+      );
     case 'live_blocked':
       return (
         <YouCard title="Live portal blocked" tone="warn">

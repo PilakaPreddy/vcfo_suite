@@ -166,13 +166,14 @@ export interface UpdateAgentRunInput {
 /**
  * Progress, the SRN and the finish. `engagementParam` must be the run's own engagement, so a run
  * id cannot be moved under another engagement's URL. Throws `AssistAgentAccessError` (404 or 409).
+ * `engagementDbId` is the engagement's uuid however the URL named it (uuid, legacy id or slug).
  */
 export async function updateAgentRun(
   ctx: AuthContext,
   engagementParam: string,
   runId: string,
   patch: UpdateAgentRunInput,
-): Promise<{ run: AssistAgentRunView; finished: boolean }> {
+): Promise<{ run: AssistAgentRunView; finished: boolean; engagementDbId: string }> {
   const row = await loadRun(ctx, runId);
   if (!row) throw new AssistAgentAccessError('not_found', 404);
   const access = await assertEngagementAccess(ctx, engagementParam);
@@ -198,7 +199,7 @@ export async function updateAgentRun(
     .where(and(eq(assistAgentRuns.id, row.id), eq(assistAgentRuns.engagementId, access.dbId)))
     .returning();
   if (!saved) throw new AssistAgentAccessError('not_found', 404);
-  return { run: toView(saved, { companyName: access.row.companyName }), finished };
+  return { run: toView(saved, { companyName: access.row.companyName }), finished, engagementDbId: access.dbId };
 }
 
 /** Most model calls one run may make; past it the resolver answers with the label match only. */

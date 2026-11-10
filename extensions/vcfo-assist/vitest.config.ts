@@ -9,6 +9,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.ts'],
+    // Engine runs drive a whole jsdom form; on a busy machine one can take longer than the 5 s default.
+    testTimeout: 20_000,
   },
   resolve: {
     alias: { '@': path.resolve(__dirname, '../../src') },

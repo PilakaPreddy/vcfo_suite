@@ -52,6 +52,7 @@ describe('assist agent catalog', () => {
       }
     }
     expect(findSubAgent('spice-a')?.status).toBe('beta');
+    expect(findSubAgent('spice-b')).toMatchObject({ status: 'beta', recipeId: 'spice-b' });
   });
 
   it('allows the mock host always and live hosts only when enabled', () => {

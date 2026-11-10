@@ -65,6 +65,7 @@ export class AssistResolveRefused extends Error {
   }
 }
 
+/** Only the label text is checked: `runId` and `recipeId` are ids, and a digit-only uuid group looks like a DIN. */
 function payloadHasPersonalData(input: ResolveInput): boolean {
   const texts = [input.fieldKey, input.fieldLabel, ...input.candidates.flatMap((c) => [c.label, c.name ?? '', c.aria ?? ''])];
   return texts.some(looksLikePersonalData);

@@ -1,21 +1,21 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { RunEngine, StartRefused } from './runner';
 import { canTransition, transition, IllegalTransition, TERMINAL } from './machine';
 import { applyTransform, getPath } from './values';
 import { liveAllowedFor, isMockHost } from './live';
-import { canonicalJson, validateRecipe, verifySignature } from './recipe';
+import { RECIPE_PUBLIC_KEYS, canonicalJson, validateRecipe, verifySignature } from './recipe';
+import { globMatch, pageMatchesUrl } from './url';
+import { expandFields, expandRecipe, MAX_REPEAT } from './expand';
 import { normalizeRecipe } from '../recipes/normalize';
 import { BUNDLED_RECIPES } from '../recipes';
-import { FakeSuite, JsdomPortal, MemoryStore, PROFILE_VALUES, loadMockPage, mockState, pdfDrop } from '../test/mock-env';
+import { FakeSuite, JsdomPortal, MemoryStore, PART_B_PROFILE, PART_B_VALUES, PROFILE_VALUES, loadMockPage, mockState, pdfDrop } from '../test/mock-env';
 import type { Run, RunState, SignedRecipe } from '../shared/types';
 
 type Raw = { title: string; version: string; actions: Array<Record<string, unknown>> };
 
 const START = { engagementId: 'eng-1', engagementName: 'Sentinel', agentId: 'incorporation', subAgentId: 'spice-a', recipeId: 'spice-a', portalTabId: 7 };
 
-function setup(page: 'spice-a.html' | 'spice-a-drift.html' = 'spice-a.html') {
+function setup(page: Parameters<typeof loadMockPage>[0] = 'spice-a.html') {
   loadMockPage(page);
   const suite = new FakeSuite();
   const portal = new JsdomPortal();
@@ -29,11 +29,14 @@ const value = (name: string) => (document.querySelector(`[name="${name}"]`) as H
 const states = (run: Run): RunState[] =>
   run.log.filter((l) => l.kind === 'transition').map((l) => l.text.split(' → ')[1]!.split(' ')[0] as RunState);
 
-async function signWithMockKey(recipe: unknown): Promise<string> {
-  const keyFile = JSON.parse(readFileSync(path.resolve(__dirname, '../../mock-portal/mock-signing-key.json'), 'utf8'));
-  const key = await crypto.subtle.importKey('jwk', keyFile.jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, new TextEncoder().encode(canonicalJson(recipe)));
-  return Buffer.from(sig).toString('base64');
+/** A throwaway Ed25519 key, for recipes the tests sign themselves. */
+async function testKey(): Promise<{ raw: string; sign: (recipe: unknown) => Promise<string> }> {
+  const pair = (await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify'])) as CryptoKeyPair;
+  const raw = Buffer.from(await crypto.subtle.exportKey('raw', pair.publicKey)).toString('base64url');
+  return {
+    raw,
+    sign: async (recipe) => Buffer.from(await crypto.subtle.sign({ name: 'Ed25519' }, pair.privateKey, new TextEncoder().encode(canonicalJson(recipe)))).toString('base64'),
+  };
 }
 
 describe('state machine', () => {
@@ -80,29 +83,46 @@ describe('recipes (G15)', () => {
   const bundled = BUNDLED_RECIPES['spice-a']!;
   const raw = () => structuredClone(bundled.recipe) as Raw;
 
-  it('the bundled recipe verifies on the mock and is well formed', async () => {
-    expect(await verifySignature(bundled, '127.0.0.1')).toMatchObject({ ok: true });
+  it('the bundled recipes carry the dev signature, verify on the mock and are well formed', async () => {
+    expect(Object.keys(BUNDLED_RECIPES).sort()).toEqual(['spice-a', 'spice-b']);
+    for (const signed of Object.values(BUNDLED_RECIPES)) {
+      expect(signed).toMatchObject({ alg: 'ed25519', keyId: 'dev' });
+      expect(await verifySignature(signed, '127.0.0.1')).toEqual({ ok: true, keyId: 'dev' });
+      expect(validateRecipe(normalizeRecipe(signed.recipe))).toEqual([]);
+    }
     const recipe = normalizeRecipe(bundled.recipe);
-    expect(validateRecipe(recipe)).toEqual([]);
     expect(recipe.attachCss).toBe('#signed-pdf');
     expect(recipe.actions.filter((a) => a.kind === 'safe').map((a) => a.role)).toEqual(['save', 'check', 'download']);
     expect(recipe.gates.find((g) => g.kind === 'SUBMIT')).toMatchObject({ text: 'Submit' });
   });
 
-  it('the mock key is refused on a live host', async () => {
+  it('the dev key is refused on a live host, before its signature counts', async () => {
     const r = await verifySignature(bundled, 'www.mca.gov.in');
-    expect(r.ok).toBe(false);
+    expect(r).toMatchObject({ ok: false });
+    expect(r.reason).toMatch(/dev key.*mock hosts only/);
   });
 
-  it("Suite's HMAC signature is accepted on mock hosts only", async () => {
-    const hmac: SignedRecipe = { recipe: bundled.recipe, sig: 'ab'.repeat(32), alg: 'HMAC-SHA256' };
-    expect((await verifySignature(hmac, '127.0.0.1')).ok).toBe(true);
-    expect((await verifySignature(hmac, 'www.mca.gov.in')).ok).toBe(false);
+  it('refuses an unknown key id, the prod placeholder, another algorithm and no key id', async () => {
+    expect(RECIPE_PUBLIC_KEYS.prod).toBeNull();
+    expect((await verifySignature({ ...bundled, keyId: 'prod' }, '127.0.0.1')).reason).toMatch(/not built into the extension/);
+    expect((await verifySignature({ ...bundled, keyId: 'evil' }, '127.0.0.1')).ok).toBe(false);
+    expect((await verifySignature({ ...bundled, keyId: '__proto__' }, '127.0.0.1')).ok).toBe(false);
+    expect((await verifySignature({ ...bundled, keyId: undefined }, '127.0.0.1')).ok).toBe(false);
+    expect((await verifySignature({ ...bundled, alg: 'HMAC-SHA256' }, '127.0.0.1')).reason).toMatch(/not ed25519/);
   });
 
-  it('a recipe with one changed byte is refused', async () => {
-    const tampered: SignedRecipe = { sig: bundled.sig, recipe: { ...raw(), title: `${raw().title.slice(0, -1)}X` } };
-    expect((await verifySignature(tampered, '127.0.0.1')).ok).toBe(false);
+  it('a recipe with one changed byte, or a bad signature, is refused', async () => {
+    const tampered: SignedRecipe = { ...bundled, recipe: { ...raw(), title: `${raw().title.slice(0, -1)}X` } };
+    expect((await verifySignature(tampered, '127.0.0.1')).reason).toMatch(/does not match/);
+    expect((await verifySignature({ ...bundled, sig: 'not base64!' }, '127.0.0.1')).ok).toBe(false);
+    expect((await verifySignature({ ...bundled, sig: Buffer.alloc(64).toString('base64') }, '127.0.0.1')).ok).toBe(false);
+  });
+
+  it('a key other than dev is accepted on a live host when it is built in', async () => {
+    const key = await testKey();
+    const signed: SignedRecipe = { recipe: raw(), sig: await key.sign(raw()), alg: 'ed25519', keyId: 'prod' };
+    expect(await verifySignature(signed, 'www.mca.gov.in', { ...RECIPE_PUBLIC_KEYS, prod: key.raw })).toEqual({ ok: true, keyId: 'prod' });
+    expect((await verifySignature(signed, 'www.mca.gov.in')).ok).toBe(false);
   });
 
   it('a validly signed recipe with a new action kind, or a "safe" Submit, is refused by shape', async () => {
@@ -112,7 +132,56 @@ describe('recipes (G15)', () => {
     const safeSubmit = raw();
     safeSubmit.actions.push({ id: 'go', kind: 'safe', label: 'Final Submit', match: { text: 'Final Submit' } });
     expect(validateRecipe(normalizeRecipe(safeSubmit)).join(' ')).toMatch(/G4/);
-    expect((await verifySignature({ recipe: newKind, sig: await signWithMockKey(newKind) }, '127.0.0.1')).ok).toBe(true);
+    const key = await testKey();
+    expect((await verifySignature({ recipe: newKind, sig: await key.sign(newKind), alg: 'ed25519', keyId: 't' }, '127.0.0.1', { t: key.raw })).ok).toBe(true);
+  });
+});
+
+describe('page check (urlPattern)', () => {
+  const page = { urlPattern: '/content/mca/global/en/mca/e-filing/incorporation-change-services/spice-plus*', mockUrlPattern: '/spice-a*.html' };
+
+  it('matches the glob against the whole path', () => {
+    expect(globMatch('/spice-a*.html', '/spice-a.html')).toBe(true);
+    expect(globMatch('/spice-a*.html', '/spice-a-drift.html')).toBe(true);
+    expect(globMatch('/spice-a*.html', '/spice-b.html')).toBe(false);
+    expect(globMatch('/a?c', '/abc')).toBe(true);
+    expect(globMatch('/a.c', '/abc')).toBe(false);
+  });
+
+  it('uses the mock pattern on a mock host and the portal pattern elsewhere', () => {
+    expect(pageMatchesUrl(page, 'http://127.0.0.1:4318/spice-a.html')).toBe(true);
+    expect(pageMatchesUrl(page, 'http://127.0.0.1:4318/spice-b.html')).toBe(false);
+    expect(pageMatchesUrl(page, 'https://www.mca.gov.in/content/mca/global/en/mca/e-filing/incorporation-change-services/spice-plus.html')).toBe(true);
+    expect(pageMatchesUrl(page, 'https://www.mca.gov.in/spice-a.html')).toBe(false);
+    expect(pageMatchesUrl(page, 'not a url')).toBe(false);
+  });
+});
+
+describe('repeating groups (each)', () => {
+  const recipe = normalizeRecipe(BUNDLED_RECIPES['spice-b']!.recipe);
+  const templates = recipe.pages[0]!.fields;
+
+  it('turns each template into one field per profile entry, block by block', () => {
+    const fields = expandFields(templates, PART_B_PROFILE.profile);
+    const directors = fields.filter((f) => f.key.startsWith('directors['));
+    expect(directors.map((f) => f.key).slice(0, 3)).toEqual(['directors[0].firstName', 'directors[0].surName', 'directors[0].din']);
+    expect(directors).toHaveLength(2 * templates.filter((f) => f.each === 'directors').length);
+    const din2 = fields.find((f) => f.key === 'directors[1].din')!;
+    expect(din2).toMatchObject({ label: 'Director 2: DIN', css: '[name="director2Din"]', name: 'director2Din', som: 'guide[0].guide1[0].guideRootPanel[0].directors[0].director[1].din[0]' });
+    expect(din2.each).toBeUndefined();
+    expect(fields.filter((f) => f.key.includes('{'))).toEqual([]);
+  });
+
+  it('fills no block for an empty or absent array, and caps a huge one', () => {
+    const none = expandFields(templates, { ...PART_B_PROFILE.profile, directors: [], subscribers: undefined });
+    expect(none.some((f) => /^(directors|subscribers)\[/.test(f.key))).toBe(false);
+    const many = expandFields(templates, { directors: Array.from({ length: 99 }, () => ({})) });
+    expect(many.filter((f) => f.key.endsWith('.din'))).toHaveLength(MAX_REPEAT);
+  });
+
+  it('leaves a recipe without templates as it is', () => {
+    const a = normalizeRecipe(BUNDLED_RECIPES['spice-a']!.recipe);
+    expect(expandRecipe(a, PART_B_PROFILE.profile).pages[0]!.fields.map((f) => f.key)).toEqual(a.pages[0]!.fields.map((f) => f.key));
   });
 });
 
@@ -340,7 +409,7 @@ describe('run engine on the mock portal', () => {
     expect(suite.calls.map((c) => c.name)).not.toContain('profile');
   });
 
-  it('G11 + G15: even with live allowed, the mock-signed recipe is refused on a live host', async () => {
+  it('G11 + G15: even with live allowed, the dev-signed recipe is refused on a live host', async () => {
     const { engine, suite, portal } = setup();
     suite.catalogValue = { liveAllowed: true, agents: [] };
     portal.url = 'https://www.mca.gov.in/form';
@@ -354,7 +423,7 @@ describe('run engine on the mock portal', () => {
   it('G15: a tampered Suite recipe is refused and the bundled one is used on the mock', async () => {
     const { engine, suite } = setup();
     const bundled = BUNDLED_RECIPES['spice-a']!;
-    suite.recipeValue = { sig: bundled.sig, recipe: { ...(bundled.recipe as Raw), version: '9.9.9' } };
+    suite.recipeValue = { ...bundled, recipe: { ...(bundled.recipe as Raw), version: '9.9.9' } };
     await engine.start(START);
     await engine.settle();
     expect(engine.run!.recipeVersion).toBe((bundled.recipe as Raw).version);
@@ -362,13 +431,40 @@ describe('run engine on the mock portal', () => {
     expect(engine.run!.log.some((l) => l.text.startsWith('G15: Suite recipe refused'))).toBe(true);
   });
 
-  it("uses Suite's recipe on the mock when Suite serves it (HMAC, mock hosts only)", async () => {
+  it("uses Suite's recipe on the mock when Suite serves it (dev key, mock hosts only)", async () => {
     const { engine, suite } = setup();
-    suite.recipeValue = { recipe: BUNDLED_RECIPES['spice-a']!.recipe, sig: 'ab'.repeat(32), alg: 'HMAC-SHA256' };
+    suite.recipeValue = structuredClone(BUNDLED_RECIPES['spice-a']!);
     await engine.start(START);
     await engine.settle();
     expect(engine.run!.recipeFrom).toBe('suite');
     expect(suite.calls.find((c) => c.name === 'createRun')!.body).toEqual({ subAgent: 'spice-a', portalHost: '127.0.0.1', recipeVersion: '1.1.0', fieldsTotal: 9, state: 'PULL_PROFILE' });
+  });
+
+  it('fills nothing while the portal tab shows another page, and goes on once the form page is back', async () => {
+    const { engine, portal } = setup();
+    portal.url = 'http://127.0.0.1:4318/somewhere-else.html';
+    await engine.start(START);
+    await engine.settle();
+    await engine.send({ type: 'LOGGED_IN' });
+    await engine.settle();
+    expect(engine.run!.state).toBe('FILL');
+    expect(engine.run!.wait).toEqual({ kind: 'wrong_page', page: 'SPICe+ Part A', path: '/somewhere-else.html' });
+    expect(engine.run!.fields).toEqual([]);
+    expect(engine.run!.log.some((l) => l.kind === 'refusal' && l.text.includes('/spice-a*.html'))).toBe(true);
+    portal.url = 'http://127.0.0.1:4318/spice-a.html';
+    await engine.tick();
+    await engine.settle();
+    expect(engine.run!.wait).toEqual({ kind: 'confirm' });
+    // Navigating away between the confirmation and the write stops the write too.
+    portal.url = 'http://127.0.0.1:4318/other.html';
+    await engine.send({ type: 'CONFIRM_FILL' });
+    await engine.settle();
+    expect(engine.run!.wait).toMatchObject({ kind: 'wrong_page' });
+    expect(mockState().modelWrites).toEqual([]);
+    portal.url = 'http://127.0.0.1:4318/spice-a.html';
+    await engine.send({ type: 'RETRY' });
+    await engine.settle();
+    expect(value('proposedName1')).toBe('Sentinel Alpha Private Limited');
   });
 
   it('G12: refuses to start in a tab that is not in front, and refuses a second run', async () => {
@@ -407,5 +503,91 @@ describe('run engine on the mock portal', () => {
     await engine.send({ type: 'RETRY' });
     await engine.settle();
     expect(engine.run!.state).toBe('WAIT_DSC');
+  });
+});
+
+describe('SPICe+ Part B on the mock portal (repeating groups)', () => {
+  const START_B = { ...START, subAgentId: 'spice-b', recipeId: 'spice-b' };
+
+  function setupB() {
+    const env = setup('spice-b.html');
+    env.portal.url = 'http://127.0.0.1:4318/spice-b.html';
+    env.suite.profileValue = PART_B_PROFILE;
+    return env;
+  }
+
+  it('fills company, office, two subscribers and two directors at T0 with 0 AI calls, and stops at the human gates', async () => {
+    const { engine, suite, portal } = setupB();
+    await engine.start(START_B);
+    await engine.settle();
+    expect(engine.run!.recipeVersion).toBe('1.0.0');
+    await engine.send({ type: 'LOGGED_IN' });
+    await engine.settle();
+    expect(engine.run!.wait).toEqual({ kind: 'confirm' });
+    expect(mockState().modelWrites).toEqual([]);
+    const planned = engine.run!.fields.filter((f) => f.status === 'planned');
+    expect(planned.every((f) => f.tier === 'T0')).toBe(true);
+    // Director 2 has no DIN in the profile: it is the user's, not a guess.
+    expect(engine.run!.fields.find((f) => f.key === 'directors[1].din')).toMatchObject({ status: 'missing' });
+    expect(engine.run!.fields.filter((f) => f.status === 'user').map((f) => f.key)).toEqual(['directors[0].designation', 'directors[1].designation']);
+    expect(suite.calls.find((c) => c.name === 'createRun')!.body).toMatchObject({ subAgent: 'spice-b', fieldsTotal: 12 + 2 * 8 + 2 * 8 });
+
+    await engine.send({ type: 'CONFIRM_FILL' });
+    await engine.settle();
+    expect(value('authorisedCapital')).toBe('1000000');
+    expect(value('faceValue')).toBe('10');
+    expect(value('officeLine1')).toBe('Sentinel Tower 1');
+    expect(value('officeState')).toBe('TG');
+    expect(value('subscriber1FirstName')).toBe('Subone');
+    expect(value('subscriber1Pan')).toBe('SENTB1234C');
+    expect(value('subscriber1Dob')).toBe('01/02/1980');
+    expect(value('subscriber2Shares')).toBe('5000');
+    expect(value('director1Din')).toBe('09876543');
+    expect(value('director2FirstName')).toBe('Dirtwo');
+    expect(value('director2Din')).toBe('');
+    expect(value('director1Designation')).toBe('');
+    expect(mockState().modelWrites).toContain('director2FirstName');
+    expect(engine.run!.aiCalls).toBe(0);
+    expect(suite.resolvePayloads).toHaveLength(0);
+    expect(engine.run!.state).toBe('WAIT_DSC');
+
+    await engine.send(await pdfDrop());
+    await engine.settle();
+    expect(engine.run!.state).toBe('WAIT_SUBMIT_PAY');
+    expect(mockState().clicks['btn-submit']).toBeUndefined();
+    expect(portal.clickedIds).toEqual(['btn-check', 'btn-download', 'btn-check']);
+    document.getElementById('btn-submit')!.click();
+    document.getElementById('btn-pay')!.click();
+    await engine.tick();
+    await engine.settle();
+    expect(engine.run!.state).toBe('DONE');
+    expect(engine.run!.srn).toBe('AC7654321');
+
+    const sent = JSON.stringify(suite.calls.filter((c) => c.name !== 'profile'));
+    for (const v of [...PART_B_VALUES, ...PROFILE_VALUES]) expect(sent).not.toContain(v);
+  });
+
+  it('keeps the expanded plan across a restart', async () => {
+    const { engine, store, suite, portal } = setupB();
+    await engine.start(START_B);
+    await engine.settle();
+    await engine.send({ type: 'LOGGED_IN' });
+    await engine.settle();
+    const again = new RunEngine({ suite, store, portalFor: () => portal, bundledRecipes: BUNDLED_RECIPES });
+    await again.restore();
+    await again.settle();
+    await again.send({ type: 'CONFIRM_FILL' });
+    await again.settle();
+    expect(value('director2Pan')).toBe('SENTE2222F');
+  });
+
+  it('refuses to fill the Part B recipe on the Part A page', async () => {
+    const { engine, portal } = setupB();
+    portal.url = 'http://127.0.0.1:4318/spice-a.html';
+    await engine.start(START_B);
+    await engine.settle();
+    await engine.send({ type: 'LOGGED_IN' });
+    await engine.settle();
+    expect(engine.run!.wait).toMatchObject({ kind: 'wrong_page', page: 'SPICe+ Part B' });
   });
 });

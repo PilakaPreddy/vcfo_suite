@@ -198,7 +198,7 @@ export default defineBackground(() => {
         return;
       case 'openSuite': {
         const origin = ui.suite.origin ?? (await suiteOrigins())[0];
-        await chrome.tabs.create({ url: `${origin}${SUITE_PATHS.fixInSuite(ui.engagementId ?? '')}` });
+        await chrome.tabs.create({ url: `${origin}${SUITE_PATHS.fixInSuite(ui.engagementId ?? '', cmd.stepId)}` });
         return;
       }
     }

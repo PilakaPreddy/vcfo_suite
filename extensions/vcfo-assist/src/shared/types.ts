@@ -29,6 +29,12 @@ export interface RecipeField {
   /** The profile cannot supply it: the user answers it on the portal; the agent never types into it. */
   askUser?: boolean;
   note?: string;
+  /**
+   * A repeating template over this profile array (`directors`, `subscribers`). Its key holds
+   * `[{i}]`; `{i}` (0-based) and `{n}` (1-based) in the key, SOM, CSS and label are replaced once per
+   * entry by `expandRecipe` after the profile is loaded. An expanded field has no `each`.
+   */
+  each?: string;
 }
 
 /** Actions the engine knows. A recipe cannot add a new kind (SAFETY.md G15). */
@@ -62,8 +68,10 @@ export interface RecipeGate {
 export interface RecipePage {
   id: string;
   title: string;
-  /** Regular expression source matched against the page path. */
+  /** A glob on the page path (`*` any run, `?` one character); the engine fills only a matching page. */
   urlPattern: string;
+  /** The same glob for the local mock portal, used instead of `urlPattern` on a mock host. */
+  mockUrlPattern?: string;
   /** Selector that exists once the page is ready. */
   readyCss?: string;
   fields: RecipeField[];
@@ -83,13 +91,14 @@ export interface Recipe {
 
 /**
  * A recipe as delivered: Suite's JSON format (docs/specs/vcfo-assist-agents/API.md), which
- * `src/recipes/normalize.ts` turns into `Recipe`, plus its signature. `alg` is `HMAC-SHA256` for
- * Suite's server-keyed signature and absent (ECDSA P-256) for recipes signed with a built-in key.
+ * `src/recipes/normalize.ts` turns into `Recipe`, plus its Ed25519 signature (base64) and the id of
+ * the key that made it. `src/engine/recipe.ts` checks both before anything else.
  */
 export interface SignedRecipe {
   recipe: unknown;
   sig: string;
   alg?: string;
+  keyId?: string;
 }
 
 // ---------- catalog ----------
@@ -97,6 +106,8 @@ export interface SignedRecipe {
 export interface CatalogSubAgent {
   id: string;
   name: string;
+  /** The checklist step the run advances; "Fix in Suite" opens it when no missing entry names one. */
+  stepId?: string;
   /** Absent while the sub-agent is not built yet ("Coming soon"). */
   recipeId?: string;
   form?: string;
@@ -271,6 +282,7 @@ export type WaitInfo =
   | { kind: 'dsc' }
   | { kind: 'submit_pay' }
   | { kind: 'live_blocked'; host: string }
+  | { kind: 'wrong_page'; page: string; path: string }
   | { kind: 'suite_error'; message: string };
 
 export interface LogEntry {

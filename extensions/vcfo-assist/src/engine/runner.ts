@@ -11,12 +11,16 @@
  *    label passes the guards; the portal agent then guards the real element again.
  *  - Nothing is written before the user confirms the fill table (G13).
  *  - A live host is refused before the profile is pulled unless Suite allows it (G11).
+ *  - Nothing is planned or written while the portal tab shows a page other than the recipe page's
+ *    `urlPattern` (`mockUrlPattern` on a mock host).
  */
 import { HUMAN_STATES, TERMINAL, appendLog, suiteStatus, transition } from './machine';
 import { LIVE_BLOCKED_MESSAGE, isMockHost, liveAllowedFor } from './live';
 import { validateRecipe, verifySignature } from './recipe';
 import { normalizeRecipe } from '../recipes/normalize';
 import { valueFor } from './values';
+import { expandRecipe, hasTemplates } from './expand';
+import { pageMatchesUrl, patternFor } from './url';
 import { resolveField } from '../heal/ladder';
 import { profileLeafValues } from '../heal/payload';
 import { isForbiddenAction } from '../guards';
@@ -63,6 +67,7 @@ const WAIT_TEXT: Record<WaitInfo['kind'], string> = {
   dsc: 'waiting for the signed PDF',
   submit_pay: 'waiting for you to click Submit and pay',
   live_blocked: 'live portal blocked',
+  wrong_page: 'the portal tab shows another page',
   suite_error: 'Suite did not answer',
 };
 
@@ -185,7 +190,7 @@ export class RunEngine {
         await this.move('ATTACH', 'signed PDF dropped');
         break;
       case 'RETRY':
-        if (wait?.kind === 'check_failed' || wait?.kind === 'suite_error') {
+        if (wait?.kind === 'check_failed' || wait?.kind === 'suite_error' || wait?.kind === 'wrong_page') {
           this.patch({ wait: undefined });
           await this.save();
         }
@@ -204,7 +209,8 @@ export class RunEngine {
   async tick(): Promise<void> {
     const run = this.run;
     if (!run || this.driving || TERMINAL.has(run.state)) return;
-    if (run.state === 'WAIT_LOGIN' || run.state === 'WAIT_SUBMIT_PAY') await this.drive();
+    // A wrong-page wait clears by itself once the user opens the recipe's page.
+    if (run.state === 'WAIT_LOGIN' || run.state === 'WAIT_SUBMIT_PAY' || run.wait?.kind === 'wrong_page') await this.drive();
   }
 
   async reset(): Promise<void> {
@@ -353,6 +359,11 @@ export class RunEngine {
       return this.waitFor({ kind: 'suite_error', message: `Could not load the profile: ${(err as Error).message}` });
     }
     this.p!.profile = profile;
+    // Repeating groups (directors, subscribers) become one field per profile entry, once.
+    if (this.p!.recipe && hasTemplates(this.p!.recipe)) {
+      this.p!.recipe = expandRecipe(this.p!.recipe, profile.profile);
+      await this.log('info', `recipe expanded for this client: ${this.p!.recipe.pages.reduce((n, p) => n + p.fields.length, 0)} fields`);
+    }
     await this.log('info', `profile loaded for ${profile.companyName || run.engagementName || run.engagementId} (${profile.missing?.length ?? 0} missing in Suite)`);
     try {
       const created = await this.deps.suite.createRun(run.engagementId, this.createBody());
@@ -392,8 +403,16 @@ export class RunEngine {
     const recipe = this.p!.recipe!;
     const page = recipe.pages[run.page];
     if (!page) return this.move('CHECK', 'no more pages').then(() => false);
-    if (!run.phase || run.phase === 'plan') return this.planPage();
     if (run.phase === 'confirm') return this.waitFor({ kind: 'confirm' });
+    // The page check: plan and write only on the page the recipe was recorded on.
+    const tab = await this.portal().tabInfo();
+    if (!tab || !pageMatchesUrl(page, tab.url)) {
+      const path = pathOf(tab?.url ?? '');
+      if (this.run!.wait?.kind !== 'wrong_page') await this.log('refusal', `"${page.title}" expects ${patternFor(page, run.portalHost)}; the tab shows ${path || 'no page'}. Nothing filled.`);
+      return this.waitFor({ kind: 'wrong_page', page: page.title, path });
+    }
+    if (this.run!.wait?.kind === 'wrong_page') this.patch({ wait: undefined });
+    if (!run.phase || run.phase === 'plan') return this.planPage();
 
     // phase === 'write': the user confirmed this exact table.
     const portal = this.portal();
@@ -806,6 +825,14 @@ export class RunEngine {
 
 /** The `kind` word Suite stores for each guard. */
 const REFUSAL_KIND: Record<string, string> = { G1: 'login', G2: 'captcha', G3: 'otp', G4: 'submit', G5: 'pay', G6: 'sign', G7: 'page' };
+
+function pathOf(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return '';
+  }
+}
 
 function hostOf(url: string): string {
   try {

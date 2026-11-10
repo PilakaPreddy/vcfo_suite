@@ -31,5 +31,5 @@ export function startMockPortal(port = 4318, log = []) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const port = Number(process.argv[2] ?? 4318);
   await startMockPortal(port);
-  console.log(`MOCK portal on http://127.0.0.1:${port}/spice-a.html (drift: /spice-a-drift.html)`);
+  console.log(`MOCK portal on http://127.0.0.1:${port}/spice-a.html (drift: /spice-a-drift.html, Part B: /spice-b.html)`);
 }

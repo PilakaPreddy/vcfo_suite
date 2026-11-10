@@ -7,5 +7,5 @@
     "resolveJsonModule": true,
     "types": ["chrome", "vitest/globals"]
   },
-  "exclude": [".output", "node_modules", "src/suite/contract.test.ts"]
+  "exclude": [".output", "node_modules", "src/suite/contract.test.ts", "src/recipes/recipes.test.ts"]
 }

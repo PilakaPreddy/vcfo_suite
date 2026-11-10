@@ -3,13 +3,16 @@
  *   - window.guideBridge with resolveNode(som), setProperty(somList, prop, values), validate(errors, som)
  *     and visit(cb), built from the [data-som] boxes on the page;
  *   - Save draft, Check form, Download PDF, an Attach signed PDF slot, SUBMIT and Pay fee;
- *   - after SUBMIT and Pay it shows "SRN AB1234567".
+ *   - after SUBMIT and Pay it shows "SRN AB1234567" (Part A) or "SRN AC7654321" (Part B, data-srn on the form).
  * window.__mock records every button click and model write so tests can prove what happened.
  */
 (function () {
   'use strict';
   var mock = (window.__mock = { clicks: {}, modelWrites: [], domEvents: [], checkPassed: false, submitted: false, paid: false });
-  var REQUIRED = ['proposedName1', 'companyType', 'companyClass', 'companyCategory', 'companySubCategory', 'mainDivision'];
+  // A page marks its required boxes with data-required; Part A predates that and lists its own.
+  var marked = Array.prototype.map.call(document.querySelectorAll('[data-som][data-required] input, [data-som][data-required] select, [data-som][data-required] textarea'), function (el) { return el.name; });
+  var REQUIRED = marked.length ? marked : ['proposedName1', 'companyType', 'companyClass', 'companyCategory', 'companySubCategory', 'mainDivision'];
+  var FORM = (document.querySelector('meta[name="vcfo-mock-portal"]') || { content: 'spice-a' }).content;
 
   function $(sel) { return document.querySelector(sel); }
   function status(text) { $('#form-status').textContent = text; }
@@ -91,7 +94,7 @@
 
   $('#btn-download').addEventListener('click', function () {
     if (!mock.checkPassed) { status('Errors: run Check form first.'); return; }
-    var blob = new Blob(['%PDF-1.4\n% MOCK SPICe+ Part A, not a real form\n'], { type: 'application/pdf' });
+    var blob = new Blob(['%PDF-1.4\n% MOCK ' + FORM + ', not a real form\n'], { type: 'application/pdf' });
     var a = $('#pdf-link');
     a.href = typeof URL.createObjectURL === 'function' ? URL.createObjectURL(blob) : '#';
     a.hidden = false;
@@ -113,7 +116,7 @@
     if (!mock.submitted) { status('Errors: submit the form first.'); return; }
     mock.paid = true;
     $('#srn-box').hidden = false;
-    $('#srn-box').textContent = 'Payment received (mock). SRN AB1234567 has been generated for this form.';
+    $('#srn-box').textContent = 'Payment received (mock). SRN ' + (document.querySelector('form[data-srn]') ? document.querySelector('form[data-srn]').getAttribute('data-srn') : 'AB1234567') + ' has been generated for this form.';
     status('Done (mock).');
   });
 })();

@@ -41,6 +41,7 @@ export type PanelCommand =
   | { cmd: 'reset' }
   | { cmd: 'setOrigins'; origins: string[] }
   | { cmd: 'tick' }
-  | { cmd: 'openSuite' };
+  /** "Fix in Suite": the engagement's step page (Suite redirects to the role's own shell). */
+  | { cmd: 'openSuite'; stepId?: string };
 
 export type PanelMessage = { type: 'state'; state: PanelState };

@@ -1,6 +1,6 @@
 {
   "id": "spice-a",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "SPICe+ Part A (name reservation)",
   "subAgent": "spice-a",
   "verifiedAgainst": "mock",
@@ -11,7 +11,8 @@
       "urlPattern": "/content/mca/global/en/mca/e-filing/incorporation-change-services/spice-plus*",
       "ready": {
         "som": "guide[0].guide1[0].guideRootPanel[0]"
-      }
+      },
+      "mockUrlPattern": "/spice-a*.html"
     }
   ],
   "fields": [
@@ -114,6 +115,30 @@
       }
     },
     {
+      "id": "check-form",
+      "label": "Check form",
+      "kind": "safe",
+      "match": {
+        "text": "Check form"
+      }
+    },
+    {
+      "id": "download-pdf",
+      "label": "Download PDF",
+      "kind": "safe",
+      "match": {
+        "text": "Download PDF"
+      }
+    },
+    {
+      "id": "attach-pdf",
+      "label": "Attach PDF",
+      "kind": "safe",
+      "match": {
+        "css": "#signed-pdf"
+      }
+    },
+    {
       "id": "submit",
       "label": "Submit",
       "kind": "human",
@@ -132,6 +157,7 @@
   ],
   "gates": [
     "LOGIN",
+    "DSC",
     "SUBMIT",
     "PAY"
   ],
@@ -145,6 +171,16 @@
       "id": "saved",
       "kind": "text",
       "pattern": "[Ss]aved successfully"
+    },
+    {
+      "id": "checked",
+      "kind": "text",
+      "pattern": "[Cc]heck passed"
+    },
+    {
+      "id": "pdf-ready",
+      "kind": "text",
+      "pattern": "PDF ready"
     }
   ]
 }

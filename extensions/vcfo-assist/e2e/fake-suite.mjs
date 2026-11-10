@@ -5,11 +5,12 @@ import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHmac, randomUUID } from 'node:crypto';
-import { canonicalJson } from '../scripts/sign-recipe.mjs';
+import { randomUUID } from 'node:crypto';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const recipe = JSON.parse(readFileSync(path.join(here, '../src/recipes/spice-a.json'), 'utf8'));
+// The recipes Suite serves, with the dev-key signature Suite makes when no production key is set
+// (the bundle is generated from Suite's registry, so these are byte for byte Suite's answers).
+const { recipes: SIGNED } = JSON.parse(readFileSync(path.join(here, '../src/recipes/bundled.json'), 'utf8'));
 
 export const SENTINELS = [
   'Sentinel Alpha Private Limited',
@@ -19,6 +20,15 @@ export const SENTINELS = [
   'SENTINELWORD',
   'SENTINELA1234Z',
   'sentinel@example.test',
+  'Sentinel Tower 1',
+  'office@sentinel.test',
+  'Subone',
+  'SENTB1234C',
+  'sub1@sentinel.test',
+  'Dirtwo',
+  'SENTE2222F',
+  '09876543',
+  '9000000021',
 ];
 
 const PROFILE = {
@@ -34,9 +44,17 @@ const PROFILE = {
       category: 'Company limited by shares',
       subCategory: 'Indian non-government company',
       nicCode: '62011',
+      capital: { authorized: 1000000, subscribed: 100000, equity: { authorizedShares: 100000, faceValue: 10 } },
     },
-    directors: [{ id: 'e1', index: 1, firstName: 'Sentinel', pan: 'SENTINELA1234Z', email: 'sentinel@example.test' }],
-    subscribers: [],
+    registeredOffice: { line1: 'Sentinel Tower 1', line2: 'Sentinel Road', pincode: '500081', state: 'Telangana', country: 'India', email: 'office@sentinel.test', mobile: '9000000001' },
+    subscribers: [
+      { index: 1, kind: 'individual', isDirector: true, firstName: 'Subone', surName: 'Sentinelson', father: { firstName: 'Fatherone' }, dob: '01/02/1980', pan: 'SENTB1234C', email: 'sub1@sentinel.test', mobile: '9000000011', shares: { equity: { number: 5000 } } },
+      { index: 2, kind: 'individual', isDirector: false, firstName: 'Subtwo', surName: 'Sentineldottir', father: { firstName: 'Fathertwo' }, dob: '03/04/1985', pan: 'SENTC5678D', email: 'sub2@sentinel.test', mobile: '9000000012', shares: { equity: { number: 5000 } } },
+    ],
+    directors: [
+      { id: 'e1', index: 1, firstName: 'Sentinel', surName: 'Sentinelli', din: '09876543', pan: 'SENTINELA1234Z', dob: '05/06/1975', email: 'sentinel@example.test', mobile: '9000000021' },
+      { id: 'e4', index: 2, firstName: 'Dirtwo', surName: 'Sentinelova', pan: 'SENTE2222F', dob: '07/08/1990', email: 'dir2@sentinel.test', mobile: '9000000022' },
+    ],
     agile: {},
     moa: {},
     aoa: {},
@@ -60,8 +78,8 @@ const CATALOG = {
   mockHosts: ['localhost', '127.0.0.1'],
   agents: [
     { id: 'incorporation', title: 'Incorporation', subAgents: [
-      { id: 'spice-a', agent: 'incorporation', title: 'Name reservation', form: 'SPICe+ Part A', status: 'beta', recipeId: 'spice-a', recipeVersion: recipe.version },
-      { id: 'spice-b', agent: 'incorporation', title: 'Incorporation', form: 'SPICe+ Part B', status: 'later', recipeId: null, recipeVersion: null },
+      { id: 'spice-a', agent: 'incorporation', title: 'Name reservation', form: 'SPICe+ Part A', status: 'beta', recipeId: 'spice-a', recipeVersion: SIGNED['spice-a'].recipe.version, stepId: 'pre-4' },
+      { id: 'spice-b', agent: 'incorporation', title: 'Incorporation form', form: 'SPICe+ Part B', status: 'beta', recipeId: 'spice-b', recipeVersion: SIGNED['spice-b'].recipe.version, stepId: 'pre-10' },
     ] },
     { id: 'post-incorporation', title: 'Post-incorporation', subAgents: [{ id: 'inc-20a', title: 'Commencement of business', form: 'INC-20A', status: 'later', recipeId: null }] },
     { id: 'registration', title: 'Registration', subAgents: [{ id: 'gst-reg-01', title: 'GST registration', form: 'GST REG-01', status: 'later', recipeId: null }] },
@@ -71,8 +89,6 @@ const CATALOG = {
 
 export async function startFakeSuite(port = 4319) {
   const log = [];
-  // Suite signs with a server-only HMAC; the extension accepts that on mock hosts only.
-  const sig = createHmac('sha256', 'fake-suite-secret').update(canonicalJson(recipe)).digest('hex');
   const server = createServer((req, res) => {
     let body = '';
     req.on('data', (c) => (body += c));
@@ -104,7 +120,8 @@ export async function startFakeSuite(port = 4319) {
       if (!entry.cookie.includes('fake-session=staff-1')) return json(401, { error: 'unauthorized' });
       if (p === '/api/engagements' && req.method === 'GET') return json(200, { engagements: [{ id: 'eng-1', slug: 'sentinel', companyName: 'Sentinel Alpha Private Limited' }] });
       if (p === '/api/assist/catalog') return json(200, CATALOG);
-      if (p === '/api/assist/recipes/spice-a') return json(200, { ok: true, recipe, sig, alg: 'HMAC-SHA256' });
+      const recipeId = /^\/api\/assist\/recipes\/([\w-]+)$/.exec(p)?.[1];
+      if (recipeId) return SIGNED[recipeId] ? json(200, { ok: true, ...SIGNED[recipeId] }) : json(404, { ok: false, error: 'not_found' });
       if (p === '/api/engagements/eng-1/assist-profile') return json(200, PROFILE);
       if (p === '/api/engagements/eng-1/assist-runs' && req.method === 'POST') {
         if (!strict(ALLOWED.create)) return json(400, { ok: false, error: 'unrecognized_keys' });

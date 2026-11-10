@@ -33,6 +33,26 @@ describe('assist agent request bodies', () => {
   });
 });
 
+describe('labels-only check reads text fields, never ids', () => {
+  // The first group is all digits (a bare DIN) and the last is twelve digits (an Aadhaar shape).
+  const runId = '12345678-1234-4234-8234-123456789012';
+  const base = { recipeId: 'spice-a', recipeVersion: '1.0.0', fieldKey: 'company.type', proposed: { som: 'a[0].b[0]' }, sourceTier: 'T1' };
+
+  it('accepts a patch whose run id has digit-only groups', () => {
+    expect(proposePatchSchema.safeParse({ ...base, runId, evidence: { fieldLabel: 'Type of company' } }).success).toBe(true);
+  });
+
+  it('still refuses personal data in the proposed label or the field key', () => {
+    expect(proposePatchSchema.safeParse({ ...base, runId, proposed: { label: 'PAN ABCDE1234F' } }).success).toBe(false);
+    expect(proposePatchSchema.safeParse({ ...base, fieldKey: 'x 9876543210' }).success).toBe(false);
+  });
+
+  it('accepts progress with an SRN and refuses a value in a heal field name', () => {
+    expect(updateAgentRunSchema.safeParse({ srn: 'A12345678', state: 'DONE', heals: [{ field: 'company.type', tier: 'T0', ok: true }] }).success).toBe(true);
+    expect(updateAgentRunSchema.safeParse({ heals: [{ field: 'director@example.com', tier: 'T1', ok: true }] }).success).toBe(false);
+  });
+});
+
 describe('SRN write-back text', () => {
   const at = new Date('2026-11-09T10:00:00Z');
   it('appends one line and never replaces the lead’s note', () => {

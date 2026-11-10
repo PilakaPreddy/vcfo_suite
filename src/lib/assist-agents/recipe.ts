@@ -9,6 +9,11 @@ import { z } from 'zod';
  * (`src/lib/assist-profile/types.ts`, dotted, `[n]` for an array entry); the filler reads the value
  * from the profile inside the browser. `som` is the AEM Adaptive Forms SOM path the main-world
  * filler hands to `guideBridge.resolveNode`; `css` is the DOM fallback.
+ *
+ * Repeating groups (directors, subscribers): a field with `each: 'directors'` is a template. Its
+ * key reads `directors[{i}].firstName`, and `{i}` (0-based) or `{n}` (1-based) in its SOM path,
+ * selector and label are replaced once per entry of that profile array, inside the browser. The
+ * template carries no count: the profile decides how many blocks are filled.
  */
 
 /** The transforms the filler knows. Each maps one profile value to the portal's wording. */
@@ -33,7 +38,11 @@ export const RECIPE_GATES = ['LOGIN', 'DSC', 'SUBMIT', 'PAY'] as const;
 export type RecipeGate = (typeof RECIPE_GATES)[number];
 
 const SEMVER = /^\d+\.\d+\.\d+$/;
-const KEY = /^[a-z][a-zA-Z0-9]*(\[\d+\])?(\.[a-zA-Z][a-zA-Z0-9]*(\[\d+\])?)*$/;
+const KEY = /^[a-z][a-zA-Z0-9]*(\[(\d+|\{i\})\])?(\.[a-zA-Z][a-zA-Z0-9]*(\[(\d+|\{i\})\])?)*$/;
+/** A profile array for `each`, for example `directors` or `subscribers`. */
+const EACH = /^[a-z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)*$/;
+/** The instance placeholders of a repeating field. */
+const PLACEHOLDER = /\{[in]\}/;
 const ID = /^[a-z0-9][a-z0-9-]*$/;
 
 /** How to find one element: a SOM path, a CSS selector, or the visible text of a button. */
@@ -50,8 +59,14 @@ const pageSchema = z
   .object({
     id: z.string().regex(ID),
     title: z.string().min(1),
-    /** A glob on the path after the host, for example `/content/mca/.../spice-plus*`. */
+    /**
+     * A glob on the path after the host, for example `/content/mca/.../spice-plus*`: `*` is any
+     * run of characters, `?` one character, everything else literal. The extension refuses to fill
+     * a page whose path does not match.
+     */
     urlPattern: z.string().min(1),
+    /** The same glob for the local mock portal; used instead of `urlPattern` on a mock host. */
+    mockUrlPattern: z.string().min(1).optional(),
     /** The page is ready when this element exists. */
     ready: matchSchema,
   })
@@ -72,6 +87,8 @@ const fieldSchema = z
      */
     askUser: z.boolean().optional(),
     note: z.string().optional(),
+    /** The profile array this template repeats over (see the file comment). */
+    each: z.string().regex(EACH).optional(),
   })
   .strict();
 
@@ -128,6 +145,12 @@ export const recipeSchema = z
       if (keys.has(field.key)) ctx.addIssue({ code: 'custom', path: ['fields', i, 'key'], message: 'field_key_duplicate' });
       keys.add(field.key);
       if (field.page && !pageIds.has(field.page)) ctx.addIssue({ code: 'custom', path: ['fields', i, 'page'], message: 'field_page_unknown' });
+      if (field.each) {
+        if (!field.key.startsWith(`${field.each}[{i}].`)) ctx.addIssue({ code: 'custom', path: ['fields', i, 'key'], message: 'each_key_shape' });
+        if (!PLACEHOLDER.test(field.som)) ctx.addIssue({ code: 'custom', path: ['fields', i, 'som'], message: 'each_som_needs_placeholder' });
+      } else if ([field.key, field.som, field.css ?? '', field.label].some((t) => PLACEHOLDER.test(t) || t.includes('[{i}]'))) {
+        ctx.addIssue({ code: 'custom', path: ['fields', i, 'each'], message: 'placeholder_without_each' });
+      }
     });
     // Submit and Pay are never the agent's to click (PLAN §4): such an action must be `human`.
     recipe.actions.forEach((action, i) => {
@@ -140,6 +163,17 @@ export const recipeSchema = z
 
 export type Recipe = z.infer<typeof recipeSchema>;
 export type RecipeField = Recipe['fields'][number];
+
+/**
+ * The recipe field a concrete key belongs to: an exact key, or a repeating template whose `[{i}]`
+ * matches an index (`directors[1].firstName` finds `directors[{i}].firstName`).
+ */
+export function findRecipeField(recipe: Recipe, key: string): RecipeField | null {
+  const exact = recipe.fields.find((f) => f.key === key);
+  if (exact) return exact;
+  const escape = (t: string) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return recipe.fields.find((f) => f.each && new RegExp(`^${f.key.split('[{i}]').map(escape).join('\\[\\d+\\]')}$`).test(key)) ?? null;
+}
 
 /** Parses a recipe and throws a readable error naming the first problem. */
 export function parseRecipe(raw: unknown): Recipe {

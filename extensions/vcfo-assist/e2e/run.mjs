@@ -6,7 +6,8 @@
 // the guards refuse the user id, password, captcha and OTP, nothing is written before the
 // confirmation, Submit and Pay are never clicked by the agent, the SRN is read and written back,
 // no profile value is sent anywhere, the portal host gets no request beyond its static files, and
-// the drift page heals at T1 with 0 AI calls and a patch proposal.
+// the drift page heals at T1 with 0 AI calls and a patch proposal, the Part B recipe waits on the
+// wrong page and then fills two subscriber and two director blocks from repeating recipe fields.
 //
 // Playwright comes from the Suite repository's node_modules (it is not a dependency here). Set
 // CHROME_PATH to a Chrome for Testing or Chromium binary; branded Chrome ignores --load-extension.
@@ -84,13 +85,13 @@ async function main() {
   const panel = await pagePromise;
   await panel.setViewportSize({ width: 400, height: 1400 }).catch(() => undefined);
   const runState = () => panel.getByTestId('run-state').innerText();
-  const waitState = (s) => panel.getByTestId('run-state').filter({ hasText: s }).waitFor({ timeout: 20000 });
+  const waitState = (s, timeout = 20000) => panel.getByTestId('run-state').filter({ hasText: s }).waitFor({ timeout });
 
   console.log('Run 1: Part A on the mock');
   await panel.getByText('Connected', { exact: true }).waitFor({ timeout: 15000 });
   check(true, 'panel shows Connected (Suite reached through the Suite tab)');
   await panel.locator('.picker select').selectOption('eng-1');
-  await panel.getByText('Ready', { exact: true }).waitFor({ timeout: 10000 });
+  await panel.getByText('Ready', { exact: true }).first().waitFor({ timeout: 10000 });
   check(true, 'readiness badge shows Ready (profile missing[] is empty)');
   await panel.screenshot({ path: path.join(artifacts, 'panel-home.png'), fullPage: true });
 
@@ -127,7 +128,7 @@ async function main() {
   check(!filled.clicks['btn-submit'] && !filled.clicks['btn-pay'], 'Submit and Pay not clicked');
   check(filled.clicks['btn-check'] === 1 && filled.clicks['btn-download'] === 1, 'Check form and Download PDF clicked once each');
   const activity = await panel.getByTestId('activity').innerText();
-  check(activity.includes('recipe spice-a@1.1.0 from Suite verified'), "Suite's recipe used (HMAC accepted on the mock host)");
+  check(activity.includes('recipe spice-a@1.1.0 from Suite verified'), "Suite's recipe used (Ed25519 dev key accepted on the mock host)");
   for (const code of ['G1', 'G2', 'G3']) check(activity.includes(`${code}: refused`), `activity log shows a ${code} refusal`);
 
   await panel.getByTestId('pdf-input').setInputFiles({ name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% signed by the user (mock)\n') });
@@ -190,6 +191,69 @@ async function main() {
   await panel.getByRole('button', { name: 'Cancel run' }).click();
   await waitState('CANCELLED');
   check(true, 'run cancelled');
+
+  console.log('Run 3: Part B (repeating directors and subscribers)');
+  await panel.getByRole('button', { name: 'New run' }).click();
+  // Started on the Part A page: the Part B recipe must refuse to fill there.
+  await portal.goto(`${MOCK}/spice-a.html`);
+  await portal.bringToFront();
+  const runButtons = panel.getByRole('button', { name: 'Run', exact: true });
+  await runButtons.nth(1).waitFor();
+  await panel.waitForTimeout(500);
+  await runButtons.nth(1).click();
+  await panel.getByRole('button', { name: 'I have logged in' }).click({ timeout: 15000 });
+  await panel.getByRole('heading', { name: 'Open the form page' }).waitFor({ timeout: 15000 });
+  const wrongWrites = await portal.evaluate(() => window.__mock.modelWrites.length);
+  check(wrongWrites === 0, 'Part B recipe fills nothing on the Part A page (urlPattern check)');
+  await panel.screenshot({ path: path.join(artifacts, 'panel-wrong-page.png'), fullPage: true });
+  await portal.goto(`${MOCK}/spice-b.html`);
+  await portal.bringToFront();
+  await panel.getByTestId('confirm-fill').waitFor({ timeout: 20000 });
+  check(true, 'run went on by itself once the Part B page was open');
+  const rowsB = await panel.locator('table.diff tbody tr').allInnerTexts();
+  check(rowsB.some((t) => t.includes('Director 2: first name')) && rowsB.some((t) => t.includes('Subscriber 2: number of equity shares subscribed')), 'confirm table lists both director and both subscriber blocks');
+  await panel.getByTestId('confirm-fill').click();
+  // 39 fields, each guarded and written in the page: allow more time than Part A's nine.
+  await waitState('WAIT DSC', 90000);
+  const partB = await portal.evaluate(() => {
+    const v = (n) => document.querySelector(`[name=${n}]`).value;
+    return {
+      cap: v('authorisedCapital'),
+      line1: v('officeLine1'),
+      state: v('officeState'),
+      s1: v('subscriber1FirstName'),
+      s2pan: v('subscriber2Pan'),
+      s2shares: v('subscriber2Shares'),
+      d1din: v('director1Din'),
+      d2: v('director2FirstName'),
+      d2din: v('director2Din'),
+      d1desig: v('director1Designation'),
+      writes: window.__mock.modelWrites,
+      clicks: window.__mock.clicks,
+    };
+  });
+  check(partB.cap === '1000000' && partB.line1 === 'Sentinel Tower 1' && partB.state === 'TG', 'capital and registered office filled');
+  check(partB.s1 === 'Subone' && partB.s2pan === 'SENTC5678D' && partB.s2shares === '5000', 'both subscriber blocks filled');
+  check(partB.d1din === '09876543' && partB.d2 === 'Dirtwo' && partB.d2din === '', 'both director blocks filled; a DIN the profile lacks stays empty');
+  check(partB.d1desig === '', 'designation left for the user (askUser)');
+  check(partB.writes.includes('director2FirstName'), 'repeating fields filled through guideBridge');
+  await panel.getByTestId('pdf-input').setInputFiles({ name: 'signed-b.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n% Part B signed by the user (mock)\n') });
+  await waitState('WAIT SUBMIT PAY');
+  const gateB = await portal.evaluate(() => window.__mock.clicks);
+  check(!gateB['btn-submit'] && !gateB['btn-pay'], 'Part B: Submit and Pay not clicked by the agent');
+  await portal.click('#btn-submit');
+  await portal.click('#btn-pay');
+  await waitState('DONE');
+  check((await panel.getByTestId('srn').innerText()).includes('AC7654321'), 'Part B SRN AC7654321 read and shown');
+  await panel.screenshot({ path: path.join(artifacts, 'panel-part-b.png'), fullPage: true });
+  await portal.screenshot({ path: path.join(artifacts, 'portal-part-b.png'), fullPage: true });
+  const apiB = suite.log.filter((e) => e.path.startsWith('/api/'));
+  check(apiB.some((e) => e.path === '/api/assist/recipes/spice-b'), "Part B recipe fetched from Suite");
+  check(apiB.some((e) => e.method === 'PATCH' && e.body.includes('"srn":"AC7654321"')), 'Part B SRN written back to the run');
+  const outboundB = apiB.filter((e) => e.method !== 'GET').map((e) => e.body).join('\n');
+  check(SENTINELS.every((v) => !outboundB.includes(v)), 'no Part B profile value in any request body sent to Suite');
+  const rejectedB = apiB.filter((e) => e.status >= 400 && e.path !== '/api/assist/catalog');
+  check(rejectedB.length === 0, 'Suite accepted every Part B request body');
 
   // G8: nothing in extension storage looks like a credential.
   const stored = await sw.evaluate(async () => JSON.stringify([await chrome.storage.local.get(null), await chrome.storage.session.get(null)]));

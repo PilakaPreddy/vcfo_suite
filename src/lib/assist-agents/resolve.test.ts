@@ -78,6 +78,13 @@ describe('resolveField', () => {
     expect(calls).toHaveLength(0);
   });
 
+  it('never reads the run id as personal data, even when its groups are all digits', async () => {
+    setAskProviderForTests(null);
+    const runId = '12345678-1234-4234-8234-123456789012';
+    expect(looksLikePersonalData(runId)).toBe(true);
+    await expect(resolveField(input({ runId }))).resolves.toMatchObject({ tier: 'T1', choice: 1 });
+  });
+
   it('refuses more than 40 candidates and an unknown recipe', async () => {
     setAskProviderForTests(null);
     const many = Array.from({ length: 41 }, (_, i) => ({ i, label: `Field ${i}` }));

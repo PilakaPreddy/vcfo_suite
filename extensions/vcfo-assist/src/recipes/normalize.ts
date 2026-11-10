@@ -21,8 +21,8 @@ interface SuiteRecipe {
   title: string;
   subAgent?: string;
   verifiedAgainst?: string;
-  pages: Array<{ id: string; title: string; urlPattern: string; ready?: SuiteMatch }>;
-  fields: Array<{ key: string; page?: string; som: string; css?: string; label: string; transform?: string; required?: boolean; askUser?: boolean; note?: string }>;
+  pages: Array<{ id: string; title: string; urlPattern: string; mockUrlPattern?: string; ready?: SuiteMatch }>;
+  fields: Array<{ key: string; page?: string; som: string; css?: string; label: string; transform?: string; required?: boolean; askUser?: boolean; note?: string; each?: string }>;
   actions: Array<{ id: string; label: string; kind: string; match: SuiteMatch }>;
   gates: string[];
   expect: Array<{ id: string; kind: string; pattern: string }>;
@@ -56,6 +56,12 @@ function roleOf(id: string, label: string): SafeActionRole | undefined {
   return undefined;
 }
 
+/** `[name="director1Din"]` → `director1Din`: the control's name when the recipe's selector names it. */
+export function nameFromCss(css: string | undefined): string | undefined {
+  const m = /^\[name=(?:"([^"]+)"|'([^']+)'|([\w.-]+))\]$/.exec((css ?? '').trim());
+  return m ? (m[1] ?? m[2] ?? m[3]) : undefined;
+}
+
 /** `guide[0]...proposedName1[0]` → `proposedName1`: an AEM node's name is the last SOM step. */
 export function nameFromSom(som: string | undefined): string | undefined {
   const m = /\.?([A-Za-z_][\w]*)\[\d+\]$/.exec(som ?? '');
@@ -77,6 +83,7 @@ export function normalizeRecipe(raw: unknown): Recipe {
     id: p.id,
     title: p.title,
     urlPattern: p.urlPattern,
+    mockUrlPattern: p.mockUrlPattern,
     readyCss: p.ready?.css,
     fields: [] as RecipeField[],
   }));
@@ -87,11 +94,12 @@ export function normalizeRecipe(raw: unknown): Recipe {
       label: f.label,
       som: f.som,
       css: f.css,
-      name: nameFromSom(f.som),
+      name: nameFromCss(f.css) ?? nameFromSom(f.som),
       transform: (f.transform ? TRANSFORMS[f.transform] ?? f.transform : 'none') as RecipeTransform,
       required: f.required,
       askUser: f.askUser,
       note: f.note,
+      each: f.each,
     });
   }
 

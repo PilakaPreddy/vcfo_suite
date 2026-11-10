@@ -6,8 +6,7 @@
  * `chrome.scripting.executeScript`), so the Auth.js session cookie is sent normally and Suite
  * needs no CORS headers, no OPTIONS handler and no token (docs/specs/assist-profile/06-no-cors.md).
  *
- * The paths and response shapes follow the brief until docs/specs/vcfo-assist-agents/API.md
- * exists; adjust `SUITE_PATHS` and the `parse*` helpers here when it lands.
+ * The paths and response shapes follow docs/specs/vcfo-assist-agents/API.md.
  */
 import type { ResolveContext, RunCreate, RunUpdate, SuitePort } from '../engine/ports';
 import type { Catalog, EngagementSummary, PatchProposal, ProfileResult, ResolvePayload, ResolveResponse, SignedRecipe } from '../shared/types';
@@ -25,8 +24,12 @@ export const SUITE_PATHS = {
   profile: (engagementId: string) => `/api/engagements/${enc(engagementId)}/assist-profile`,
   runs: (engagementId: string) => `/api/engagements/${enc(engagementId)}/assist-runs`,
   run: (engagementId: string, runId: string) => `/api/engagements/${enc(engagementId)}/assist-runs/${enc(runId)}`,
-  /** Where "Fix in Suite" opens. `/app` sends each role to its own home. */
-  fixInSuite: (_engagementId: string) => '/app',
+  /**
+   * Where "Fix in Suite" opens: Suite redirects to the engagement's checklist step in the shell the
+   * signed-in role can open (lead, manager or admin), or to the engagement page without a step.
+   */
+  fixInSuite: (engagementId: string, stepId?: string) =>
+    engagementId ? `/api/assist/step-link/${enc(engagementId)}${stepId ? `?step=${enc(stepId)}` : ''}` : '/',
 };
 
 export interface TabFetchResult {
@@ -55,7 +58,7 @@ export const DEFAULT_CATALOG: Catalog = {
       name: 'Incorporation',
       subAgents: [
         { id: 'spice-a', name: 'SPICe+ Part A (name reservation)', recipeId: 'spice-a', form: 'SPICe+ Part A' },
-        { id: 'spice-b', name: 'SPICe+ Part B', form: 'SPICe+ Part B' },
+        { id: 'spice-b', name: 'SPICe+ Part B (incorporation form)', recipeId: 'spice-b', form: 'SPICe+ Part B' },
         { id: 'agile-pro-s', name: 'AGILE-PRO-S', form: 'AGILE-PRO-S' },
       ],
     },
@@ -114,6 +117,7 @@ export function parseCatalog(json: unknown): Catalog {
           name: form && form !== title ? `${form} (${title.charAt(0).toLowerCase()}${title.slice(1)})` : title,
           form,
           recipeId: typeof s.recipeId === 'string' && s.recipeId ? s.recipeId : undefined,
+          stepId: typeof s.stepId === 'string' && s.stepId ? s.stepId : undefined,
         };
       }),
     })),
@@ -122,7 +126,12 @@ export function parseCatalog(json: unknown): Catalog {
 
 export function parseSignedRecipe(json: unknown): SignedRecipe {
   if (isObj(json) && isObj(json.recipe) && typeof json.sig === 'string') {
-    return { recipe: json.recipe, sig: json.sig, alg: typeof json.alg === 'string' ? json.alg : undefined };
+    return {
+      recipe: json.recipe,
+      sig: json.sig,
+      alg: typeof json.alg === 'string' ? json.alg : undefined,
+      keyId: typeof json.keyId === 'string' ? json.keyId : undefined,
+    };
   }
   throw new SuiteError('recipe response has no recipe and sig', 502);
 }
@@ -203,7 +212,7 @@ export class SuiteClient implements SuitePort {
     const { fieldKey, fieldLabel, candidates } = payload;
     const runId = ctx.runId && UUID.test(ctx.runId) ? ctx.runId : undefined;
     const body = strip({ fieldKey, fieldLabel, candidates, recipeId: ctx.recipeId, runId });
-    return parseResolve(await this.withoutRunIdOnPii(body, (b) => this.call(SUITE_PATHS.resolve(), 'POST', b)));
+    return parseResolve(await this.call(SUITE_PATHS.resolve(), 'POST', body));
   }
 
   async proposePatch(patch: PatchProposal): Promise<void> {
@@ -217,23 +226,6 @@ export class SuiteClient implements SuitePort {
       sourceTier,
       runId: runId && UUID.test(runId) ? runId : undefined,
     });
-    await this.withoutRunIdOnPii(body, (b) => this.call(SUITE_PATHS.patches(), 'POST', b));
-  }
-
-  /**
-   * Suite's labels-only check reads every string in the body, the run id included, and a uuid whose
-   * groups happen to be all digits looks like a DIN or an Aadhaar number to it. `runId` is optional
-   * on both routes, so the call is repeated once without it.
-   */
-  private async withoutRunIdOnPii<T extends { runId?: string }>(body: T, send: (b: T) => Promise<unknown>): Promise<unknown> {
-    try {
-      return await send(body);
-    } catch (err) {
-      if (body.runId && err instanceof SuiteError && /personal_data/.test(err.message)) {
-        const { runId: _drop, ...rest } = body;
-        return send(rest as T);
-      }
-      throw err;
-    }
+    await this.call(SUITE_PATHS.patches(), 'POST', body);
   }
 }

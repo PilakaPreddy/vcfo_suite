@@ -10,7 +10,8 @@ import { describe, expect, it } from 'vitest';
 import { RunEngine } from '../engine/runner';
 import { BUNDLED_RECIPES } from '../recipes';
 import { SuiteClient, type TabFetchResult } from './suite-client';
-import { JsdomPortal, MemoryStore, PROFILE_VALUES, SENTINEL_PROFILE, loadMockPage, pdfDrop } from '../test/mock-env';
+import { JsdomPortal, MemoryStore, PART_B_PROFILE, PART_B_VALUES, PROFILE_VALUES, SENTINEL_PROFILE, loadMockPage, pdfDrop } from '../test/mock-env';
+import type { ProfileResult } from '../shared/types';
 
 const SUITE_LIB = path.resolve(__dirname, '../../../../src/lib/assist-agents');
 const present = existsSync(path.join(SUITE_LIB, 'api-schemas.ts'));
@@ -21,12 +22,19 @@ interface Sent {
   body: unknown;
 }
 
-function client(sent: Sent[], choice: (body: { candidates: Array<{ i: number; name?: string }> }) => number | null) {
+/** A run id whose first group is all digits (a bare DIN shape) and whose last is twelve digits (an Aadhaar shape). */
+const DIGIT_RUN_ID = '12345678-1234-4234-8234-123456789012';
+
+function client(
+  sent: Sent[],
+  choice: (body: { candidates: Array<{ i: number; name?: string }> }) => number | null,
+  opts: { runId?: string; profile?: ProfileResult } = {},
+) {
   return new SuiteClient(async (p, init): Promise<TabFetchResult> => {
     sent.push({ method: init.method, path: p, body: init.body });
-    if (p.endsWith('/assist-profile')) return { status: 200, json: { ok: true, ...SENTINEL_PROFILE } };
+    if (p.endsWith('/assist-profile')) return { status: 200, json: { ok: true, ...(opts.profile ?? SENTINEL_PROFILE) } };
     if (p.startsWith('/api/assist/recipes/')) return { status: 404, json: { ok: false, error: 'not_found' } };
-    if (p.endsWith('/assist-runs') && init.method === 'POST') return { status: 201, json: { ok: true, run: { id: '0b6f3c2a-1b1d-4e2f-8a3b-9c4d5e6f7a8b' } } };
+    if (p.endsWith('/assist-runs') && init.method === 'POST') return { status: 201, json: { ok: true, run: { id: opts.runId ?? '0b6f3c2a-1b1d-4e2f-8a3b-9c4d5e6f7a8b' } } };
     if (p.includes('/assist-runs/')) return { status: 200, json: { ok: true } };
     if (p === '/api/assist/resolve') return { status: 200, json: { ok: true, choice: choice(init.body as never), confidence: 0.9, tier: 'T3', tokens: 800, aiCalls: 1 } };
     if (p === '/api/assist/patches') return { status: 201, json: { ok: true } };
@@ -55,16 +63,41 @@ describe.skipIf(!present)("Suite API contract (Suite's own zod schemas)", async 
       if (s.path === '/api/assist/resolve') {
         const body = s.body as Record<string, unknown>;
         expect(Object.keys(body).every((k) => RESOLVE_KEYS.includes(k))).toBe(true);
-        expect(body.recipeId).toBe('spice-a');
+        expect(['spice-a', 'spice-b']).toContain(body.recipeId);
       }
     }
     const outbound = JSON.stringify(sent.filter((s) => s.method !== 'GET').map((s) => s.body));
-    for (const v of PROFILE_VALUES) expect(outbound).not.toContain(v);
+    for (const v of [...PROFILE_VALUES, ...PART_B_VALUES]) expect(outbound).not.toContain(v);
   }
 
-  it('the bundled recipe passes Suite\'s recipe schema', () => {
-    const r = recipeSchema.safeParse(BUNDLED_RECIPES['spice-a']!.recipe);
-    expect(r.success, r.success ? '' : JSON.stringify(r.error.issues[0])).toBe(true);
+  it("every bundled recipe passes Suite's recipe schema", () => {
+    for (const signed of Object.values(BUNDLED_RECIPES)) {
+      const r = recipeSchema.safeParse(signed.recipe);
+      expect(r.success, r.success ? '' : JSON.stringify(r.error.issues[0])).toBe(true);
+    }
+  });
+
+  it('a full Part B filing (two directors, two subscribers) sends only bodies Suite accepts', async () => {
+    loadMockPage('spice-b.html');
+    const sent: Sent[] = [];
+    const portal = new JsdomPortal();
+    portal.url = 'http://127.0.0.1:4318/spice-b.html';
+    const engine = new RunEngine({ suite: client(sent, () => null, { profile: PART_B_PROFILE }), store: new MemoryStore(), portalFor: () => portal, bundledRecipes: BUNDLED_RECIPES });
+    await engine.start({ engagementId: 'eng-1', agentId: 'incorporation', subAgentId: 'spice-b', recipeId: 'spice-b', portalTabId: 1 });
+    await engine.settle();
+    await engine.send({ type: 'LOGGED_IN' });
+    await engine.settle();
+    await engine.send({ type: 'CONFIRM_FILL' });
+    await engine.settle();
+    await engine.send(await pdfDrop());
+    await engine.settle();
+    document.getElementById('btn-submit')!.click();
+    document.getElementById('btn-pay')!.click();
+    await engine.tick();
+    await engine.settle();
+    expect(engine.run!.state).toBe('DONE');
+    expect(sent.some((s) => s.method === 'PATCH' && (s.body as { srn?: string }).srn === 'AC7654321')).toBe(true);
+    checkAll(sent);
   });
 
   it('a full mock filing sends only bodies Suite accepts', async () => {
@@ -95,7 +128,7 @@ describe.skipIf(!present)("Suite API contract (Suite's own zod schemas)", async 
     const sent: Sent[] = [];
     const portal = new JsdomPortal();
     const engine = new RunEngine({
-      suite: client(sent, (b) => b.candidates.find((c) => c.name === 'nameOption2')?.i ?? null),
+      suite: client(sent, (b) => b.candidates.find((c) => c.name === 'nameOption2')?.i ?? null, { runId: DIGIT_RUN_ID }),
       store: new MemoryStore(),
       portalFor: () => portal,
       bundledRecipes: BUNDLED_RECIPES,
@@ -108,6 +141,9 @@ describe.skipIf(!present)("Suite API contract (Suite's own zod schemas)", async 
     await engine.settle();
     expect(sent.some((s) => s.path === '/api/assist/resolve')).toBe(true);
     expect(sent.some((s) => s.path === '/api/assist/patches')).toBe(true);
+    // The digit-only run id goes on both calls, once each: Suite checks labels only, never ids.
+    expect(sent.filter((s) => s.path === '/api/assist/resolve').map((s) => (s.body as { runId?: string }).runId)).toEqual([DIGIT_RUN_ID]);
+    expect(sent.filter((s) => s.path === '/api/assist/patches').map((s) => (s.body as { runId?: string }).runId)).toEqual([DIGIT_RUN_ID]);
     checkAll(sent);
   });
 });

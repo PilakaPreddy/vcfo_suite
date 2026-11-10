@@ -13,3 +13,7 @@ button.danger { background: #8b1e1e; color: #fff; border-color: #8b1e1e; }
 .hint { color: #667; font-size: 12px; }
 .srn { font-weight: 700; font-size: 16px; color: #14532d; }
 #form-status { min-height: 1.4em; font-weight: 600; }
+h3 { font-size: 14px; margin: 12px 0 6px; }
+input[type="email"], input[type="tel"] { font: inherit; padding: 6px 8px; border: 1px solid #bbb; border-radius: 4px; max-width: 100%; }
+fieldset.instance { border: 1px dashed #c6c9d2; border-radius: 6px; padding: 8px 12px; margin: 0 0 10px; }
+fieldset.instance legend { font-weight: 600; padding: 0 4px; }

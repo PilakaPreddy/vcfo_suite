@@ -1,4 +1,5 @@
 import spiceA from './recipes/spice-a.json';
+import spiceB from './recipes/spice-b.json';
 import { parseRecipe, type Recipe } from './recipe';
 
 /**
@@ -6,7 +7,7 @@ import { parseRecipe, type Recipe } from './recipe';
  * change ships with a deploy and its version must be bumped (an approved patch is applied by a
  * person editing the JSON and bumping the version; the patch row records what to change).
  */
-const RECIPE_FILES: readonly unknown[] = [spiceA];
+const RECIPE_FILES: readonly unknown[] = [spiceA, spiceB];
 
 let cache: Map<string, Recipe> | null = null;
 

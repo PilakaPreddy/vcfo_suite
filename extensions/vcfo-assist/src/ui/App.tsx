@@ -138,7 +138,7 @@ function Home({ state, send }: { state: PanelState; send: (c: PanelCommand) => v
                     ) : missing === 0 ? (
                       <span className="chip chip-positive">Ready</span>
                     ) : (
-                      <button type="button" className="chip chip-warn link" onClick={() => send({ cmd: 'openSuite' })} title={r.missing.map((m) => m.label).join(', ')}>
+                      <button type="button" className="chip chip-warn link" onClick={() => send({ cmd: 'openSuite', stepId: r.missing.find((m) => m.stepId)?.stepId ?? s.stepId })} title={r.missing.map((m) => m.label).join(', ')}>
                         {missing} missing → Fix in Suite
                       </button>
                     )}
