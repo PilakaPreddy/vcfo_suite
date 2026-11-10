@@ -5,7 +5,7 @@ import { prefillNotes, shortLabel, subStepCount, subStepsOf } from './step-progr
 const stepNo = (id: string) => getIncorporationPhases().flatMap((p) => p.items).findIndex((i) => i.id === id) + 1;
 
 describe('subStepsOf', () => {
-  const reg4 = getItem('reg-4')!; // GST registration: two sections (GST, LUT)
+  const reg4 = getItem('reg-4')!; // GST registration: the client's GST REG-01 tabs
 
   it('groups by section and marks the first open group as now', () => {
     const subs = subStepsOf(reg4, {}, 'live');
@@ -15,9 +15,9 @@ describe('subStepsOf', () => {
   });
 
   it('counts a section done when one of its fields has an answer', () => {
-    const subs = subStepsOf(reg4, { lutArn: 'AD290000000001' }, 'live');
-    const lut = subs.find((x) => /LUT/.test(x.l));
-    expect(lut?.s).toBe('done');
+    const subs = subStepsOf(reg4, { gstTradeName: 'Acme' }, 'live');
+    const business = subs.find((x) => /Business/.test(x.l));
+    expect(business?.s).toBe('done');
     expect(subStepCount(subs).done).toBe(1);
   });
 

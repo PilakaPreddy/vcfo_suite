@@ -35,6 +35,7 @@ import { directorAudiencesFromPre6 } from '@/lib/incorporation-docs/audiences';
 import { isIncorpSlotSetFrozen } from '@/lib/incorporation-docs/share';
 import { directorResponsesFromState, type StepStateMap } from '@/lib/incorporation/proposed-directors';
 import { isDirectFlowStep } from '@/lib/incorporation/pre-inc-direct-flow';
+import { GST_REG_STEP_ID, gstRegFormatChecks } from '@/lib/checklist/gst-registration-fields';
 
 /**
  * One step validator for the form and the server.
@@ -164,6 +165,10 @@ export function runStepValidation(input: StepValidationInput): StepValidationRes
 
   const errors = requiredFieldErrors(input.itemId, input.responses, input.ownershipType);
   const delivery = validateInternDelivery(input.itemId, input.responses);
+  if (input.itemId === GST_REG_STEP_ID) {
+    const gst = gstRegFormatChecks(input.responses);
+    return result({ ...errors, ...gst.errors, ...delivery.errors }, gst.warnings);
+  }
   return result({ ...errors, ...delivery.errors });
 }
 

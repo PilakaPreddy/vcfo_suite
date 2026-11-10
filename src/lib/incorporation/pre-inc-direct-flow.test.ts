@@ -23,9 +23,9 @@ import {
 const NOW = '2026-10-12T10:00:00.000Z';
 
 describe('direct-flow step list', () => {
-  it('is every active pre-incorporation step except the board resolution', () => {
+  it('is every active pre-incorporation step except the board resolution, plus GST registration', () => {
     const active = getPreIncPhases().flatMap((phase) => phase.items.map((item) => item.id));
-    expect(new Set(active.filter((id) => id !== MANAGER_APPROVAL_STEP_ID))).toEqual(
+    expect(new Set([...active.filter((id) => id !== MANAGER_APPROVAL_STEP_ID), 'reg-4'])).toEqual(
       new Set(DIRECT_FLOW_STEP_IDS),
     );
   });

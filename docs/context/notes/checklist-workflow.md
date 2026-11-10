@@ -210,3 +210,34 @@ Spec `docs/specs/pre-inc-direct-flow/` (CONTEXT, AUDIT, REPORT).
   `FitToWidth`, which scales the ~800px Word page into its column so it never runs under the rail.
 - The staff sidebar now starts as the rail (opens on hover) when nothing is saved; the pin
   button or "[" still pins it.
+
+## GST registration as the portal's REG-01 (2026-11-09)
+
+- `reg-4` follows the GST portal's FORM GST REG-01 tab by tab. The fields live in
+  `src/lib/checklist/gst-registration-fields.ts` (`GST_REG_FIELDS`), and
+  `checklist-responses.ts` points `reg-4` at them. Tabs: Part A (the TRN), Business
+  Details, Promoter / Partners, Authorized Signatory, Authorized Representative,
+  Principal Place of Business, Additional Places of Business (shows when the
+  principal place says Yes), Bank Accounts, State Specific Information, Aadhaar
+  Authentication, Verification, ARN and Certificate, LUT Filing. The portal's
+  Goods and Services tab (HSN and SAC) is left out by owner decision.
+- `reg-4` is a direct-flow step (`DIRECT_FLOW_STEP_IDS`). A field marked
+  `filledBy: 'intern'` is lead-only (`GST_REG_LEAD_ONLY_FIELD_IDS`): the client never
+  sees it. The client sees only Business Details, Promoter / Partners, Authorized
+  Signatory, Principal Place of Business, Bank Accounts and State Specific
+  Information. The project lead can edit every field. A client submit with only lead
+  fields left waits on the lead; the lead's submit (with the GSTIN and the
+  certificate) completes the step.
+- `reg-4` is also a parallel step (`PARALLEL_STEP_IDS`): it opens to the client once
+  `pre-12` (the certificate of incorporation) is complete, whatever the
+  post-incorporation steps say. Before that the client reads it locked.
+- `gstRegFormatChecks` checks the PAN, the GSTIN (and that it carries the company
+  PAN), the PIN, the mobiles and the emails, and warns when Part B is due (15 days
+  after the TRN date) or the TRN has expired.
+- The ids `gstinNumber`, `gstRegistrationDate`, `gstCertificateUrl` and the LUT ids are
+  unchanged, so the registration facts and the credentials workbook read them as before.
+  After a change to the field list run `npm run ask:catalog`.
+- Running the app in a cloud sandbox: Docker is not available, so start Postgres 16
+  directly (install `postgresql-16-pgvector` for migration 0047), and run
+  `next dev --webpack` with `NEXT_FONT_GOOGLE_MOCKED_RESPONSES` pointing at a mock
+  module, because Google Fonts cannot be fetched from the build.

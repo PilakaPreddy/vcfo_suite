@@ -2,6 +2,7 @@ import { addDays, format } from 'date-fns';
 import { checklist, type ChecklistField, type ChecklistItem } from '@/data/checklist';
 import type { OwnershipType } from '@/data/engagements';
 import { PART_A_STEP_ID, partAFieldsFor } from '@/lib/checklist/part-a-sections';
+import { GST_REG_FIELDS } from '@/lib/checklist/gst-registration-fields';
 import { expandDirectorSlotFields, withoutUnusedDirectorSlots } from '@/lib/incorporation/incorp-director-slots';
 import { PRE15_MAX_OTHER_INTERESTS } from '@/lib/incorporation/other-company-interests';
 import { isRepeatField, repeatEntries } from '@/lib/checklist/checklist-repeat';
@@ -1543,52 +1544,8 @@ export const CLIENT_RESPONSE_FIELDS: Record<string, ChecklistField[]> = {
       required: true,
     },
   ],
-  'reg-4': [
-    {
-      id: 'gstinNumber',
-      label: 'GSTIN',
-      type: 'text',
-      section: 'GST Registration',
-      placeholder: 'e.g. 29AABCS1429B1Z1',
-      required: true,
-    },
-    {
-      id: 'gstRegistrationDate',
-      label: 'GST Registration Date',
-      type: 'date',
-      section: 'GST Registration',
-      required: true,
-    },
-    {
-      id: 'gstCertificateUrl',
-      label: 'GST Certificate',
-      type: 'file',
-      section: 'GST Registration',
-      accept: '.pdf,image/*',
-      required: true,
-    },
-    {
-      id: 'lutFilingDate',
-      label: 'LUT Filing Date',
-      type: 'date',
-      section: 'LUT Filing',
-    },
-    {
-      id: 'lutArn',
-      label: 'LUT ARN / Acknowledgement',
-      type: 'text',
-      section: 'LUT Filing',
-      placeholder: 'Application Reference Number',
-    },
-    {
-      id: 'lutNotes',
-      label: 'LUT notes (optional)',
-      required: false,
-      type: 'textarea',
-      section: 'LUT Filing',
-      placeholder: 'Witness KYC status, portal remarks…',
-    },
-  ],
+  // GST REG-01 as the portal asks it (Part A, Part B tabs, ARN, LUT): see gst-registration-fields.ts.
+  'reg-4': GST_REG_FIELDS,
   'reg-5': [
     {
       id: 'lutFilingDate',
@@ -2071,7 +2028,9 @@ export function formatResponseSummary(
       summary = joinSummaryParts([r.inc22Srn?.trim(), r.inc22NewAddress?.trim()]);
       break;
     case 'reg-4':
-      summary = joinSummaryParts([r.gstinNumber?.trim(), r.lutArn?.trim()]);
+      summary = r.gstinNumber?.trim()
+        ? joinSummaryParts([r.gstinNumber.trim(), r.lutArn?.trim()])
+        : joinSummaryParts([r.gstArn?.trim() ? `ARN ${r.gstArn.trim()}` : undefined, r.gstTrn?.trim() ? `TRN ${r.gstTrn.trim()}` : undefined]);
       break;
     case 'reg-5':
       summary = joinSummaryParts([r.lutArn?.trim(), r.lutFilingDate?.trim()]);
