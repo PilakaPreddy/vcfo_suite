@@ -44,6 +44,7 @@ function arg(name, fallback) {
 
 const remove = process.argv.includes('--remove');
 const resetClients = process.argv.includes('--reset-clients');
+const migrate = process.argv.includes('--migrate');
 const confirmed = process.argv.includes('--yes');
 const dbId = arg('db', 'vcfo-suite-db');
 const region = arg('region', process.env.AWS_REGION || 'ap-south-1');
@@ -215,10 +216,8 @@ console.log('Tunnel is up.\n');
 const seed = spawn(
   process.execPath,
   [
-    '--conditions=react-server',
-    '--import',
-    'tsx',
-    ...(resetClients
+    ...(migrate ? ['node_modules/drizzle-kit/bin.cjs', 'migrate'] : ['--conditions=react-server', '--import', 'tsx']),
+    ...(migrate ? [] : resetClients
       ? ['scripts/reset-client-data.ts', ...(confirmed ? ['--yes'] : [])]
       : ['scripts/seed-demo-clients.ts', ...(remove ? ['--remove'] : [])]),
   ],

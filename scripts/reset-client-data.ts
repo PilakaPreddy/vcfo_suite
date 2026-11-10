@@ -43,8 +43,20 @@ const skipStorage = process.argv.includes('--skip-storage');
 const DEMO_EMAIL_PATTERN = '%@demo.vcfo.local';
 const DEMO_EMAIL_PATTERN_PROD = '%@demo.sbctrack.in';
 
-/** Profiles that go: every client login and every demo-tagged login. */
-const DOOMED_PROFILES = sql`
+/**
+ * KEEP_ONLY_ADMINS (comma-separated emails) keeps only those logins, as admins, and deletes
+ * every other login, staff included. Missing ones are created as admins with no password
+ * (they sign in with Microsoft or use Forgot password).
+ */
+const KEEP_ONLY = (process.env.KEEP_ONLY_ADMINS ?? '')
+  .split(',')
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+/** Profiles that go: every client login and every demo-tagged login, or all but KEEP_ONLY. */
+const DOOMED_PROFILES = KEEP_ONLY.length
+  ? sql`select id from profiles where lower(email) not in (${sql.join(KEEP_ONLY.map((e) => sql`${e}`), sql`, `)})`
+  : sql`
   select id from profiles
   where role = 'client'
      or lower(email) like ${DEMO_EMAIL_PATTERN}
@@ -112,6 +124,21 @@ async function main() {
           where engagement_id is not null or actor_user_id in (${DOOMED_PROFILES})`,
     )}`,
   );
+
+  if (KEEP_ONLY.length) {
+    console.log(`\nKEEP_ONLY_ADMINS: ${KEEP_ONLY.join(', ')} (made admin; missing ones created).`);
+    if (apply) {
+      for (const email of KEEP_ONLY) {
+        await db.execute(sql`insert into profiles (email, role, name) values (${email}, 'admin', ${email.split('@')[0]})
+          on conflict (email) do update set role = 'admin', status = 'active'`);
+      }
+      keptProfiles.splice(0, keptProfiles.length, ...(await rows<{ id: string; email: string; role: string }>(
+        sql`select id, email, role from profiles where id not in (${DOOMED_PROFILES})`,
+      )));
+    } else if (!keptProfiles.length) {
+      keptProfiles.push({ id: '', email: KEEP_ONLY[0], role: 'admin' });
+    }
+  }
 
   if (keptProfiles.filter((p) => p.role === 'super_admin' || p.role === 'admin').length === 0) {
     throw new Error('No admin or super admin login would be left. Refusing to continue.');
