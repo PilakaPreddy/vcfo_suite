@@ -40,6 +40,7 @@ import type { Engagement } from '@/data/engagements';
 import { STUCK_LABEL } from '@/lib/projects/project-stuck';
 import { useStaffBasePath } from '@/hooks/use-staff-base-path';
 import { useApp } from '@/context/AppContext';
+import { ClientHealthChip } from '@/components/client-health/ClientHealthChip';
 import { isAdminOrManager, isFirmWideAdmin } from '@/lib/auth';
 
 type View = 'table' | 'board';
@@ -239,12 +240,15 @@ export function ProjectsView(props: ProjectsViewProps) {
     {
       key: 'health',
       header: 'Status',
-      width: '128px',
+      width: '232px',
       render: (item) => (
-        <span title={STUCK_LABEL[item.stuck]}>
-          <Chip tone={HEALTH_TONE[item.facts.health]} fixed>
-            {item.facts.health}
-          </Chip>
+        <span className="flex items-center gap-1.5">
+          <span title={STUCK_LABEL[item.stuck]}>
+            <Chip tone={HEALTH_TONE[item.facts.health]} fixed>
+              {item.facts.health}
+            </Chip>
+          </span>
+          <ClientHealthChip engagementId={item.e.id} />
         </span>
       ),
     },

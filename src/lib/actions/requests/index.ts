@@ -6,6 +6,8 @@ import { createDocumentRequest } from '@/db/repositories/document-requests';
 import { notifyEngagementEventSoon } from '@/lib/email/send-after-response';
 import { clientRecipients, dayInput, jsonTarget, loadEngagement, oneRow, recheckOf, STAFF_ROLES, stepTitle, unavailable } from '../shared';
 import { defineAction, type ActionContext, type AnyAction } from '../types';
+import { sendList } from './send-list';
+import { createListFromTemplate } from './create-list-from-template';
 
 /**
  * Ask the client for a document. The client sees it in their portal and gets an email, so it is
@@ -84,4 +86,4 @@ const create = defineAction({
   },
 });
 
-export const actions: AnyAction[] = [create];
+export const actions: AnyAction[] = [create, sendList, createListFromTemplate];

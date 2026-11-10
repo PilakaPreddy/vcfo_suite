@@ -16,6 +16,7 @@ export type PortalRouteKey =
   | 'payroll'
   | 'budgets'
   | 'registrations'
+  | 'requests'
   | 'documents'
   | 'knowledge-bank'
   /** Alias of `knowledge-bank` (the prototype's "library" key); both open the same page. */
@@ -39,6 +40,7 @@ export const PORTAL_PATHS: Record<PortalRouteKey, string> = {
   payroll: `${CP_BASE}/payroll`,
   budgets: `${CP_BASE}/budgets`,
   registrations: `${CP_BASE}/registrations`,
+  requests: `${CP_BASE}/requests`,
   documents: `${CP_BASE}/documents`,
   'knowledge-bank': `${CP_BASE}/library`,
   library: `${CP_BASE}/library`,
@@ -62,6 +64,7 @@ export const PORTAL_TITLES: Record<PortalRouteKey, string> = {
   payroll: 'Payroll',
   budgets: 'Budgets',
   registrations: 'Registrations',
+  requests: 'Requests',
   documents: 'Documents',
   'knowledge-bank': 'Library',
   library: 'Library',

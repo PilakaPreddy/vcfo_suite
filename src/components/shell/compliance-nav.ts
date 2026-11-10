@@ -1,4 +1,4 @@
-import { CalendarDays, FileSpreadsheet, ListChecks } from 'lucide-react';
+import { CalendarDays, CalendarClock, FileSpreadsheet, FileWarning, Hourglass, ListChecks } from 'lucide-react';
 import { TONE } from '@/components/shell/nav-tones';
 import type { SidebarNavLeaf } from '@/components/shell/SidebarNavGroup';
 
@@ -28,5 +28,18 @@ export function complianceLeaves(base: string): SidebarNavLeaf[] {
     { to: `${base}/compliances/obligations`, label: 'Obligations', icon: ListChecks, iconTone: TONE.work },
     { to: `${base}/compliances/calendar`, label: 'Calendar', icon: CalendarDays, iconTone: TONE.calendar },
     { to: `${base}/compliances/filings`, label: 'Filings', icon: FileSpreadsheet, iconTone: TONE.files },
+  ];
+}
+
+/**
+ * The staff-only leaves after the shared three: Expiries (registrations and KYC that lapse),
+ * Notices (the notice desk) and Events (company events that start an MCA filing). Clients do not
+ * get these pages.
+ */
+export function staffComplianceLeaves(base: string): SidebarNavLeaf[] {
+  return [
+    { to: `${base}/compliances/expiries`, label: 'Expiries', icon: Hourglass, iconTone: TONE.calendar },
+    { to: `${base}/compliances/notices`, label: 'Notices', icon: FileWarning, iconTone: TONE.queue },
+    { to: `${base}/compliances/events`, label: 'Company events', icon: CalendarClock, iconTone: TONE.work },
   ];
 }

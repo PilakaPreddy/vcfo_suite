@@ -32,6 +32,7 @@ import { isFirmWideAdmin } from '@/lib/auth';
 import { trendWithLive, useHomeTrends } from '@/hooks/use-home-trends';
 import { useStampHomeTiles } from '@/hooks/use-stamp-home-tiles';
 import { clientRowFacts } from '@/views/admin/clients/client-row';
+import { MyDayCard } from '@/views/my-day/MyDayCard';
 
 type ManagerOption = { id: string; name: string; email: string };
 
@@ -233,6 +234,9 @@ export default function FirmDashboard() {
             </Button>
           </DashHero>
         ) : null}
+
+        {/* IDEAS-PLAN F: the caller's ranked plan for today. */}
+        <MyDayCard />
 
         <AdminPracticeCards practice={practiceQuery.data} loading={practiceQuery.isPending} base="/app/admin" />
 

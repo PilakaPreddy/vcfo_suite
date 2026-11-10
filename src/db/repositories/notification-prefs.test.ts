@@ -106,7 +106,7 @@ describe('reminder days, daily digest and role alerts (P-626, P-627)', () => {
     expect(insert.values?.remindDays).toBe(3);
     expect(insert.values?.digestTime).toBe('08:30');
     expect(insert.values?.email).toMatchObject({ escalations: false, approvalsWaiting: true, weeklyDigest: true });
-    expect(next.alerts).toEqual({ approvalsWaiting: true, escalations: false, partnerReport: true });
+    expect(next.alerts).toEqual({ approvalsWaiting: true, escalations: false, partnerReport: true, myDayEmail: false });
   });
 
   it('reads them back, and null turns the digest off and the reminder back to the default', async () => {

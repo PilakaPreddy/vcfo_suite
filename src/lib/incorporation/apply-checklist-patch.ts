@@ -8,6 +8,7 @@ import {
   type EngagementChecklistState,
 } from '@/db/repositories/engagements';
 import { leadWritablePatch } from '@/lib/checklist/checklist-item-review';
+import { proposeEventsFromChecklistSave } from '@/lib/compliance-events/record-change-hook';
 import type { ChecklistItemStateSlice } from '@/lib/checklist/checklist-state-key';
 import { emptyEmailDispatch, type EmailDispatchResult } from '@/lib/email/email-dispatch';
 import { leadManagerRequestNotifyPlan } from '@/lib/email/lead-manager-request-notify';
@@ -122,6 +123,10 @@ export async function applyChecklistPatch(
   const patch = checklistPatchForRole(ctx, itemId, patchFields, prevSlice, new Date().toISOString());
 
   const checklistState = await patchChecklistItem(ctx, appOrDbEngagementId, itemId, patch);
+
+  // A changed registered office, auditor or director list on an incorporated company proposes a
+  // compliance event for the lead to confirm. Additive: the hook never throws, so the save stands.
+  await proposeEventsFromChecklistSave(ctx, { engagement: before, itemId, prevSlice, nextSlice: checklistState[itemId] });
 
   // Autosave is responses-only and must not fan out. Request / Submit /
   // Email manager again send reviewSource or resendManagerEmail.

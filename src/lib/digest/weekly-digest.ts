@@ -27,7 +27,8 @@ export interface DigestItem {
   href?: string;
 }
 
-export type DigestSectionKey = 'overdue' | 'due' | 'needs' | 'changes' | 'waiting' | 'stuck';
+/** `health` is the staff "Client health" section (src/lib/client-health/digest.ts). */
+export type DigestSectionKey = 'overdue' | 'due' | 'needs' | 'changes' | 'waiting' | 'stuck' | 'health';
 
 export interface DigestSection {
   key: DigestSectionKey;

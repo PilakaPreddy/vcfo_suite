@@ -207,6 +207,7 @@ export function portalNav({
         { k: 'notifications', t: 'Notifications', badge: unread ? String(unread) : undefined, hot: unread > 0 },
       ],
     },
+    { k: 'requests', t: 'Requests', i: 'clipboard-list' },
     { k: 'documents', t: 'Documents', i: 'folder-open', badge: docs ? String(docs) : undefined },
     { k: 'knowledge-bank', t: 'Library', i: 'library' },
     { k: 'credentials', t: 'Credentials', i: 'key-round' },

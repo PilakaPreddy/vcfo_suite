@@ -11,6 +11,8 @@ import {
   Building2,
   CalendarCheck,
   ClipboardCheck,
+  ClipboardList,
+  HeartPulse,
   Clock,
   Columns3,
   Database,
@@ -38,7 +40,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import type { Role } from '@/lib/auth';
-import { complianceLeaves, compliancesBasePath } from '@/components/shell/compliance-nav';
+import { complianceLeaves, compliancesBasePath, staffComplianceLeaves } from '@/components/shell/compliance-nav';
 import { TONE } from '@/components/shell/nav-tones';
 import type { SidebarNavLeaf } from '@/components/shell/SidebarNavGroup';
 
@@ -147,13 +149,19 @@ function practiceBlock(role: Role, base: string): NavEntry[] {
       compliancesGroup(practice, [
         { ...complianceLeaves(practice)[0], to: `${practice}/compliances` },
         { ...complianceLeaves(practice)[2], to: `${practice}/filings` },
+        ...staffComplianceLeaves('/app/super'),
       ]),
       { to: `${practice}/registrations`, label: 'Registrations', icon: BadgeCheck, iconTone: TONE.work },
     ];
   }
   return [
     { to: `${base}/incorporation`, label: 'Incorporation', icon: Landmark, iconTone: TONE.work },
-    compliancesGroup(compliancesBasePath(role, base)),
+    role === 'client'
+      ? compliancesGroup(compliancesBasePath(role, base))
+      : compliancesGroup(compliancesBasePath(role, base), [
+          ...complianceLeaves(compliancesBasePath(role, base)),
+          ...staffComplianceLeaves(compliancesBasePath(role, base)),
+        ]),
     { to: `${base}/registrations`, label: 'Registrations', icon: BadgeCheck, iconTone: TONE.work },
   ];
 }
@@ -183,6 +191,16 @@ function payrollItem(base: string): NavItem {
  * Receivables (docs/specs/receivables/PLAN.md) lives outside /app at /receivables/manager, with its
  * own header; this row only opens it. Managers only: the one receivables manager is a manager.
  */
+/** Client request lists (docs/specs/automation/IDEAS-PLAN.md, feature A): what each client still owes. */
+function requestsItem(base: string): NavItem {
+  return { to: `${base}/requests`, label: 'Requests', icon: ClipboardList, iconTone: TONE.queue };
+}
+
+/** The nightly client health score (feature E), one band per engagement. */
+function clientHealthItem(base: string): NavItem {
+  return { to: `${base}/client-health`, label: 'Client health', icon: HeartPulse, iconTone: TONE.people };
+}
+
 function receivablesItem(): NavItem {
   return { to: '/receivables/manager', label: 'Receivables', icon: IndianRupee, iconTone: TONE.work };
 }
@@ -193,6 +211,8 @@ const firmAdminItems: NavEntry[] = [
   { to: '/app/admin/dashboard', label: 'Today', icon: LayoutDashboard, iconTone: TONE.home },
   { to: '/app/admin/projects', label: 'Projects', icon: Briefcase, iconTone: TONE.work },
   { to: '/app/admin/approvals', label: 'Approvals', icon: ClipboardCheck, iconTone: TONE.queue },
+  requestsItem('/app/admin'),
+  clientHealthItem('/app/admin'),
   { to: '/app/admin/people', label: 'People', icon: Users, iconTone: TONE.people },
   { to: '/app/admin/managers', label: 'Managers', icon: UserSquare2, iconTone: TONE.people },
   ...practiceBlock('admin', '/app/admin'),
@@ -218,6 +238,7 @@ const clientItems: NavEntry[] = [
   payrollItem('/app/client'),
   budgetsItem('/app/client'),
   updatesGroup('/app/client'),
+  requestsItem('/app/client'),
   { to: '/app/client/documents', label: 'Documents', icon: FolderClosed, iconTone: TONE.files },
   { to: '/app/client/library', label: 'Library', icon: BookMarked, iconTone: TONE.knowledge },
   { to: '/app/client/audit', label: 'Audit', icon: HistoryIcon, iconTone: TONE.audit },
@@ -229,6 +250,8 @@ const clientItems: NavEntry[] = [
 const superAdminItems: NavEntry[] = [
   { to: '/app/super/dashboard', label: 'Overview', icon: LayoutDashboard, iconTone: TONE.home },
   { to: '/app/super/risks', label: 'Risks', icon: TriangleAlert, iconTone: TONE.queue },
+  requestsItem('/app/super'),
+  clientHealthItem('/app/super'),
   { to: '/app/super/projects', label: 'Clients', icon: Building2, iconTone: TONE.work },
   ...practiceBlock('super_admin', '/app/super'),
   labourRegistersItem('/app/super/practice'),
@@ -270,6 +293,8 @@ function managerItems(staffBase: string): NavEntry[] {
     { to: `${staffBase}/work`, label: 'Work', icon: ListChecks, iconTone: TONE.work },
     { to: `${staffBase}/projects`, label: 'Projects', icon: Briefcase, iconTone: TONE.work },
     { to: `${staffBase}/approvals`, label: 'Approvals', icon: ClipboardCheck, iconTone: TONE.queue },
+    requestsItem(staffBase),
+    clientHealthItem(staffBase),
     { to: `${staffBase}/people`, label: 'People', icon: Users, iconTone: TONE.people },
     { to: `${staffBase}/team`, label: 'Project leads', icon: UserSquare2, iconTone: TONE.people },
     ...practiceBlock('manager', staffBase),
@@ -294,6 +319,8 @@ const INTERN_CLIENTS = '/app/intern/clients';
 const internItems: NavEntry[] = [
   { to: '/app/intern/today', label: 'Today', icon: LayoutDashboard, iconTone: TONE.home },
   { to: '/app/intern/tasks', label: 'Work', icon: ListChecks, iconTone: TONE.work },
+  requestsItem('/app/intern'),
+  clientHealthItem('/app/intern'),
   { to: INTERN_CLIENTS, label: 'Clients', icon: Building2, iconTone: TONE.people },
   ...practiceBlock('intern', '/app/intern'),
   labourRegistersItem('/app/intern'),

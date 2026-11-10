@@ -13,6 +13,7 @@ import {
   Moon,
   Newspaper,
   Rss,
+  Sunrise,
   type LucideIcon,
 } from 'lucide-react';
 import { SpectrumTabs } from '@/components/ui/spectrum-tabs';
@@ -424,6 +425,23 @@ export function NotificationsCard({
                       )
                     }
                     aria-label="Monthly partner report"
+                  />
+                </div>
+              ) : null}
+              {prefs.alerts ? (
+                /* IDEAS-PLAN F: the optional weekday "My day" email at 08:40, off until the person turns it on. */
+                <div className="flex min-h-[52px] flex-wrap items-center gap-3 border-t border-line-soft px-4 py-2.5 md:px-5">
+                  <RowTile Icon={Sunrise} tile="bg-info-soft text-info" />
+                  <span className="min-w-0 flex-1 text-[14px] text-ink">My day email, weekdays 08:40</span>
+                  <Switch
+                    checked={Boolean(prefs.alerts.myDayEmail)}
+                    onCheckedChange={(v) =>
+                      void save(
+                        { alerts: { myDayEmail: v } },
+                        { text: `My day email ${v ? 'on' : 'off'}`, patch: { alerts: { myDayEmail: !v } } },
+                      )
+                    }
+                    aria-label="My day email"
                   />
                 </div>
               ) : null}

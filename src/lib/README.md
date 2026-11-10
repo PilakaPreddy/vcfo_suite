@@ -15,18 +15,23 @@ Domain logic and helpers. Nothing here imports `db`; data access goes through
 - `board-meetings/` — board meetings after incorporation: dates (T-10, T-7, T+30, 120-day gap), meeting numbers, quorum, agenda rules, the notice text and Word file, `.ics` invites and signed director links.
 - `checklist/` — the 34-step SPICe+ checklist: per-step validation, gating, review, locks, responses and Part A sections.
 - `client/` — client overview, home (`/api/client/home`) and progress-board shapes, shared by the portal and the legacy client views.
+- `client-health/` — the computed client health score and band, the signals behind it, the SLA escalation ladder, the nightly run and the weekly digest section (automation wave 2, E). Gotchas: `docs/context/notes/automation.md`.
 - `client-portal/` — the v7 client portal's pure models (answers, compliances, credentials, documents, steps).
 - `compliance/` — the recurring compliance calendar: FY periods, obligation instances and the filings register.
+- `compliance-events/` — company events after incorporation (director, office, auditor, allotment, capital, MGT-14): spotting a change in a checklist save, and planning the form, due date and client request; the table is `company_events` (automation wave 2, D).
 - `compliance-tasks/` — the statutory and non-statutory model: stages and status words, reminders, repeats, progress steps, the reminder email.
 - `doc-pack/` — the incorporation document pack registry, inputs and what blocks each document.
 - `documents/` — vault and milestone document visibility rules and storage keys.
 - `email/` — outbound email (`send-email.ts`, the system of record), layout and engagement event mail.
+- `expiries/` — the expiry tracker for DSCs, DIR-3 KYC and registrations: kinds, alert stages (T-60, T-30, T-7, expired), the red, amber and green band, the backfill seed and one alert's task, draft request and emails (automation wave 2, B).
 - `incorporation/` — incorporation answers outside the checklist itself: directors, DIR-2, pre-inc direct flow, NIC-2008, countries.
 - `incorporation-docs/` — generators for the MCA incorporation documents (MOA, AOA, INC-9, DIR-2, DIR-8 and letters).
 - `intern/` — the project lead's (intern role) dashboard, work queue, managers and personal todos.
 - `knowledge-bank/` — knowledge bank folders, search and storage keys.
 - `labour-registers/` — statutory labour registers: the form catalogue for a state and period, column and value matching against a client's payroll sheet, the per-day attendance block, content-addressed caching of generated documents, and the section 14 overtime scoping. Gotchas: `docs/context/notes/labour-registers.md`.
+- `my-day/` — the "My day" plan for staff: gathering due work through the person's own scoped repositories, the ranking shared by the Today card, Ask and the morning email, and that email (automation wave 2, F).
 - `noc/` — the parent company NOC (Pre-2 board resolution) templates and variants.
+- `notices/` — the tax and GST notice desk: authorities, stages, reading a notice into a case, the reply draft from the knowledge bank, and the T-7, T-2 and overdue escalations (automation wave 2, C).
 - `notifications/` — in-app bell, announcements, popup cadence and the dock animation.
 - `notes/` — the wire type of a staff note on a client record (G-19).
 - `notify/` — WhatsApp nudges (outbound only; never blocks email).
@@ -35,6 +40,7 @@ Domain logic and helpers. Nothing here imports `db`; data access goes through
 - `outlook/` — Microsoft Outlook OAuth and token encryption for sending mail as a user.
 - `projects/` — engagements (projects): create scope, DB helpers, change requests, step paths, stuck rules, schedule windows, deadlines and pending approvals.
 - `registrations/` — registration facts (number, certificate, issue date, expiry, renewal) built from the step answers and the workbook's reg rows (G-05, G-06).
+- `request-lists/` — client request lists: item and list statuses, progress, the reminder cadence and limits (email, WhatsApp from the second reminder, a call task after the third, at most eight) and the reminder emails (automation wave 2, A).
 - `shell/` — app chrome: shell appearance, brand name, motion presets, phase colours and page metadata.
 - `super/` — the super admin overview shape builder.
 

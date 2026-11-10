@@ -26,13 +26,18 @@ const CLIENT_LINE =
   "waiting on you and which filings are coming up. I can't change, file or send anything; your project " +
   'lead does that.';
 
-/** The actions this role may start from chat today, as plain lines. Switched-off tiers are left out. */
+/**
+ * The actions this role may start from chat today, as plain lines. Switched-off tiers are left out.
+ * The everyday actions (`common`) come first, so the short "what can you do" list keeps them as the
+ * registry grows.
+ */
 export async function staffActionLines(role: AppRole): Promise<string[]> {
   const flags = askFlags();
   if (flags.killedPaths.has('fixed_workflow')) return [];
   const actions = await actionsForRole(role);
   return actions
     .filter((a) => a.capability && agentMayExecute(a.tier) && !flags.killedTiers.has(a.tier))
+    .sort((a, b) => Number(Boolean(b.common)) - Number(Boolean(a.common)))
     .map((a) => a.capability!);
 }
 
