@@ -36,6 +36,7 @@ export function MilestoneResponseFormViewFooters(p: MilestoneResponseFormViewMod
     submissionLocked,
     submitting,
     unlockedFields,
+    uploading,
   } = p;
 
   // The sectioned layout's footer exists to save / submit / advance the form.
@@ -109,7 +110,7 @@ export function MilestoneResponseFormViewFooters(p: MilestoneResponseFormViewMod
               type="button"
               size="sm"
               onClick={() => void handleSubmit()}
-              disabled={submitting || saving || autoSaveStatus === 'saving'}
+              disabled={submitting || saving || uploading || autoSaveStatus === 'saving'}
               className="cursor-pointer"
             >
               {submitting ? 'Submitting…' : 'Submit for review'}
@@ -220,7 +221,7 @@ export function MilestoneResponseFormViewFooters(p: MilestoneResponseFormViewMod
                     }
                     disabled={
                       internFooterAction === 'submit'
-                        ? submitting || saving || autoSaveStatus === 'saving'
+                        ? submitting || saving || uploading || autoSaveStatus === 'saving'
                         : submitting
                     }
                     className="cursor-pointer"
@@ -324,7 +325,7 @@ export function MilestoneResponseFormViewFooters(p: MilestoneResponseFormViewMod
               type="button"
               size="sm"
               onClick={() => void handleSubmit()}
-              disabled={submitting || saving || autoSaveStatus === 'saving'}
+              disabled={submitting || saving || uploading || autoSaveStatus === 'saving'}
               className="cursor-pointer"
             >
               {submitting ? 'Submitting…' : 'Submit again for review'}
