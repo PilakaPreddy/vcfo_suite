@@ -14,7 +14,7 @@ type JourneyNodeProps = {
 
 /**
  * Shared journey node language — blue current, teal-green done, amber clock
- * waiting, dashed slate upcoming.
+ * waiting, outlined slate upcoming.
  *
  * Upcoming steps show their step number, never a padlock: the sequential gate
  * is unchanged, but the UI states it in words ("This opens after X is
@@ -22,7 +22,7 @@ type JourneyNodeProps = {
  *
  * VCFO Spectrum (R-22, ST5): the node is now the step square. Done is green with a tick, the
  * active step is a ring with a blurple square and a halo, a waiting step the same ring in teal,
- * and an upcoming step a dashed square. The picked row's own tint marks the selection, so the
+ * and an upcoming step an outlined square. The picked row's own tint marks the selection, so the
  * node only adds a soft ring when it is not already live.
  */
 export function JourneyNode({

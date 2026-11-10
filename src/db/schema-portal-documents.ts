@@ -24,7 +24,7 @@ import { clientLibraryItems, documentRequests, engagements, profiles } from './s
  * has no due date / step / field / review-note columns, and the request type
  * `DocRequest.dueAt` was dropped on insert). One row per request, optional.
  * Written by staff when they create or edit a request; read by the client
- * Documents page (dashed "missing" rows: due chip, owning step, SBC note).
+ * Documents page (outlined "missing" rows: due chip, owning step, SBC note).
  */
 export const documentRequestDetails = pgTable(
   'document_request_details',

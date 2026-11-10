@@ -46,7 +46,7 @@ export function RepeatGroupEditor({
   return (
     <div className="space-y-3">
       {entries.length === 0 ? (
-        <p className="rounded-md border-dash-fine px-3 py-3 text-sm text-ink-muted">
+        <p className="rounded-md border-fine px-3 py-3 text-sm text-ink-muted">
           {group.emptyLabel ?? `No ${inSentence(noun)} added yet.`}
         </p>
       ) : null}

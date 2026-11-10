@@ -109,10 +109,10 @@
 .vup-file.err{background:oklch(var(--danger-soft));border-color:oklch(var(--danger) / .3);color:oklch(var(--danger))}
 .vup-fn{flex:1;min-width:0;font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vup-file.err .vup-fn{white-space:normal;overflow-wrap:anywhere}
-/* drop zone: a dashed area (R-56); dragging turns it blurple */
+/* drop zone: a plain-edged area (R-56); dragging turns it blurple */
 .vup-big{border:1.5px solid transparent;border-radius:6px;background-color:oklch(var(--surface-sunken));padding:28px 16px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;cursor:pointer}
-.vup-big:hover{--dash-color:oklch(var(--brand-line))}
-.vup-big:focus-visible{outline:none;--dash-color:oklch(var(--brand));box-shadow:0 0 0 4px oklch(var(--focus-ring) / .24)}
+.vup-big:hover{--edge-color:oklch(var(--brand-line))}
+.vup-big:focus-visible{outline:none;--edge-color:oklch(var(--brand));box-shadow:0 0 0 4px oklch(var(--focus-ring) / .24)}
 .vup-big.over{border-color:oklch(var(--brand));background:oklch(var(--brand-soft))}
 .vup-up{color:oklch(var(--ink-muted))}
 .vup-big.over .vup-up{color:oklch(var(--brand-text))}
@@ -136,7 +136,7 @@
 .vup-hd .sx-ib{width:32px;height:32px}
 .vup-for{border-width:1px}
 .vup-for>button{font-size:13.5px}
-.vup-big{--dash-color:oklch(var(--line-strong))}
+.vup-big{--edge-color:oklch(var(--line-strong))}
 .vup-dt{font-size:13.5px}
 .vup-cap{font-size:11.5px}
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, ArrowLeft, CalendarCheck, Download, Info, Lock, RotateCcw } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Download, Info, Lock, RotateCcw } from 'lucide-react';
 
 import { ActDirectory, type DirectoryFile, type DirectoryFolder } from '@/components/labour-registers/ActDirectory';
 import { AttestDialog } from '@/components/labour-registers/AttestDialog';
@@ -301,18 +301,6 @@ export function BatchPage({
         }
       />
 
-      {!view.locked && canPrepare && !uploads.attendance && (view.needsAttendance?.length ?? 0) > 0 ? (
-        <LrBanner icon={CalendarCheck} tone="warn">
-          <span className="font-semibold">No attendance sheet for this period.</span>{' '}
-          {view.attendanceAssumed
-            ? 'The month is recorded as fully present. Upload a sheet to replace that.'
-            : `${view.needsAttendance!.length} registers carry a column per day and cannot be produced without one.`}{' '}
-          <button type="button" onClick={() => setAttendanceOpen(true)} className={`${lr.link} align-baseline`}>
-            {view.attendanceAssumed ? 'Change how it was recorded' : 'Decide how to handle it'}
-          </button>
-        </LrBanner>
-      ) : null}
-
       {actions.error ? (
         <LrBanner icon={AlertCircle} tone="bad">
           {actions.error}
@@ -386,6 +374,25 @@ export function BatchPage({
             mapHref={
               canPrepare
                 ? (slot) => `${shellBase}/labour-registers?batch=${view.batchId}&map=${slot}`
+                : undefined
+            }
+            /* The missing-attendance notice sits on the Attendance row, next to the file it asks for,
+               not in a banner at the top of the page. */
+            notes={
+              !view.locked && canPrepare && !uploads.attendance && (view.needsAttendance?.length ?? 0) > 0
+                ? {
+                    attendance: (
+                      <>
+                        <span className="font-semibold">No attendance sheet for this period.</span>{' '}
+                        {view.attendanceAssumed
+                          ? 'The month is recorded as fully present. Upload a sheet to replace that.'
+                          : `${view.needsAttendance!.length} ${view.needsAttendance!.length === 1 ? 'register carries' : 'registers carry'} a column per day and cannot be produced without one.`}{' '}
+                        <button type="button" onClick={() => setAttendanceOpen(true)} className={`${lr.link} align-baseline`}>
+                          {view.attendanceAssumed ? 'Change how it was recorded' : 'Decide how to handle it'}
+                        </button>
+                      </>
+                    ),
+                  }
                 : undefined
             }
             onPick={upload}

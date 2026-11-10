@@ -55,7 +55,7 @@ describe('FilterChip', () => {
   it('draws a plain-edged add chip when unset (R-56)', () => {
     render(<FilterChip label="Status" value="" options={options} onChange={() => {}} />);
     expect(screen.getByRole('button', { name: 'Status' })).toHaveClass('border-line-strong');
-    expect(screen.getByRole('button', { name: 'Status' })).toHaveClass('border-dashed');
+    expect(screen.getByRole('button', { name: 'Status' }).className).not.toMatch(/dashed|dotted/);
   });
 
   it('draws the set chip with the value and clears it with the ×', () => {

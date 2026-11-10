@@ -4,7 +4,7 @@ import type { ChecklistStepGate } from '@/lib/checklist/checklist-step-gate';
 
 /**
  * ST5 marker (R-22) for a step gate. Done is the green tick, the open step is the live ring
- * (teal when it waits on someone else), and a locked step is the dashed upcoming square.
+ * (teal when it waits on someone else), and a locked step is the outlined upcoming square.
  */
 export function stepMarkForGate(gate: Pick<ChecklistStepGate, 'kind'>): { state: StepState; tone: StepTone; label: string } {
   switch (gate.kind) {

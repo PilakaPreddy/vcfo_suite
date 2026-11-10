@@ -119,7 +119,7 @@ function RowBox({ checked, mixed, onChange, label }: { checked: boolean; mixed?:
  *   switch to the head and keeps the choice in localStorage.
  * - `changedAt` + `visitKey` (E-08): a 6px blurple square before rows changed since the last visit.
  * - `loading` (L1): grey row shapes in place of the rows.
- * - `onClearFilters` or `emptyAction` (E3): the dashed empty state with "Clear filters" or your action.
+ * - `onClearFilters` or `emptyAction` (E3): the plain-edged empty state with "Clear filters" or your action.
  */
 export function EFilingGrid<T>({
   columns,
@@ -199,9 +199,9 @@ export function EFilingGrid<T>({
   visitSeed?: number;
   /** L1: grey row shapes. */
   loading?: boolean;
-  /** E3: shows the dashed empty state with "Clear filters" when there are no rows. */
+  /** E3: shows the plain-edged empty state with "Clear filters" when there are no rows. */
   onClearFilters?: () => void;
-  /** E3: a different action in the dashed empty state. */
+  /** E3: a different action in the plain-edged empty state. */
   emptyAction?: ReactNode;
 }) {
   // The router from context, not useRouter(): the grid also renders outside the app router (tests).

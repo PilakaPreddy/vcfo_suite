@@ -45,7 +45,7 @@ Branch `overnight/31oct`, merged into `main`. Every milestone has its own report
 | 1 | Hub | The builder on the laptop refused production actions without the owner's word in its own chat. The hub built everything itself with six parallel agents. |
 | 2 | M1 | Light page background `#edf1f6`, one step darker than white cards. Dark mode already had the step. |
 | 3 | M1 | Pages that draw their own 1.5 px card frame get 2 px from one rule at the end of `globals.css`; client-portal cards from a temporary `!important` rule in `23-portal.css`. |
-| 4 | M1 | New `border-dash-fine` (3 px dash, 3 px gap) only for drop zones and empty states. Other dashed edges are now solid. |
+| 4 | M1 | New `border-fine` (3 px dash, 3 px gap) only for drop zones and empty states. Other dashed edges are now solid. |
 | 5 | M1 | New shared `StepLink` draws each connector through the mark centres (11 places fixed). |
 | 6 | M2 | "Steps done" counts SPICe+ steps. The Expected COI date moved into the note of that tile. |
 | 7 | M2 | Trend lines are rebuilt from real records for the last days. A tile with no history shows a flat dashed line and "No history yet". |

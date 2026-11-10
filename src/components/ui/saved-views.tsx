@@ -111,7 +111,7 @@ export function SavedViews({ storageKey, views, current, onApply, className }: S
             type="button"
             disabled={!!on}
             title={on ? 'These filters are a view already' : undefined}
-            className="inline-flex h-7 flex-none items-center gap-1.5 rounded-md border-1.5 border-dashed border-line-strong px-2.5 text-[13px] font-medium text-ink-2 hover:bg-surface-sunken disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent data-[state=open]:bg-surface-sunken"
+            className="inline-flex h-7 flex-none items-center gap-1.5 rounded-md border-1.5 border-line-strong px-2.5 text-[13px] font-medium text-ink-2 hover:bg-surface-sunken disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent data-[state=open]:bg-surface-sunken"
           >
             <Plus className="h-3.5 w-3.5" strokeWidth={1.6} aria-hidden />
             Save view

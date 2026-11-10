@@ -211,7 +211,7 @@ export default function AskSources() {
                   type="file"
                   accept=".pdf,.docx,.txt,.md"
                   required
-                  className="mt-2 block w-full rounded-md border-dash-fine px-3 py-3 text-[13px] text-ink-2 file:mr-3 file:rounded-md file:border-0 file:bg-surface-sunken file:px-3 file:py-1.5 file:text-[13px] file:font-medium file:text-ink"
+                  className="mt-2 block w-full rounded-md border-fine px-3 py-3 text-[13px] text-ink-2 file:mr-3 file:rounded-md file:border-0 file:bg-surface-sunken file:px-3 file:py-1.5 file:text-[13px] file:font-medium file:text-ink"
                 />
               ) : (
                 <Textarea aria-label="Note" name="note" required rows={6} className="mt-2" />

@@ -198,7 +198,7 @@ export function Seg({
 
 /**
  * The four workflow steps of a filing as ST5 marks (R-22, prototype FilingTrack): 20px marks, done
- * steps a green square with a tick and their date, the live step a ring, later steps a dashed
+ * steps a green square with a tick and their date, the live step a ring, later steps an outlined
  * square. A step that is not done says who holds it: the client in amber, SBC in blue.
  */
 export function FocusTrack({ nodes }: { nodes: TrackNode[] }) {

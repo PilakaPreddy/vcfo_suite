@@ -36,12 +36,17 @@ import { canRequestWindowChange } from '@/lib/work/work-access';
 import { errorMessage, toastError, toastSuccess } from '@/lib/toast-errors';
 import { identityTone } from '@/views/compliances/identity';
 import { cn } from '@/lib/utils';
+import { shortCompany } from '@/components/super/parts/super-text';
 
 /** An open work item the planner can place on the calendar. */
 export interface PlannerItem {
   key: string;
   title: string;
   companyName: string;
+  /** The client's engagement, which picks its colour (the same on every staff screen). */
+  engagementId?: string;
+  /** The part of the work: Incorporation, Registration, Compliance, Documents or Task. */
+  part?: string;
   dueYmd?: string;
   overdue: boolean;
   /** For the all-day row: a filing is a statutory due date, a manager-dated item has a lock. */
@@ -135,7 +140,10 @@ export function PlannerCalendar({
     const out: StaffCalEvent[] = blocks.map((b) => {
       const item = b.itemKey ? itemsByKey.get(b.itemKey) : undefined;
       const late = Boolean(item?.dueYmd && istYmdOf(b.startsAt) > item.dueYmd);
-      const engagement = item ? engagements.find((e) => e.companyName === item.companyName) : undefined;
+      const engagementId = item?.engagementId ?? (item ? engagements.find((e) => e.companyName === item.companyName)?.id : undefined);
+      // Every block says whose work it is and which part: "Kestrel Robotics · Incorporation".
+      // A block with no work item is the person's own time.
+      const whose = item ? [shortCompany(item.companyName), item.part].filter(Boolean).join(' · ') : 'Personal';
       return {
         id: `block:${b.id}`,
         title: b.title,
@@ -143,11 +151,11 @@ export function PlannerCalendar({
         end: toWallIso(b.endsAt),
         kind: 'block',
         tone: b.itemKey ? 'item' : 'block',
-        client: identityTone(engagement?.id ?? item?.companyName ?? b.title),
+        client: item ? identityTone(engagementId ?? item.companyName) : undefined,
         own: !b.itemKey,
         late,
-        sub: item?.companyName,
-        hint: `${b.title} · ${timeRangeLabel(b.startsAt, b.endsAt)}${late ? ' · after the due date' : ''}`,
+        sub: whose,
+        hint: `${b.title} · ${whose} · ${timeRangeLabel(b.startsAt, b.endsAt)}${late ? ' · after the due date' : ''}`,
       };
     });
     for (const i of items) {
@@ -160,8 +168,9 @@ export function PlannerCalendar({
         allDay: true,
         kind,
         tone: kind === 'statutory' ? 'statutory' : kind === 'client-agreed' ? 'agreed' : i.overdue ? 'overdue' : 'upcoming',
-        sub: i.companyName,
-        hint: `${i.title} · ${i.companyName}${kind === 'statutory' ? ' · statutory due date' : kind === 'client-agreed' ? ' · dates set by the manager' : ''}`,
+        client: identityTone(i.engagementId ?? engagements.find((e) => e.companyName === i.companyName)?.id ?? i.companyName),
+        sub: [shortCompany(i.companyName), i.part].filter(Boolean).join(' · '),
+        hint: `${i.title} · ${[i.companyName, i.part].filter(Boolean).join(' · ')}${kind === 'statutory' ? ' · statutory due date' : kind === 'client-agreed' ? ' · dates set by the manager' : ''}`,
       });
     }
     return out;

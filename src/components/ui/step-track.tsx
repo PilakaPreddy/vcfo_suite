@@ -43,7 +43,7 @@ export function StepMark({
         'relative z-[1] inline-grid flex-none place-items-center rounded-mark',
         state === 'done' && 'bg-positive-mid text-white',
         state === 'now' && cn('bg-surface-raised', RING[tone]),
-        state === 'next' && 'border-[1.5px] border-dashed border-line-strong bg-surface-raised',
+        state === 'next' && 'border-[1.5px] border-line-strong bg-surface-raised',
         className,
       )}
       style={{ width: size, height: size }}

@@ -17,7 +17,7 @@ const LEGEND = [
   ['Due soon', 'bg-warning-mid'],
   ['Overdue', 'bg-danger-mid'],
   ['Upcoming', 'bg-upcoming-mid'],
-  ['Not applicable', 'border-1.5 border-dashed border-line-strong'],
+  ['Not applicable', 'border-1.5 border-line-strong'],
 ] as const;
 
 type Cell = { state: 'filed' | 'soon' | 'late' | 'upcoming'; day: number };
@@ -27,7 +27,7 @@ const CELL: Record<Cell['state'] | 'na', string> = {
   soon: 'bg-warning-soft text-warning',
   late: 'bg-danger-soft text-danger',
   upcoming: 'bg-surface-sunken text-ink-2',
-  na: 'border-1.5 border-dashed border-line',
+  na: 'border-1.5 border-line',
 };
 
 /**

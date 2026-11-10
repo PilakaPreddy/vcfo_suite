@@ -7,7 +7,7 @@
  * books that lift and tilt, blue "Updated" ribbon, no-match bubble), the
  * recently-read drill (lib_recent_drill) and the empty library (lib_empty).
  * VCFO Spectrum (C-0110, R-10, R-48): the shelf filter is a dropdown, the shelves sit in
- * a plain white card, and the empty and no-match states are dashed areas with the action
+ * a plain white card, and the empty and no-match states are plain-edged areas with the action
  * (no mascot).
  * Data: saved items GET /api/client/library (not behind the Ask VCFO flag), reading progress
  * GET /api/client/library/reads (NEW), suggestions GET /api/client/library/topic.

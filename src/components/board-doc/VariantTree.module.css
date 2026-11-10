@@ -8,7 +8,7 @@
 @media (max-width:767px){.box svg{min-width:980px}.hint{display:block}}
 .tn rect{fill:oklch(var(--surface-raised));stroke:oklch(var(--line-strong));stroke-width:1.5}
 .tn text{fill:oklch(var(--ink-muted));font-size:13px;font-weight:500}
-.dash rect{stroke-dasharray:3 3;fill:oklch(var(--surface-sunken))}
+.dash rect{fill:oklch(var(--surface-sunken))}
 .root rect{fill:oklch(var(--ink));stroke:oklch(var(--ink))}
 .root text{fill:oklch(var(--surface-raised))}
 .on:not(.root) rect{stroke:oklch(var(--brand));stroke-width:2;fill:oklch(var(--brand-soft))}

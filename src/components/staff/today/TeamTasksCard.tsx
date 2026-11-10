@@ -420,7 +420,7 @@ function TeamTasksBody({ rows, tools, loading, viewParam }: Props & { viewParam:
                     <li className="px-1 text-[12.5px] text-ink-muted">{list.length - 12} more in the list</li>
                   ) : null}
                   {list.length === 0 ? (
-                    <li className="rounded-md border-dash-fine px-2 py-3 text-center text-[12.5px] text-ink-muted">
+                    <li className="rounded-md border-fine px-2 py-3 text-center text-[12.5px] text-ink-muted">
                       None
                     </li>
                   ) : null}

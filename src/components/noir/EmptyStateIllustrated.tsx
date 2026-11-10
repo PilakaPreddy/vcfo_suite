@@ -26,7 +26,7 @@ export function EmptyStateIllustrated({
   return (
     <Surface
       className={cn(
-        "flex flex-col items-center border-dash-fine [--dash-color:oklch(var(--brand)/0.2)] bg-brand-soft/30 px-6 py-12 text-center",
+        "flex flex-col items-center border-fine [--edge-color:oklch(var(--brand)/0.2)] bg-brand-soft/30 px-6 py-12 text-center",
         className,
       )}
     >

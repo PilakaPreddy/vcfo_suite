@@ -10,7 +10,7 @@
  * side cards In <Company>'s project · Related · Documents for this.
  * Reading progress is recorded per section (NEW client_library_reads).
  * Chips, file badges and step marks are the shared Spectrum parts, drawn in
- * `.cp-tw` islands; the not-available state is a dashed area (no mascot, R-04).
+ * `.cp-tw` islands; the not-available state is a plain-edged area (no mascot, R-04).
  */
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';

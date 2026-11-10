@@ -107,7 +107,7 @@ html[data-theme="dark"] .ld-root .seg>.thumb{display:none}
 @media (max-width:700px){.ld-scrim{align-items:flex-end;padding:0}.ld-root .dlg{width:100%!important;border-radius:6px 14px 0 0!important;max-height:86vh;overflow:auto;animation:lup .25s cubic-bezier(.22,1,.36,1) both}.ld-root .bar{width:72px}}
 @media (prefers-reduced-motion: reduce){.ld-root .dlg{animation:none!important}.ld-root .seg>.thumb{display:none}}
 
-/* ---------------- empty library (lib_empty, R-48: a dashed area with the action; no figure) ---------------- */
+/* ---------------- empty library (lib_empty, R-48: a plain-edged area with the action; no figure) ---------------- */
 .le-root .le-q{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 @media (max-width:767px){.le-root .le-q .sx-btn{min-height:40px;height:auto;white-space:normal}}
 

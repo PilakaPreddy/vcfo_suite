@@ -112,10 +112,10 @@ export function ListRow({ children, className, onClick, label }: { children: Rea
   return <div className={base}>{children}</div>;
 }
 
-/** Empty list body (R-05, R-48): a dashed area with the action. */
+/** Empty list body (R-05, R-48): a plain-edged area with the action. */
 export function Empty({ children = 'None', action }: { children?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="m-4 flex flex-col items-center gap-2.5 rounded-md border-dash-fine px-4 py-6 text-center text-[13px] text-ink-muted md:mx-5">
+    <div className="m-4 flex flex-col items-center gap-2.5 rounded-md border-fine px-4 py-6 text-center text-[13px] text-ink-muted md:mx-5">
       <span>{children}</span>
       {action}
     </div>
@@ -675,8 +675,8 @@ export function DropZone({
         if (f) onFile(f);
       }}
       className={cn(
-        'drop-zone flex items-center gap-3 rounded-md border-dash-fine bg-surface-raised px-4 py-3.5',
-        over && 'bg-brand-soft [--dash-color:oklch(var(--brand))]',
+        'drop-zone flex items-center gap-3 rounded-md border-fine bg-surface-raised px-4 py-3.5',
+        over && 'bg-brand-soft [--edge-color:oklch(var(--brand))]',
         busy && 'opacity-70',
         className,
       )}

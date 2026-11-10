@@ -6,7 +6,7 @@
  * read-all through the same route (Undo restores exactly the ids it changed).
  * Channel card: `/api/account/profile` (WhatsApp opt-in).
  * VCFO Spectrum: type tiles and status chips, "This month" as a total, one stacked
- * bar and rows that open the drill-down (R-25), a dashed empty state (R-48).
+ * bar and rows that open the drill-down (R-25), a plain-edged empty state (R-48).
  */
 import { sep } from '@/lib/date-format';
 import { useMemo, useState } from 'react';

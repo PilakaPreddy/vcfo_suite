@@ -46,7 +46,7 @@ export default function PortalsPage() {
           ))}
         </div>
       ) : (
-        <div className="rounded-md border-dash-fine px-4 py-8 text-center">
+        <div className="rounded-md border-fine px-4 py-8 text-center">
           <p className="text-[14px] font-medium">Demo portals are not set up</p>
           <p className="mt-1 text-[13px] text-ink-muted">Sign in to open your own portal.</p>
         </div>
